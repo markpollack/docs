@@ -37,10 +37,6 @@
   },
   "tabs": [
     {
-      "name": "Docs",
-      "url": "docs"
-    },
-    {
       "name": "Experiments",
       "url": "experiments"
     }
@@ -81,14 +77,7 @@
       ]
     },
     {
-      "group": "Documentation",
-      "pages": [
-        "docs/index",
-        "docs/glossary"
-      ]
-    },
-    {
-      "group": "Loopy",
+      "group": "Loopy Docs",
       "pages": [
         "docs/loopy/getting-started",
         "docs/loopy/extending",
@@ -96,7 +85,7 @@
       ]
     },
     {
-      "group": "Agent Workflow",
+      "group": "Agent Workflow Docs",
       "pages": [
         "docs/agent-workflow/getting-started",
         "docs/agent-workflow/parameterization",
@@ -107,7 +96,7 @@
       ]
     },
     {
-      "group": "Experiment Driver",
+      "group": "Experiment Driver Docs",
       "pages": [
         "docs/experiment-driver/getting-started",
         "docs/experiment-driver/creating-experiments",

@@ -1,0 +1,64 @@
+---
+title: "Code Coverage v1 — Knowledge Injection Baseline"
+description: "9 variants testing progressive knowledge injection on Spring Boot test generation"
+---
+
+<div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+  <span style={{background: '#22c55e', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>COMPLETE</span>
+  <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Feb 2026</span>
+</div>
+
+## Hypothesis
+
+Progressive knowledge injection — giving agents increasingly structured domain knowledge — improves JUnit test generation quality on Spring Boot projects more than model upgrades.
+
+## Setup
+
+| Parameter | Value |
+|-----------|-------|
+| **Target** | Spring Boot projects (gs-rest-service, spring-petclinic) |
+| **Variants** | 9 (baseline → full forge with SAE) |
+| **Evaluation** | Four-tier jury (T0-T3) |
+| **Build tool** | Maven |
+| **Agent engine** | [Agent Workflow](/projects/agent-workflow) |
+
+## The 9 Variants
+
+| # | Variant | Knowledge Level |
+|---|---------|----------------|
+| 1 | Simple prompt | None |
+| 2 | + System prompt | Minimal guidance |
+| 3 | + Flat knowledge base | File-based domain knowledge |
+| 4 | + Skills (SkillsJars) | Structured, agent-accessible knowledge |
+| 5 | + Skills + SAE | Skills + Structured Agent Execution |
+| 6 | + Hardened prompt | Defensive instructions |
+| 7 | + Hardened + KB | Hardened + flat knowledge |
+| 8 | + Hardened + Skills | Hardened + structured knowledge |
+| 9 | + Forge (full stack) | Complete knowledge-directed execution |
+
+## Key Findings
+
+1. **Two independent axes discovered** — Knowledge injection and prompt hardening improve quality independently
+2. **Model floor exists** — PetClinic achieves 92-94% coverage across all variants (the model already knows PetClinic)
+3. **SAE is most efficient** — 70 expected steps, $2.84 per run
+4. **Partial knowledge paradox** — Some knowledge without structure can *decrease* performance
+5. **First Markov fingerprints** — Tool-call traces reveal distinct behavioral signatures per variant
+
+## Markov Analysis
+
+Agent behavior varies dramatically across variants even when final outcomes are similar. The [Markov fingerprint](/methodology/markov-fingerprinting) analysis revealed:
+
+- **JAR cluster patterns** — How much time agents spend in dependency inspection
+- **Thrashing loops** — BUILD→TEST→EDIT cycles that indicate the agent is stuck
+- **Loop amplification** — Quantified via transition probability engineering (TPE)
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Experiment Repo" icon="github" href="https://github.com/markpollack/code-coverage-experiment">
+    Full traces, Markov analysis scripts, raw data
+  </Card>
+  <Card title="Blog: Agent Fingerprint" icon="newspaper" href="https://blog.pollack.ai/i-read-my-agents-diary/">
+    Narrative walkthrough of the Markov findings
+  </Card>
+</CardGroup>

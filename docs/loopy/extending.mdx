@@ -1,0 +1,281 @@
+---
+title: "Extending Loopy"
+description: "Custom skills, subagents, tool profiles, listeners, and the programmatic API"
+---
+
+Loopy has five extension points, from zero-code Markdown files to full Java SPIs.
+
+<CardGroup cols={3}>
+  <Card title="Skills" icon="book">
+    Domain knowledge the agent reads on demand
+  </Card>
+  <Card title="Subagents" icon="users">
+    Specialist agents for delegation
+  </Card>
+  <Card title="Tool Profiles" icon="wrench">
+    New tools via Java SPI
+  </Card>
+</CardGroup>
+
+---
+
+## Skills
+
+Skills are the fastest way to make Loopy smarter. A skill is a Markdown file with YAML frontmatter. The agent sees skill names and descriptions upfront but only loads full content when relevant — no tokens wasted.
+
+### Create a skill
+
+Place a `SKILL.md` in your project:
+
+```
+.claude/skills/my-conventions/SKILL.md
+```
+
+```markdown
+---
+name: my-conventions
+description: Team coding conventions for our Spring Boot services
+---
+
+# Instructions
+
+When working on this codebase:
+- Use constructor injection, never field injection
+- All REST endpoints return ProblemDetail for errors (RFC 9457)
+- Tests use @WebMvcTest with MockMvc, not @SpringBootTest
+- Entity IDs are UUIDs, never auto-increment
+```
+
+Next time you run Loopy in that directory, the agent discovers the skill automatically.
+
+### Where skills live
+
+| Location | Path | Use case |
+|----------|------|----------|
+| Project | `.claude/skills/*/SKILL.md` | Team conventions, checked into the repo |
+| Global | `~/.claude/skills/*/SKILL.md` | Personal skills across all projects |
+| Classpath | `META-INF/skills/*/SKILL.md` in JARs | Published skill packages (Maven dep) |
+
+### Install from the catalog
+
+Loopy ships with 23+ curated skills from 8 publishers:
+
+```bash
+/skills search testing
+/skills info systematic-debugging
+/skills add systematic-debugging
+```
+
+### Publish skills as a JAR (SkillsJars)
+
+Package skills as a Maven dependency so teams get them automatically:
+
+```
+my-skills.jar
+└── META-INF/skills/
+    └── my-org/my-repo/api-design/
+        └── SKILL.md
+```
+
+Add the JAR to `pom.xml` and Loopy discovers it on the classpath. Skills follow the [agentskills.io](https://agentskills.io) spec — they work in 40+ agentic CLIs, not just Loopy.
+
+---
+
+## Subagents
+
+Subagents are specialist agents the main agent delegates to via the `Task` tool. Define them as Markdown files — no Java required.
+
+### Create a subagent
+
+Create `.claude/agents/test-runner.md`:
+
+```markdown
+---
+name: test-runner
+description: Runs tests and reports pass/fail summary
+tools: Bash, Read
+---
+
+You are a testing specialist. When invoked:
+
+1. Run `./mvnw test` in the working directory
+2. Parse output for pass/fail/skip counts
+3. If tests fail, read the relevant test source files
+4. Report a concise summary: what passed, what failed, and why
+```
+
+The main agent delegates testing tasks to this subagent automatically based on the `description` field.
+
+### Frontmatter fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique identifier (lowercase, hyphens) |
+| `description` | Yes | When to use — the main agent reads this to decide |
+| `tools` | No | Allowed tools (comma-separated). Inherits all if omitted |
+| `model` | No | `haiku`, `sonnet`, or `opus` |
+
+### Tips
+
+- Keep `description` specific — "Runs tests and reports results" routes better than "helps with testing"
+- Restrict `tools` to what the subagent needs. A test runner doesn't need `Edit`
+- Subagents run in isolated context windows — they can't see the main conversation
+- Subagents cannot spawn other subagents (the `Task` tool is excluded automatically)
+
+---
+
+## Tool Profiles (Java SPI)
+
+Add new tools the agent can call. Implement a Java interface, package as a JAR, and Loopy discovers it at startup via `ServiceLoader`.
+
+### Implement ToolProfileContributor
+
+```java
+public class DatabaseToolProfile implements ToolProfileContributor {
+
+    @Override
+    public String profileName() {
+        return "database-tools";
+    }
+
+    @Override
+    public List<ToolCallback> tools(ToolFactoryContext ctx) {
+        return List.of(
+            ToolCallbacks.from(new QueryTool(ctx.workingDirectory())),
+            ToolCallbacks.from(new SchemaTool(ctx.workingDirectory()))
+        );
+    }
+}
+```
+
+### Register via ServiceLoader
+
+Create `META-INF/services/io.github.markpollack.loopy.tools.ToolProfileContributor`:
+
+```
+com.example.tools.DatabaseToolProfile
+```
+
+### What ToolFactoryContext provides
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `workingDirectory` | `Path` | Agent's working directory |
+| `chatModel` | `ChatModel` | The active LLM (for tools that need AI) |
+| `commandTimeout` | `Duration` | Tool execution timeout (default 120s) |
+| `interactive` | `boolean` | True in TUI mode, false in print/REPL |
+
+### Built-in profiles
+
+| Profile | Description |
+|---------|-------------|
+| `dev` | Full interactive toolset (bash, file I/O, search, skills, subagents) |
+| `boot` | Spring Boot scaffolding tools |
+| `headless` | Same as `dev` minus `AskUserQuestion` (for CI/CD) |
+| `readonly` | Read-only: file read, grep, glob, list directory |
+
+Custom profiles load **alongside** built-in profiles, not replacing them.
+
+---
+
+## Listeners
+
+Observe what the agent does without changing its behavior.
+
+### ToolCallListener
+
+Fires around every tool execution:
+
+```java
+public class CostTracker implements ToolCallListener {
+
+    @Override
+    public void onToolExecutionCompleted(String runId, int turn,
+            AssistantMessage.ToolCall toolCall, String result,
+            Duration duration) {
+        log.info("Tool {} took {}ms", toolCall.name(), duration.toMillis());
+    }
+}
+```
+
+### AgentLoopListener
+
+Fires at loop lifecycle boundaries:
+
+```java
+public class ProgressReporter implements AgentLoopListener {
+
+    @Override
+    public void onLoopCompleted(String runId, LoopState state,
+            TerminationReason reason) {
+        System.err.printf("Done: %s (%d turns)%n", reason, state.turns());
+    }
+}
+```
+
+Wire listeners through the `MiniAgent` builder:
+
+```java
+var agent = MiniAgent.builder()
+    .config(config)
+    .model(chatModel)
+    .toolCallListener(new CostTracker())
+    .loopListener(new ProgressReporter())
+    .build();
+```
+
+<Note>
+Listener methods should not throw exceptions — exceptions are logged and swallowed to avoid crashing the agent loop.
+</Note>
+
+---
+
+## Programmatic API
+
+Embed Loopy's agent in other Java applications:
+
+```java
+LoopyAgent agent = LoopyAgent.builder()
+    .workingDirectory(Path.of("/path/to/project"))
+    .build();
+
+LoopyResult result = agent.run("add input validation to UserController");
+```
+
+### Multi-step with session memory
+
+Context is preserved across `run()` calls by default:
+
+```java
+LoopyAgent agent = LoopyAgent.builder()
+    .workingDirectory(workspace)
+    .maxTurns(80)
+    .build();
+
+agent.run("plan a refactoring of the service layer");
+agent.run("now execute the plan");  // sees the previous conversation
+```
+
+### Builder options
+
+| Method | Description | Default |
+|--------|-------------|---------|
+| `.model(String)` | Model ID | `claude-sonnet-4-6` |
+| `.workingDirectory(Path)` | Agent's working directory | *required* |
+| `.systemPrompt(String)` | Custom system prompt | Built-in coding prompt |
+| `.maxTurns(int)` | Max loop iterations | `80` |
+| `.costLimit(double)` | Max cost in dollars | `$5.00` |
+| `.sessionMemory(boolean)` | Preserve context across `run()` calls | `true` |
+| `.timeout(Duration)` | Overall loop timeout | `10 min` |
+| `.disabledTools(Set<String>)` | Tools to exclude | none |
+
+### Custom endpoints (vLLM, LM Studio)
+
+```java
+LoopyAgent agent = LoopyAgent.builder()
+    .baseUrl("http://localhost:1234/v1")
+    .apiKey("lm-studio")
+    .model("local-model")
+    .workingDirectory(workspace)
+    .build();
+```

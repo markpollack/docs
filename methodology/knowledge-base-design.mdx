@@ -1,0 +1,152 @@
+---
+title: "Knowledge Base Design"
+description: "How to structure domain knowledge for agent consumption — routing tables, progressive disclosure, and the Diataxis weighting"
+---
+
+## The Problem
+
+Agents read files. The question is: which files, in what order, with what structure?
+
+A flat directory of Markdown files forces the agent to read everything or guess. A well-structured KB lets the agent navigate to exactly what it needs in 1-2 file reads.
+
+## The Agent-Consumption Weighting
+
+Not all documentation types are equally useful to agents. Based on [Diataxis](https://diataxis.fr/) (Daniele Procida), we weight the four document types for agent consumption:
+
+| Type | Agent Value | Why |
+|------|------------|-----|
+| **Reference** | Highest | Structured, predictable, greppable. Consistent format means the agent can parse reliably |
+| **How-to** | High | Action-oriented recipes map directly to agent tasks. Step-by-step instructions translate into actions |
+| **Explanation** | Medium | Provides context for judgment calls. But costs tokens proportional to discursiveness. Best accessed on-demand |
+| **Tutorial** | Low | Agents don't build confidence, learn by repetition, or benefit from "we" language. Almost entirely wasted tokens |
+
+This inverts the typical human documentation priority. Humans want tutorials first; agents want reference first.
+
+## Directory Layout
+
+A KB serving both human and agent consumers:
+
+```
+knowledge-store/
+├── index.md                    # Entry point: routing table
+├── reference/                  # Agent-primary
+│   ├── api-changes.md
+│   ├── configuration.md
+│   └── error-codes.md
+├── howto/                      # Agent-primary
+│   ├── migrate-security.md
+│   ├── handle-deprecation.md
+│   └── configure-logging.md
+├── explanation/                # Agent-secondary (on-demand)
+│   ├── why-api-changed.md
+│   └── design-rationale.md
+└── tutorials/                  # Human-only (agent ignores)
+    └── getting-started.md
+```
+
+## The Index Pattern
+
+The `index.md` at every directory level is the agent's entry point. It contains a **routing table** — not content, but pointers:
+
+```markdown
+# Spring Migration Knowledge
+
+| Topic | File | Read when... |
+|-------|------|-------------|
+| Import changes | reference/javax-to-jakarta.md | Task involves import migration |
+| Security config | howto/migrate-security.md | Project uses Spring Security |
+| JPA changes | reference/jpa-changes.md | Task involves data access |
+| Why APIs changed | explanation/api-rationale.md | Agent needs design context |
+```
+
+The "Read when..." column is critical. It tells the agent *under what conditions* to read the file. This is more useful than a document type label — it encodes priority and relevance.
+
+### Routing precedence
+
+- "Always read first" — mandatory context
+- "Task involves X" — conditional on the current task
+- "Only when stuck" — fallback for debugging
+
+## Progressive Disclosure
+
+The agent reads in layers:
+
+<Steps>
+  <Step title="Read the root index">
+    ~50 lines. The agent sees what domains exist and which are relevant to its task.
+  </Step>
+  <Step title="Read the domain index">
+    ~30 lines. The agent sees specific topics and their routing conditions.
+  </Step>
+  <Step title="Read the relevant file">
+    Full content — but only for the 1-3 files that match the task. Not the whole KB.
+  </Step>
+</Steps>
+
+A well-structured KB turns a 50-file knowledge base into 2-3 file reads. The agent spends tokens on knowledge, not navigation.
+
+## Two KB Types
+
+The lab uses two distinct KB architectures:
+
+### Code-Agent KB (task-driven)
+
+For agents that execute coding tasks. Optimized for lookup and action.
+
+- Root `index.md` ≤100 lines
+- `VOCABULARY.md` — controlled vocabulary for consistent terminology
+- Domain directories with per-domain `index.md`
+- Cheatsheets and structured reference files
+- **Update cadence**: when frameworks or tools change
+- **Agent roles**: Curator (read-write maintenance) + Navigator (read-only consumption)
+
+### Research-Partner KB (question-driven)
+
+For research synthesis and strategic context. Optimized for understanding and connections.
+
+- `CLAUDE.md` as session bridge (routing + context)
+- `synthesis/` hierarchy with theme index and per-theme docs
+- Immutable source conversations
+- **Update cadence**: after each research conversation
+- **Agent role**: session bridge (one agent, dual modes — synthesis intake + Q&A)
+
+<Note>
+Don't mix them. The same domain can appear in both KB types with different purposes. A code-agent KB about Spring Security has migration recipes. A research-partner KB about Spring Security has strategic analysis of the migration's impact on the product roadmap.
+</Note>
+
+## Design Rules
+
+1. **Index files contain pointers, not content.** If you're putting explanation in the index, it belongs in a separate file.
+
+2. **Reference format should be greppable.** Consistent headings, predictable structure, machine-parseable tables. The agent's first retrieval is typically `Grep` for a keyword, then `Read` of the matching file.
+
+3. **One topic per file.** A file that covers both "how to migrate security" and "why the security API changed" should be split. The agent might need one without the other.
+
+4. **Negative knowledge is explicit.** If something is out of scope, say so in the index. "This KB does NOT cover: deployment, monitoring, performance tuning." This prevents the agent from searching fruitlessly.
+
+5. **KnowledgeRefs are relative paths.** In experiment datasets, `knowledgeRefs` point to files relative to `knowledgeBaseDir`. Typically 1-5 directory refs per item (usually 2-3). The agent reads the pointed-to index, then drills down.
+
+## Evidence
+
+### Code Coverage v1
+
+Variant 3 (flat knowledge base) vs Variant 4 (structured skills) — identical content, different packaging. Variant 4 outperformed Variant 3 in efficiency metrics. The agent using structured skills showed 0% JAR_INSPECT — it stopped needing to inspect dependencies because the knowledge was delivered proactively.
+
+### SkillsBench
+
+[SkillsBench](https://arxiv.org/abs/2602.12670) confirmed that structure matters: [AgentSkillOS](https://arxiv.org/abs/2602.12670) found that hierarchically structured skills outperform flat files even with identical content.
+
+### Partial Knowledge Paradox
+
+Some knowledge without structure *decreases* performance (Code Coverage v1, finding #4). An unstructured KB is worse than no KB — the agent wastes tokens navigating and gets confused by contradictory or irrelevant information.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Forge Pipeline" icon="hammer" href="/methodology/forge">
+    How knowledge gets packaged into agent-ready artifacts
+  </Card>
+  <Card title="Extending Loopy" icon="puzzle-piece" href="/docs/loopy/extending">
+    Skills, SkillsJars, and progressive disclosure in practice
+  </Card>
+</CardGroup>

@@ -1,0 +1,56 @@
+---
+title: "Experiments"
+description: "Controlled studies measuring what moves the needle for AI agent reliability"
+---
+
+Every experiment in this lab follows the same pattern: **define variants, control for one variable, measure with the four-tier jury, analyze behavioral traces.**
+
+We don't just measure whether agents succeed — we measure *how* they behave on the way to success or failure, using [Markov chain analysis](/methodology/markov-fingerprinting) of tool-call traces.
+
+## Active Experiments
+
+<CardGroup cols={2}>
+  <Card
+    title="Code Coverage v2"
+    icon="flask"
+    href="/experiments/code-coverage-v2"
+  >
+    Skills vs flat knowledge bases — does structure matter when content is identical? 7 variants on Spring PetClinic.
+  </Card>
+  <Card
+    title="Issue Classification"
+    icon="tags"
+    href="/experiments/issue-classification"
+  >
+    Infrastructure vs prompts on SWE-bench Lite — does tooling beat prompt engineering at 300-task scale?
+  </Card>
+</CardGroup>
+
+## Completed Experiments
+
+<CardGroup cols={2}>
+  <Card
+    title="Code Coverage v1"
+    icon="check-circle"
+    href="/experiments/code-coverage-v1"
+  >
+    Knowledge injection baseline — 9 variants, first Markov fingerprints, two independent axes discovered.
+  </Card>
+</CardGroup>
+
+## Upcoming
+
+| Experiment | Question | Status |
+|-----------|----------|--------|
+| Code Coverage v3 | Extended variant ladder with refined skills | Planned |
+| SWE-bench Results | Cross-experiment comparison on standardized tasks | Planned |
+
+---
+
+## Experiment Design Principles
+
+1. **One variable per experiment** — Isolate the thing being tested
+2. **Deterministic preprocessing** — Parse inputs before the LLM sees them (zero LLM cost)
+3. **Cascaded evaluation** — T0→T1→T2→T3, cheap filters first
+4. **Behavioral analysis** — Markov chains on tool-call traces, not just pass/fail
+5. **Reproducibility** — All experiment repos are public with full trace data

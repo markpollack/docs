@@ -1,0 +1,96 @@
+---
+title: "Forge Methodology"
+description: "Deterministic customization pipeline — from knowledge to structured agent execution"
+---
+
+## What is Forge?
+
+Forge is the deterministic customization pipeline that transforms raw domain knowledge into agent-ready execution artifacts. It's the bridge between "we have knowledge" and "the agent uses it well."
+
+The name comes from a botanical lifecycle metaphor: **Define → Forge → Run → Grow** — knowledge is forged into structured tools before the agent ever sees it.
+
+## Why Deterministic?
+
+Early versions of the lab's approach used LLMs to process and restructure knowledge. This was expensive, non-reproducible, and introduced hallucination risk at the knowledge layer — exactly where you need reliability most.
+
+The forge pipeline is **zero-LLM-cost**: all knowledge processing happens through deterministic Java tooling.
+
+## The Pipeline
+
+<Steps>
+  <Step title="Define">
+    Declare what the agent needs to know — testing patterns, framework conventions, dependency usage, project structure. This is authored by humans as curated opinions.
+  </Step>
+  <Step title="Forge">
+    Deterministic tooling transforms definitions into agent-ready artifacts:
+    - **SkillsJars** — Packaged, structured knowledge units the agent can discover and load
+    - **Pre-analysis rules** — Import parsing, file structure analysis, KB routing decisions
+    - **Execution constraints** — Tool configurations, checkpoint definitions, guard rails
+  </Step>
+  <Step title="Run">
+    The agent executes with forged artifacts available. Skills are discoverable (not force-fed), pre-analysis has already routed to the right knowledge, and execution constraints shape behavior without prompt engineering.
+  </Step>
+  <Step title="Grow">
+    Post-execution analysis feeds back into the Define phase:
+    - Which skills were used vs ignored?
+    - Where did the agent thrash? (from [Markov analysis](/methodology/markov-fingerprinting))
+    - What knowledge gaps caused failures? (from [jury evaluation](/methodology/four-tier-jury))
+  </Step>
+</Steps>
+
+## Key Principle: Curated Over Comprehensive
+
+[SkillsBench](https://arxiv.org/abs/2602.12670) showed that 2-3 curated skills outperform comprehensive skill sets by +16.2pp, while comprehensive skills actually *decrease* performance by -2.9pp.
+
+Forge embodies this: the forge step is opinionated curation, not exhaustive knowledge dumping. A human decides what matters, deterministic tooling packages it, and the agent discovers what it needs.
+
+## Forge Artifacts
+
+| Artifact | What It Is | How Agent Uses It |
+|----------|-----------|-------------------|
+| **SkillsJar** | Packaged knowledge unit (JAR file with structured metadata) | Agent discovers via tool search, loads relevant skills on demand |
+| **Pre-analysis rules** | Deterministic routing logic (e.g., "if imports pytest, route to Python testing KB") | Runs before LLM, shapes context at zero cost |
+| **Execution template** | Structured Agent Execution (SAE) definition — checkpoints, phase gates | Agent follows defined execution phases |
+| **Guard rails** | Tool permission configs, output validators | Constrain agent to productive tool subsets |
+
+## Forge vs Prompt Engineering
+
+| Dimension | Prompt Engineering | Forge |
+|-----------|-------------------|-------|
+| **Cost** | Per-token, every run | Zero (deterministic, one-time) |
+| **Reproducibility** | Variable (LLM non-determinism) | Exact (Java tooling) |
+| **Scalability** | Prompt length limits | Unlimited (packaged artifacts) |
+| **Maintenance** | Edit prompts, hope for the best | Versioned artifacts, testable |
+| **Discoverability** | Agent sees everything at once | Agent pulls what it needs |
+
+## Implementation
+
+Forge is implemented across several lab projects:
+
+- **[Agent Workflow](/projects/agent-workflow)** — Execution loop that consumes forge artifacts
+- **[Loopy](/projects/loopy)** — CLI that exposes the full Define→Forge→Run→Grow lifecycle
+- **[Agent Judge](/projects/agent-judge)** — Evaluation in the Grow phase that identifies knowledge gaps
+
+## Evidence
+
+### Code Coverage v2
+
+The [v2 experiment](/experiments/code-coverage-v2) directly tests forge effectiveness:
+- **Variant 3** (flat KB) vs **Variant 4** (SkillsJar) — same content, different packaging
+- **Variant 7** (full forge) — T3 score of 0.933, highest across all variants
+- Skills variant showed 0% JAR_INSPECT — the agent stopped needing to inspect dependencies because forge provided the knowledge upfront
+
+### Code Coverage v1
+
+The [v1 experiment](/experiments/code-coverage-v1) established that the forge variant (variant 9) produced the most efficient behavioral fingerprint — fewest expected steps, cleanest Markov trace.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="The Thesis" icon="lightbulb" href="/methodology/knowledge-directed-execution">
+    Forge is how knowledge-directed execution gets implemented
+  </Card>
+  <Card title="Loopy CLI" icon="terminal" href="/projects/loopy">
+    The product that makes forge accessible to developers
+  </Card>
+</CardGroup>

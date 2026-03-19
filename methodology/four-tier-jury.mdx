@@ -1,0 +1,73 @@
+---
+title: "Four-Tier Jury"
+description: "Cascaded evaluation — deterministic first, LLM last"
+---
+
+## The Problem
+
+LLM-as-judge is expensive and non-deterministic. Running GPT-4 evaluation on every agent output costs $0.50-2.00 per assessment and produces variable results.
+
+## The Solution
+
+A **cascaded jury** that filters through cheap, deterministic checks before reaching expensive LLM evaluation. Only work products that pass all lower tiers advance.
+
+## The Four Tiers
+
+### T0: Deterministic
+
+Checks that require no execution — regex matching, file existence, syntax validation, compilation checks.
+
+**Examples:**
+- Does the generated test file exist?
+- Does it compile?
+- Does it contain at least one `@Test` annotation?
+- Are import statements valid?
+
+**Cost:** Free. **Latency:** Milliseconds.
+
+### T1: Command
+
+Checks that run shell commands and inspect exit codes or output patterns.
+
+**Examples:**
+- Does `mvn test` pass?
+- Does the coverage report show improvement?
+- Does `checkstyle` pass?
+
+**Cost:** Minimal (compute only). **Latency:** Seconds.
+
+### T2: Golden Test
+
+Compares agent output against known-good reference outputs using structural similarity.
+
+**Examples:**
+- Does the generated test cover the same methods as the reference test?
+- Is the assertion strategy consistent with project conventions?
+- Does the test structure match golden examples?
+
+**Cost:** Minimal. **Latency:** Seconds.
+
+### T3: LLM Assessment
+
+Semantic evaluation by a language model — reserved for cases that pass all lower tiers.
+
+**Examples:**
+- Is the test meaningful (not just asserting `true`)?
+- Does it test edge cases?
+- Is the test maintainable?
+
+**Cost:** $0.50-2.00 per assessment. **Latency:** 5-15 seconds.
+
+## Cascade Economics
+
+By filtering at each tier, typically only 30-40% of outputs reach T3. This reduces evaluation cost by **60-80%** while maintaining quality — because outputs that fail T0-T2 would fail T3 anyway.
+
+## Implementation
+
+The four-tier jury is implemented in [Agent Judge](/projects/agent-judge) and used across all lab experiments.
+
+## Applied In
+
+- [Code Coverage v1](/experiments/code-coverage-v1) — Full T0-T3 cascade on 9 variants
+- [Code Coverage v2](/experiments/code-coverage-v2) — Refined scoring, T3=0.933 for forge variant
+- [Issue Classification](/experiments/issue-classification) — Adapted for SWE-bench task evaluation

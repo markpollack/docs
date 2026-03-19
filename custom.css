@@ -1,0 +1,141 @@
+/* ============================================
+   Pollack AI Lab — Custom Styles
+   Adapted from pollack.ai design system
+   ============================================ */
+
+/* --- Fonts: Geist Mono for technical identity --- */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap');
+
+/* --- Headings: monospace technical feel --- */
+h1, h2, h3, h4 {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  letter-spacing: 0.02em;
+}
+
+h1 {
+  font-weight: 300 !important;
+  letter-spacing: 0.06em;
+}
+
+h2 {
+  font-weight: 400 !important;
+  letter-spacing: 0.04em;
+}
+
+/* --- Text selection: cyan tint (matches pollack.ai) --- */
+::selection {
+  background: rgba(79, 195, 247, 0.25);
+  color: #ffffff;
+}
+
+/* --- Card hover: gold accent from pollack.ai --- */
+/* Mintlify card components */
+[class*="Card"] a:hover,
+.dark [class*="Card"] a:hover {
+  border-color: rgba(255, 215, 64, 0.5) !important;
+  background: rgba(255, 215, 64, 0.03) !important;
+}
+
+/* --- Sidebar: subtle monospace labels --- */
+nav [class*="group"] > span,
+nav [class*="Group"] > span {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+/* --- Code blocks: match pollack.ai deep space --- */
+.dark pre {
+  background: #020915 !important;
+  border: 1px solid rgba(79, 195, 247, 0.15);
+}
+
+/* --- Inline code: cyan-tinted --- */
+.dark :not(pre) > code {
+  background: rgba(79, 195, 247, 0.08) !important;
+  color: #81d4fa !important;
+  border: 1px solid rgba(79, 195, 247, 0.12);
+}
+
+/* --- Tables: subtle blue borders like pollack.ai cards --- */
+.dark table {
+  border-color: rgba(33, 150, 243, 0.2);
+}
+
+.dark th {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(79, 195, 247, 0.7);
+  border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.dark td {
+  border-bottom: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+/* --- Status badges (used on experiment pages) --- */
+.dark span[style*="background: #22c55e"],
+.dark span[style*="background: #3b82f6"],
+.dark span[style*="background: #ffd740"] {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  letter-spacing: 0.08em;
+}
+
+/* --- Blockquotes: gold left border (thesis callouts) --- */
+.dark blockquote {
+  border-left-color: #ffd740 !important;
+  background: rgba(255, 215, 64, 0.03);
+}
+
+/* --- Horizontal rules: gradient fade like pollack.ai section dividers --- */
+.dark hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(79, 195, 247, 0.3), transparent);
+}
+
+/* --- Callout boxes (Note, Warning, Tip): pollack.ai accents --- */
+.dark [class*="Note"],
+.dark [class*="note"] {
+  border-color: rgba(79, 195, 247, 0.3);
+  background: rgba(79, 195, 247, 0.04);
+}
+
+.dark [class*="Warning"],
+.dark [class*="warning"] {
+  border-color: rgba(255, 215, 64, 0.4);
+  background: rgba(255, 215, 64, 0.04);
+}
+
+/* --- Steps component: cyan connectors --- */
+.dark [class*="Step"] [class*="indicator"],
+.dark [class*="step"] [class*="indicator"] {
+  border-color: rgba(79, 195, 247, 0.4);
+}
+
+/* --- Footer: muted, monospace --- */
+footer {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  letter-spacing: 0.1em;
+}
+
+/* --- Scrollbar: subtle, matches deep space bg --- */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #020915;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(79, 195, 247, 0.2);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 195, 247, 0.4);
+}

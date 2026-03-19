@@ -1,0 +1,77 @@
+---
+title: "Documentation"
+description: "Tutorials, guides, and reference for the Pollack AI Lab project stack"
+---
+
+Everything you need to go from zero to running agents, experiments, and skills.
+
+## Getting Started
+
+Pick a project and follow the tutorial. Each one gets you to a working result in under 10 minutes.
+
+<CardGroup cols={3}>
+  <Card title="Loopy" icon="terminal" href="/docs/loopy/getting-started">
+    Install the CLI, run your first agent session, and see cost visibility in action
+  </Card>
+  <Card title="Agent Workflow" icon="rotate" href="/docs/agent-workflow/getting-started">
+    Build your first Spring AI agent with loop control, tools, and termination
+  </Card>
+  <Card title="Experiment Driver" icon="flask" href="/docs/experiment-driver/getting-started">
+    Run an AI agent evaluation with a dataset, jury, and variant comparison
+  </Card>
+</CardGroup>
+
+## Guides
+
+Task-oriented recipes. You know what you want to do — these show you how.
+
+<CardGroup cols={2}>
+  <Card title="Extending Loopy" icon="puzzle-piece" href="/docs/loopy/extending">
+    Custom skills, subagents, tool profiles, and the programmatic API
+  </Card>
+  <Card title="Choosing a Loop Pattern" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
+    Decision tree for AgentLoopAdvisor vs explicit loops vs graph workflows
+  </Card>
+  <Card title="Creating Experiments" icon="vial" href="/docs/experiment-driver/creating-experiments">
+    Design datasets, wire judges, and compare agent variants
+  </Card>
+  <Card title="Building a Jury" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Three-tier evaluation: deterministic, structural, and semantic judges
+  </Card>
+</CardGroup>
+
+## Concepts
+
+Architecture and design rationale — why things work the way they do.
+
+<CardGroup cols={2}>
+  <Card title="The Thesis" icon="lightbulb" href="/methodology/knowledge-directed-execution">
+    Knowledge + structured execution > model
+  </Card>
+  <Card title="Forge Pipeline" icon="hammer" href="/methodology/forge">
+    Deterministic customization from knowledge to execution artifacts
+  </Card>
+  <Card title="Four-Tier Jury" icon="gavel" href="/methodology/four-tier-jury">
+    T0-T3 cascaded evaluation for agent output
+  </Card>
+  <Card title="Markov Fingerprinting" icon="chart-line" href="/methodology/markov-fingerprinting">
+    Behavioral analysis of agent tool-call traces
+  </Card>
+</CardGroup>
+
+## Reference
+
+<CardGroup cols={2}>
+  <Card title="Glossary" icon="book" href="/docs/glossary">
+    All key terms defined in one place — jury, SAE, TPE, SkillsJar, variant ladder, and more
+  </Card>
+  <Card title="Loopy CLI" icon="rectangle-terminal" href="/docs/loopy/cli-reference">
+    All flags, slash commands, and execution modes
+  </Card>
+  <Card title="Agent Workflow API" icon="code" href="/docs/agent-workflow/api-reference">
+    Builder options, listener interfaces, termination reasons
+  </Card>
+  <Card title="Experiment Driver API" icon="database" href="/docs/experiment-driver/api-reference">
+    Config, dataset format, invoker contract, result model
+  </Card>
+</CardGroup>

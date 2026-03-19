@@ -1,0 +1,67 @@
+---
+title: "Markov Fingerprinting"
+description: "Modeling agent tool-call traces as stochastic processes to reveal behavioral patterns"
+---
+
+## The Insight
+
+Agent tool-call sequences are approximately first-order Markov chains. The probability of the next tool call depends primarily on the current tool call, not the full history. This means we can apply well-studied stochastic process analysis to understand agent behavior.
+
+## The 9-State Taxonomy
+
+Every tool call maps to one of nine behavioral states:
+
+| State | Description | Example Tools |
+|-------|------------|---------------|
+| **ORIENT** | Understanding the task | Read prompt, list files |
+| **READ** | Reading existing code | Read file, search code |
+| **EDIT** | Modifying code | Write file, edit file |
+| **BUILD** | Compiling | Run maven/gradle build |
+| **TEST** | Running tests | Execute test suite |
+| **JAR_INSPECT** | Examining dependencies | Inspect JAR contents |
+| **SEARCH** | Broad exploration | Grep, glob, web search |
+| **META** | Agent self-management | Task creation, planning |
+| **TERMINAL** | Done | Success or failure |
+
+## What Markov Analysis Reveals
+
+### Transition Probability Engineering (TPE)
+
+The transition matrix P(next_state | current_state) is the agent's "behavioral fingerprint." Different variants produce measurably different fingerprints.
+
+### Key Metrics
+
+- **Expected steps to completion** — From the fundamental matrix N = (I - Q)^{-1}
+- **P(success)** — Absorbing chain probability of reaching success vs. failure
+- **Thrash score** — Loop amplification in BUILD→TEST→EDIT cycles
+- **JAR cluster %** — Time spent in dependency inspection (correlates with knowledge availability)
+
+### What We've Found
+
+From [Code Coverage v1](/experiments/code-coverage-v1):
+
+1. **Knowledge reduces JAR inspection** — Variants with domain knowledge spend less time inspecting dependencies
+2. **Thrashing predicts failure** — High BUILD→TEST→EDIT loop counts correlate with lower T3 scores
+3. **SAE changes the fingerprint** — Structured Agent Execution produces measurably different transition matrices
+4. **Two independent axes** — Knowledge injection and prompt hardening affect different parts of the transition matrix
+
+## Tools
+
+The analysis pipeline is implemented in the [markov-agent-analysis](https://github.com/tuvium/markov-agent-analysis) Python library.
+
+```bash
+uv pip install -e ~/tuvium/projects/markov-agent-analysis/[all]
+```
+
+Key function: `build_absorbing_chain_from_traces()` — transforms raw tool-call logs into absorbing Markov chains.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Blog: I Read My Agent's Diary" icon="newspaper" href="https://blog.pollack.ai/i-read-my-agents-diary/">
+    Narrative walkthrough of the Markov analysis
+  </Card>
+  <Card title="Agent Journal" icon="book" href="/projects/agent-journal">
+    The trace capture layer that feeds this analysis
+  </Card>
+</CardGroup>

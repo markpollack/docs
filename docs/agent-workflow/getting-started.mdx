@@ -1,0 +1,208 @@
+---
+title: "Getting Started with Agent Workflow"
+description: "Build AI agent workflows with typed steps, branching, loops, gates, and parallel execution"
+---
+
+## Prerequisites
+
+- Java 21+
+- Maven
+- Spring AI 2.0-SNAPSHOT
+- An `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+
+## Add the Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-flows</artifactId>
+    <version>0.9.0-SNAPSHOT</version>
+</dependency>
+```
+
+<Note>
+Agent Workflow is being renamed from Agent Harness. Maven coordinates will change in a future release.
+</Note>
+
+## Your First Workflow
+
+Define steps as lambdas, compose them with a fluent DSL:
+
+```java
+ChatClient chat = ChatClient.builder(chatModel).build();
+
+Step<Object, Object> write = Step.named("write", (ctx, in) ->
+        chat.prompt()
+                .user("Write a 3-sentence story about: " + in)
+                .call().content());
+
+Step<Object, Object> edit = Step.named("edit", (ctx, in) ->
+        chat.prompt()
+                .user("Rewrite this in a humorous style. Return only the story: " + in)
+                .call().content());
+
+String result = (String) Workflow.<String, Object>define("story-pipeline")
+        .step(write)
+        .then(edit)
+        .run("dragons and wizards");
+```
+
+That's three steps: define, compose, run. The output of `write` flows into `edit` automatically.
+
+## Eight Composable Primitives
+
+The DSL gives you eight ways to compose steps. All eight have been validated with real LLM calls against GPT-4.1.
+
+### Sequential
+
+Chain steps into a pipeline — output flows forward:
+
+```java
+Workflow.define("pipeline")
+    .step(write)
+    .then(editForAudience)
+    .then(editForStyle)
+    .run(input);
+```
+
+### Branch
+
+Route based on a predicate:
+
+```java
+Step<Object, Object> classify = Step.named("classify", (ctx, in) ->
+        chat.prompt()
+                .user("Classify as 'medical' or 'legal'. Reply with one word: " + in)
+                .call().content().strip().toLowerCase());
+
+Workflow.define("router")
+    .step(classify)
+    .branch(output -> "medical".equals(output))
+        .then(medicalExpert)
+        .otherwise(legalExpert)
+    .run("I broke my leg");
+```
+
+### Loop
+
+Repeat until a condition is met:
+
+```java
+Workflow.define("refinement-loop")
+    .repeatUntilOutput(score -> score instanceof Double d && d >= 0.6)
+        .step(editor)
+        .step(scorer)
+    .end()
+    .run("A dragon walked into a bar.");
+```
+
+### Parallel
+
+Fan out to concurrent steps, collect results:
+
+```java
+List<Object> results = (List<Object>) Workflow.define("evening-planner")
+    .parallel(findMeals, findMovies)
+    .run("romantic");
+// results.get(0) = meals, results.get(1) = movies
+```
+
+### Error Recovery
+
+Route exceptions to recovery steps:
+
+```java
+Workflow.define("resilient")
+    .step(riskyStep)
+        .onError(IllegalArgumentException.class, recovery)
+    .then(finalStep)
+    .run(input);
+```
+
+### Decision (LLM-routed)
+
+Let the LLM choose which step to run:
+
+```java
+Workflow.define("decision-router")
+    .decision(chat)
+        .option("summarize", summarizeStep)
+        .option("translate", translateStep)
+    .end()
+    .run("The quick brown fox...");
+```
+
+### Gate (quality checkpoint)
+
+Pass or fail based on a quality evaluation:
+
+```java
+Gate<Object> qualityGate = (ctx, output) -> {
+    double score = evaluateQuality(output);
+    return score >= 0.7 ? GateDecision.PASS : GateDecision.FAIL;
+};
+
+Workflow.define("gated-pipeline")
+    .step(generate)
+    .gate(qualityGate)
+        .onPass(approve)
+        .onFail(reject)
+    .end()
+    .run(input);
+```
+
+### Supervisor (autonomous delegation)
+
+LLM autonomously selects sub-agents each iteration:
+
+```java
+Workflow.supervisor("text-improver", chat)
+    .agents(review, edit)
+    .until(ctx -> ctx.get(AgentContext.ITERATION_COUNT).orElse(0) >= 3)
+    .run("The very big dragon was flying high.");
+```
+
+## Two Layers
+
+Agent Workflow provides two layers for different needs:
+
+| Layer | Entry point | Use case |
+|-------|------------|----------|
+| **Workflow DSL** | `Workflow.define()` | Composable steps, branching, loops, gates, parallel — structured multi-step workflows |
+| **AgentLoopAdvisor** | `AgentLoopAdvisor.builder()` | Drop-in Spring AI advisor for autonomous tool-calling agents (CLI agents, benchmarks) |
+
+The DSL composes *typed steps*. The advisor wraps a *ChatClient* with loop control. Both are valid — choose based on whether you're building a workflow or an autonomous agent.
+
+### AgentLoopAdvisor (autonomous agents)
+
+For agents that think-act-observe in a loop with tools:
+
+```java
+var advisor = AgentLoopAdvisor.builder()
+    .toolCallingManager(toolCallingManager)
+    .maxTurns(20)
+    .timeout(Duration.ofMinutes(5))
+    .costLimit(5.0)
+    .build();
+
+var chatClient = ChatClient.builder(chatModel)
+    .defaultAdvisors(advisor)
+    .defaultTools(bashTool, readTool, writeTool)
+    .build();
+
+chatClient.prompt()
+    .user("Fix the failing tests")
+    .call()
+    .chatResponse();
+```
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Choosing a Pattern" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
+    Decision tree: DSL workflow vs advisor vs graph
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    Full builder API, step types, gates, context keys
+  </Card>
+</CardGroup>

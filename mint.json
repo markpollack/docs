@@ -1,95 +1,135 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "Starter Kit",
-  "head": [
-  "<script async src=\"https://plausible.io/js/pa-9w9eU8zavLlCwrEK9JZqR.js\"></script>",
-  "<script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>"
-  ],
+  "name": "Pollack AI Lab",
+  "ignore": ["DESIGN.md", "README.md", "CLAUDE.md", "plans/**"],
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+    "dark": "/logo/lab-dark.svg",
+    "light": "/logo/lab-light.svg"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/logo/favicon.svg",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
-    "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+    "primary": "#4fc3f7",
+    "light": "#81d4fa",
+    "dark": "#0097a7",
+    "background": {
+      "dark": "#020915"
     }
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:hi@mintlify.com"
-    }
-  ],
   "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://dashboard.mintlify.com"
+    "name": "Latest Experiment",
+    "url": "/experiments/code-coverage-v2"
   },
-  "tabs": [
-    {
-      "name": "API Reference",
-      "url": "api-reference"
-    }
-  ],
   "anchors": [
-    {
-      "name": "Documentation",
-      "icon": "book-open-cover",
-      "url": "https://mintlify.com/docs"
-    },
-    {
-      "name": "Community",
-      "icon": "slack",
-      "url": "https://mintlify.com/community"
-    },
     {
       "name": "Blog",
       "icon": "newspaper",
-      "url": "https://mintlify.com/blog"
+      "url": "https://blog.pollack.ai"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/markpollack"
     }
   ],
   "navigation": [
     {
-      "group": "Get Started",
+      "group": "Lab",
       "pages": [
-        "introduction",
-        "quickstart",
-        "development"
+        "index",
+        "about"
       ]
     },
     {
-      "group": "Essentials",
+      "group": "Projects",
       "pages": [
-        "essentials/markdown",
-        "essentials/code",
-        "essentials/images",
-        "essentials/settings",
-        "essentials/navigation",
-        "essentials/reusable-snippets"
+        "projects/index",
+        "projects/loopy"
       ]
     },
     {
-      "group": "API Documentation",
+      "group": "Agent Suite",
       "pages": [
-        "api-reference/introduction"
+        "projects/agent-workflow",
+        "projects/agent-client",
+        "projects/agent-judge",
+        "projects/agent-bench",
+        "projects/agent-journal",
+        "projects/agent-sandbox",
+        "projects/agent-tools-and-skills"
       ]
     },
     {
-      "group": "Endpoint Examples",
+      "group": "Supporting Projects",
       "pages": [
-        "api-reference/endpoint/get",
-        "api-reference/endpoint/create",
-        "api-reference/endpoint/delete"
+        "projects/claude-agent-sdk",
+        "projects/acp-java-sdk",
+        "projects/spring-ai-a2a"
+      ]
+    },
+    {
+      "group": "Documentation",
+      "pages": [
+        "docs/index",
+        "docs/glossary"
+      ]
+    },
+    {
+      "group": "Loopy Docs",
+      "pages": [
+        "docs/loopy/getting-started",
+        "docs/loopy/extending",
+        "docs/loopy/cli-reference"
+      ]
+    },
+    {
+      "group": "Agent Workflow Docs",
+      "pages": [
+        "docs/agent-workflow/getting-started",
+        "docs/agent-workflow/examples",
+        "docs/agent-workflow/choosing-a-pattern",
+        "docs/agent-workflow/api-reference"
+      ]
+    },
+    {
+      "group": "Experiment Driver Docs",
+      "pages": [
+        "docs/experiment-driver/getting-started",
+        "docs/experiment-driver/creating-experiments",
+        "docs/experiment-driver/jury-system",
+        "docs/experiment-driver/api-reference"
+      ]
+    },
+    {
+      "group": "Experiments",
+      "pages": [
+        "experiments/index",
+        "experiments/code-coverage-v1",
+        "experiments/code-coverage-v2",
+        "experiments/issue-classification"
+      ]
+    },
+    {
+      "group": "Methodology",
+      "pages": [
+        "methodology/index",
+        "methodology/forge",
+        "methodology/four-tier-jury",
+        "methodology/markov-fingerprinting",
+        "methodology/knowledge-directed-execution",
+        "methodology/knowledge-base-design",
+        "methodology/structured-agent-execution"
       ]
     }
   ],
   "footerSocials": {
-    "x": "https://x.com/mintlify",
-    "github": "https://github.com/mintlify",
-    "linkedin": "https://linkedin.com/company/mintlify"
+    "github": "https://github.com/markpollack",
+    "x": "https://x.com/markpollack",
+    "linkedin": "https://linkedin.com/in/markpollack"
+  },
+  "css": "/custom.css",
+  "analytics": {
+    "plausible": {
+      "domain": "lab.pollack.ai"
+    }
   }
 }

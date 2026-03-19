@@ -1,0 +1,356 @@
+---
+title: "Workflow DSL Examples"
+description: "Eight complete, runnable examples — validated with real LLM calls against GPT-4.1"
+---
+
+Every example below is a real integration test from [workflow-dsl-examples](https://github.com/markpollack/workflow-dsl-examples). All eight pass against GPT-4.1 with temperature 0.3.
+
+## Setup
+
+All examples share this `ChatClient` factory:
+
+```java
+String apiKey = System.getenv("OPENAI_API_KEY");
+OpenAiApi api = OpenAiApi.builder().apiKey(apiKey).build();
+OpenAiChatModel model = OpenAiChatModel.builder()
+        .openAiApi(api)
+        .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-4.1")
+                .maxTokens(1024)
+                .temperature(0.3)
+                .build())
+        .build();
+ChatClient chat = ChatClient.builder(model).build();
+```
+
+---
+
+## 1. Sequential Pipeline
+
+Chain steps into a pipeline — each step's output flows into the next.
+
+```java
+Step<Object, Object> write = Step.named("write", (ctx, in) ->
+        chat.prompt()
+                .user("You are a creative writer. Write a 3-sentence story about: " + in)
+                .call().content());
+
+Step<Object, Object> editForAudience = Step.named("edit-audience", (ctx, in) ->
+        chat.prompt()
+                .user("Rewrite this story for young adults. Return only the story: " + in)
+                .call().content());
+
+Step<Object, Object> editForStyle = Step.named("edit-style", (ctx, in) ->
+        chat.prompt()
+                .user("Rewrite this story in a humorous style. Return only the story: " + in)
+                .call().content());
+
+String result = (String) Workflow.<String, Object>define("novel-creator")
+        .step(write)
+        .then(editForAudience)
+        .then(editForStyle)
+        .run("dragons and wizards");
+```
+
+Three LLM calls in sequence: write a story, rewrite for audience, rewrite for style.
+
+---
+
+## 2. Branch (Predicate Routing)
+
+Route to different steps based on a classification result.
+
+```java
+Step<Object, Object> classify = Step.named("classify", (ctx, in) ->
+        chat.prompt()
+                .user("Classify this as either 'medical' or 'legal'. " +
+                      "Reply with exactly one word: " + in)
+                .call().content().strip().toLowerCase());
+
+Step<Object, Object> medicalExpert = Step.named("medical", (ctx, in) ->
+        chat.prompt()
+                .user("You are a medical expert. Briefly advise on: " + in)
+                .call().content());
+
+Step<Object, Object> legalExpert = Step.named("legal", (ctx, in) ->
+        chat.prompt()
+                .user("You are a legal expert. Briefly advise on: " + in)
+                .call().content());
+
+String result = (String) Workflow.<String, Object>define("category-router")
+        .step(classify)
+        .branch(output -> "medical".equals(output))
+            .then(medicalExpert)
+            .otherwise(legalExpert)
+        .run("I broke my leg, what should I do?");
+
+// Medical input → routes to medicalExpert
+assertThat(result.toLowerCase())
+        .containsAnyOf("doctor", "hospital", "medical", "fracture", "treatment");
+```
+
+The `.strip().toLowerCase()` on the classify output is important — LLMs sometimes return trailing whitespace or mixed case.
+
+---
+
+## 3. Loop (Repeat Until Output)
+
+Iterate until a quality threshold is met. This is the most complex primitive — LLM score parsing needs care.
+
+```java
+AtomicInteger iterations = new AtomicInteger(0);
+
+Step<Object, Object> scorer = Step.named("scorer", (ctx, in) -> {
+    iterations.incrementAndGet();
+    String response = chat.prompt()
+            .user("Rate this text for humor on a scale of 0.0 to 1.0. " +
+                  "Reply with ONLY a decimal number, nothing else: " + in)
+            .call().content().strip();
+
+    // Parse score — regex fallback for safety
+    try {
+        return Double.parseDouble(response);
+    } catch (NumberFormatException e) {
+        var matcher = java.util.regex.Pattern.compile("\\d+\\.\\d+").matcher(response);
+        if (matcher.find()) {
+            return Double.parseDouble(matcher.group());
+        }
+        return 0.0;  // can't parse, keep looping
+    }
+});
+
+Step<Object, Object> editor = Step.named("editor", (ctx, in) ->
+        chat.prompt()
+                .user("Write a very short (2-sentence) extremely funny joke about dragons. " +
+                      "Be hilarious.")
+                .call().content());
+
+Object result = Workflow.<String, Object>define("humor-loop")
+        .repeatUntilOutput(score -> score instanceof Double d && d >= 0.6)
+            .step(editor)
+            .step(scorer)
+        .end()
+        .run("A dragon walked into a bar.");
+
+assertThat(iterations.get()).isBetween(1, 10);
+assertThat((Double) result).isGreaterThanOrEqualTo(0.6);
+```
+
+<Note>
+**Key finding**: GPT-4.1 returns clean decimal numbers every time with the "Reply with ONLY a decimal number" prompt. The regex fallback never fires — but it's there for safety with other models.
+</Note>
+
+---
+
+## 4. Parallel (Fan-Out)
+
+Run steps concurrently, collect results into a list.
+
+```java
+Step<Object, Object> findMeals = Step.named("find-meals", (ctx, in) ->
+        chat.prompt()
+                .user("Suggest 3 meals for a " + in + " evening. " +
+                      "Just list the meal names, one per line.")
+                .call().content());
+
+Step<Object, Object> findMovies = Step.named("find-movies", (ctx, in) ->
+        chat.prompt()
+                .user("Suggest 3 movies for a " + in + " evening. " +
+                      "Just list the movie titles, one per line.")
+                .call().content());
+
+@SuppressWarnings("unchecked")
+List<Object> results = (List<Object>) Workflow.<String, Object>define("evening-planner")
+        .parallel(findMeals, findMovies)
+        .run("romantic");
+
+// results.get(0) = meal suggestions
+// results.get(1) = movie suggestions
+assertThat(results).hasSize(2);
+assertThat((String) results.get(0)).isNotBlank();
+assertThat((String) results.get(1)).isNotBlank();
+```
+
+Both LLM calls execute concurrently. Results are ordered to match step order.
+
+---
+
+## 5. Error Recovery
+
+Route exceptions to a recovery step instead of failing the workflow.
+
+```java
+Step<Object, Object> riskyStep = Step.named("risky", (ctx, in) -> {
+    if (((String) in).contains("bad")) {
+        throw new IllegalArgumentException("Bad input detected");
+    }
+    return chat.prompt()
+            .user("Process this: " + in)
+            .call().content();
+});
+
+Step<Object, Object> recovery = Step.named("recovery", (ctx, in) ->
+        chat.prompt()
+                .user("The previous step failed. " +
+                      "Generate a safe default response for: " + in)
+                .call().content());
+
+Step<Object, Object> finalStep = Step.named("finalize", (ctx, in) ->
+        "Final: " + in);
+
+String result = (String) Workflow.<String, Object>define("error-recovery")
+        .step(riskyStep)
+            .onError(IllegalArgumentException.class, recovery)
+        .then(finalStep)
+        .run("bad input");
+
+assertThat(result).startsWith("Final:");
+```
+
+The exception routes to `recovery`, whose output flows into `finalStep` as if `riskyStep` had succeeded. The workflow continues — it doesn't crash.
+
+---
+
+## 6. Decision (LLM-Routed)
+
+Let the LLM choose which step to execute. Unlike `branch()` (predicate-based), `decision()` gives the LLM a menu of labeled options.
+
+```java
+Step<Object, Object> summarize = Step.named("summarize", (ctx, in) ->
+        chat.prompt()
+                .user("Summarize this in one sentence: " + in)
+                .call().content());
+
+Step<Object, Object> translate = Step.named("translate", (ctx, in) ->
+        chat.prompt()
+                .user("Translate this to French: " + in)
+                .call().content());
+
+String result = (String) Workflow.<String, Object>define("decision-router")
+        .decision(chat)
+            .option("summarize", summarize)
+            .option("translate", translate)
+        .end()
+        .run("The quick brown fox jumps over the lazy dog. " +
+             "This is a classic English pangram used for testing.");
+
+assertThat(result).isNotBlank();
+assertThat(result.split("\\s+").length).isGreaterThan(3);
+```
+
+The DSL generates a routing prompt from the option names. GPT-4.1 returns clean single-word labels — no parsing issues.
+
+---
+
+## 7. Gate (Quality Checkpoint)
+
+Evaluate output quality and route to pass or fail paths.
+
+```java
+AtomicReference<String> routeTaken = new AtomicReference<>();
+
+Gate<Object> qualityGate = (ctx, output) -> {
+    String response = chat.prompt()
+            .user("Rate this text for quality on a scale of 0.0 to 1.0. " +
+                  "Reply with ONLY a decimal number: " + output)
+            .call().content().strip();
+
+    double score;
+    try {
+        score = Double.parseDouble(response);
+    } catch (NumberFormatException e) {
+        var matcher = java.util.regex.Pattern.compile("\\d+\\.\\d+").matcher(response);
+        score = matcher.find() ? Double.parseDouble(matcher.group()) : 0.0;
+    }
+
+    return score >= 0.7 ? GateDecision.PASS : GateDecision.FAIL;
+};
+
+Step<Object, Object> generate = Step.named("generate", (ctx, in) ->
+        chat.prompt()
+                .user("Write a well-crafted 2-sentence story about: " + in)
+                .call().content());
+
+Step<Object, Object> approve = Step.named("approve", (ctx, in) -> {
+    routeTaken.set("pass");
+    return "APPROVED: " + in;
+});
+
+Step<Object, Object> reject = Step.named("reject", (ctx, in) -> {
+    routeTaken.set("fail");
+    return "REJECTED: " + in;
+});
+
+String result = (String) Workflow.<String, Object>define("gated-pipeline")
+        .step(generate)
+        .gate(qualityGate)
+            .onPass(approve)
+            .onFail(reject)
+        .end()
+        .run("a heroic knight");
+
+assertThat(routeTaken.get()).isIn("pass", "fail");
+assertThat(result).satisfiesAnyOf(
+        r -> assertThat(r).startsWith("APPROVED:"),
+        r -> assertThat(r).startsWith("REJECTED:"));
+```
+
+GPT-4.1 typically produces quality text, so this usually routes to APPROVED. The gate becomes more interesting with weaker models or harder tasks.
+
+---
+
+## 8. Supervisor (Autonomous Delegation)
+
+The LLM autonomously selects which sub-agent to invoke each iteration.
+
+```java
+AtomicInteger reviewCalls = new AtomicInteger();
+AtomicInteger editCalls = new AtomicInteger();
+
+Step<Object, Object> review = Step.named("review", (ctx, in) -> {
+    reviewCalls.incrementAndGet();
+    return chat.prompt()
+            .user("Review this text and suggest one improvement: " + in)
+            .call().content();
+});
+
+Step<Object, Object> edit = Step.named("edit", (ctx, in) -> {
+    editCalls.incrementAndGet();
+    return chat.prompt()
+            .user("Edit this text to be more concise: " + in)
+            .call().content();
+});
+
+Object result = Workflow.<String, Object>supervisor("text-improver", chat)
+        .agents(review, edit)
+        .until(ctx -> ctx.get(AgentContext.ITERATION_COUNT).orElse(0) >= 3)
+        .run("The very big and extremely large dragon was flying very high " +
+             "up in the sky above the tall mountains.");
+
+assertThat(reviewCalls.get() + editCalls.get()).isGreaterThanOrEqualTo(3);
+```
+
+The supervisor generates a routing prompt from agent names and descriptions. Each iteration, the LLM picks the most appropriate agent for the current state of the text. Terminates after 3 iterations.
+
+---
+
+## Testing Strategy
+
+These examples demonstrate the assertion pattern for LLM-backed tests:
+
+- **Shape, not exact equality** — `isNotBlank()`, `hasSize(2)`, correct type
+- **Content signals** — expected keywords present (e.g., "doctor" for medical routing)
+- **Routing correctness** — branch/gate took the right path
+- **Convergence** — loops terminate within bounds
+- **Low temperature** (0.3) — reduces variance for test stability
+
+## Run the Examples
+
+```bash
+git clone https://github.com/markpollack/workflow-dsl-examples.git
+cd workflow-dsl-examples
+export OPENAI_API_KEY=sk-...
+./mvnw verify -Dgroups=ours
+```
+
+All 8 tests run against real GPT-4.1 calls.

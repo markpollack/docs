@@ -1,0 +1,51 @@
+---
+title: "Agent Workflow"
+description: "Foundation library implementing agentic loop patterns for building AI agents with Spring AI"
+---
+
+<Note>
+**Formerly: Agent Harness** — being renamed to Agent Workflow to better reflect its role as an execution engine.
+</Note>
+
+## Overview
+
+Agent Workflow is the execution engine at the heart of the lab's agent stack. It provides two approaches for building AI agents with Spring AI:
+
+- **AgentLoopAdvisor** — Drop-in Spring AI advisor that adds autonomous agent behavior to any chat client
+- **Explicit loop patterns** — Full control over the agent execution cycle for SDLC-focused agents
+
+## Why It Matters
+
+Most agent frameworks focus on prompt engineering. Agent Workflow focuses on **execution infrastructure** — the loop control, tool orchestration, and state management that determine whether an agent completes reliably or spirals.
+
+This is the "structured execution" half of our thesis: *knowledge + structured execution > model*.
+
+## Documentation
+
+<CardGroup cols={3}>
+  <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
+    Build your first agent with loop control in 5 minutes
+  </Card>
+  <Card title="Choosing a Pattern" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
+    Decision tree: advisor vs explicit loops vs graph workflows
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    Builder options, listeners, termination reasons
+  </Card>
+</CardGroup>
+
+## Quick Links
+
+<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-harness">
+  Source code and documentation
+</Card>
+
+## Used In
+
+- [Code Coverage v1](/experiments/code-coverage-v1) — Agent execution engine for all 9 variants
+- [Code Coverage v2](/experiments/code-coverage-v2) — Agent execution with skills injection
+- [Issue Classification](/experiments/issue-classification) — SWE-bench agent runner
+
+## Related Blog Posts
+
+- [Building Reliable Agent Systems](https://blog.pollack.ai/building-reliable-agent-systems/) — Why infrastructure matters more than model choice

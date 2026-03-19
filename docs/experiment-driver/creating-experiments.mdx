@@ -1,0 +1,124 @@
+---
+title: "Creating Experiments"
+description: "Design datasets, define variant ladders, filter items, and analyze results"
+---
+
+## Design Philosophy
+
+Every experiment tests a hypothesis about what makes agents better. The experiment driver makes the independent variables explicit:
+
+| Variable | How you control it |
+|----------|--------------------|
+| **Knowledge** | `knowledgeRefs` in dataset items, `knowledgeBaseDir` in config |
+| **Prompt structure** | `promptTemplate` with `{{task}}` and `{{knowledgeRefs}}` placeholders |
+| **Model** | `model` field in config |
+| **Execution strategy** | Your `AgentInvoker` implementation |
+| **Evaluation criteria** | Your `Jury` wiring |
+
+## Variant Ladders
+
+The most informative experiments use a **progressive variant ladder** — each variant adds one thing to the previous:
+
+| Variant | Change from previous | Tests |
+|---------|---------------------|-------|
+| 1. Simple prompt | — (baseline) | Model's raw capability |
+| 2. + System prompt | Add domain instructions | Does framing help? |
+| 3. + Knowledge base | Add `knowledgeRefs` | Does knowledge help? |
+| 4. + Skills (SkillsJars) | Same content, structured packaging | Does structure help? |
+| 5. + SAE | Add Structured Agent Execution | Does execution structure help? |
+
+Each step isolates one variable. If variant 4 outperforms variant 3 with identical knowledge content, the structure is what matters — not just the knowledge.
+
+## Dataset Design
+
+### Item structure
+
+Each item needs:
+- **`developerTask`** — what you're asking the agent to do (natural language)
+- **`before/`** — the starting state (real source code)
+- **`reference/`** — the correct result (for judge comparison)
+- **`bucket`** — difficulty classification (A = easy, B = medium, C = hard)
+- **`knowledgeRefs`** — paths to relevant KB entries (relative to `knowledgeBaseDir`)
+
+### Buckets
+
+Use buckets to stratify difficulty:
+
+| Bucket | Typical characteristics |
+|--------|------------------------|
+| **A** | Single file, mechanical change, clear instructions |
+| **B** | Multi-file, requires understanding, some ambiguity |
+| **C** | Cross-cutting concern, requires domain knowledge, creative problem-solving |
+
+### Filtering
+
+Run subsets of the dataset:
+
+```java
+// Run only bucket A items
+ExperimentConfig.builder()
+    .itemFilter(ItemFilter.bucket("A"))
+    // ...
+
+// Run items with specific tags
+ExperimentConfig.builder()
+    .itemFilter(ItemFilter.tags("rename", "simple"))
+    // ...
+
+// Run a single item by ID
+ExperimentConfig.builder()
+    .itemFilter(ItemFilter.id("RENAME-001"))
+    // ...
+```
+
+## ExperimentConfig Reference
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `experimentName` | Yes | — | Experiment identifier |
+| `datasetDir` | Yes | — | Path to dataset directory |
+| `model` | Yes | — | LLM model (`sonnet`, `opus`, `haiku`, or full ID) |
+| `promptTemplate` | Yes | — | Template with `{{task}}` and `{{knowledgeRefs}}` |
+| `perItemTimeout` | Yes | — | Timeout per item invocation |
+| `itemFilter` | No | all items | Filter by bucket, tags, ID, status |
+| `knowledgeBaseDir` | No | — | KB root (for ablation tracking) |
+| `outputDir` | No | — | Directory for workspaces and logs |
+| `experimentTimeout` | No | — | Timeout for entire experiment |
+| `metadata` | No | — | Arbitrary key-value pairs |
+| `baselineId` | No | — | Reference experiment for comparison |
+
+## Result Structure
+
+Results are persisted by `FileSystemResultStore`:
+
+```
+results/
+└── rename-field-v1/
+    ├── index.json                    # Experiment history
+    └── a1b2c3d4.json               # Individual experiment result
+```
+
+Each result contains:
+- Experiment metadata (name, config, git version, timestamps)
+- Per-item results (agent output, jury verdict, tokens, cost, duration)
+- Aggregate statistics (pass rate, total cost, total duration)
+
+## Cross-Run Comparison
+
+```java
+ComparisonEngine comparison = new ComparisonEngine();
+ComparisonResult diff = comparison.compare(resultA, resultB);
+```
+
+The comparison engine aligns items by ID across two experiments and reports per-item and aggregate deltas.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Building a Jury" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Three-tier evaluation: deterministic, structural, semantic
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/experiment-driver/api-reference">
+    Full config, dataset format, invoker contract
+  </Card>
+</CardGroup>

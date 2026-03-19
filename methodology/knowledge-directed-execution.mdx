@@ -1,0 +1,78 @@
+---
+title: "Knowledge-Directed Execution"
+description: "The thesis: knowledge + structured execution > model"
+---
+
+## The Thesis
+
+> **Knowledge + structured execution > model**
+
+Agent reliability improves more from giving agents the right knowledge and constraining their execution than from switching to a larger model.
+
+## What This Means
+
+### Knowledge
+
+Not "more data" — **curated, structured domain knowledge** delivered to the agent at the right time:
+
+- Which testing patterns work for this framework
+- What dependencies are available and how to use them
+- What the project conventions are
+- What common failure modes look like
+
+### Structured Execution
+
+Not "better prompts" — **infrastructure that shapes agent behavior**:
+
+- Deterministic preprocessing before the LLM acts
+- Tool configuration that guides tool selection
+- Execution loops with built-in checkpoints
+- Judge feedback that catches failures early
+
+### > Model
+
+This doesn't mean models don't matter. It means that for a given model, you get more reliability improvement from knowledge and execution infrastructure than from upgrading to the next model tier.
+
+## Evidence
+
+### Code Coverage v1
+
+The [first experiment](/experiments/code-coverage-v1) showed two independent axes of improvement — knowledge injection and prompt hardening — both of which operate on infrastructure, not model choice. The PetClinic "model floor" (92-94% coverage regardless of variant) demonstrates that the model's prior knowledge creates a ceiling that only infrastructure can differentiate.
+
+### SkillsBench (External)
+
+[SkillsBench](https://arxiv.org/abs/2602.12670) (Feb 2026) found that 2-3 curated skills improve agent performance by +16.2 percentage points on average. Comprehensive skills actually *decrease* performance by -2.9pp. This validates "curated > comprehensive" — structure matters.
+
+### Stripe Convergence
+
+Stripe's [Minions paper](https://arxiv.org/abs/2402.15678) independently arrived at similar conclusions: "the walls matter more than the model." Their multi-agent system improves reliability through structured task decomposition, not model upgrades.
+
+## The Equation
+
+```
+Agent Reliability = f(Knowledge Quality × Execution Structure × Model Capability)
+```
+
+Current industry focus is almost entirely on Model Capability. This lab focuses on the first two terms, where the marginal returns are higher.
+
+## Naming History
+
+This concept has gone through several names:
+
+| Name | Status |
+|------|--------|
+| "Infrastructure over prompts" | Early framing, too narrow |
+| "Knowledge-directed execution" | Current, captures both components |
+| "Curated opinions + structured execution" | Verbose but precise |
+| "The walls matter more than the model" | Stripe's phrasing, resonant |
+
+See [journal/2026-03-02-naming-the-thesis.md](https://github.com/markpollack) for the full naming discussion.
+
+## How to Apply
+
+If you're building agent systems:
+
+1. **Start with knowledge** — What does your agent need to know that it doesn't?
+2. **Structure the delivery** — Skills > flat files > nothing
+3. **Add execution constraints** — Deterministic preprocessing, judge feedback loops
+4. **Then consider the model** — Upgrade only after infrastructure is solid

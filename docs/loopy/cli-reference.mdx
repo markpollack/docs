@@ -1,0 +1,90 @@
+---
+title: "Loopy CLI Reference"
+description: "All flags, slash commands, execution modes, and configuration options"
+---
+
+## Execution Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| **TUI** | `loopy` | Interactive terminal UI with chat history and spinner |
+| **Print** | `loopy -p "task"` | Single task, output to stdout, exit code 0/1 |
+| **REPL** | `loopy --repl` | Simple readline loop for quick tasks |
+
+## CLI Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-d, --directory <path>` | Working directory | Current directory |
+| `-m, --model <name>` | Model to use | Per-provider default |
+| `-t, --max-turns <n>` | Maximum agent loop iterations | `20` |
+| `-p, --print <prompt>` | Single-shot print mode | — |
+| `--provider <name>` | `anthropic`, `openai`, `google-genai` | `anthropic` |
+| `--base-url <url>` | Custom API base URL (vLLM, LM Studio) | — |
+| `--debug` | Verbose agent activity on stderr | — |
+| `--repl` | REPL mode | — |
+| `--help` | Print usage | — |
+| `--version` | Print version | — |
+
+## Slash Commands
+
+Lines starting with `/` are intercepted before reaching the agent — zero LLM tokens consumed.
+
+| Command | Description |
+|---------|-------------|
+| `/help` | List available commands |
+| `/clear` | Clear session memory |
+| `/quit` | Exit Loopy |
+| `/btw <question>` | Stateless side question — never added to conversation history |
+| `/skills` | Discover, search, install, and manage domain skills |
+| `/boot-new` | Scaffold a new Spring Boot project from a bundled template |
+| `/boot-setup` | One-time preferences wizard (groupId, Java version, database) |
+| `/starters` | Discover Agent Starters; suggest by pom.xml triggers |
+| `/boot-add` | Bootstrap domain capabilities into an existing project |
+| `/boot-modify` | Structural modifications (Java version, native support, CI) |
+| `/forge-agent --brief <path>` | Bootstrap an agent experiment project from YAML brief |
+| `/session save [name]` | Save current session |
+| `/session list` | List saved sessions |
+| `/session load <id>` | Restore a saved session |
+
+## Agent Tools
+
+The embedded agent has access to these tools:
+
+| Tool | Description |
+|------|-------------|
+| `Bash` | Execute shell commands |
+| `Read` | Read file contents |
+| `Write` | Create or overwrite files |
+| `Edit` | Targeted edits to existing files |
+| `Glob` | Find files by pattern |
+| `Grep` | Search file contents |
+| `ListDirectory` | List directory with optional depth |
+| `Skill` | Load domain skills on demand |
+| `Submit` | Submit final answer (ends the loop) |
+| `TodoWrite` | Track work items |
+| `Task` | Delegate to subagents |
+| `TaskOutput` | Retrieve background subagent results |
+| `AskUserQuestion` | Ask user for clarification (TUI only) |
+| `WebSearch` | Web search (requires `BRAVE_API_KEY`) |
+| `WebFetch` | Fetch and summarize web pages |
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key (required for default provider) |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `GOOGLE_API_KEY` | Google Gemini API key |
+| `BRAVE_API_KEY` | Brave Search API key (for WebSearch/WebFetch) |
+| `LOOPY_DEBUG_LOG` | Path for debug log file |
+
+## Default Models
+
+| Provider | Model |
+|----------|-------|
+| Anthropic | `claude-sonnet-4-20250514` |
+| OpenAI | `gpt-4o` |
+| Gemini | `gemini-2.5-flash` |
+
+Override with `--model` or `.model()` in the programmatic API.

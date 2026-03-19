@@ -1,0 +1,62 @@
+---
+title: "Code Coverage v2 — Skills vs Knowledge Bases"
+description: "Do agent-structured skills outperform flat file injection when content is identical?"
+---
+
+<div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+  <span style={{background: '#3b82f6', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>IN PROGRESS</span>
+  <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Mar 2026</span>
+</div>
+
+## Hypothesis
+
+Agent-structured skills (SkillsJars) outperform flat file knowledge injection **even when the content is identical** — because structure itself improves agent tool selection and execution strategy.
+
+This is the core ablation: same knowledge, different packaging. Inspired by [SkillsBench](https://arxiv.org/abs/2602.12670) finding that 2-3 curated skills outperform comprehensive skill sets.
+
+## Setup
+
+| Parameter | Value |
+|-----------|-------|
+| **Target** | spring-petclinic, gs-rest-service |
+| **Variants** | 7 (simple → hardened + skills + SAE + forge) |
+| **N-count** | 3 per variant |
+| **Estimated cost** | ~$50-57 for full sweep |
+| **Evaluation** | Four-tier jury (T0-T3) |
+| **Agent engine** | [Agent Workflow](/projects/agent-workflow) |
+
+## The 7 Variants
+
+| # | Variant | What's Different |
+|---|---------|-----------------|
+| 1 | Simple | Baseline, no knowledge |
+| 2 | + System prompt | Minimal guidance only |
+| 3 | + Flat KB | File-based domain knowledge |
+| 4 | + Skills | **Same content as 3**, packaged as SkillsJars |
+| 5 | + Hardened + Skills | Defensive prompting + structured knowledge |
+| 6 | + Skills + SAE | Structured Agent Execution added |
+| 7 | + Forge | Full knowledge-directed execution stack |
+
+**Critical comparison**: Variant 3 vs 4 — identical content, different structure.
+
+## Preliminary Results (Stage 3, N=1)
+
+- **PetClinic model floor confirmed** — 92-94% coverage across all variants
+- **SAE most efficient** — 70 expected steps, $2.84/run
+- **Skills variant** — 0% JAR_INSPECT but 105 steps (interesting behavioral shift)
+- **Forge T3 score** — 0.933 (highest across all variants)
+
+## What's Next
+
+Stage 4: N=3 sweeps across all variants (~14 runs total) to establish statistical confidence.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Experiment Repo" icon="github" href="https://github.com/markpollack/code-coverage-v2">
+    Traces, variant configs, analysis scripts
+  </Card>
+  <Card title="v1 Baseline" icon="flask" href="/experiments/code-coverage-v1">
+    First experiment establishing the methodology
+  </Card>
+</CardGroup>

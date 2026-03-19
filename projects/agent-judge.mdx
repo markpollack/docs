@@ -1,0 +1,36 @@
+---
+title: "Agent Judge"
+description: "Agent-agnostic evaluation framework with a four-tier cascaded jury system"
+---
+
+## Overview
+
+Agent Judge provides a principled way to evaluate AI agent work products. Instead of relying solely on LLM-as-judge (expensive, non-deterministic), it implements a **four-tier cascaded jury** that filters through deterministic checks first.
+
+## The Four Tiers
+
+| Tier | Name | What It Does | Cost |
+|------|------|-------------|------|
+| **T0** | Deterministic | Regex, file existence, compilation checks | Free |
+| **T1** | Command | Run shell commands, check exit codes | Minimal |
+| **T2** | Golden Test | Compare against known-good reference outputs | Minimal |
+| **T3** | LLM Assessment | Semantic evaluation by language model | $$$ |
+
+Each tier acts as a filter — only work products that pass cheaper tiers advance to expensive LLM evaluation. This reduces cost by 60-80% while maintaining evaluation quality.
+
+## Quick Links
+
+<CardGroup cols={2}>
+  <Card title="GitHub" icon="github" href="https://github.com/spring-ai-community/agent-judge">
+    Source code and documentation
+  </Card>
+  <Card title="Methodology" icon="layer-group" href="/methodology/four-tier-jury">
+    Full methodology documentation
+  </Card>
+</CardGroup>
+
+## Used In
+
+- [Code Coverage v1](/experiments/code-coverage-v1) — All evaluation (T0-T3 cascade)
+- [Code Coverage v2](/experiments/code-coverage-v2) — T3 highest score at 0.933 for forge variant
+- [Issue Classification](/experiments/issue-classification) — Adapted for SWE-bench task evaluation

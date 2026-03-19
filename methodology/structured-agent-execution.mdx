@@ -1,0 +1,119 @@
+---
+title: "Structured Agent Execution (SAE)"
+description: "Phased execution with checkpoints, guard rails, and deterministic preprocessing"
+---
+
+## What is SAE?
+
+Structured Agent Execution is a execution template that breaks agent work into defined phases with checkpoints between them. Instead of "do the whole task in one shot," the agent follows a structured pipeline:
+
+```
+Pre-analysis (deterministic) → Plan → Execute → Verify
+```
+
+Each phase has exit criteria. The agent doesn't advance until the current phase passes.
+
+## Why Structure Matters
+
+Without structure, agents make two common mistakes:
+
+1. **Premature execution** — editing code before understanding the codebase
+2. **Thrashing** — cycling between build, test, and edit without progress
+
+SAE prevents both by making the agent prove understanding before it acts, and by detecting loops early.
+
+## The Phases
+
+<Steps>
+  <Step title="Pre-analysis (deterministic, zero LLM cost)">
+    Parse the project before the LLM sees it:
+    - Import scanning (what frameworks are used?)
+    - Dependency analysis (what's in the POM?)
+    - File structure mapping (where's the code?)
+    - KB routing (which knowledge applies?)
+
+    This runs as deterministic Java tooling. The LLM receives a structured analysis, not raw source files.
+  </Step>
+  <Step title="Plan">
+    The agent reads pre-analysis results and relevant knowledge, then produces an execution plan:
+    - What files to modify
+    - In what order
+    - What to verify at each step
+
+    The plan is logged and can be evaluated by judges.
+  </Step>
+  <Step title="Execute">
+    The agent follows its own plan:
+    - Tool calls scoped to the current plan step
+    - Build verification after each modification
+    - Automatic rollback on critical failures
+
+    Execution is constrained by guard rails — tool permissions, output validators, and cost limits.
+  </Step>
+  <Step title="Verify">
+    Post-execution checks:
+    - Does the project compile?
+    - Do tests pass?
+    - Do jury judges approve the result?
+
+    If verification fails, the agent can retry with diagnostic feedback about *what* failed and *why*.
+  </Step>
+</Steps>
+
+## SAE vs Unstructured Execution
+
+| Dimension | Unstructured | SAE |
+|-----------|-------------|-----|
+| **First action** | Agent decides (often: start editing) | Read pre-analysis, then plan |
+| **Knowledge access** | Agent searches ad-hoc | Pre-routed by deterministic analysis |
+| **Build failures** | Agent retries blindly | Diagnostic feedback classifies the failure |
+| **Cost** | Variable (thrashing wastes tokens) | Predictable (phases bound token spend) |
+| **Observability** | Opaque tool-call stream | Phase-tagged traces, plan-to-execution diff |
+
+## Evidence
+
+### Code Coverage v1 — Most Efficient Variant
+
+SAE (variant 5) was the **most efficient** variant across all 9 configurations:
+
+- **70 expected steps** to completion (vs 100+ for unstructured variants)
+- **$2.84 per run** (lowest cost)
+- Cleanest [Markov fingerprint](/methodology/markov-fingerprinting) — fewest thrashing loops
+
+### The Pre-Analysis Multiplier
+
+In the [issue classification experiment](/experiments/issue-classification), deterministic pre-analysis (`+pre-analysis`) routes to the correct KB subset at zero LLM cost. The agent starts with the right context instead of spending tokens searching for it.
+
+For the Arize dataset, pre-analysis parses `_pytest` imports and routes to the Python testing KB. This single deterministic step eliminates an entire exploration phase that would cost $0.10-0.50 per item.
+
+## Implementation
+
+SAE is implemented through the collaboration of several projects:
+
+| Component | Project | Role |
+|-----------|---------|------|
+| Pre-analysis tools | [Agent Tools & Skills](/projects/agent-tools-and-skills) | Deterministic parsing |
+| Execution loop | [Agent Workflow](/projects/agent-workflow) | Phase management, guard rails |
+| Knowledge routing | [Forge](/methodology/forge) | KB structure, index routing |
+| Verification | [Agent Judge](/projects/agent-judge) | Post-execution jury evaluation |
+| Diagnostic feedback | Experiment Driver | Gap classification, remediation |
+
+## How to Define SAE for Your Project
+
+1. **Identify what's deterministic** — What can you parse, analyze, or route without an LLM?
+2. **Define phase boundaries** — What must be true before the agent moves to the next phase?
+3. **Set guard rails** — Which tools are allowed in each phase? What's the cost limit?
+4. **Wire verification** — What judges check the output?
+
+The [Forge pipeline](/methodology/forge) handles steps 1-3 through its Define → Forge → Run lifecycle.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Forge Pipeline" icon="hammer" href="/methodology/forge">
+    How SAE templates get created and packaged
+  </Card>
+  <Card title="Markov Fingerprinting" icon="chart-line" href="/methodology/markov-fingerprinting">
+    How SAE shows up in behavioral traces
+  </Card>
+</CardGroup>

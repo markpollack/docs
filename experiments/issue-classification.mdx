@@ -1,0 +1,47 @@
+---
+title: "Issue Classification — Infrastructure vs Prompts"
+description: "SWE-bench Lite: does infrastructure-level optimization beat prompt engineering?"
+---
+
+<div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+  <span style={{background: '#3b82f6', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>IN PROGRESS</span>
+  <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Mar 2026</span>
+</div>
+
+## Hypothesis
+
+Infrastructure-level optimization — knowledge bases, deterministic preprocessing, tool configuration, judge feedback loops — outperforms prompt-level optimization on SWE-bench Lite tasks.
+
+## Setup
+
+| Parameter | Value |
+|-----------|-------|
+| **Target** | SWE-bench Lite (300 tasks) |
+| **Variants** | 5-variant ladder |
+| **Control** | Arize `ruleset_0.txt` (20 rules, test_accuracy=0.40) |
+| **Key innovation** | `+pre-analysis` — deterministic preprocessing (parse `_pytest` imports → route KB, zero LLM cost) |
+| **Evaluation** | [Four-tier jury](/methodology/four-tier-jury) adapted for SWE-bench |
+
+## The Variant Ladder
+
+| # | Variant | Approach |
+|---|---------|----------|
+| 1 | Baseline | No knowledge, standard prompt |
+| 2 | + Prompt optimization | Better system prompt, few-shot examples |
+| 3 | + Knowledge base | Flat file domain knowledge for Python testing |
+| 4 | + Pre-analysis | Deterministic import parsing → KB routing |
+| 5 | + Full infrastructure | Pre-analysis + skills + judge feedback loop |
+
+## Current Status
+
+Stage 5 complete (125 tests). Stage 7 next: fix SmokeTest package-private bug, wire ClaudeSdkInvoker, run 5-variant ladder.
+
+## What This Proves
+
+If the infrastructure variant significantly outperforms the prompt variant on SWE-bench — a well-studied benchmark with known baselines — it provides strong evidence for the [knowledge-directed execution thesis](/methodology/knowledge-directed-execution).
+
+## Resources
+
+<Card title="Experiment Repo" icon="github" href="https://github.com/markpollack/tuvium-ir-experiment">
+  Full experiment code, variant configs, SWE-bench task selection
+</Card>

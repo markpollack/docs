@@ -1,0 +1,229 @@
+---
+title: "Getting Started with Experiment Driver"
+description: "Run your first AI agent evaluation: dataset, agent, jury, and variant comparison"
+---
+
+## What You'll Build
+
+An experiment that evaluates an AI agent against a dataset of coding tasks, scores the results with a jury of judges, and compares variants to test whether adding knowledge improves quality.
+
+## Prerequisites
+
+- Java 17+
+- Maven (the project includes `./mvnw`)
+
+## Concepts
+
+<CardGroup cols={2}>
+  <Card title="Dataset" icon="database">
+    A collection of items, each with a task description, "before" source state, and "reference" solution
+  </Card>
+  <Card title="AgentInvoker" icon="robot">
+    Your agent — anything that takes a prompt + workspace and produces a result
+  </Card>
+  <Card title="Jury" icon="scale-balanced">
+    One or more judges that score the agent's output against the reference
+  </Card>
+  <Card title="ExperimentRunner" icon="play">
+    Orchestrates: load items → invoke agent → evaluate → persist results
+  </Card>
+</CardGroup>
+
+## Step 1: Create a Dataset
+
+A dataset is a directory with a manifest and per-item directories:
+
+```
+my-dataset/
+├── dataset.json
+└── items/
+    └── RENAME-001/
+        ├── item.json
+        ├── before/
+        │   └── src/main/java/com/example/Person.java
+        └── reference/
+            └── src/main/java/com/example/Person.java
+```
+
+**dataset.json** — the manifest:
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "rename-field",
+  "version": "1.0.0",
+  "description": "Field rename tasks",
+  "items": [
+    {
+      "id": "RENAME-001",
+      "slug": "simple-rename",
+      "path": "items/RENAME-001",
+      "bucket": "A",
+      "taskType": "rename-field",
+      "status": "active"
+    }
+  ]
+}
+```
+
+**item.json** — per-item metadata:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "RENAME-001",
+  "slug": "simple-rename",
+  "developerTask": "Rename the field 'name' to 'fullName' in Person.java and update all references",
+  "taskType": "rename-field",
+  "bucket": "A",
+  "noChange": false,
+  "knowledgeRefs": [],
+  "tags": ["rename", "simple"],
+  "status": "active"
+}
+```
+
+The `before/` directory is the starting state. The `reference/` directory is the correct answer. The agent never sees the reference — it's used by judges for comparison.
+
+## Step 2: Implement an AgentInvoker
+
+`AgentInvoker` is a single-method interface:
+
+```java
+public class MyAgent implements AgentInvoker {
+
+    @Override
+    public InvocationResult invoke(InvocationContext context) {
+        // Your agent works in context.workspacePath()
+        // using context.prompt() as the task description
+
+        ProcessBuilder pb = new ProcessBuilder(
+            "my-agent", "--workspace", context.workspacePath().toString(),
+                        "--prompt", context.prompt());
+        pb.directory(context.workspacePath().toFile());
+
+        Process p = pb.start();
+        boolean finished = p.waitFor(
+            context.timeout().toSeconds(), TimeUnit.SECONDS);
+
+        if (!finished) {
+            p.destroyForcibly();
+            return InvocationResult.timeout(
+                context.timeout().toMillis(),
+                context.metadata(), "Timed out");
+        }
+
+        return InvocationResult.completed(
+            List.of(), 0, 0, 0, 0.0,
+            System.currentTimeMillis(),
+            null, context.metadata());
+    }
+}
+```
+
+For Claude Code, use the built-in `ClaudeSdkInvoker` from the `experiment-claude` module.
+
+## Step 3: Wire a Jury
+
+Start with a simple deterministic judge:
+
+```java
+public class FileExistsJudge implements Judge, JudgeWithMetadata {
+    private final String expectedFile;
+
+    public FileExistsJudge(String expectedFile) {
+        this.expectedFile = expectedFile;
+    }
+
+    @Override
+    public Judgment judge(JudgmentContext context) {
+        boolean exists = Files.exists(
+            context.workspacePath().resolve(expectedFile));
+
+        return Judgment.builder()
+            .score(new BooleanScore(exists))
+            .status(exists ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
+            .reasoning(exists ? "Found" : "Missing: " + expectedFile)
+            .build();
+    }
+
+    @Override
+    public JudgeMetadata metadata() {
+        return new JudgeMetadata(
+            "file_exists",
+            "Checks that " + expectedFile + " exists",
+            JudgeType.DETERMINISTIC);
+    }
+}
+
+Jury jury = SimpleJury.builder()
+    .judge(new FileExistsJudge("src/main/java/com/example/Person.java"), 1.0)
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+```
+
+## Step 4: Run the Experiment
+
+```java
+DatasetManager datasetManager = new FileSystemDatasetManager();
+ResultStore resultStore = new FileSystemResultStore(Path.of("results"));
+
+ExperimentConfig config = ExperimentConfig.builder()
+    .experimentName("rename-field-v1")
+    .datasetDir(Path.of("my-dataset"))
+    .model("sonnet")
+    .promptTemplate("{{task}}")
+    .perItemTimeout(Duration.ofMinutes(2))
+    .outputDir(Path.of("results"))
+    .build();
+
+ExperimentRunner runner = new ExperimentRunner(
+    datasetManager, jury, resultStore, config);
+
+ExperimentResult result = runner.run(new MyAgent());
+
+System.out.printf("Pass rate: %.0f%% (%d/%d)%n",
+    result.passRate() * 100,
+    result.passCount(),
+    result.items().size());
+```
+
+## Step 5: Compare Variants
+
+The real power is variant comparison — same dataset, different agent configurations:
+
+```java
+// Variant A: base agent
+ExperimentConfig configA = ExperimentConfig.builder()
+    .experimentName("rename-v1-base")
+    .datasetDir(datasetDir)
+    .model("sonnet")
+    .promptTemplate("{{task}}")
+    .perItemTimeout(Duration.ofMinutes(2))
+    .build();
+ExperimentResult resultA = runner.run(baseAgent);
+
+// Variant B: agent with knowledge base
+ExperimentConfig configB = ExperimentConfig.builder()
+    .experimentName("rename-v1-with-kb")
+    .datasetDir(datasetDir)
+    .model("sonnet")
+    .promptTemplate("{{task}}\n\nRelevant knowledge:\n{{knowledgeRefs}}")
+    .knowledgeBaseDir(Path.of("knowledge"))
+    .perItemTimeout(Duration.ofMinutes(2))
+    .build();
+ExperimentResult resultB = runner.run(kbAgent);
+```
+
+Same model. Same dataset. Does adding curated knowledge improve agent quality? That's the thesis in action.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Creating Experiments" icon="vial" href="/docs/experiment-driver/creating-experiments">
+    Dataset design, variant ladders, and filter strategies
+  </Card>
+  <Card title="Building a Jury" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Three-tier evaluation: deterministic, structural, and semantic
+  </Card>
+</CardGroup>

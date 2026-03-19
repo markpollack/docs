@@ -1,0 +1,70 @@
+---
+title: "Glossary"
+description: "Key terms used across the Pollack AI Lab projects and experiments"
+---
+
+Terms are grouped by domain. Click any linked term to go deeper.
+
+## The Thesis
+
+| Term | Definition |
+|------|-----------|
+| **Knowledge-directed execution** | The thesis that curated knowledge + structured execution improves agent reliability more than model upgrades. See [full explanation](/methodology/knowledge-directed-execution). |
+| **Curated opinions** | Domain knowledge that is opinionated engineering guidance, not neutral facts. "Use constructor injection" rather than "Spring supports field and constructor injection." |
+| **Structured execution** | Task sequencing, deterministic checkpoints, scoped context, and tiered validation — the infrastructure that shapes agent behavior without prompt engineering. |
+| **The equation** | `knowledge + structured execution > model` — shorthand for the thesis. |
+
+## Forge Pipeline
+
+| Term | Definition |
+|------|-----------|
+| **[Forge](/methodology/forge)** | The deterministic customization pipeline that transforms knowledge into agent-ready artifacts. Named after a botanical metaphor: Define → Forge → Run → Grow. |
+| **Skill** | A Markdown file with YAML frontmatter that provides domain knowledge to an agent. Follows the [agentskills.io](https://agentskills.io) spec. |
+| **SkillsJar** | A Java JAR that packages skills under `META-INF/skills/` for classpath discovery. Teams get skills automatically via Maven dependencies. |
+| **Progressive disclosure** | The agent sees skill names and descriptions upfront but loads full content only when relevant. Reduces token waste. |
+| **Pre-analysis** | Deterministic parsing (imports, dependencies, file structure) that runs before the LLM. Routes context at zero cost. |
+| **SAE** | Structured Agent Execution — a phased execution template with checkpoints and guard rails. See [full explanation](/methodology/structured-agent-execution). |
+
+## Evaluation
+
+| Term | Definition |
+|------|-----------|
+| **[Jury](/methodology/four-tier-jury)** | A collection of judges that evaluates agent output. Produces a verdict. |
+| **Judge** | A single evaluator that scores one aspect of agent output. Can be deterministic (T0-T2) or LLM-powered (T3). |
+| **Verdict** | The jury's aggregate decision — pass or fail, with per-judge scores and reasoning. |
+| **Tier** | Evaluation cost level. T0 = free/deterministic, T1 = command/shell, T2 = golden test comparison, T3 = LLM semantic assessment. |
+| **Cascade** | The filtering strategy — cheap tiers run first, expensive tiers only fire if cheaper ones pass. Reduces cost 60-80%. |
+| **Diagnostic feedback** | Post-jury analysis that classifies failures into 8 gap categories and proposes KB improvements. Closes the improvement loop. |
+
+## Experiments
+
+| Term | Definition |
+|------|-----------|
+| **Variant** | One configuration of an experiment — a specific combination of knowledge, prompt, model, and execution strategy. |
+| **Variant ladder** | A progressive sequence of variants, each adding one variable to the previous. Isolates what causes improvement. |
+| **Dataset** | A collection of items, each with a task description, "before" state, and "reference" solution. |
+| **Bucket** | Difficulty classification for dataset items. A = easy, B = medium, C = hard. |
+| **Model floor** | The baseline quality a model achieves with zero knowledge injection. If the model already knows the domain (e.g., PetClinic), the floor is high and infrastructure is the only differentiator. |
+| **Partial knowledge paradox** | The finding that some knowledge without structure can *decrease* agent performance. Unstructured knowledge confuses more than it helps. |
+
+## Behavioral Analysis
+
+| Term | Definition |
+|------|-----------|
+| **[Markov fingerprint](/methodology/markov-fingerprinting)** | A behavioral signature derived from an agent's tool-call trace, modeled as an approximate first-order Markov chain. |
+| **9-state taxonomy** | The classification of all tool calls into 9 states: ORIENT, READ, EDIT, BUILD, TEST, INSPECT, SEARCH, WRITE, CONFIG. |
+| **TPE** | Transition Probability Engineering — the practice of shaping agent behavior by modifying the probability of state transitions (via knowledge, tools, or execution structure). |
+| **Absorbing chain** | A Markov chain with terminal states the agent cannot leave (success or failure). Agent traces are absorbing chains, not ergodic — PageRank does not apply. |
+| **Thrash score** | `visitation_mass × P(failure|SCC)` — quantifies how much time an agent wastes in unproductive loops. |
+| **Loop amplification** | `expected_visits / ideal_visits` — how many extra visits a state gets due to looping behavior. |
+| **Fundamental matrix** | `N = (I - Q)^{-1}` — gives expected number of visits to each transient state before absorption. The core computation for absorbing chain analysis. |
+
+## Architecture
+
+| Term | Definition |
+|------|-----------|
+| **[Agent Workflow](/projects/agent-workflow)** | The execution engine — loop control, tool orchestration, state management. Formerly "Agent Harness." |
+| **AgentLoopAdvisor** | A Spring AI advisor that adds autonomous agent behavior to any `ChatClient`. Handles turn limits, timeouts, cost tracking, stuck detection. |
+| **[AgentInvoker](/docs/experiment-driver/api-reference)** | Interface for plugging any agent into the experiment driver. Single method: `invoke(context) → result`. |
+| **MiniAgent** | A complete ~100-line agent implementation used in Loopy. Embedded (copied source), not a Maven dependency. |
+| **Knowledge base (KB)** | A structured collection of files consumed by agents. Organized with `index.md` routing tables, domain directories, and dual-audience layout. See [KB Design](/methodology/knowledge-base-design). |

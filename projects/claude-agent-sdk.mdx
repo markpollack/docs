@@ -1,0 +1,42 @@
+---
+title: "Claude Agent SDK (Java)"
+description: "Java SDK for Claude Code CLI integration — tutorials, reference, and Spring Boot auto-configuration"
+---
+
+## Overview
+
+Java SDK for programmatic access to Claude Code. Pure Java implementation mirroring the official Python and TypeScript Claude Agent SDKs, with full Spring Boot auto-configuration.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/claude-agent-sdk-java">
+    SDK implementation — pure Java, no native dependencies
+  </Card>
+  <Card title="Tutorial Examples" icon="graduation-cap" href="https://github.com/spring-ai-community/claude-agent-sdk-java-tutorial">
+    23 progressive tutorial modules with working code
+  </Card>
+  <Card title="Documentation" icon="book" href="https://springaicommunity.mintlify.app/claude-agent-sdk/index">
+    Full docs on Spring AI Community — overview, reference, tutorial walkthrough
+  </Card>
+  <Card title="API Reference" icon="code" href="https://springaicommunity.mintlify.app/claude-agent-sdk/reference/java">
+    Java API reference — all classes and configuration options
+  </Card>
+</CardGroup>
+
+## Tutorial Structure
+
+The tutorial covers six parts, from first contact to multi-agent orchestration:
+
+| Part | Topic | Modules |
+|------|-------|---------|
+| 1 | Fundamentals | Hello world, query API, sync/async clients, message types |
+| 2 | Configuration | CLI options, tool permissions, permission modes, structured outputs |
+| 3 | Sessions & State | Multi-turn, session resume/fork, async advanced |
+| 4 | Safety & Control | Permission callbacks, pre/post tool-use hooks, interrupt handling |
+| 5 | MCP Integration | External servers, multiple MCP servers, MCP with hooks |
+| 6 | Multi-Agent | Subagents intro, parallel subagents, orchestrator pattern |
+
+## Role in the Lab
+
+Agent Client uses the Claude Agent SDK under the hood to drive Claude Code in experiments. The SDK provides the low-level session management while Agent Client adds Spring Boot lifecycle and sandbox isolation on top.

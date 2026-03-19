@@ -1,0 +1,179 @@
+---
+title: "Pollack AI Lab"
+description: "A small open research lab for AI agent engineering — projects, experiments, and methodology"
+---
+
+<div style={{
+  position: 'relative',
+  marginTop: '-2rem',
+  marginBottom: '2rem',
+  padding: '3rem 2rem',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  background: 'linear-gradient(180deg, rgba(2,9,21,0.95) 0%, rgba(2,9,21,0.98) 100%)'
+}}>
+  <div style={{
+    position: 'absolute',
+    inset: 0,
+    backgroundImage: 'url(/images/bubble-chamber-bebc.jpg)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: 0.07,
+    pointerEvents: 'none'
+  }} />
+  <div style={{position: 'relative', zIndex: 1, textAlign: 'center'}}>
+    <div style={{
+      width: '7px',
+      height: '7px',
+      borderRadius: '50%',
+      background: '#ffd740',
+      margin: '0 auto 1.5rem',
+      boxShadow: '0 0 0 2px rgba(255,215,64,0.2), 0 0 18px 5px rgba(255,215,64,0.35)'
+    }} />
+    <div style={{
+      fontFamily: 'Geist Mono, monospace',
+      fontSize: 'clamp(1.4rem, 3vw, 2.2rem)',
+      fontWeight: 300,
+      letterSpacing: '0.14em',
+      color: '#ffffff',
+      textTransform: 'uppercase',
+      marginBottom: '0.75rem'
+    }}>Pollack AI Lab</div>
+    <div style={{
+      fontFamily: 'Geist Mono, monospace',
+      fontSize: '0.72rem',
+      letterSpacing: '0.2em',
+      color: 'rgba(79, 195, 247, 0.7)',
+      textTransform: 'uppercase'
+    }}>Agent Infrastructure · Experiments · Methodology</div>
+  </div>
+</div>
+
+## What We're Building
+
+Infrastructure and methodology for **knowledge-directed agent execution** — the thesis that *knowledge + structured execution > model* for reliable AI agent systems.
+
+This lab houses the projects that make that thesis tangible, and the experiments that prove it.
+
+<CardGroup cols={2}>
+  <Card title="Projects" icon="wrench" href="/projects/index">
+    Open-source tools for building, evaluating, and observing AI agents on the JVM
+  </Card>
+  <Card title="Experiments" icon="flask" href="/experiments/index">
+    Controlled studies measuring what actually moves the needle for agent reliability
+  </Card>
+</CardGroup>
+
+---
+
+## Latest Experiments
+
+<div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem'}}>
+  <div style={{borderLeft: '3px solid #4fc3f7', paddingLeft: '0.75rem'}}>
+    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Code Coverage v2 — Skills vs Knowledge Bases</div>
+    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>Do agent-structured skills outperform flat file injection? 7 variants, N=3, Markov behavioral analysis</div>
+    <div style={{fontSize: '0.75rem'}}>Mar 2026 · In Progress · <a href="/experiments/code-coverage-v2">Details →</a></div>
+  </div>
+  <div style={{borderLeft: '3px solid #4fc3f7', paddingLeft: '0.75rem'}}>
+    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Code Coverage v1 — Knowledge Injection Baseline</div>
+    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>9 variants testing progressive knowledge injection on Spring Boot test generation. First Markov fingerprints.</div>
+    <div style={{fontSize: '0.75rem'}}>Feb 2026 · Complete · <a href="/experiments/code-coverage-v1">Details →</a></div>
+  </div>
+  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
+    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Issue Classification — Infrastructure vs Prompts</div>
+    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>SWE-bench Lite: does infrastructure-level optimization beat prompt engineering?</div>
+    <div style={{fontSize: '0.75rem'}}>Mar 2026 · In Progress · <a href="/experiments/issue-classification">Details →</a></div>
+  </div>
+</div>
+
+---
+
+## Core Projects
+
+<CardGroup cols={3}>
+  <Card
+    title="Agent Workflow"
+    icon="arrows-spin"
+    href="/projects/agent-workflow"
+  >
+    Agentic loop patterns for Spring AI — the execution engine
+  </Card>
+  <Card
+    title="Agent Judge"
+    icon="gavel"
+    href="/projects/agent-judge"
+  >
+    Four-tier cascaded jury for evaluating agent outputs
+  </Card>
+  <Card
+    title="Loopy"
+    icon="terminal"
+    href="/projects/loopy"
+  >
+    Loop-driven interactive coding agent CLI for Java developers
+  </Card>
+  <Card
+    title="Agent Client"
+    icon="robot"
+    href="/projects/agent-client"
+  >
+    Claude Code, Gemini CLI, SWE-bench agents as Spring services
+  </Card>
+  <Card
+    title="Agent Bench"
+    icon="chart-bar"
+    href="/projects/agent-bench"
+  >
+    Enterprise Java agent benchmarking beyond SWE-bench
+  </Card>
+  <Card
+    title="Agent Journal"
+    icon="book"
+    href="/projects/agent-journal"
+  >
+    Behavioral trace capture for agent research and observability
+  </Card>
+</CardGroup>
+
+---
+
+## Methodology
+
+Our experiments use a consistent evaluation framework.
+
+<CardGroup cols={2}>
+  <Card
+    title="Forge Pipeline"
+    icon="hammer"
+    href="/methodology/forge"
+  >
+    Deterministic customization — Define → Forge → Run → Grow. Zero-LLM-cost knowledge packaging.
+  </Card>
+  <Card
+    title="Four-Tier Jury"
+    icon="layer-group"
+    href="/methodology/four-tier-jury"
+  >
+    T0 deterministic → T1 command → T2 golden test → T3 LLM assessment
+  </Card>
+  <Card
+    title="Markov Fingerprinting"
+    icon="diagram-project"
+    href="/methodology/markov-fingerprinting"
+  >
+    Model agent tool-call traces as stochastic processes to identify behavioral patterns
+  </Card>
+  <Card
+    title="The Thesis"
+    icon="lightbulb"
+    href="/methodology/knowledge-directed-execution"
+  >
+    Knowledge + structured execution > model — why infrastructure beats prompts
+  </Card>
+</CardGroup>
+
+---
+
+<div style={{textAlign: 'center', fontSize: '0.8rem', color: '#666', marginTop: '2rem'}}>
+  <a href="https://pollack.ai">pollack.ai</a> · <a href="https://blog.pollack.ai">Blog</a> · <a href="https://github.com/markpollack">GitHub</a>
+</div>

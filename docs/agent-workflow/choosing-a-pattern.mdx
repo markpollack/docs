@@ -1,0 +1,139 @@
+---
+title: "Choosing a Pattern"
+description: "Decision tree for workflow DSL, AgentLoopAdvisor, and explicit loop patterns"
+---
+
+## The Decision Tree
+
+```
+What are you building?
+    │
+    ├── A multi-step workflow (pipeline, routing, loops, gates)
+    │   └── Workflow DSL  →  Workflow.define()
+    │
+    ├── An autonomous tool-calling agent (CLI, benchmark, coding agent)
+    │   └── AgentLoopAdvisor  →  drops into any ChatClient
+    │
+    └── Multi-agent orchestration with custom state machines
+        └── Explicit Loop Patterns  →  GraphCompositionStrategy
+```
+
+## The Three Layers
+
+### Layer 1: Workflow DSL (structured multi-step)
+
+For composing typed steps into defined workflows. You control the flow — the LLM executes within it.
+
+```java
+Workflow.define("review-pipeline")
+    .step(analyze)
+    .branch(output -> isHighRisk(output))
+        .then(deepReview)
+        .otherwise(quickReview)
+    .gate(qualityGate)
+        .onPass(approve)
+        .onFail(requestChanges)
+    .end()
+    .run(pullRequest);
+```
+
+**Eight primitives**: sequential, branch, loop, parallel, error recovery, decision, gate, supervisor.
+
+**Use when**: You know the shape of the workflow in advance. Steps are composable and typed. Data flows between steps.
+
+### Layer 2: AgentLoopAdvisor (autonomous agents)
+
+For agents that decide what to do on each turn. The advisor adds loop control to any Spring AI `ChatClient`:
+
+```java
+var advisor = AgentLoopAdvisor.builder()
+    .toolCallingManager(toolCallingManager)
+    .maxTurns(20)
+    .timeout(Duration.ofMinutes(5))
+    .costLimit(5.0)
+    .stuckThreshold(3)
+    .jury(myJury, 5)
+    .listener(myListener)
+    .build();
+```
+
+**Built-in safety**: Turn limits, timeouts, cost caps, stuck detection, jury evaluation.
+
+**Use when**: The agent drives — you provide tools and boundaries, the LLM decides what to do.
+
+### Layer 3: Explicit Loop Patterns (advanced)
+
+Full control over agent execution for custom state machines and multi-agent orchestration:
+
+| Pattern | Use case |
+|---------|----------|
+| `TurnLimitedLoop` | Simplest explicit loop — iterate with limits |
+| `StateMachineLoop` | Agent with defined states (PLANNING → EXECUTING → REVIEWING) |
+| `EvaluatorOptimizerLoop` | Iterative refinement with evaluator feedback |
+| `GraphCompositionStrategy` | Multi-node workflows with conditional routing |
+
+**Use when**: You need state machines, multi-agent handoffs, or custom termination beyond what the advisor provides (~5% of cases).
+
+## Comparison
+
+| | Workflow DSL | AgentLoopAdvisor | Explicit Loops |
+|---|---|---|---|
+| **Complexity** | Medium | Lowest | Highest |
+| **Who drives** | You (the workflow) | The LLM (with guardrails) | You (explicit while loop) |
+| **Typed data flow** | Yes (`Step<I,O>`) | No (ChatClient messages) | Manual |
+| **Branching / gates** | Built-in | No | Manual |
+| **Parallel execution** | Built-in | No | Manual |
+| **Tool calling** | Via ChatClientStep | Native (Spring AI advisors) | Manual |
+| **Multi-agent** | Via supervisor | No | GraphCompositionStrategy |
+| **Best for** | Pipelines, routing, quality gates | CLI agents, benchmarks | Custom orchestration |
+
+## DSL Primitives Quick Reference
+
+| Primitive | DSL | What it does |
+|-----------|-----|-------------|
+| **Sequential** | `.step(a).then(b)` | Pipeline — output flows forward |
+| **Branch** | `.branch(pred).then(a).otherwise(b)` | Predicate-based routing |
+| **Loop** | `.repeatUntilOutput(pred).step(a).end()` | Iterate until condition met |
+| **Parallel** | `.parallel(a, b)` | Concurrent execution, collect results |
+| **Error** | `.step(a).onError(ExType.class, recovery)` | Exception routing |
+| **Decision** | `.decision(chat).option("a", stepA).end()` | LLM picks the route |
+| **Gate** | `.gate(g).onPass(a).onFail(b).end()` | Quality checkpoint |
+| **Supervisor** | `.supervisor(name, chat).agents(a, b).until(pred)` | Autonomous delegation loop |
+
+## Step Types
+
+| Step | What it wraps | LLM cost |
+|------|-------------|----------|
+| `Step.named("n", lambda)` | Any lambda `(ctx, input) → output` | Depends on lambda |
+| `ChatClientStep.of(chat, template)` | Single Spring AI `ChatClient` call | One LLM call |
+| `ClaudeStep.of(template)` | Full Claude CLI agent session | Full agent run |
+| `Steps.of(fn)` | Pure function (no context) | None |
+| `Steps.retrying(n, step)` | Retry wrapper | Per attempt |
+| `Steps.terminate(status, msg)` | Early exit | None |
+
+## Composability
+
+Workflows implement `Step<I, O>`. A workflow can be a step inside another workflow:
+
+```java
+var innerWorkflow = Workflow.<String, String>define("inner")
+    .step(analyzeStep)
+    .then(classifyStep)
+    .build();
+
+Workflow.define("outer")
+    .step(innerWorkflow)   // workflow-as-step
+    .then(reportStep)
+    .run(input);
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
+    Build your first workflow with all 8 primitives
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    Full builder API, step types, gates, context keys
+  </Card>
+</CardGroup>

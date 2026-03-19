@@ -1,0 +1,183 @@
+---
+title: "Experiment Driver API Reference"
+description: "Configuration, dataset format, invoker contract, and result model"
+---
+
+## ExperimentConfig
+
+```java
+ExperimentConfig.builder()
+    .experimentName("name")                    // Required: experiment identifier
+    .datasetDir(Path.of("dataset"))            // Required: dataset directory
+    .model("sonnet")                           // Required: LLM model
+    .promptTemplate("{{task}}")                // Required: prompt with placeholders
+    .perItemTimeout(Duration.ofMinutes(2))     // Required: per-item timeout
+    .itemFilter(ItemFilter.bucket("A"))        // Optional: filter items
+    .knowledgeBaseDir(Path.of("kb"))           // Optional: KB root
+    .outputDir(Path.of("results"))             // Optional: persist workspaces
+    .experimentTimeout(Duration.ofHours(1))    // Optional: overall timeout
+    .metadata(Map.of("key", "value"))          // Optional: arbitrary metadata
+    .baselineId("abc123")                      // Optional: comparison baseline
+    .build();
+```
+
+## AgentInvoker
+
+Single-method interface — implement this to plug in any agent:
+
+```java
+public interface AgentInvoker {
+    InvocationResult invoke(InvocationContext context)
+        throws AgentInvocationException;
+}
+```
+
+**Contract**:
+- Blocking: returns when agent completes, times out, or fails
+- Thread-safe: callable from multiple threads
+- NOT responsible for: timeout enforcement, workspace setup, result tracking
+
+## InvocationContext
+
+What the runner passes to your agent:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `workspacePath` | `Path` | Directory where agent operates |
+| `prompt` | `String` | Fully constructed prompt |
+| `systemPrompt` | `String` | Optional additional system instructions |
+| `model` | `String` | Model identifier |
+| `timeout` | `Duration` | Timeout hint |
+| `metadata` | `Map` | Pass-through (experimentId, itemId, etc.) |
+| `runDir` | `Path` | Optional directory for trace artifacts |
+
+## InvocationResult
+
+What your agent returns:
+
+```java
+// Success
+InvocationResult.completed(phases, inputTokens, outputTokens,
+    thinkingTokens, totalCostUsd, durationMs, sessionId, metadata);
+
+// Timeout
+InvocationResult.timeout(durationMs, metadata, errorMessage);
+
+// Error
+InvocationResult.error(errorMessage, metadata);
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Agent completed without error |
+| `status` | `TerminalStatus` | `COMPLETED`, `ERROR`, `TIMEOUT` |
+| `inputTokens` | `int` | Total input tokens consumed |
+| `outputTokens` | `int` | Total output tokens produced |
+| `totalCostUsd` | `double` | Estimated cost |
+| `durationMs` | `long` | Wall-clock execution time |
+
+## Dataset Format
+
+### dataset.json
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "dataset-name",
+  "version": "1.0.0",
+  "description": "What this dataset tests",
+  "items": [
+    {
+      "id": "ITEM-001",
+      "slug": "short-description",
+      "path": "items/ITEM-001",
+      "bucket": "A",
+      "taskType": "task-type",
+      "status": "active"
+    }
+  ]
+}
+```
+
+### item.json
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "ITEM-001",
+  "slug": "short-description",
+  "developerTask": "Natural language task description",
+  "taskType": "task-type",
+  "bucket": "A",
+  "noChange": false,
+  "knowledgeRefs": ["path/to/kb-entry.md"],
+  "tags": ["tag1", "tag2"],
+  "status": "active"
+}
+```
+
+### Directory layout
+
+```
+dataset/
+├── dataset.json
+└── items/
+    └── ITEM-001/
+        ├── item.json
+        ├── before/          # Starting state
+        │   └── src/...
+        └── reference/       # Correct result
+            └── src/...
+```
+
+## ItemFilter
+
+```java
+ItemFilter.all()                     // No filtering
+ItemFilter.bucket("A")               // Single bucket
+ItemFilter.tags("rename", "simple")  // By tags
+ItemFilter.id("ITEM-001")           // Single item
+```
+
+## ResultStore
+
+| Implementation | Use case |
+|---------------|----------|
+| `FileSystemResultStore(path)` | Production — persists to disk |
+| `InMemoryResultStore()` | Testing — HashMap-backed |
+
+Both implement:
+
+```java
+void save(ExperimentResult result);
+Optional<ExperimentResult> load(String id);
+List<ExperimentResult> listByName(String experimentName);
+Optional<ExperimentResult> mostRecent(String experimentName);
+```
+
+## ExperimentResult
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `experimentId()` | `String` | Unique run ID |
+| `experimentName()` | `String` | Experiment name from config |
+| `items()` | `List<ItemResult>` | Per-item results |
+| `passCount()` | `int` | Items that passed all judges |
+| `failCount()` | `int` | Items that failed |
+| `passRate()` | `double` | Pass count / total (0.0–1.0) |
+
+## Modules
+
+```xml
+<!-- Core: runner, dataset, jury, stores, diagnostics -->
+<dependency>
+    <groupId>ai.tuvium</groupId>
+    <artifactId>experiment-core</artifactId>
+</dependency>
+
+<!-- Claude SDK integration (ClaudeSdkInvoker, SemanticDiffJudge) -->
+<dependency>
+    <groupId>ai.tuvium</groupId>
+    <artifactId>experiment-claude</artifactId>
+</dependency>
+```

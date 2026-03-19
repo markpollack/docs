@@ -1,0 +1,110 @@
+---
+title: "Getting Started with Loopy"
+description: "Install, configure, and run your first agent session in under 5 minutes"
+---
+
+## Prerequisites
+
+- **Java 21+** — check with `java -version`. Install via [SDKMAN](https://sdkman.io/): `sdk install java 21.0.9-librca`
+- **An API key** for at least one provider:
+
+| Provider | Environment Variable | Get a key |
+|----------|---------------------|-----------|
+| Anthropic (default) | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) |
+| OpenAI | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com/) |
+| Google Gemini | `GOOGLE_API_KEY` | [aistudio.google.com](https://aistudio.google.com/) |
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Install
+
+<Steps>
+  <Step title="Download the JAR">
+    ```bash
+    curl -LO https://github.com/markpollack/loopy/releases/download/v0.2.0/loopy-0.2.0-SNAPSHOT.jar
+    ```
+  </Step>
+  <Step title="Run it">
+    ```bash
+    java -jar loopy-0.2.0-SNAPSHOT.jar
+    ```
+    The TUI launches with a chat interface. Type a message and press Enter.
+  </Step>
+</Steps>
+
+Or build from source:
+
+```bash
+git clone https://github.com/markpollack/loopy.git
+cd loopy
+./mvnw package
+java -jar target/loopy-0.2.0-SNAPSHOT.jar
+```
+
+## Your First Session
+
+Loopy starts in **interactive TUI mode** by default — a terminal chat interface with real-time agent feedback and a spinner while the agent thinks.
+
+Try giving it a coding task:
+
+```
+> Add input validation to the User class — name must be non-blank, email must match RFC 5322
+```
+
+The agent reads your codebase (via `CLAUDE.md` if present), plans the change, edits files, and verifies the result. You see token usage and estimated cost after each response:
+
+```
+tokens: 1234/567 | cost: $0.0089
+```
+
+## Three Execution Modes
+
+| Mode | Command | Use case |
+|------|---------|----------|
+| **TUI** (default) | `loopy` | Interactive development — chat, iterate, explore |
+| **Print** | `loopy -p "your task"` | Scripting and CI — single task, stdout output |
+| **REPL** | `loopy --repl` | Quick tasks — readline loop, no TUI overhead |
+
+## Slash Commands
+
+Lines starting with `/` are intercepted before reaching the agent — no LLM tokens consumed.
+
+| Command | What it does |
+|---------|-------------|
+| `/help` | List all commands |
+| `/skills` | Discover, search, install domain skills |
+| `/boot-new` | Scaffold a new Spring Boot project |
+| `/starters` | Discover Agent Starters for your project |
+| `/boot-add` | Add capabilities to an existing project |
+| `/boot-modify` | Structural changes (Java version, CI, native image) |
+| `/btw <question>` | Side question without polluting session context |
+| `/session save` | Save current session for later |
+| `/clear` | Reset conversation memory |
+
+## Add Project Context
+
+Create a `CLAUDE.md` file in your project root. Loopy reads it automatically and appends it to the agent's system prompt — same convention as Claude Code.
+
+```markdown
+# My Project
+
+- Spring Boot 3.4 with Java 21
+- Use constructor injection, never field injection
+- Tests use @WebMvcTest with MockMvc
+- API returns ProblemDetail for errors (RFC 9457)
+```
+
+No CLI flags needed. The agent sees your conventions on every turn.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Extending Loopy" icon="puzzle-piece" href="/docs/loopy/extending">
+    Custom skills, subagents, tool profiles, and the programmatic API
+  </Card>
+  <Card title="CLI Reference" icon="rectangle-terminal" href="/docs/loopy/cli-reference">
+    All flags, options, and configuration
+  </Card>
+</CardGroup>

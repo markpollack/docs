@@ -1,0 +1,163 @@
+---
+title: "Building a Jury"
+description: "Three-tier cascaded evaluation: deterministic, structural, and semantic judges"
+---
+
+## Why a Jury?
+
+A single judge gives you a single score. A jury gives you *diagnostic information* — when something fails, you know *where* in the stack it failed and *why*.
+
+The experiment driver uses a **cascaded jury** with three tiers. Each tier is more expensive than the last, and only fires if cheaper tiers don't already have a verdict.
+
+## The Three Tiers
+
+<Steps>
+  <Step title="Tier 1: Deterministic">
+    Zero-cost, instant, binary. Checks facts that are unambiguously right or wrong.
+
+    **Examples**: Does the project compile? Does `java -version` report the right version? Are all `javax.*` imports replaced with `jakarta.*`?
+
+    **Cost**: Free (no LLM calls)
+  </Step>
+  <Step title="Tier 2: Structural">
+    Compares the agent's output against the reference implementation at a structural level — AST diffs, import sets, annotation changes, POM dependency trees.
+
+    **Examples**: Are the same imports present? Do method signatures match? Are the right dependencies in the POM?
+
+    **Cost**: Free (structural comparison, no LLM)
+  </Step>
+  <Step title="Tier 3: Semantic">
+    LLM-powered evaluation for questions that can't be answered structurally. Uses criteria extracted from the execution plan to judge whether the agent's approach was sound.
+
+    **Examples**: Is the error handling strategy appropriate? Does the migration preserve business logic semantics?
+
+    **Cost**: LLM tokens per item
+  </Step>
+</Steps>
+
+## Wiring a Simple Jury
+
+Start with a single Tier 1 judge:
+
+```java
+Jury jury = SimpleJury.builder()
+    .judge(new BuildSuccessJudge(), 1.0)
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+```
+
+## Wiring a Multi-Tier Jury
+
+Add judges from each tier with weights:
+
+```java
+// Tier 1: deterministic
+Judge buildJudge = new BuildSuccessJudge();
+Judge versionJudge = new ClassVersionJudge(61);  // Java 17 = class version 61
+
+// Tier 2: structural
+Judge importJudge = new ImportDiffJudge();
+Judge pomJudge = new MavenPomDiffJudge();
+
+// Tier 3: semantic (LLM-powered)
+Judge semanticJudge = new SemanticDiffJudge(chatModel, criteriaExtractor);
+
+Jury jury = SimpleJury.builder()
+    .judge(buildJudge, 1.0)         // Must compile
+    .judge(versionJudge, 0.8)       // Right Java version
+    .judge(importJudge, 0.6)        // Correct imports
+    .judge(pomJudge, 0.6)           // Correct dependencies
+    .judge(semanticJudge, 0.4)      // Semantically sound
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+```
+
+Weights determine influence on the final verdict, not ordering. The cascade is implicit in judge cost — cheap judges run first.
+
+## Writing a Custom Judge
+
+Implement `Judge` and `JudgeWithMetadata`:
+
+```java
+public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
+
+    @Override
+    public Judgment judge(JudgmentContext context) {
+        Path workspace = context.workspacePath();
+
+        // Run the build
+        ProcessBuilder pb = new ProcessBuilder("./mvnw", "compile");
+        pb.directory(workspace.toFile());
+        Process p = pb.start();
+        int exitCode = p.waitFor();
+
+        boolean success = exitCode == 0;
+
+        return Judgment.builder()
+            .score(new BooleanScore(success))
+            .status(success ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
+            .reasoning(success
+                ? "Build succeeded"
+                : "Build failed with exit code " + exitCode)
+            .build();
+    }
+
+    @Override
+    public JudgeMetadata metadata() {
+        return new JudgeMetadata(
+            "build_success",
+            "Verifies the project compiles after agent modifications",
+            JudgeType.DETERMINISTIC);
+    }
+}
+```
+
+### Judge interface
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `judge(JudgmentContext)` | `Judgment` | Evaluate the agent's output |
+
+### JudgmentContext provides
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `workspacePath()` | `Path` | Agent's modified workspace |
+| `referencePath()` | `Path` | Reference implementation |
+| `itemMetadata()` | `Map` | Item metadata (id, slug, tags) |
+
+### Judgment fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | `Score` | `BooleanScore` or `NumericScore` |
+| `status` | `JudgmentStatus` | `PASS`, `FAIL`, or `ERROR` |
+| `reasoning` | `String` | Human-readable explanation |
+
+## Diagnostic Feedback
+
+After jury evaluation, the `DiagnosticAnalyzer` classifies failures into 8 gap categories:
+
+| Gap | Where it failed |
+|-----|----------------|
+| **Knowledge** | Missing or incorrect KB entry |
+| **Analysis** | Pre-analysis missed a pattern |
+| **Planning** | Agent planned the wrong approach |
+| **Execution** | Agent deviated from its own plan |
+| **Tool** | Tool limitation or misconfiguration |
+| **Prompt** | Ambiguous or misleading task prompt |
+| **Evaluation** | Judge produced a false positive/negative |
+| **Environment** | External factor (timeout, network, disk) |
+
+This classification feeds the [Forge pipeline](/methodology/forge) — knowledge gaps become new KB entries, tool gaps become new deterministic tools, and the flywheel turns.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Four-Tier Jury Methodology" icon="gavel" href="/methodology/four-tier-jury">
+    The evaluation framework behind experiment scoring
+  </Card>
+  <Card title="Creating Experiments" icon="vial" href="/docs/experiment-driver/creating-experiments">
+    Dataset design, variant ladders, configuration
+  </Card>
+</CardGroup>

@@ -1,0 +1,91 @@
+---
+title: "Methodology"
+description: "How we design experiments, evaluate agents, and analyze behavior"
+---
+
+The lab uses a consistent methodology across all experiments. This page is the overview — each component has its own deep-dive.
+
+## Six Pillars
+
+<CardGroup cols={3}>
+  <Card
+    title="The Thesis"
+    icon="lightbulb"
+    href="/methodology/knowledge-directed-execution"
+  >
+    Knowledge + structured execution > model
+  </Card>
+  <Card
+    title="Forge"
+    icon="hammer"
+    href="/methodology/forge"
+  >
+    Deterministic customization pipeline — Define → Forge → Run → Grow
+  </Card>
+  <Card
+    title="KB Design"
+    icon="folder-tree"
+    href="/methodology/knowledge-base-design"
+  >
+    How to structure knowledge for agent consumption
+  </Card>
+  <Card
+    title="SAE"
+    icon="list-check"
+    href="/methodology/structured-agent-execution"
+  >
+    Phased execution with checkpoints and guard rails
+  </Card>
+  <Card
+    title="Evaluation"
+    icon="layer-group"
+    href="/methodology/four-tier-jury"
+  >
+    Four-tier cascaded jury — deterministic first, LLM last
+  </Card>
+  <Card
+    title="Behavioral Analysis"
+    icon="diagram-project"
+    href="/methodology/markov-fingerprinting"
+  >
+    Markov chain modeling of agent tool-call traces
+  </Card>
+</CardGroup>
+
+## Experiment Protocol
+
+Every experiment follows this structure:
+
+<Steps>
+  <Step title="Define hypothesis">
+    What are we testing? One variable, controlled comparison.
+  </Step>
+  <Step title="Design variants">
+    Progressive ladder from baseline to full treatment. Each variant adds exactly one thing.
+  </Step>
+  <Step title="Deterministic preprocessing">
+    Parse inputs before the LLM sees them. Route to knowledge bases. Zero LLM cost for this stage.
+  </Step>
+  <Step title="Run N times">
+    Each variant runs N=3+ times for statistical confidence. Full traces captured.
+  </Step>
+  <Step title="Evaluate with four-tier jury">
+    T0 (deterministic) → T1 (command) → T2 (golden test) → T3 (LLM). Cheap filters first.
+  </Step>
+  <Step title="Analyze behavioral traces">
+    Build Markov chains from tool-call sequences. Compare transition probabilities across variants.
+  </Step>
+  <Step title="Publish">
+    Experiment page here in the lab, narrative on blog.pollack.ai, raw data on GitHub.
+  </Step>
+</Steps>
+
+## Key Metrics
+
+| Metric | What It Measures | Source |
+|--------|-----------------|--------|
+| **T3 Score** | Overall quality (LLM jury assessment) | Agent Judge |
+| **Expected Steps** | Efficiency (Markov fundamental matrix) | Agent Journal |
+| **P(success)** | Reliability (absorbing chain probability) | Markov Analysis |
+| **Thrash Score** | Stability (loop amplification in BUILD→TEST→EDIT) | Markov Analysis |
+| **Cost** | Practical efficiency ($ per experiment run) | Token tracking |

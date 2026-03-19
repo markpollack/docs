@@ -5,7 +5,7 @@ description: "Agent Communication Protocol — build agents, consume agents, int
 
 Pure Java implementation of the Agent Communication Protocol (ACP) — a standard for agent-to-agent and agent-to-IDE communication. Build agents that any ACP-compatible IDE can connect to, or consume agents from any ACP-compatible runtime. Three-phase lifecycle: Initialize → Session → Prompt. Three agent API styles: sync, async, and annotation-driven.
 
-ACP is the wire protocol behind `A2AStep` in [Agent Workflow](/projects/agent-workflow) — wrapping a remote agent as a local `Step<I,O>`.
+ACP is the planned wire protocol for `A2AStep` in [Agent Workflow](/projects/agent-workflow) — wrapping a remote agent as a local `Step<I,O>`.
 
 ## Getting Started
 
@@ -53,6 +53,6 @@ ACP is the wire protocol behind `A2AStep` in [Agent Workflow](/projects/agent-wo
 
 ## Role in the Lab
 
-- **[Agent Workflow](/projects/agent-workflow)** wraps remote ACP agents as `A2AStep` — a remote agent becomes a local `Step<I,O>` in a workflow
+- **[Agent Workflow](/projects/agent-workflow)** — planned `A2AStep` will wrap remote ACP agents as local `Step<I,O>` in workflows
 - ACP standardizes how agents discover, connect, and delegate — the communication backbone for multi-agent architectures
 - IDE integration enables agents built with Agent Workflow to run inside Zed, JetBrains, and VS Code

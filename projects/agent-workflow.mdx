@@ -1,11 +1,11 @@
 ---
 title: "Agent Workflow"
-description: "Spring-native DSL for composing multi-step agentic pipelines with typed context, crash recovery, and quality gates"
+description: "Spring-native DSL for composing multi-step agentic pipelines with typed context, portable runtimes, and quality gates"
 ---
 
 ## Overview
 
-Agent Workflow lets you compose **steps** into a **workflow**. Each step does one thing — call an LLM, run a deterministic function, invoke an external agent. Steps pass data to each other through a typed **context** (key-value pairs that flow through the pipeline). The workflow definition compiles to an **intermediate representation** (a graph of nodes and edges), which means the same workflow code can execute in different ways — in-process, with JDBC crash recovery, or on Temporal — without changing a line.
+Agent Workflow lets you compose **steps** into a **workflow**. Each step does one thing — call an LLM, run a deterministic function, invoke an external agent. Steps pass data to each other through a typed **context** (key-value pairs that flow through the pipeline). The workflow definition compiles to an **intermediate representation** (a graph of nodes and edges), which means the same workflow code can be executed by different runtimes without changing a line.
 
 ```java
 Workflow.define("pr-review")
@@ -30,22 +30,15 @@ A `ClaudeStep` isn't a single API call — it runs a complete agentic loop inter
 **Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
 
 **The graph IR** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
-- **Crash recovery** — if the app restarts mid-workflow, completed steps are skipped and execution resumes from the last checkpoint
+- **Portable runtimes** — the IR decouples definition from execution. Additional runtimes (crash recovery via `workflow-batch`, durable execution) planned without changing workflow code
 - **Tracing** — every step transition is recorded for observability and [Markov analysis](/methodology/markov-fingerprinting)
-- **Visualization** — the graph is inspectable at compile time
-
-**Portable runtimes.** Same workflow code, different durability — swap with a single `@Bean`:
-
-| Runtime | What it adds | Requires |
-|---------|-------------|----------|
-| `LocalPartitionHandler` | Nothing — in-process, zero overhead | Nothing (default) |
-| `CheckpointingPartitionHandler` | JDBC crash recovery | A `DataSource` |
+- **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
 ## Documentation
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
-    Steps, context, crash recovery, first workflow
+    Steps, context, portable runtimes, first workflow
   </Card>
   <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
     4 patterns for getting data into steps

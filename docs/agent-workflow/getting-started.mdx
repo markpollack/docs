@@ -1,11 +1,11 @@
 ---
 title: "Getting Started with Agent Workflow"
-description: "Compose steps into workflows with typed context, crash recovery, and quality gates"
+description: "Compose steps into workflows with typed context, portable runtimes, and quality gates"
 ---
 
 ## What is Agent Workflow?
 
-A workflow is a sequence of **steps**. Each step does one thing — calls an LLM, runs a function, invokes an external agent. Steps pass data through a shared **context** (typed key-value pairs). The workflow compiles to a **graph IR** that can execute locally, with JDBC crash recovery, or on Temporal — same code, different runtime.
+A workflow is a sequence of **steps**. Each step does one thing — calls an LLM, runs a function, invokes an external agent. Steps pass data through a shared **context** (typed key-value pairs). The workflow compiles to a **graph IR** — a pure data structure that decouples definition from execution. Today it runs via `LocalPartitionHandler`; the IR is designed to support additional runtimes (JDBC checkpointing, durable execution) without changing workflow code.
 
 ```java
 Workflow.define("pr-review")
@@ -42,7 +42,7 @@ Several flavors depending on what you're calling:
 | `ChatClientStep` | Single Spring AI `ChatClient` call | Seconds |
 | `ClaudeStep` | Full Claude CLI agent session (many turns, many tool calls) | Minutes |
 | `AgentClientStep` | External agent runtime (Claude, Gemini, etc.) | Minutes |
-| `A2AStep` | Remote agent via Agent Communication Protocol | Minutes |
+| `A2AStep` (planned) | Remote agent via Agent Communication Protocol | Minutes |
 
 A `ClaudeStep` isn't a single API call — it runs a complete agentic loop internally. The workflow sees it as one step:
 
@@ -122,25 +122,11 @@ Output flows forward: `write` → `editForAudience` → `editForStyle`. Each ste
 
 The DSL doesn't execute directly — it builds a `WorkflowGraph`. This separation enables:
 
-- **Crash recovery** — completed steps are checkpointed; on restart, execution resumes from where it left off
+- **Portable runtimes** — the IR decouples workflow definition from execution. Additional runtimes (JDBC checkpointing, durable execution) can be added without changing workflow code
 - **Tracing** — every step transition is recorded (`TraceRecorder`)
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
 Control flow compiles to real graph structure: a branch is 4 nodes + 4 edges; a loop has a back-edge; parallel has fork/join nodes. All visible in traces.
-
-## Crash Recovery
-
-If your app crashes halfway through a workflow, you don't want to re-run completed steps (especially $5 LLM calls). Swap the runtime with a single `@Bean`:
-
-```java
-@Bean PartitionHandler partitionHandler(DataSource ds) {
-    return new CheckpointingPartitionHandler(ds);  // JDBC crash recovery
-}
-```
-
-On restart, the executor reads the checkpoint, skips completed steps, and resumes from the last unfinished step. Same workflow code — zero changes.
-
-**Graduation path**: start with `LocalPartitionHandler` (zero overhead), add `CheckpointingPartitionHandler` when you need crash recovery, graduate to `TemporalPartitionHandler` for distributed durability.
 
 ## Prerequisites
 

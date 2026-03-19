@@ -19,8 +19,8 @@ If you know Spring Batch, you already know 80% of Agent Workflow. This page maps
 | `@StepScope` | Step class instantiated per workflow | Per-execution bean with injected params |
 | `ExecutionContext.put()` + promotion | `Steps.outputOf()` auto-propagation | Share data between non-adjacent steps |
 | `ExecutionContext.put("key", value)` | `updateContext()` → `ctx.mutate().with(KEY, value).build()` | Publish typed metadata alongside primary output |
-| `JobRepository` (JDBC) | `CheckpointingPartitionHandler` | Crash recovery — resume from last completed step |
 | `PartitionHandler` | `PartitionHandler` | Same name, same concept — substrate for step execution |
+| `JobRepository` (JDBC) | Planned (JDBC `PartitionHandler`) | Crash recovery — resume from last completed step (not yet implemented) |
 
 ## Data Flow Patterns
 
@@ -86,25 +86,11 @@ Workflow.define("pipeline")
     .run(input);
 ```
 
-### JobRepository → CheckpointingPartitionHandler
+### JobRepository → PartitionHandler (planned)
 
 **Spring Batch**: `JobRepository` persists step execution state to JDBC. On restart, completed steps are skipped.
 
-**Agent Workflow**: `CheckpointingPartitionHandler` does the same — checkpoint after each step, resume on restart.
-
-```java
-// Spring Batch — automatic with @EnableBatchProcessing
-@Bean
-public JobRepository jobRepository(DataSource ds) { ... }
-
-// Agent Workflow — single @Bean swap
-@Bean
-public PartitionHandler partitionHandler(DataSource ds) {
-    return new CheckpointingPartitionHandler(ds);
-}
-```
-
-Both use JDBC. Both skip completed steps on restart. The difference: Agent Workflow steps can run for minutes (full LLM sessions), not milliseconds (item processing).
+**Agent Workflow**: The `PartitionHandler` interface is the seam for future crash recovery. Today only `LocalPartitionHandler` exists (in-process, zero overhead). JDBC-backed checkpointing is planned — the same pattern as Spring Batch's `JobRepository`, but for steps that cost $5 each instead of milliseconds.
 
 ## What's Different
 
@@ -114,20 +100,9 @@ Both use JDBC. Both skip completed steps on restart. The difference: Agent Workf
 | **Step cost** | Free (CPU only) | $0.01-$5.00 per step (LLM tokens) |
 | **Data model** | Chunk-oriented (read-process-write) | Typed I/O (any input → any output) |
 | **Flow control** | Sequential, split, decision (SpEL expressions) | 10+ primitives (branch, loop, gate, supervisor, LLM decision) |
-| **Crash recovery** | JobRepository (always on) | PartitionHandler (opt-in, graduated) |
+| **Crash recovery** | JobRepository (always on) | PartitionHandler seam (planned) |
 | **Error handling** | Skip/retry policies on chunks | `.onError()` routing to recovery steps |
 | **Quality gates** | Not built in | `JudgeGate` with verdict feedback and retry |
-
-## The Graduation Path
-
-Spring Batch developers already understand why crash recovery matters — you don't want to re-process 10M records. Agent Workflow makes the same argument for LLM calls: you don't want to re-run a $5 Claude session because the app restarted.
-
-```
-Spring Batch:     @EnableBatchProcessing → JobRepository → done
-Agent Workflow:   LocalPartitionHandler → CheckpointingPartitionHandler → TemporalPartitionHandler
-```
-
-Start with zero overhead. Add crash recovery when the cost of re-running steps justifies it. Graduate to Temporal when you need distributed durability.
 
 ## Related
 

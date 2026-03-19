@@ -33,7 +33,7 @@ public interface AgentStep { /* marker — no methods */ }
 | Lambda | `Step.named("n", (ctx, in) -> ...)` | Any function |
 | Chat | `ChatClientStep.of(chat, "template {input}")` | Single Spring AI call |
 | Claude | `ClaudeStep.of("template").workingDirectory(path)` | Full Claude CLI session |
-| A2A | `A2AStep.of(url)` | Remote agent via Agent-to-Agent protocol |
+| A2A (planned) | `A2AStep.of(url)` | Remote agent via Agent-to-Agent protocol |
 | Function | `Steps.of(fn)` | Pure deterministic function |
 | Retry | `Steps.retrying(3, step)` | Retry wrapper |
 | Output ref | `Steps.outputOf("step-name")` | Read prior step result from context |
@@ -196,19 +196,11 @@ The substrate swap seam. Same workflow code, different durability:
 
 ```java
 @Bean PartitionHandler partitionHandler() {
-    return new LocalPartitionHandler();                            // default
-    // return new CheckpointingPartitionHandler(dataSource);       // JDBC
-    // return new TemporalPartitionHandler(client, "task-queue");  // Temporal
+    return new LocalPartitionHandler();  // in-process, zero overhead
 }
 ```
 
-| Handler | What it adds | Requires |
-|---------|-------------|----------|
-| `LocalPartitionHandler` | Nothing — in-process, zero overhead | Nothing |
-| `CheckpointingPartitionHandler` | JDBC crash recovery (Spring Integration MessageStore) | A `DataSource` |
-| `TemporalPartitionHandler` | Distributed durable execution | Temporal Server |
-
-Graduation path: Local → Checkpointing → Temporal. Each a single `@Bean` swap.
+Today only `LocalPartitionHandler` is implemented (direct in-process execution). The `PartitionHandler` interface is the seam for future runtimes — JDBC checkpointing, durable execution — without changing workflow code.
 
 ## TraceRecorder
 
@@ -232,8 +224,7 @@ agent-workflow/
 ├── workflow-core/       # WorkflowGraph, WorkflowExecutor, PartitionHandler, TraceRecorder
 ├── workflow-flows/      # Workflow DSL, ClaudeStep, ChatClientStep, JudgeGate
 ├── workflow-journal/    # JournalContextPolicy (agent-journal backed)
-├── workflow-batch/      # CheckpointingPartitionHandler (JDBC + Spring Integration)
-├── workflow-temporal/   # TemporalPartitionHandler (optional Temporal SDK)
+├── workflow-batch/      # PartitionHandler implementations (planned)
 ├── workflow-mcp/        # McpAgentToolRegistrar
 ├── workflow-tools/      # BashTool, ReadTool, WriteTool, EditTool, GlobTool, GrepTool
 ├── workflow-agents/     # MiniAgent

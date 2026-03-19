@@ -173,7 +173,7 @@ Steps are the atomic unit. Each wraps a different kind of execution:
 | `ChatClientStep.of(chat, template)` | Single Spring AI call | Seconds |
 | `ClaudeStep.of(template)` | Full Claude CLI agent session | Minutes |
 | `AgentClientStep.of(client, template)` | AgentClient abstraction | Minutes |
-| `A2AStep.of(url)` | Remote A2A agent | Minutes |
+| `A2AStep.of(url)` (planned) | Remote A2A agent | Minutes |
 | `Steps.of(fn)` | Pure deterministic function | Milliseconds |
 | `Steps.retrying(n, step)` | Retry wrapper | Per attempt |
 | `Steps.outputOf("step-name")` | Read prior step's output | Instant |

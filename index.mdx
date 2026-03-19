@@ -1,6 +1,6 @@
 ---
 title: "Pollack AI Lab"
-description: "A small open research lab for AI agent engineering — projects, experiments, and methodology"
+description: "Tools and experiments for building agents that work — and understanding why they work"
 ---
 
 <div style={{
@@ -45,22 +45,36 @@ description: "A small open research lab for AI agent engineering — projects, e
       letterSpacing: '0.2em',
       color: 'rgba(79, 195, 247, 0.7)',
       textTransform: 'uppercase'
-    }}>Agent Infrastructure · Experiments · Methodology</div>
+    }}>Agent Infrastructure · Experiments</div>
   </div>
 </div>
 
-## What We're Building
+We build tools that help you understand what your agents are actually doing — and make them better. Every tool call leaves a trace. We capture those traces, score the output, and analyze the behavior. When something goes wrong, we can see *where* and *why*. Then we fix it and measure whether the fix worked.
 
-Infrastructure and methodology for **knowledge-directed agent execution** — the thesis that *knowledge + structured execution > model* for reliable AI agent systems.
+**Mark Pollack** — creator of [Spring AI](https://spring.io/projects/spring-ai). Previously VMware/Broadcom (Spring team). Now building agent infrastructure and Developer Advocate at JetBrains.
 
-This lab houses the projects that make that thesis tangible, and the experiments that prove it.
+---
 
-<CardGroup cols={2}>
-  <Card title="Projects" icon="wrench" href="/projects/index">
-    Open-source tools for building, evaluating, and observing AI agents on the JVM
+## Core Projects
+
+<CardGroup cols={3}>
+  <Card title="Agent Workflow" icon="arrows-spin" href="/projects/agent-workflow">
+    Multi-step agentic pipelines with typed context, quality gates, and portable runtimes
   </Card>
-  <Card title="Experiments" icon="flask" href="/experiments/index">
-    Controlled studies measuring what actually moves the needle for agent reliability
+  <Card title="Agent Judge" icon="gavel" href="/projects/agent-judge">
+    Evaluation with deterministic, command, and LLM judges
+  </Card>
+  <Card title="Loopy" icon="terminal" href="/projects/loopy">
+    Interactive coding agent CLI for Java developers
+  </Card>
+  <Card title="Agent Client" icon="robot" href="/projects/agent-client">
+    Claude, Gemini, Codex, Amazon Q as unified Spring services
+  </Card>
+  <Card title="Agent Journal" icon="book" href="/projects/agent-journal">
+    Behavioral trace capture for analysis and observability
+  </Card>
+  <Card title="Agent Bench" icon="chart-bar" href="/projects/agent-bench">
+    Benchmarking on real enterprise Java tasks
   </Card>
 </CardGroup>
 
@@ -71,106 +85,15 @@ This lab houses the projects that make that thesis tangible, and the experiments
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem'}}>
   <div style={{borderLeft: '3px solid #4fc3f7', paddingLeft: '0.75rem'}}>
     <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Code Coverage v2 — Skills vs Knowledge Bases</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>Do agent-structured skills outperform flat file injection? 7 variants, N=3, Markov behavioral analysis</div>
+    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>Do structured skills outperform flat file injection? 7 variants, N=3</div>
     <div style={{fontSize: '0.75rem'}}>Mar 2026 · In Progress · <a href="/experiments/code-coverage-v2">Details →</a></div>
   </div>
   <div style={{borderLeft: '3px solid #4fc3f7', paddingLeft: '0.75rem'}}>
     <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Code Coverage v1 — Knowledge Injection Baseline</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>9 variants testing progressive knowledge injection on Spring Boot test generation. First Markov fingerprints.</div>
+    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>9 variants testing progressive knowledge injection on Spring Boot test generation</div>
     <div style={{fontSize: '0.75rem'}}>Feb 2026 · Complete · <a href="/experiments/code-coverage-v1">Details →</a></div>
   </div>
-  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
-    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Issue Classification — Infrastructure vs Prompts</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>SWE-bench Lite: does infrastructure-level optimization beat prompt engineering?</div>
-    <div style={{fontSize: '0.75rem'}}>Mar 2026 · In Progress · <a href="/experiments/issue-classification">Details →</a></div>
-  </div>
 </div>
-
----
-
-## Core Projects
-
-<CardGroup cols={3}>
-  <Card
-    title="Agent Workflow"
-    icon="arrows-spin"
-    href="/projects/agent-workflow"
-  >
-    Agentic loop patterns for Spring AI — the execution engine
-  </Card>
-  <Card
-    title="Agent Judge"
-    icon="gavel"
-    href="/projects/agent-judge"
-  >
-    Four-tier cascaded jury for evaluating agent outputs
-  </Card>
-  <Card
-    title="Loopy"
-    icon="terminal"
-    href="/projects/loopy"
-  >
-    Loop-driven interactive coding agent CLI for Java developers
-  </Card>
-  <Card
-    title="Agent Client"
-    icon="robot"
-    href="/projects/agent-client"
-  >
-    Claude Code, Gemini CLI, SWE-bench agents as Spring services
-  </Card>
-  <Card
-    title="Agent Bench"
-    icon="chart-bar"
-    href="/projects/agent-bench"
-  >
-    Enterprise Java agent benchmarking beyond SWE-bench
-  </Card>
-  <Card
-    title="Agent Journal"
-    icon="book"
-    href="/projects/agent-journal"
-  >
-    Behavioral trace capture for agent research and observability
-  </Card>
-</CardGroup>
-
----
-
-## Methodology
-
-Our experiments use a consistent evaluation framework.
-
-<CardGroup cols={2}>
-  <Card
-    title="Forge Pipeline"
-    icon="hammer"
-    href="/methodology/forge"
-  >
-    Deterministic customization — Define → Forge → Run → Grow. Zero-LLM-cost knowledge packaging.
-  </Card>
-  <Card
-    title="Four-Tier Jury"
-    icon="layer-group"
-    href="/methodology/four-tier-jury"
-  >
-    T0 deterministic → T1 command → T2 golden test → T3 LLM assessment
-  </Card>
-  <Card
-    title="Markov Fingerprinting"
-    icon="diagram-project"
-    href="/methodology/markov-fingerprinting"
-  >
-    Model agent tool-call traces as stochastic processes to identify behavioral patterns
-  </Card>
-  <Card
-    title="The Thesis"
-    icon="lightbulb"
-    href="/methodology/knowledge-directed-execution"
-  >
-    Knowledge + structured execution > model — why infrastructure beats prompts
-  </Card>
-</CardGroup>
 
 ---
 

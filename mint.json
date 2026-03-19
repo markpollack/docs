@@ -34,10 +34,6 @@
   ],
   "tabs": [
     {
-      "name": "Projects",
-      "url": "projects"
-    },
-    {
       "name": "Documentation",
       "url": "docs"
     },
@@ -48,10 +44,9 @@
   ],
   "navigation": [
     {
-      "group": "Lab",
+      "group": "",
       "pages": [
-        "index",
-        "about"
+        "index"
       ]
     },
     {

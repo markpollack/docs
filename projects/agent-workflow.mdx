@@ -9,7 +9,7 @@ Agent Workflow helps you build agents that really work — understand *why* they
 
 The philosophy follows what Stripe learned building [Minions](https://arxiv.org/abs/2402.15678) at scale: *"The model does not run the system. The system runs the model."*
 
-A fluent DSL makes workflows easy to define — branching, loops, parallel execution, LLM-driven routing, error recovery. Steps exchange data through typed **context**. The workflow compiles to a **graph IR** that separates definition from execution, enabling portable runtimes without changing workflow code.
+A fluent DSL makes workflows easy to define — branching, loops, parallel execution, LLM-driven routing, error recovery. Steps exchange data through typed **context**. The workflow compiles to a **graph intermediate representation** that separates definition from execution, enabling portable runtimes without changing workflow code.
 
 ```java
 Workflow.define("pr-review")
@@ -33,8 +33,8 @@ A `ClaudeStep` isn't a single API call — it runs a complete agentic loop inter
 
 **Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
 
-**The graph IR** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
-- **Portable runtimes** — the IR decouples definition from execution. Additional runtimes (crash recovery via `workflow-batch`, durable execution) planned without changing workflow code
+**The graph** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
+- **Portable runtimes** — the graph decouples definition from execution. Additional runtimes (crash recovery via `workflow-batch`, durable execution) planned without changing workflow code
 - **Tracing** — every step transition is recorded for observability and [Markov analysis](/methodology/markov-fingerprinting)
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
@@ -57,7 +57,7 @@ A `ClaudeStep` isn't a single API call — it runs a complete agentic loop inter
     Batch concepts → Agent Workflow
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    Step, AgentContext, Gate, IR, StepRunner
+    Step, AgentContext, Gate, WorkflowGraph, StepRunner
   </Card>
 </CardGroup>
 

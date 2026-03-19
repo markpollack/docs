@@ -1,43 +1,52 @@
 ---
 title: "Agent Workflow"
-description: "Foundation library implementing agentic loop patterns for building AI agents with Spring AI"
+description: "Spring-native DSL for composing multi-step agentic pipelines with durability, tracing, and quality gates"
 ---
-
-<Note>
-**Formerly: Agent Harness** — being renamed to Agent Workflow to better reflect its role as an execution engine.
-</Note>
 
 ## Overview
 
-Agent Workflow is the execution engine at the heart of the lab's agent stack. It provides two approaches for building AI agents with Spring AI:
+Agent Workflow is a Spring-native DSL for composing multi-step agentic pipelines. Developers write fluent workflow definitions that compile to a `WorkflowGraph` IR, execute via a swappable `PartitionHandler`, and record every transition for tracing and behavioral analysis.
 
-- **AgentLoopAdvisor** — Drop-in Spring AI advisor that adds autonomous agent behavior to any chat client
-- **Explicit loop patterns** — Full control over the agent execution cycle for SDLC-focused agents
+```java
+Workflow.define("pr-review")
+    .step(fetchDiff)
+    .then(analyzeDiff)
+    .gate(new JudgeGate(jury, 0.8))
+        .onPass(postComment)
+        .onFail(revise)
+    .end()
+    .run(event);
+```
 
 ## Why It Matters
 
-Most agent frameworks focus on prompt engineering. Agent Workflow focuses on **execution infrastructure** — the loop control, tool orchestration, and state management that determine whether an agent completes reliably or spirals.
+**Step = full agentic loop.** A `ClaudeStep` runs a multi-turn LLM session internally — dozens of tool calls, minutes of execution — and returns a typed result. The workflow orchestrates *semantic* steps; the loop mechanics are internal. This is the opposite of frameworks where each LLM API call is a separate workflow activity.
 
-This is the "structured execution" half of our thesis: *knowledge + structured execution > model*.
+**Durability is a deployment concern.** The same workflow code runs on `LocalPartitionHandler` (zero overhead), `CheckpointingPartitionHandler` (JDBC crash recovery), or `TemporalPartitionHandler` (distributed durability). Single `@Bean` swap — no workflow code changes.
+
+**10+ composable primitives.** Sequential, branch, while-do loop, do-while loop, parallel, dynamic parallel, LLM decision routing, quality gates with verdict feedback, supervisor, error recovery, terminate. The graph IR uses Java 21 sealed interfaces — every construct produces real nodes and typed edges, not opaque lambdas.
 
 ## Documentation
 
-<CardGroup cols={3}>
+<CardGroup cols={2}>
   <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
-    Build your first agent with loop control in 5 minutes
+    Install, first workflow, four-layer architecture, durability graduation path
   </Card>
-  <Card title="Choosing a Pattern" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
-    Decision tree: advisor vs explicit loops vs graph workflows
+  <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
+    All 10+ primitives with code examples
+  </Card>
+  <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
+    8 runnable integration tests validated against GPT-4.1
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    Builder options, listeners, termination reasons
+    Step types, Workflow builder, WorkflowGraph IR, gates, PartitionHandler, TraceRecorder
   </Card>
 </CardGroup>
 
 ## Quick Links
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-harness">
-  Source code and documentation
+  Source code
 </Card>
 
 ## Used In
@@ -45,7 +54,3 @@ This is the "structured execution" half of our thesis: *knowledge + structured e
 - [Code Coverage v1](/experiments/code-coverage-v1) — Agent execution engine for all 9 variants
 - [Code Coverage v2](/experiments/code-coverage-v2) — Agent execution with skills injection
 - [Issue Classification](/experiments/issue-classification) — SWE-bench agent runner
-
-## Related Blog Posts
-
-- [Building Reliable Agent Systems](https://blog.pollack.ai/building-reliable-agent-systems/) — Why infrastructure matters more than model choice

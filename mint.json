@@ -1,12 +1,13 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "Pollack AI Lab",
-  "ignore": ["DESIGN.md", "README.md", "CLAUDE.md", "plans/**"],
+  "ignore": ["DESIGN.md", "README.md", "CLAUDE.md", "plans/**", ".agent/**"],
   "logo": {
     "dark": "/logo/lab-dark.svg",
     "light": "/logo/lab-light.svg"
   },
   "favicon": "/logo/favicon.svg",
+  "appearance": "dark",
   "colors": {
     "primary": "#4fc3f7",
     "light": "#81d4fa",

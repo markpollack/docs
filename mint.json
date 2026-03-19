@@ -32,6 +32,9 @@
       "url": "https://github.com/markpollack"
     }
   ],
+  "primaryTab": {
+    "name": "Projects"
+  },
   "tabs": [
     {
       "name": "Docs",

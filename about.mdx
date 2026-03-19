@@ -1,40 +1,26 @@
 ---
-title: "About the Lab"
-description: "An engineering research lab exploring what makes AI agents reliable"
+title: "About"
+description: "What this lab does and why"
 ---
 
-## Mission
+We build tools that help you understand what your agents are actually doing — and make them better.
 
-Pollack AI Lab is a personal research lab focused on one question: **what infrastructure makes AI agents actually reliable?**
+Every tool call an agent makes leaves a trace. We capture those traces, score the output, and analyze the behavior. When something goes wrong, we can see *where* in the pipeline it happened and *why*. Then we fix it — add missing knowledge, separate deterministic steps from LLM steps, build new tools — and measure whether the fix worked.
 
-Not bigger models. Not better prompts. Infrastructure — knowledge bases, structured execution, evaluation systems, and behavioral analysis.
+The projects here are the infrastructure for that loop: [Agent Workflow](/projects/agent-workflow) composes the pipelines, [Agent Judge](/projects/agent-judge) scores the output, [Agent Journal](/projects/agent-journal) captures the traces, and [Agent Skills](/projects/agent-skills) packages the knowledge. [Loopy](/projects/loopy) is where it all comes together as a product.
 
 ## Who
 
-**Mark Pollack** — Founder of [Spring AI](https://spring.io/projects/spring-ai), former VMware/Broadcom Principal Engineer, now building agent infrastructure at [Tuvium](https://tuvium.com) and Developer Advocate at JetBrains.
-
-20+ years building developer frameworks (Spring .NET, Spring XD, Spring Cloud Data Flow). Now applying that same "infrastructure over cleverness" philosophy to AI agents.
-
-## The Thesis
-
-> **Knowledge + structured execution > model**
-
-Agent reliability improves more from giving agents the right knowledge and constraining their execution than from switching to a larger model. We call this **knowledge-directed execution**.
-
-This lab exists to build the tools that make that thesis tangible and run the experiments that prove it.
-
-## How This Lab Connects
+**Mark Pollack** — creator of [Spring AI](https://spring.io/projects/spring-ai). Previously VMware/Broadcom (Spring team). Now building agent infrastructure and Developer Advocate at JetBrains.
 
 <CardGroup cols={3}>
   <Card title="pollack.ai" icon="globe" href="https://pollack.ai">
-    Landing page and visual identity
+    Home
   </Card>
-  <Card title="blog.pollack.ai" icon="newspaper" href="https://blog.pollack.ai">
-    Ideas, narratives, thesis essays
+  <Card title="Blog" icon="newspaper" href="https://blog.pollack.ai">
+    Writing
   </Card>
-  <Card title="lab.pollack.ai" icon="flask">
-    Projects, experiments, methodology (you are here)
+  <Card title="GitHub" icon="github" href="https://github.com/markpollack">
+    Code
   </Card>
 </CardGroup>
-
-The knowledge flows bidirectionally: blog ideas become lab experiments, experiment results feed project implementations, and project capabilities enable new experiments.

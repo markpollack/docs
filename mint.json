@@ -32,6 +32,20 @@
       "url": "https://github.com/markpollack"
     }
   ],
+  "tabs": [
+    {
+      "name": "Projects",
+      "url": "projects"
+    },
+    {
+      "name": "Documentation",
+      "url": "docs"
+    },
+    {
+      "name": "Experiments",
+      "url": "experiments"
+    }
+  ],
   "navigation": [
     {
       "group": "Lab",
@@ -110,18 +124,6 @@
         "experiments/code-coverage-v1",
         "experiments/code-coverage-v2",
         "experiments/issue-classification"
-      ]
-    },
-    {
-      "group": "Methodology",
-      "pages": [
-        "methodology/index",
-        "methodology/forge",
-        "methodology/four-tier-jury",
-        "methodology/markov-fingerprinting",
-        "methodology/knowledge-directed-execution",
-        "methodology/knowledge-base-design",
-        "methodology/structured-agent-execution"
       ]
     }
   ],

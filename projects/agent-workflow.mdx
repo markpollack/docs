@@ -1,11 +1,13 @@
 ---
 title: "Agent Workflow"
-description: "Compose multi-step agentic pipelines with typed context, portable runtimes, and quality gates"
+description: "Build agents that work — and measure why they work. Multi-step pipelines with typed context, quality gates, and portable runtimes."
 ---
 
 ## Overview
 
-Agent Workflow is a Java library for building multi-step agentic pipelines. You define **steps** — each one calls an LLM, runs a function, or invokes an external agent — and compose them into **workflows** using a fluent DSL with branching, loops, quality gates, and parallel execution. Steps exchange data through a typed **context**, and the workflow compiles to a **graph IR** that separates definition from execution. This means the same workflow code runs on different runtimes without changes — local today, with crash recovery or durable execution as the project matures.
+Agent Workflow helps you build agents that really work — and measure their effectiveness. You compose **steps** into **workflows**, each step doing one thing: call an LLM, run a function, invoke an external agent. Quality gates evaluate output at each stage. Every step transition is traced, feeding [Agent Journal](/projects/agent-journal) for behavioral analysis and [Markov fingerprinting](/methodology/markov-fingerprinting).
+
+A fluent DSL makes workflows easy to define — branching, loops, parallel execution, LLM-driven routing, error recovery. Steps exchange data through typed **context**. The workflow compiles to a **graph IR** that separates definition from execution, enabling portable runtimes without changing workflow code.
 
 ```java
 Workflow.define("pr-review")

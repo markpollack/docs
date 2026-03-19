@@ -1,62 +1,80 @@
 ---
 title: "Code Coverage v2 — Skills vs Knowledge Bases"
-description: "Do agent-structured skills outperform flat file injection when content is identical?"
+description: "7 variants on Spring PetClinic testing whether structured skills outperform flat knowledge injection"
 ---
 
 <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
-  <span style={{background: '#3b82f6', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>IN PROGRESS</span>
+  <span style={{background: '#22c55e', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>COMPLETE</span>
   <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Mar 2026</span>
 </div>
 
 ## Hypothesis
 
-Agent-structured skills (SkillsJars) outperform flat file knowledge injection **even when the content is identical** — because structure itself improves agent tool selection and execution strategy.
-
-This is the core ablation: same knowledge, different packaging. Inspired by [SkillsBench](https://arxiv.org/abs/2602.12670) finding that 2-3 curated skills outperform comprehensive skill sets.
+Structured skills (SkillsJars) outperform flat knowledge injection — not because they contain more knowledge, but because structure itself changes agent behavior. Pre-analysis (a mandatory exploration pass before writing code) further reduces wasted steps by front-loading understanding.
 
 ## Setup
 
 | Parameter | Value |
 |-----------|-------|
-| **Target** | spring-petclinic, gs-rest-service |
-| **Variants** | 7 (simple → hardened + skills + SAE + forge) |
-| **N-count** | 3 per variant |
-| **Estimated cost** | ~$50-57 for full sweep |
+| **Target** | spring-petclinic |
+| **Variants** | 7 |
+| **N-count** | 3 per variant (20 sessions total) |
 | **Evaluation** | Four-tier jury (T0-T3) |
 | **Agent engine** | [Agent Workflow](/projects/agent-workflow) |
 
 ## The 7 Variants
 
-| # | Variant | What's Different |
-|---|---------|-----------------|
-| 1 | Simple | Baseline, no knowledge |
-| 2 | + System prompt | Minimal guidance only |
-| 3 | + Flat KB | File-based domain knowledge |
-| 4 | + Skills | **Same content as 3**, packaged as SkillsJars |
-| 5 | + Hardened + Skills | Defensive prompting + structured knowledge |
-| 6 | + Skills + SAE | Structured Agent Execution added |
-| 7 | + Forge | Full knowledge-directed execution stack |
+| # | Name | What it adds |
+|---|------|-------------|
+| 1 | simple | Minimal prompt, no knowledge, no stopping condition |
+| 2 | hardened | Structured prompt + explicit stopping condition |
+| 3 | hardened+kb | Hardened + flat knowledge base (Spring test imports, JaCoCo config) |
+| 4 | hardened+skills | Hardened + SkillsJars (structured, modular knowledge packages) |
+| 5 | hardened+preanalysis | Hardened + mandatory pre-analysis pass before writing tests |
+| 6 | hardened+skills+preanalysis | Skills + pre-analysis together |
+| 7 | hardened+skills+preanalysis+plan-act | Two-phase: deep exploration then sustained action |
 
-**Critical comparison**: Variant 3 vs 4 — identical content, different structure.
+## Results (N=3)
 
-## Preliminary Results (Stage 3, N=1)
+| Variant | Mean Steps | Mean Cost | T3 Quality |
+|---------|-----------|-----------|------------|
+| hardened+skills+preanalysis | 75.0 | $3.39 | 0.850 |
+| hardened+preanalysis | 80.3 | $3.41 | 0.789 |
+| hardened+kb | 83.3 | $3.21 | 0.847 |
+| hardened+skills+preanalysis+plan-act | 95.0 | $5.11 | 0.878 |
+| hardened+skills | 101.7 | $3.70 | 0.856 |
+| hardened | 103.0 | $4.08 | 0.850 |
+| simple | 109.5 | $3.47 | 0.783 |
 
-- **PetClinic model floor confirmed** — 92-94% coverage across all variants
-- **SAE most efficient** — 70 expected steps, $2.84/run
-- **Skills variant** — 0% JAR_INSPECT but 105 steps (interesting behavioral shift)
-- **Forge T3 score** — 0.933 (highest across all variants)
+## Key Findings
 
-## What's Next
+1. **Prompt hardening is the biggest quality driver** — simple → hardened: +0.067 quality, -6% steps. A free gain from structural discipline alone.
+2. **Pre-analysis drives efficiency at a quality cost** — hardened+preanalysis: -22% steps but quality drops to 0.789. Tight plans miss edge cases.
+3. **Skills fix pre-analysis's quality regression** — hardened+skills+preanalysis: -31% steps AND quality = 0.850 (matches hardened). Best tradeoff in the experiment.
+4. **KB is a pure efficiency play on known codebases** — hardened+kb: -24% steps, quality flat. On novel codebases the effect should be larger.
+5. **Plan-act is high variance** — highest quality ceiling (0.878) but also highest cost ($5.11) and rework spiral risk.
+6. **Markov model predicts step counts** — zero mean bias in leave-one-out cross-validation despite formal rejection of first-order assumption.
 
-Stage 4: N=3 sweeps across all variants (~14 runs total) to establish statistical confidence.
+## What Comes Next
+
+The PetClinic model floor (agents already know PetClinic well) limits how much knowledge injection can differentiate. The follow-up experiment targets **Apache Fineract** — a novel, complex codebase where the agent has no prior knowledge — to test whether skills make a larger difference on unfamiliar territory.
 
 ## Resources
 
 <CardGroup cols={2}>
-  <Card title="Experiment Repo" icon="github" href="https://github.com/markpollack/code-coverage-v2">
-    Traces, variant configs, analysis scripts
+  <Card title="Dataset & Traces (v2.0.0)" icon="github" href="https://github.com/markpollack/code-coverage-v2/releases/tag/v2.0.0">
+    Full dataset download, variant configs, raw traces
   </Card>
-  <Card title="v1 Baseline" icon="flask" href="/experiments/code-coverage-v1">
-    First experiment establishing the methodology
+  <Card title="Blog: I Read My Agent's Diary" icon="newspaper" href="https://blog.pollack.ai/i-read-my-agents-diary/">
+    Narrative walkthrough of the behavioral analysis
+  </Card>
+  <Card title="Results Report (PDF)" icon="file" href="/images/results-v3.pdf">
+    Full quantitative results with figures and tables
+  </Card>
+  <Card title="Reading Agent Behavior (PDF)" icon="file" href="/images/markov-primer-v2.pdf">
+    How to read agent behavioral traces — a casual explainer
+  </Card>
+  <Card title="v1 Baseline Experiment" icon="flask" href="/experiments/code-coverage-v1">
+    The first experiment establishing the methodology
   </Card>
 </CardGroup>

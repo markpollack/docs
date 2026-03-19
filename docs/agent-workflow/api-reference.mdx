@@ -190,6 +190,56 @@ graph.finishNode()   // String
 | `ErrorMatch(ExType)` | Error edges |
 | `LoopContinue` / `LoopExit` | Loop nodes |
 
+## Type Checking
+
+`WorkflowGraphAssert.assertTypeCompatible(graph)` walks a compiled graph and checks that each step's declared output type is assignable to the next step's declared input type. Catches `ClassCastException`-style bugs at test time.
+
+**Opt-in**: Steps that override `inputType()` / `outputType()` participate. Lambda steps and `Step.named()` return `Object.class` by default and are silently skipped — no false positives.
+
+```java
+// Typed steps declare their types
+static class ClassifyStep implements Step<String, ClassificationResult> {
+    @Override public Class<?> inputType()  { return String.class; }
+    @Override public Class<?> outputType() { return ClassificationResult.class; }
+    // ...
+}
+
+static class FormatResultStep implements Step<ClassificationResult, String> {
+    @Override public Class<?> inputType()  { return ClassificationResult.class; }
+    @Override public Class<?> outputType() { return String.class; }
+    // ...
+}
+
+// Compile and check — no LLM calls needed
+WorkflowGraph<String, Object> graph = Workflow.<String, Object>define("pipeline")
+        .step(new ClassifyStep(chat))
+        .then(new FormatResultStep())
+        .compile();
+
+WorkflowGraphAssert.assertTypeCompatible(graph);  // passes
+```
+
+If types don't match:
+
+```java
+.step(new ClassifyStep(chat))       // outputs ClassificationResult
+.then(new IntegerConsumer())         // expects Integer — MISMATCH
+
+// Throws:
+// TypeIncompatibleException: step 'classify' outputs ClassificationResult
+//   but step 'int-consumer' expects Integer
+```
+
+Untyped steps (lambdas) break the typed chain — no check across the gap:
+
+```java
+.step(new ClassifyStep(chat))                           // typed
+.then(Step.named("transform", (ctx, in) -> in.toString()))  // untyped — skipped
+.then(new IntegerConsumer())                             // no check — prior step untyped
+```
+
+Use in CI to validate workflow structure without making LLM calls.
+
 ## PartitionHandler
 
 The substrate swap seam. Same workflow code, different durability:

@@ -27,9 +27,10 @@ Workflow.define("pr-review")
 **Steps** are the building blocks. Each step takes input, does work, and produces output. Steps can be:
 
 - **Deterministic** — a Java function (GitHub API call, string formatting, file parsing)
-- **LLM-powered** — a `ChatClientStep` (single Spring AI call), a `ClaudeStep` (full multi-turn agent session), or an `AgentClientStep` (external agent runtime)
+- **Single LLM call** — `ChatClientStep` wraps a [Spring AI](https://spring.io/projects/spring-ai) `ChatClient` call
+- **Agentic CLI tools** — `ClaudeStep` uses the [Claude Agent SDK](/projects/claude-agent-sdk) for full multi-turn agent sessions with deep tracing. `AgentClientStep` wraps other CLI agents — Google Gemini, OpenAI Codex, Amazon Q — via [Agent Client](/projects/agent-client), giving you a unified interface across runtimes
 
-A `ClaudeStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
+A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
 
 **Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
 

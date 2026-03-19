@@ -5,9 +5,9 @@ description: "Build agents that work — and measure why they work. Multi-step p
 
 ## Overview
 
-Agent Workflow helps you build agents that really work — and understand *why* they work. The philosophy follows what Stripe learned building [Minions](https://arxiv.org/abs/2402.15678) (1,300 PRs/week, zero human-written code): **"The model does not run the system. The system runs the model."**
+Agent Workflow helps you build agents that really work — and understand *why* they work. You compose **steps** into **workflows**, each step doing one thing: call an LLM, run a function, invoke an external agent. Quality gates evaluate output at each stage. Every step transition is traced, feeding [Agent Journal](/projects/agent-journal) for behavioral analysis — so you can answer *what was the agent thinking? where did it get stuck? did it actually solve the problem?*
 
-You compose **steps** into **workflows**, each step doing one thing: call an LLM, run a function, invoke an external agent. Quality gates evaluate output at each stage. Every step transition is traced, feeding [Agent Journal](/projects/agent-journal) for behavioral analysis — so you can answer *what was the agent thinking? where did it get stuck? did it actually solve the problem?*
+The philosophy follows what Stripe learned building [Minions](https://arxiv.org/abs/2402.15678) at scale: *"The model does not run the system. The system runs the model."*
 
 A fluent DSL makes workflows easy to define — branching, loops, parallel execution, LLM-driven routing, error recovery. Steps exchange data through typed **context**. The workflow compiles to a **graph IR** that separates definition from execution, enabling portable runtimes without changing workflow code.
 

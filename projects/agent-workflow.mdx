@@ -35,7 +35,7 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 **Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
 
 **The graph** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
-- **Portable runtimes** — the graph decouples definition from execution. Additional runtimes (crash recovery via `workflow-batch`, durable execution) planned without changing workflow code
+- **Portable runtimes** — the graph decouples definition from execution. Ships with `LocalStepRunner` (in-process, zero overhead). `CheckpointingStepRunner` (JDBC crash recovery via `workflow-batch`) and `TemporalStepRunner` (distributed durable execution) are planned — same workflow code, swap a single `@Bean`
 - **Tracing** — every step transition is recorded for observability and [Markov analysis](/methodology/markov-fingerprinting)
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 

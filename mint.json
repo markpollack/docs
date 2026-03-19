@@ -52,15 +52,40 @@
       "group": "Projects",
       "pages": [
         "projects/index",
-        "projects/loopy"
+        {
+          "group": "Loopy",
+          "pages": [
+            "projects/loopy",
+            "docs/loopy/getting-started",
+            "docs/loopy/extending",
+            "docs/loopy/cli-reference"
+          ]
+        }
       ]
     },
     {
       "group": "Agent Suite",
       "pages": [
-        "projects/agent-workflow",
+        {
+          "group": "Agent Workflow",
+          "pages": [
+            "projects/agent-workflow",
+            "docs/agent-workflow/getting-started",
+            "docs/agent-workflow/parameterization",
+            "docs/agent-workflow/examples",
+            "docs/agent-workflow/choosing-a-pattern",
+            "docs/agent-workflow/spring-batch-mapping",
+            "docs/agent-workflow/api-reference"
+          ]
+        },
         "projects/agent-client",
-        "projects/agent-judge",
+        {
+          "group": "Agent Judge",
+          "pages": [
+            "projects/agent-judge",
+            "docs/experiment-driver/jury-system"
+          ]
+        },
         "projects/agent-bench",
         "projects/agent-journal",
         "projects/agent-sandbox",
@@ -74,34 +99,6 @@
         "projects/claude-agent-sdk",
         "projects/acp-java-sdk",
         "projects/spring-ai-a2a"
-      ]
-    },
-    {
-      "group": "Loopy Docs",
-      "pages": [
-        "docs/loopy/getting-started",
-        "docs/loopy/extending",
-        "docs/loopy/cli-reference"
-      ]
-    },
-    {
-      "group": "Agent Workflow Docs",
-      "pages": [
-        "docs/agent-workflow/getting-started",
-        "docs/agent-workflow/parameterization",
-        "docs/agent-workflow/examples",
-        "docs/agent-workflow/choosing-a-pattern",
-        "docs/agent-workflow/spring-batch-mapping",
-        "docs/agent-workflow/api-reference"
-      ]
-    },
-    {
-      "group": "Experiment Driver Docs",
-      "pages": [
-        "docs/experiment-driver/getting-started",
-        "docs/experiment-driver/creating-experiments",
-        "docs/experiment-driver/jury-system",
-        "docs/experiment-driver/api-reference"
       ]
     },
     {

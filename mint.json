@@ -32,20 +32,6 @@
       "url": "https://github.com/markpollack"
     }
   ],
-  "tabs": [
-    {
-      "name": "Projects",
-      "url": "projects"
-    },
-    {
-      "name": "Documentation",
-      "url": "docs"
-    },
-    {
-      "name": "Experiments",
-      "url": "experiments"
-    }
-  ],
   "navigation": [
     {
       "group": "Lab",
@@ -56,6 +42,7 @@
     },
     {
       "group": "Projects",
+      "icon": "wrench",
       "pages": [
         "projects/index",
         "projects/loopy"
@@ -63,6 +50,7 @@
     },
     {
       "group": "Agent Suite",
+      "icon": "robot",
       "pages": [
         "projects/agent-workflow",
         "projects/agent-client",
@@ -76,6 +64,7 @@
     },
     {
       "group": "Supporting Projects",
+      "icon": "handshake",
       "pages": [
         "projects/claude-agent-sdk",
         "projects/acp-java-sdk",
@@ -84,13 +73,15 @@
     },
     {
       "group": "Documentation",
+      "icon": "book",
       "pages": [
         "docs/index",
         "docs/glossary"
       ]
     },
     {
-      "group": "Loopy Docs",
+      "group": "Loopy",
+      "icon": "terminal",
       "pages": [
         "docs/loopy/getting-started",
         "docs/loopy/extending",
@@ -98,7 +89,8 @@
       ]
     },
     {
-      "group": "Agent Workflow Docs",
+      "group": "Agent Workflow",
+      "icon": "arrows-spin",
       "pages": [
         "docs/agent-workflow/getting-started",
         "docs/agent-workflow/parameterization",
@@ -109,7 +101,8 @@
       ]
     },
     {
-      "group": "Experiment Driver Docs",
+      "group": "Experiment Driver",
+      "icon": "flask",
       "pages": [
         "docs/experiment-driver/getting-started",
         "docs/experiment-driver/creating-experiments",
@@ -119,6 +112,7 @@
     },
     {
       "group": "Experiments",
+      "icon": "microscope",
       "pages": [
         "experiments/index",
         "experiments/code-coverage-v1",

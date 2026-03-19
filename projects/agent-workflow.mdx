@@ -1,11 +1,11 @@
 ---
 title: "Agent Workflow"
-description: "Spring-native DSL for composing multi-step agentic pipelines with typed context, portable runtimes, and quality gates"
+description: "Compose multi-step agentic pipelines with typed context, portable runtimes, and quality gates"
 ---
 
 ## Overview
 
-Agent Workflow lets you compose **steps** into a **workflow**. Each step does one thing — call an LLM, run a deterministic function, invoke an external agent. Steps pass data to each other through a typed **context** (key-value pairs that flow through the pipeline). The workflow definition compiles to an **intermediate representation** (a graph of nodes and edges), which means the same workflow code can be executed by different runtimes without changing a line.
+Agent Workflow is a Java library for building multi-step agentic pipelines. You define **steps** — each one calls an LLM, runs a function, or invokes an external agent — and compose them into **workflows** using a fluent DSL with branching, loops, quality gates, and parallel execution. Steps exchange data through a typed **context**, and the workflow compiles to a **graph IR** that separates definition from execution. This means the same workflow code runs on different runtimes without changes — local today, with crash recovery or durable execution as the project matures.
 
 ```java
 Workflow.define("pr-review")

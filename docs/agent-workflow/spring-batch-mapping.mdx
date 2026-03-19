@@ -19,8 +19,8 @@ If you know Spring Batch, you already know 80% of Agent Workflow. This page maps
 | `@StepScope` | Step class instantiated per workflow | Per-execution bean with injected params |
 | `ExecutionContext.put()` + promotion | `Steps.outputOf()` auto-propagation | Share data between non-adjacent steps |
 | `ExecutionContext.put("key", value)` | `updateContext()` → `ctx.mutate().with(KEY, value).build()` | Publish typed metadata alongside primary output |
-| `PartitionHandler` | `PartitionHandler` | Same name, same concept — substrate for step execution |
-| `JobRepository` (JDBC) | Planned (JDBC `PartitionHandler`) | Crash recovery — resume from last completed step (not yet implemented) |
+| `StepRunner` | `StepRunner` | Same name, same concept — substrate for step execution |
+| `JobRepository` (JDBC) | Planned (JDBC `StepRunner`) | Crash recovery — resume from last completed step (not yet implemented) |
 
 ## Data Flow Patterns
 
@@ -86,11 +86,11 @@ Workflow.define("pipeline")
     .run(input);
 ```
 
-### JobRepository → PartitionHandler (planned)
+### JobRepository → StepRunner (planned)
 
 **Spring Batch**: `JobRepository` persists step execution state to JDBC. On restart, completed steps are skipped.
 
-**Agent Workflow**: The `PartitionHandler` interface is the seam for future crash recovery. Today only `LocalPartitionHandler` exists (in-process, zero overhead). JDBC-backed checkpointing is planned — the same pattern as Spring Batch's `JobRepository`, but for steps that cost $5 each instead of milliseconds.
+**Agent Workflow**: The `StepRunner` interface is the seam for future crash recovery. Today only `LocalStepRunner` exists (in-process, zero overhead). JDBC-backed checkpointing is planned — the same pattern as Spring Batch's `JobRepository`, but for steps that cost $5 each instead of milliseconds.
 
 ## What's Different
 
@@ -100,7 +100,7 @@ Workflow.define("pipeline")
 | **Step cost** | Free (CPU only) | $0.01-$5.00 per step (LLM tokens) |
 | **Data model** | Chunk-oriented (read-process-write) | Typed I/O (any input → any output) |
 | **Flow control** | Sequential, split, decision (SpEL expressions) | 10+ primitives (branch, loop, gate, supervisor, LLM decision) |
-| **Crash recovery** | JobRepository (always on) | PartitionHandler seam (planned) |
+| **Crash recovery** | JobRepository (always on) | StepRunner seam (planned) |
 | **Error handling** | Skip/retry policies on chunks | `.onError()` routing to recovery steps |
 | **Quality gates** | Not built in | `JudgeGate` with verdict feedback and retry |
 
@@ -111,6 +111,6 @@ Workflow.define("pipeline")
     All 4 patterns for getting data into steps
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    AgentContext, ContextKey, PartitionHandler, TraceRecorder
+    AgentContext, ContextKey, StepRunner, TraceRecorder
   </Card>
 </CardGroup>

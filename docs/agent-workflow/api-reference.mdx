@@ -1,6 +1,6 @@
 ---
 title: "Agent Workflow API Reference"
-description: "Step interface, Workflow builder, WorkflowGraph IR, gates, context, PartitionHandler, and TraceRecorder"
+description: "Step interface, Workflow builder, WorkflowGraph IR, gates, context, StepRunner, and TraceRecorder"
 ---
 
 ## Step\<I, O\>
@@ -240,17 +240,25 @@ Untyped steps (lambdas) break the typed chain — no check across the gap:
 
 Use in CI to validate workflow structure without making LLM calls.
 
-## PartitionHandler
+## StepRunner
 
 The substrate swap seam. Same workflow code, different durability:
 
 ```java
-@Bean PartitionHandler partitionHandler() {
-    return new LocalPartitionHandler();  // in-process, zero overhead
+@Bean StepRunner stepRunner() {
+    return new LocalStepRunner();  // in-process, zero overhead
 }
 ```
 
-Today only `LocalPartitionHandler` is implemented (direct in-process execution). The `PartitionHandler` interface is the seam for future runtimes — JDBC checkpointing, durable execution — without changing workflow code.
+The `StepRunner` interface is the seam for portable runtimes. Today only `LocalStepRunner` is implemented. Planned:
+
+| Runner | What it adds | Status |
+|--------|-------------|--------|
+| `LocalStepRunner` | Direct in-process execution, zero overhead | Available |
+| `CheckpointingStepRunner` | JDBC crash recovery via `workflow-batch` | Stage 3.0 |
+| `TemporalStepRunner` | Distributed durable execution | Stage 3.1 |
+
+Same workflow code — swap the `@Bean`, not the workflow.
 
 ## TraceRecorder
 
@@ -271,10 +279,10 @@ record StepTransition(
 ```
 agent-workflow/
 ├── workflow-api/        # Step, AgentContext, ContextKey, Gate, RunOptions
-├── workflow-core/       # WorkflowGraph, WorkflowExecutor, PartitionHandler, TraceRecorder
+├── workflow-core/       # WorkflowGraph, WorkflowExecutor, StepRunner, TraceRecorder
 ├── workflow-flows/      # Workflow DSL, ClaudeStep, ChatClientStep, JudgeGate
 ├── workflow-journal/    # JournalContextPolicy (agent-journal backed)
-├── workflow-batch/      # PartitionHandler implementations (planned)
+├── workflow-batch/      # StepRunner implementations (planned)
 ├── workflow-mcp/        # McpAgentToolRegistrar
 ├── workflow-tools/      # BashTool, ReadTool, WriteTool, EditTool, GlobTool, GrepTool
 ├── workflow-agents/     # MiniAgent

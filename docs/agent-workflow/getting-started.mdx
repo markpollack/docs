@@ -5,7 +5,7 @@ description: "Compose steps into workflows with typed context, portable runtimes
 
 ## What is Agent Workflow?
 
-A workflow is a sequence of **steps**. Each step does one thing — calls an LLM, runs a function, invokes an external agent. Steps pass data through a shared **context** (typed key-value pairs). The workflow compiles to a **graph IR** — a pure data structure that decouples definition from execution. Today it runs via `LocalPartitionHandler`; the IR is designed to support additional runtimes (JDBC checkpointing, durable execution) without changing workflow code.
+A workflow is a sequence of **steps**. Each step does one thing — calls an LLM, runs a function, invokes an external agent. Steps pass data through a shared **context** (typed key-value pairs). The workflow compiles to a **graph IR** — a pure data structure that decouples definition from execution. Today it runs via `LocalStepRunner`; the IR is designed to support additional runtimes (JDBC checkpointing, durable execution) without changing workflow code.
 
 ```java
 Workflow.define("pr-review")

@@ -28,7 +28,7 @@ Workflow.define("pr-review")
 
 - **Deterministic** — a Java function (GitHub API call, string formatting, file parsing)
 - **Single LLM call** — `ChatClientStep` wraps a [Spring AI](https://spring.io/projects/spring-ai) `ChatClient` call
-- **Agentic CLI tools** — `ClaudeStep` uses the [Claude Agent SDK](/projects/claude-agent-sdk) for full multi-turn agent sessions with deep tracing. `AgentClientStep` wraps other CLI agents — Google Gemini, OpenAI Codex, Amazon Q — via [Agent Client](/projects/agent-client), giving you a unified interface across runtimes
+- **Agentic CLI tools** — `ClaudeStep` uses the [Claude Agent SDK](/projects/claude-agent-sdk) for full multi-turn agent sessions with deep tracing. `AgentClientStep` wraps other agentic CLI tools — Google Gemini, OpenAI Codex, Amazon Q — via [Agent Client](/projects/agent-client), giving you a unified interface
 
 A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
 
@@ -36,7 +36,8 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 
 **The graph** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
 - **Portable runtimes** — the graph decouples definition from execution. Ships with `LocalStepRunner` (in-process, zero overhead). `CheckpointingStepRunner` (JDBC crash recovery via `workflow-batch`) and `TemporalStepRunner` (distributed durable execution) are planned — same workflow code, swap a single `@Bean`
-- **Tracing** — every step transition is recorded for observability and [Markov analysis](/methodology/markov-fingerprinting)
+- **Tracing** — every step transition is recorded for observability and behavioral analysis via [Agent Journal](/projects/agent-journal)
+- **Steering** (planned) — runtime hooks that intercept before/after steps to enforce constraints, redirect behavior, or inject guidance. Deterministic or LLM-powered. Integrates with [Spring AI](https://spring.io/projects/spring-ai) advisors and the [Claude Agent SDK](/projects/claude-agent-sdk) hook system
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
 ## Documentation

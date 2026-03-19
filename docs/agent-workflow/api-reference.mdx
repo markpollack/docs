@@ -1,139 +1,119 @@
 ---
 title: "Agent Workflow API Reference"
-description: "Workflow builder, step types, gates, context keys, and AgentLoopAdvisor"
+description: "Step interface, Workflow builder, WorkflowGraph IR, gates, context, PartitionHandler, and TraceRecorder"
 ---
 
-## Workflow Builder
+## Step\<I, O\>
+
+The atomic unit of a workflow.
 
 ```java
-Workflow.<I, O>define("name")          // → WorkflowBuilder
-    .step(step)                         // add first step
-    .then(step)                         // chain next step
-    .branch(predicate)                  // conditional routing
-        .then(step).otherwise(step)
-    .parallel(step1, step2)            // concurrent execution
-    .repeatUntilOutput(predicate)      // loop (do-while)
-        .step(step).end()
-    .decision(chatClient)              // LLM routing
-        .option("name", step).end()
-    .gate(gate)                        // quality checkpoint
-        .onPass(step).onFail(step)
-        .maxRetries(3).end()
-    .onError(ExType.class, recovery)   // error recovery (on last step)
-    .run(input)                        // execute immediately
-    .run(input, RunOptions.maxCost(1.0)) // with constraints
-    .build()                           // → reusable Workflow (implements Step)
-    .compile()                         // → WorkflowGraph (IR only)
-```
-
-## Step Interface
-
-```java
-@FunctionalInterface
 public interface Step<I, O> {
+    String name();
     O execute(AgentContext ctx, I input);
 
-    default String name() { ... }       // for traces
-    default Class<?> inputType() { ... }
-    default Class<?> outputType() { ... }
+    default Class<?> inputType()  { return Object.class; }
+    default Class<?> outputType() { return Object.class; }
+
+    static <I,O> Step<I,O> named(String name, BiFunction<AgentContext, I, O> fn);
+    static <I,O> Step<I,O> noop();
 }
 ```
 
-**Factory methods:**
+**AgentStep** marker — implement on steps that make LLM calls for correct `NodeType.AGENT` cost tracking:
 
 ```java
-Step.named("name", (ctx, input) -> output)  // lambda with explicit name
-Step.noop()                                  // identity pass-through
+public interface AgentStep { /* marker — no methods */ }
 ```
 
 ## Built-in Step Types
 
-### ChatClientStep (single LLM call)
+| Type | Factory | What it wraps |
+|------|---------|-------------|
+| Lambda | `Step.named("n", (ctx, in) -> ...)` | Any function |
+| Chat | `ChatClientStep.of(chat, "template {input}")` | Single Spring AI call |
+| Claude | `ClaudeStep.of("template").workingDirectory(path)` | Full Claude CLI session |
+| A2A | `A2AStep.of(url)` | Remote agent via Agent-to-Agent protocol |
+| Function | `Steps.of(fn)` | Pure deterministic function |
+| Retry | `Steps.retrying(3, step)` | Retry wrapper |
+| Output ref | `Steps.outputOf("step-name")` | Read prior step result from context |
+| Terminate | `Steps.terminate(status, msg)` | Early workflow exit |
+
+### ClaudeStep options
 
 ```java
-// String → String
-Step<String, String> step = ChatClientStep.of(chatClient, "Summarize: {input}");
-
-// String → typed response
-Step<String, MyResponse> step = ChatClientStep.of(
-    chatClient, "Classify: {input}", MyResponse.class);
-```
-
-### ClaudeStep (full agent session)
-
-```java
-Step<String, String> agent = ClaudeStep.of("Fix the tests in {input}")
+ClaudeStep.of("Fix the tests in {input}")
     .workingDirectory(projectPath)
     .permissionMode(PermissionMode.ACCEPT_EDITS)
-    .withMcp(mcpConfig);
+    .withMcp(mcpConfig)
+    .withA2a(a2aEndpoint);
 ```
 
-### Deterministic Steps
+## Workflow Builder
 
 ```java
-Steps.of((ctx, input) -> transform(input))  // with context
-Steps.of(input -> transform(input))          // without context
-Steps.terminate(WorkflowStatus.FAILED, "reason")
-Steps.outputOf("prior-step-name")            // retrieve earlier output
-Steps.retrying(3, riskyStep)                 // retry on any exception
-Steps.retrying(3, TimeoutException.class, step)  // selective retry
+Workflow.<I, O>define("name")
+    .step(step)                                    // first step
+    .then(step)                                    // chain
+    .branch(predicate).then(a).otherwise(b)        // conditional
+    .parallel(step1, step2)                        // static fan-out
+    .parallel(itemsSupplier, stepFactory)           // dynamic fan-out
+    .repeatUntil(predicate).step(a).end()          // while-do
+    .repeatUntilOutput(predicate).step(a).end()    // do-while
+    .decision(chat).option("a", step).end()        // LLM routing
+    .gate(gate).onPass(a).onFail(b).maxRetries(3).end()  // quality gate
+    .onError(ExType.class, recovery)               // error recovery
+    .run(input)                                     // execute
+    .run(input, RunOptions.maxCost(5.0))           // with constraints
+    .compile()                                      // → WorkflowGraph (IR only)
+    .build()                                        // → Workflow (implements Step)
 ```
 
-## Gate Interface
+Named shortcuts:
 
 ```java
-@FunctionalInterface
+Workflow.sequential("name").step(a).then(b).run(input);
+Workflow.loop("name").step(a).times(5).run(input);
+Workflow.loop("name").step(a).until(predicate).run(input);
+Workflow.parallel("name").step(a, b, c).run(input);
+Workflow.supervisor("name", chat).agents(a, b).until(pred).run(input);
+```
+
+## Gate
+
+```java
 public interface Gate<O> {
     GateDecision evaluate(AgentContext ctx, O output);
 }
 ```
 
-**`GateDecision`**: `PASS`, `FAIL`, `ESCALATE`, `TIMEOUT`
+`GateDecision`: `PASS`, `FAIL`, `ESCALATE`, `TIMEOUT`
 
-### Built-in Gates
+### Implementations
 
-**JudgeGate** — backed by Agent Judge jury:
+| Gate | Description |
+|------|-------------|
+| `JudgeGate(jury, threshold)` | Automated — passes when agent-judge score >= threshold |
+| `TieredGate(jury, high, low)` | >= high → PASS, >= low → ESCALATE, < low → FAIL |
+| `HumanGate` | HITL — waits for external signal with durable timeout |
 
-```java
-Gate<Object> gate = new JudgeGate(jury, 0.7);  // score >= 0.7 → PASS
-```
-
-**TieredGate** — three outcomes:
-
-```java
-Gate<Object> gate = new TieredGate(jury, 0.8, 0.4);
-// score >= 0.8 → PASS
-// score >= 0.4 → ESCALATE
-// score < 0.4  → FAIL
-```
-
-### Gate Builder Options
+### Gate builder
 
 ```java
-.gate(qualityGate)
-    .onPass(approveStep)           // required
-    .onFail(rejectStep)            // optional
-    .onTimeout(fallbackStep)       // optional
-    .withReflector(reflectorStep)  // transforms verdict → feedback text
-    .maxRetries(3)                 // retry cap on FAIL
+.gate(new JudgeGate(jury, 0.8))
+    .onPass(approveStep)          // required
+    .onFail(reviseStep)           // optional
+    .onTimeout(fallbackStep)      // optional
+    .withReflector(reflectorStep) // Verdict → feedback text for retry
+    .maxRetries(3)                // cap
     .end()
 ```
 
-## Supervisor Builder
-
-```java
-Workflow.supervisor("name", routingChatClient)
-    .agents(reviewStep, editStep, formatStep)
-    .until(ctx -> ctx.get(AgentContext.ITERATION_COUNT).orElse(0) >= 5)
-    .maxIterations(10)             // fallback safety cap
-    .run(input)
-    .run(input, RunOptions.maxCost(2.0))
-    .build()                       // → reusable Workflow
-```
+On failure, `Verdict` written to `AgentContext.JUDGE_VERDICT`. Reflector transforms verdict into constructive feedback for the retry step.
 
 ## AgentContext
 
-Immutable, threaded through all steps. Copy-on-write via `mutate()`.
+Immutable, threaded through every step. Copy-on-write via `mutate()`.
 
 ### Well-known Keys
 
@@ -142,153 +122,120 @@ Immutable, threaded through all steps. Copy-on-write via `mutate()`.
 | `WORKFLOW_RUN_ID` | `String` | Unique execution ID |
 | `WORKFLOW_NAME` | `String` | Workflow name |
 | `CURRENT_STEP` | `String` | Active step name |
-| `ITERATION_COUNT` | `Integer` | Loop iteration counter |
+| `ITERATION_COUNT` | `Integer` | Loop counter |
 | `ACCUMULATED_COST` | `Double` | USD spend so far |
-| `ACCUMULATED_TOKENS` | `Long` | Token consumption |
-| `JUDGE_VERDICT` | `Object` | Gate failure verdict |
-| `JUDGE_REFLECTION` | `String` | Reflector-generated feedback |
-
-### Usage
+| `ACCUMULATED_TOKENS` | `Long` | Total tokens |
+| `JUDGE_VERDICT` | `Verdict` | Gate failure verdict |
+| `JUDGE_REFLECTION` | `String` | Reflector feedback text |
 
 ```java
 // Read
-Optional<Integer> count = ctx.get(AgentContext.ITERATION_COUNT);
-int required = ctx.require(AgentContext.ITERATION_COUNT); // throws if missing
+ctx.get(AgentContext.ITERATION_COUNT)      // Optional<Integer>
+ctx.require(AgentContext.ITERATION_COUNT)   // throws if missing
 
 // Write (returns new context)
-AgentContext next = ctx.mutate()
-    .with(AgentContext.ACCUMULATED_COST, 1.50)
-    .build();
+ctx.mutate().with(key, value).build()
 ```
+
+`ContextKey<T>` implements Bloch's Typesafe Heterogeneous Container (Effective Java Item 33).
 
 ## RunOptions
 
 ```java
-RunOptions.maxCost(2.0)              // stop if cost exceeds $2
-RunOptions.maxIterations(50)         // stop after 50 steps
-RunOptions.maxDuration(Duration.ofMinutes(5))
-RunOptions.unlimited()               // no constraints
+RunOptions.maxCost(5.0)
+RunOptions.maxIterations(50)
+RunOptions.maxDuration(Duration.ofMinutes(10))
+RunOptions.unlimited()
 
 // Chain
-RunOptions opts = RunOptions.maxCost(2.0)
-    .withMaxIterations(50)
-    .withMaxDuration(Duration.ofMinutes(5));
+RunOptions.maxCost(5.0).withMaxIterations(50).withMaxDuration(Duration.ofMinutes(10))
 ```
 
 ## WorkflowGraph (IR)
 
-The DSL compiles to an immutable intermediate representation:
+Pure data structure — no execution logic, no Spring AI imports.
 
 ```java
-WorkflowGraph<I, O> graph = Workflow.define("name")
-    .step(a).then(b)
-    .compile();
-
-graph.name()                    // workflow name
-graph.nodes()                   // List<WorkflowNode>
-graph.edges()                   // List<WorkflowEdge>
-graph.startNode()               // entry node name
-graph.finishNode()              // exit node name
-graph.nodeByName("step-name")   // lookup
+WorkflowGraph<I, O> graph = workflow.compile();
+graph.name()         // String
+graph.nodes()        // List<WorkflowNode>
+graph.edges()        // List<WorkflowEdge>
+graph.startNode()    // String
+graph.finishNode()   // String
 ```
 
 ### Node Types (sealed)
 
 | Node | Description |
 |------|-------------|
-| `StepNode` | Regular step execution |
-| `GatewayNode` | Predicate-based branch |
-| `DecisionNode` | LLM-driven routing |
-| `GateNode` | Quality gate with retry |
-| `LoopEntryNode` | While-do loop start |
-| `LoopCheckNode` | Do-while condition check |
-| `LoopExitNode` | Loop exit point |
+| `StepNode` | Regular step execution (AGENT or DETERMINISTIC) |
+| `GatewayNode` | Predicate branch |
+| `DecisionNode` | LLM routing |
+| `GateNode` | Quality gate with reflector and retry |
+| `LoopEntryNode` | While-do entry |
+| `LoopCheckNode` | Do-while condition |
+| `LoopExitNode` | Loop resume point |
 | `ForkNode` | Parallel split |
-| `JoinNode` | Parallel / branch convergence |
+| `JoinNode` | Convergence |
 
 ### Edge Conditions (sealed)
 
 | Condition | From |
 |-----------|------|
-| `Unconditional` | Sequential edges |
+| `Unconditional` | Sequential |
 | `BooleanGuard(true/false)` | GatewayNode |
 | `OptionMatch("name")` | DecisionNode |
-| `GateMatch(PASS/FAIL)` | GateNode |
+| `GateMatch(PASS/FAIL/ESCALATE)` | GateNode |
 | `BranchIndex(i)` | ForkNode |
 | `ErrorMatch(ExType)` | Error edges |
 | `LoopContinue` / `LoopExit` | Loop nodes |
 
-## AgentLoopAdvisor
+## PartitionHandler
 
-Drop-in Spring AI advisor for autonomous tool-calling agents:
-
-```java
-AgentLoopAdvisor.builder()
-    .toolCallingManager(manager)      // Required
-    .maxTurns(20)                      // Default: 20
-    .timeout(Duration.ofMinutes(10))   // Default: 10 min
-    .costLimit(5.0)                    // Default: $5.00
-    .stuckThreshold(3)                 // Default: 3 same outputs
-    .jury(myJury, 5)                   // Optional: evaluate every N turns
-    .listener(myListener)              // Optional: event notifications
-    .build();
-```
-
-### AgentLoopListener
+The substrate swap seam. Same workflow code, different durability:
 
 ```java
-public interface AgentLoopListener {
-    default void onLoopStarted(String runId, String userMessage) {}
-    default void onTurnStarted(String runId, int turn) {}
-    default void onTurnCompleted(String runId, int turn,
-            TerminationReason reason) {}
-    default void onLoopCompleted(String runId, LoopState finalState,
-            TerminationReason reason) {}
-    default void onLoopFailed(String runId, LoopState state,
-            Throwable error) {}
+@Bean PartitionHandler partitionHandler() {
+    return new LocalPartitionHandler();                            // default
+    // return new CheckpointingPartitionHandler(dataSource);       // JDBC
+    // return new TemporalPartitionHandler(client, "task-queue");  // Temporal
 }
 ```
 
-### TerminationReason
+| Handler | What it adds | Requires |
+|---------|-------------|----------|
+| `LocalPartitionHandler` | Nothing — in-process, zero overhead | Nothing |
+| `CheckpointingPartitionHandler` | JDBC crash recovery (Spring Integration MessageStore) | A `DataSource` |
+| `TemporalPartitionHandler` | Distributed durable execution | Temporal Server |
 
-| Value | Description |
-|-------|-------------|
-| `COMPLETED` | No more tool calls |
-| `MAX_TURNS_REACHED` | Hit `maxTurns` |
-| `TIMEOUT` | Exceeded `timeout` |
-| `COST_LIMIT_EXCEEDED` | Exceeded `costLimit` |
-| `STUCK_DETECTED` | Same output `stuckThreshold` times |
-| `JURY_PASSED` | Jury evaluation passed |
-| `ABORTED` | External abort signal |
+Graduation path: Local → Checkpointing → Temporal. Each a single `@Bean` swap.
 
-## Dependencies
+## TraceRecorder
 
-```xml
-<!-- Workflow DSL (Step, Workflow, Gate, WorkflowGraph) -->
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>agent-flows</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
-</dependency>
+Records every step transition:
 
-<!-- AgentLoopAdvisor + explicit loop patterns -->
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>harness-patterns</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
-</dependency>
+```java
+record StepTransition(
+    String fromStep, String toStep,
+    Duration duration, int tokensUsed,
+    double costUsd, Instant timestamp
+) {}
+```
 
-<!-- Agent tools (Bash, Read, Write, Edit, Glob, Grep) -->
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>harness-tools</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
-</dependency>
+`TraceRecorder.noop()` is the default — zero overhead unless opted in. Trace data feeds Markov analysis, run diagnosis, and replay.
 
-<!-- Quality gates backed by Agent Judge -->
-<dependency>
-    <groupId>io.github.springaicommunity</groupId>
-    <artifactId>agent-judge-core</artifactId>
-    <version>0.9.1-SNAPSHOT</version>
-</dependency>
+## Module Structure
+
+```
+agent-workflow/
+├── workflow-api/        # Step, AgentContext, ContextKey, Gate, RunOptions
+├── workflow-core/       # WorkflowGraph, WorkflowExecutor, PartitionHandler, TraceRecorder
+├── workflow-flows/      # Workflow DSL, ClaudeStep, ChatClientStep, JudgeGate
+├── workflow-journal/    # JournalContextPolicy (agent-journal backed)
+├── workflow-batch/      # CheckpointingPartitionHandler (JDBC + Spring Integration)
+├── workflow-temporal/   # TemporalPartitionHandler (optional Temporal SDK)
+├── workflow-mcp/        # McpAgentToolRegistrar
+├── workflow-tools/      # BashTool, ReadTool, WriteTool, EditTool, GlobTool, GrepTool
+├── workflow-agents/     # MiniAgent
+└── workflow-examples/   # Example pipelines
 ```

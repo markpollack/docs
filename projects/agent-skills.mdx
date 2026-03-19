@@ -1,0 +1,87 @@
+---
+title: "Agent Skills"
+description: "Curated domain knowledge modules — SkillsJars that make agents smarter without prompt engineering"
+---
+
+Skills are curated knowledge packages that teach agents how to do specific things well. Each skill is a structured Markdown file with routing rules and reference patterns. Agents discover skills at startup and load full content only when relevant — no tokens wasted on unused knowledge.
+
+Skills follow the [SkillsJars](https://skillsjars.io) specification and work in any agentic CLI — Loopy, Claude Code, and 40+ others.
+
+## Spring Testing Skills
+
+The first production-ready SkillsJars collection — 7 skills that teach agents how to test Spring applications.
+
+| Skill | Domain |
+|-------|--------|
+| **spring-testing-router** | Meta-skill — routes to the right domain skill based on the task |
+| **spring-jpa-testing** | `@DataJpaTest`, Testcontainers, `@ServiceConnection`, Hibernate 6/7, lazy loading |
+| **spring-mvc-testing** | `@WebMvcTest`, `MockMvc`, `jsonPath`, request validation, `@RestControllerAdvice` |
+| **spring-security-testing** | `@WithMockUser`, CSRF, JWT, OAuth2, `@PreAuthorize` method security |
+| **spring-webflux-testing** | `@WebFluxTest`, `WebTestClient`, `StepVerifier`, virtual time, SSE |
+| **spring-websocket-testing** | STOMP/WebSocket, `WebSocketStompClient`, `BlockingQueue` pattern |
+| **spring-testing-fundamentals** | AssertJ, BDDMockito, `ArgumentCaptor`, context caching, anti-patterns |
+
+### Skill Structure
+
+Each skill has a `SKILL.md` with metadata and routing rules, plus a `references/` directory with detailed patterns:
+
+```
+skills/spring-jpa-testing/
+├── SKILL.md                       # Metadata + routing rules
+└── references/
+    ├── testcontainers.md          # Detailed patterns
+    ├── transactional-tests.md
+    ├── lazy-loading-tests.md
+    └── hibernate-6-migration.md
+```
+
+### Install
+
+```bash
+git clone https://github.com/spring-ai-community/spring-testing-skills.git
+cd spring-testing-skills
+./mvnw package
+mvn skillsjars:extract -Ddir=~/.claude/skills
+```
+
+Skills are extracted to `~/.claude/skills/` where any agentic CLI discovers them automatically.
+
+## Evidence
+
+In the [Code Coverage v2](/experiments/code-coverage-v2) experiment, adding testing skills:
+- Reduced JAR_INSPECT tool calls from **11.0% → 1.0%** — the agent stopped inspecting dependencies because the skills already provided the knowledge
+- Reduced expected steps by **25%** (224 vs 301) compared to baseline
+
+This validates the thesis: curated knowledge improves agent quality more than model upgrades.
+
+## Creating Custom Skills
+
+Any Markdown file with YAML frontmatter can be a skill:
+
+```markdown
+---
+name: my-team-conventions
+description: Coding conventions for our Spring Boot services
+---
+
+# Instructions
+
+When working on this codebase:
+- Use constructor injection, never field injection
+- All REST endpoints return ProblemDetail for errors (RFC 9457)
+- Tests use @WebMvcTest with MockMvc, not @SpringBootTest
+```
+
+Place in `.claude/skills/my-conventions/SKILL.md` (project) or `~/.claude/skills/my-conventions/SKILL.md` (global).
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Spring Testing Skills" icon="github" href="https://github.com/spring-ai-community/spring-testing-skills">
+    7 skills with routing table and reference patterns
+  </Card>
+  <Card title="SkillsJars Spec" icon="book" href="https://skillsjars.io">
+    The SkillsJars format — portable domain knowledge for any agentic CLI
+  </Card>
+</CardGroup>
+

@@ -1,42 +1,64 @@
 ---
 title: "Claude Agent SDK (Java)"
-description: "Java SDK for Claude Code CLI integration — tutorials, reference, and Spring Boot auto-configuration"
+description: "Java SDK for Claude Code CLI integration — three-API architecture, sessions, MCP, multi-agent orchestration"
 ---
 
-## Overview
+Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies. Full Spring Boot auto-configuration.
 
-Java SDK for programmatic access to Claude Code. Pure Java implementation mirroring the official Python and TypeScript Claude Agent SDKs, with full Spring Boot auto-configuration.
+This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-workflow) — each step runs a full multi-turn Claude session internally.
 
-## Resources
+## Getting Started
 
 <CardGroup cols={2}>
-  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/claude-agent-sdk-java">
-    SDK implementation — pure Java, no native dependencies
+  <Card title="Overview & Quick Start" icon="play" href="https://springaicommunity.mintlify.app/claude-agent-sdk/index">
+    Three-API architecture, when to use each, first example
   </Card>
-  <Card title="Tutorial Examples" icon="graduation-cap" href="https://github.com/spring-ai-community/claude-agent-sdk-java-tutorial">
-    23 progressive tutorial modules with working code
-  </Card>
-  <Card title="Documentation" icon="book" href="https://springaicommunity.mintlify.app/claude-agent-sdk/index">
-    Full docs on Spring AI Community — overview, reference, tutorial walkthrough
-  </Card>
-  <Card title="API Reference" icon="code" href="https://springaicommunity.mintlify.app/claude-agent-sdk/reference/java">
-    Java API reference — all classes and configuration options
+  <Card title="Hello World" icon="rocket" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/01-hello-world">
+    One-line `Query.text()` — your first Claude Code call from Java
   </Card>
 </CardGroup>
 
-## Tutorial Structure
+## Tutorials
 
-The tutorial covers six parts, from first contact to multi-agent orchestration:
+23 progressive modules from fundamentals to multi-agent orchestration:
 
-| Part | Topic | Modules |
-|------|-------|---------|
-| 1 | Fundamentals | Hello world, query API, sync/async clients, message types |
-| 2 | Configuration | CLI options, tool permissions, permission modes, structured outputs |
-| 3 | Sessions & State | Multi-turn, session resume/fork, async advanced |
-| 4 | Safety & Control | Permission callbacks, pre/post tool-use hooks, interrupt handling |
-| 5 | MCP Integration | External servers, multiple MCP servers, MCP with hooks |
-| 6 | Multi-Agent | Subagents intro, parallel subagents, orchestrator pattern |
+<CardGroup cols={3}>
+  <Card title="Query & Clients" icon="graduation-cap" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/02-query-api">
+    Query API, sync client, async client, message types
+  </Card>
+  <Card title="Configuration" icon="gear" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/06-cli-options">
+    CLI options, tool permissions, permission modes, structured outputs
+  </Card>
+  <Card title="Sessions" icon="comments" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/10-multi-turn">
+    Multi-turn conversations, session resume, session fork
+  </Card>
+  <Card title="Safety & Hooks" icon="shield" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/14-permission-callbacks">
+    Permission callbacks, pre/post tool-use hooks, interrupt handling
+  </Card>
+  <Card title="MCP Integration" icon="plug" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/18-mcp-external">
+    External MCP servers, multiple servers, MCP with hooks
+  </Card>
+  <Card title="Multi-Agent" icon="users" href="https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/21-subagents-intro">
+    Subagent definitions, parallel subagents, orchestrator pattern
+  </Card>
+</CardGroup>
+
+## Reference
+
+<CardGroup cols={2}>
+  <Card title="Java API Reference" icon="code" href="https://springaicommunity.mintlify.app/claude-agent-sdk/reference/java">
+    All classes: Query, ClaudeSyncClient, ClaudeAsyncClient, CLIOptions, PermissionMode, HookRegistry
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/claude-agent-sdk-java">
+    SDK implementation
+  </Card>
+  <Card title="Tutorial Code" icon="github" href="https://github.com/spring-ai-community/claude-agent-sdk-java-tutorial">
+    23 runnable tutorial modules
+  </Card>
+</CardGroup>
 
 ## Role in the Lab
 
-Agent Client uses the Claude Agent SDK under the hood to drive Claude Code in experiments. The SDK provides the low-level session management while Agent Client adds Spring Boot lifecycle and sandbox isolation on top.
+- **[Agent Workflow](/projects/agent-workflow)** uses `ClaudeStep` which wraps `ClaudeSyncClient` — each workflow step runs a full multi-turn Claude session
+- **[Agent Client](/projects/agent-client)** uses the SDK for Claude Code integration with Spring Boot lifecycle and sandbox isolation
+- All [experiments](/experiments/index) invoke Claude through this SDK via the experiment driver's `ClaudeSdkInvoker`

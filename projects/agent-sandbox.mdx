@@ -1,15 +1,69 @@
 ---
 title: "Agent Sandbox"
-description: "Isolated command execution API — Local, Docker, and E2B cloud backends"
-url: "https://springaicommunity.mintlify.app/projects/incubating/agent-sandbox"
+description: "Isolated command execution — Local, Docker, and E2B cloud backends behind a unified API"
 ---
 
-<Note>
-This project is documented on the **Spring AI Community** site. Clicking through takes you there.
-</Note>
+A unified API for isolated command execution across multiple backends. Whether you need local process isolation, Docker container security, or cloud-based E2B microVMs, the same `Sandbox` interface works everywhere. Backends are interchangeable — code written for `LocalSandbox` works identically with `DockerSandbox` or `E2BSandbox`.
 
-Secure, isolated execution environments for untrusted agent operations. Supports Local, Docker, and E2B cloud backends with a unified API.
+## Backends
 
-<Card title="View on Spring AI Community →" icon="arrow-up-right-from-square" href="https://springaicommunity.mintlify.app/projects/incubating/agent-sandbox">
-  Full documentation and getting started guide
-</Card>
+<CardGroup cols={3}>
+  <Card title="LocalSandbox" icon="laptop">
+    Local process execution via zt-exec. Fast, no isolation overhead. Good for development and trusted code.
+  </Card>
+  <Card title="DockerSandbox" icon="docker">
+    Container isolation via Testcontainers. Full filesystem and network isolation. Production-ready.
+  </Card>
+  <Card title="E2BSandbox" icon="cloud">
+    Cloud Firecracker microVMs via E2B. Maximum isolation with MCP support and session reconnection.
+  </Card>
+</CardGroup>
+
+## Core API
+
+```java
+try (Sandbox sandbox = LocalSandbox.builder()
+        .tempDirectory("test-")
+        .build()) {
+
+    // Execute commands
+    ExecResult result = sandbox.exec(ExecSpec.of("mvn", "test"));
+
+    if (result.success()) {
+        System.out.println(result.stdout());
+    }
+
+    // File operations
+    sandbox.files()
+        .create("pom.xml", pomContent)
+        .create("src/main/java/App.java", code)
+        .and()    // return to Sandbox
+        .exec(ExecSpec.of("mvn", "compile"));
+}
+```
+
+## Module Structure
+
+| Module | Backend | Dependencies |
+|--------|---------|-------------|
+| `agent-sandbox-core` | `LocalSandbox` | zt-exec |
+| `agent-sandbox-docker` | `DockerSandbox` | testcontainers |
+| `agent-sandbox-e2b` | `E2BSandbox` | jackson, awaitility |
+| `agent-sandbox-bom` | Bill of Materials | — |
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Full Documentation" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/agent-sandbox">
+    API reference, ExecSpec builder, SandboxFiles, ExecSpecCustomizer, design principles
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-sandbox">
+    Core, Docker, E2B modules and BOM
+  </Card>
+</CardGroup>
+
+## Used By
+
+- **[Agent Judge](/projects/agent-judge)** — `agent-judge-exec` runs command-based evaluation in sandboxes
+- **[Agent Client](/projects/agent-client)** — isolated execution environments for autonomous agents
+- **[Agent Bench](/projects/agent-bench)** — benchmark execution with configurable isolation level

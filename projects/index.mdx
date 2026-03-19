@@ -1,25 +1,9 @@
 ---
 title: "Projects"
-description: "Open-source tools for building, evaluating, and observing AI agents on the JVM"
+description: "Tools for building, evaluating, and observing AI agents on the JVM"
 ---
 
-The lab produces a focused set of projects that work together as an agent engineering stack. Each project is open-source and built on [Spring AI](https://spring.io/projects/spring-ai).
-
-## The Stack
-
-```
-┌─────────────────────────────────────────┐
-│           Loopy (CLI Agent)             │  ← Interactive coding agent
-├─────────────────────────────────────────┤
-│  Agent Client  │  Agent Workflow        │  ← Execution layer
-├────────────────┼────────────────────────┤
-│  Claude SDK    │  ACP Java SDK          │  ← SDKs & Protocols
-├─────────────────────────────────────────┤
-│  Agent Judge   │  Agent Bench           │  ← Evaluation layer
-├─────────────────────────────────────────┤
-│          Agent Journal                  │  ← Observability layer
-└─────────────────────────────────────────┘
-```
+The lab produces a focused set of projects that work together as an agent engineering stack. Built on [Spring AI](https://spring.io/projects/spring-ai).
 
 ## Loopy
 
@@ -28,12 +12,12 @@ The lab produces a focused set of projects that work together as an agent engine
   icon="terminal"
   href="/projects/loopy"
 >
-  The flagship product — a loop-driven interactive coding agent CLI for Java developers with domain skills, modern TUI, and the full Forge lifecycle. Where the thesis becomes tangible.
+  Interactive coding agent CLI for Java developers — domain skills, modern TUI, Spring Boot scaffolding, multi-provider support. Where the thesis becomes a product.
 </Card>
 
 ## The Agent Suite
 
-The core `agent-*` libraries that work together as a complete agent engineering stack.
+Core `agent-*` libraries that compose into a complete agent engineering stack.
 
 <CardGroup cols={2}>
   <Card
@@ -41,61 +25,76 @@ The core `agent-*` libraries that work together as a complete agent engineering 
     icon="arrows-spin"
     href="/projects/agent-workflow"
   >
-    Agentic loop patterns — the execution engine
+    Spring-native DSL for multi-step agentic pipelines — compose steps with branching, loops, gates, and parallel execution. Compiles to a graph IR with swappable durability (local, JDBC, Temporal).
   </Card>
   <Card
     title="Agent Client"
     icon="robot"
     href="/projects/agent-client"
   >
-    Claude Code, Gemini CLI, SWE-bench as Spring services
+    Autonomous CLI agent integrations — unified framework for invoking Claude Code, Gemini CLI, and SWE-bench agents as Spring services. Portable MCP servers, auto-configuration, sandbox isolation.
   </Card>
   <Card
     title="Agent Judge"
     icon="gavel"
     href="/projects/agent-judge"
   >
-    Four-tier cascaded jury for evaluating agent work
+    Agent-agnostic evaluation with deterministic, command, and LLM judges. Jury system with voting strategies. Zero cost for T0-T1 checks — LLM fires only when cheaper tiers pass.
   </Card>
   <Card
     title="Agent Bench"
     icon="chart-bar"
     href="/projects/agent-bench"
   >
-    Enterprise Java agent benchmarking beyond SWE-bench
+    Benchmarking suite for Java-centric AI agents on enterprise dev tasks — issue triage, PR review, coverage, compliance. Agent-agnostic with provide/grade separation.
   </Card>
   <Card
     title="Agent Journal"
     icon="book"
     href="/projects/agent-journal"
   >
-    Behavioral trace capture for Markov analysis
+    Behavioral trace capture — every tool call, state transition, and decision point. Feeds Markov fingerprinting and cross-variant behavioral comparison.
+  </Card>
+  <Card
+    title="Agent Sandbox"
+    icon="shield"
+    href="/projects/agent-sandbox"
+  >
+    Isolated command execution — local, Docker, or E2B cloud backends behind a unified API. Safe execution for untrusted agent code.
+  </Card>
+  <Card
+    title="Agent Tools"
+    icon="wrench"
+    href="/projects/agent-tools"
+  >
+    Claude Code-inspired tools for Spring AI agents — file I/O, shell, search, web, subagent orchestration.
+  </Card>
+  <Card
+    title="Agent Skills"
+    icon="book-sparkles"
+    href="/projects/agent-skills"
+  >
+    Curated domain knowledge modules (SkillsJars) — teach agents how to test, review, and build Spring applications.
   </Card>
 </CardGroup>
 
 ## SDKs & Protocols
 
-Foundational SDKs maintained in the [Spring AI Community](https://springaicommunity.mintlify.app). Full documentation lives there — these links take you to the community site.
+Foundational SDKs maintained in the [Spring AI Community](https://springaicommunity.mintlify.app). Full documentation lives there.
 
 <CardGroup cols={2}>
   <Card
     title="Claude Agent SDK (Java)"
     icon="microchip"
-    href="https://springaicommunity.mintlify.app/claude-agent-sdk/index"
+    href="/projects/claude-agent-sdk"
   >
-    Java SDK for Claude Code CLI — 23-part tutorial, reference docs, Spring Boot integration
+    Java SDK for Claude Code CLI — three-API architecture, 23-part tutorial, Spring Boot auto-configuration
   </Card>
   <Card
     title="ACP Java SDK"
     icon="handshake"
-    href="https://springaicommunity.mintlify.app/acp-java-sdk/index"
+    href="/projects/acp-java-sdk"
   >
-    Agent Communication Protocol — build and consume agents, IDE integration (Zed, JetBrains, VS Code)
+    Agent Communication Protocol — build agents, consume agents, integrate with Zed, JetBrains, and VS Code
   </Card>
 </CardGroup>
-
----
-
-<Note>
-All projects are also part of the [Spring AI Community](https://springaicommunity.mintlify.app) where they serve the broader ecosystem. The lab pages here focus on how they connect to our research.
-</Note>

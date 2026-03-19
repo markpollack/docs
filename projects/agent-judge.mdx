@@ -1,36 +1,56 @@
 ---
 title: "Agent Judge"
-description: "Agent-agnostic evaluation framework with a four-tier cascaded jury system"
+description: "Agent-agnostic evaluation framework with deterministic, command, and LLM judges"
 ---
 
-## Overview
+Agent Judge is a pluggable evaluation framework for verifying AI agent task completion. It provides three kinds of judges — deterministic rules, command execution, and LLM-powered assessment — that compose into juries with configurable voting strategies. Zero coupling to any specific agent implementation.
 
-Agent Judge provides a principled way to evaluate AI agent work products. Instead of relying solely on LLM-as-judge (expensive, non-deterministic), it implements a **four-tier cascaded jury** that filters through deterministic checks first.
+The core module (`agent-judge-core`) has **zero external dependencies**. Specialized modules add command execution (`agent-judge-exec`) and LLM evaluation (`agent-judge-llm`).
 
-## The Four Tiers
-
-| Tier | Name | What It Does | Cost |
-|------|------|-------------|------|
-| **T0** | Deterministic | Regex, file existence, compilation checks | Free |
-| **T1** | Command | Run shell commands, check exit codes | Minimal |
-| **T2** | Golden Test | Compare against known-good reference outputs | Minimal |
-| **T3** | LLM Assessment | Semantic evaluation by language model | $$$ |
-
-Each tier acts as a filter — only work products that pass cheaper tiers advance to expensive LLM evaluation. This reduces cost by 60-80% while maintaining evaluation quality.
-
-## Quick Links
+## Core Abstractions
 
 <CardGroup cols={2}>
-  <Card title="GitHub" icon="github" href="https://github.com/spring-ai-community/agent-judge">
-    Source code and documentation
+  <Card title="Judge" icon="gavel">
+    Functional interface — takes `JudgmentContext`, returns `Judgment` with score, status, reasoning, and granular checks
   </Card>
-  <Card title="Methodology" icon="layer-group" href="/methodology/four-tier-jury">
-    Full methodology documentation
+  <Card title="Jury" icon="users">
+    Multi-judge aggregation with voting strategies — majority, consensus, weighted average, median
   </Card>
 </CardGroup>
 
-## Used In
+## Judge Types
 
-- [Code Coverage v1](/experiments/code-coverage-v1) — All evaluation (T0-T3 cascade)
-- [Code Coverage v2](/experiments/code-coverage-v2) — T3 highest score at 0.933 for forge variant
-- [Issue Classification](/experiments/issue-classification) — Adapted for SWE-bench task evaluation
+| Type | Module | Cost | Example |
+|------|--------|------|---------|
+| **Deterministic** | `agent-judge-core` | Free | `FileExistsJudge`, `FileContentJudge`, custom rules |
+| **Command** | `agent-judge-exec` | Compute only | `BuildSuccessJudge` (Maven/Gradle), `CommandJudge` |
+| **LLM** | `agent-judge-llm` | Token cost | `CorrectnessJudge`, custom LLM evaluation |
+| **Agent** | `agent-judge-agent` | Agent cost | Delegate evaluation to an AI agent |
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Full Documentation" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/agent-judge">
+    API reference, built-in judges, jury system, voting strategies, code examples
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-judge">
+    6 modules — core, exec, llm, agent, advisor, BOM
+  </Card>
+</CardGroup>
+
+## Guides
+
+<CardGroup cols={2}>
+  <Card title="Building a Jury" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Wire judges into a cascaded jury for experiment evaluation
+  </Card>
+  <Card title="LLM as Judge (Blog)" icon="newspaper" href="https://springaicommunity.mintlify.app/blog/agents/llm-as-judge">
+    Judge design, rubric creation, scoring patterns
+  </Card>
+</CardGroup>
+
+## Role in the Lab
+
+- **[Agent Workflow](/projects/agent-workflow)** — `JudgeGate` wraps a jury as a quality checkpoint in workflow pipelines
+- **[Experiment Driver](/docs/experiment-driver/getting-started)** — jury system scores agent output across all experiments
+- **[Agent Client](/projects/agent-client)** — `JudgeAdvisor` integrates evaluation into agent execution loops

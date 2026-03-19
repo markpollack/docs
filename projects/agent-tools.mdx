@@ -1,0 +1,61 @@
+---
+title: "Agent Tools"
+description: "Claude Code-inspired tools for Spring AI agents — file I/O, shell, search, web, and multi-agent orchestration"
+---
+
+A Spring AI library that reimplements Claude Code-inspired capabilities as Java-based tools. This is the foundational toolkit for building AI agents in Java/Spring applications — the tools that [Loopy](/projects/loopy) and [Agent Workflow](/projects/agent-workflow) use under the hood.
+
+## Core Tools
+
+| Tool | What it does |
+|------|-------------|
+| **FileSystemTools** | Read, write, edit files with precise control |
+| **ShellTools** | Execute shell commands with timeout, background processes, regex filtering |
+| **GrepTool** | Pure Java grep with regex, glob filtering, multiple output modes |
+| **GlobTool** | Fast file pattern matching |
+| **SkillsTool** | Load and invoke skills on demand — progressive disclosure |
+| **TaskTools** | Multi-agent orchestration with specialized subagent delegation |
+| **TodoWriteTool** | Structured task management with state tracking |
+| **SmartWebFetchTool** | AI-powered web content summarization with caching |
+| **BraveWebSearchTool** | Web search with domain filtering |
+| **AskUserQuestionTool** | Interactive Q&A with multiple-choice options |
+
+## Quick Start
+
+```xml
+<dependency>
+    <groupId>org.springaicommunity</groupId>
+    <artifactId>spring-ai-agent-utils</artifactId>
+    <version>0.5.0</version>
+</dependency>
+```
+
+Requires Java 17+, Spring Boot 3.x/4.x, Spring AI 2.0.0-M2+.
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Project Overview" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/spring-ai-agent-utils">
+    Full tool documentation, architecture, Spring AI integration
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/spring-ai-agent-utils">
+    Core library, A2A module, BOM, example demos
+  </Card>
+</CardGroup>
+
+## Concepts
+
+<CardGroup cols={2}>
+  <Card title="Tool Search (Blog)" icon="magnifying-glass" href="https://springaicommunity.mintlify.app/blog/tools/tool-search">
+    Dynamic tool discovery — 34-64% token savings via Tool Search Tool pattern
+  </Card>
+  <Card title="Extending Loopy" icon="puzzle-piece" href="/docs/loopy/extending">
+    How tools, skills, subagents, and tool profiles work in Loopy
+  </Card>
+</CardGroup>
+
+## Used By
+
+- **[Loopy](/projects/loopy)** — embeds these tools as the agent's core capabilities
+- **[Agent Workflow](/projects/agent-workflow)** — provides tools via the `workflow-tools` module
+- **[Agent Client](/projects/agent-client)** — tools available to all agent runtimes

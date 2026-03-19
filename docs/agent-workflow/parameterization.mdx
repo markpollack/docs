@@ -1,0 +1,300 @@
+---
+title: "Step Parameterization"
+description: "How to get data into and out of steps — constructor injection, input chaining, context keys, metadata publishing, and mixed patterns"
+---
+
+The first question everyone asks: **"How do I get data into my steps?"**
+
+There are three levels, presented as a progression. Most users start at Level 1 and add complexity only when needed.
+
+| Level | Pattern | When you need it |
+|-------|---------|-----------------|
+| **1** | [Input chaining](#pattern-1-input-chaining) | Each step transforms the previous result (most common) |
+| **1b** | [Constructor injection](#pattern-2-constructor-injection) | Static config: model, threshold, API client |
+| **2** | [Context keys](#pattern-3-context-keys) | Step C needs step A's output, but step B sits between |
+| **3** | [Context writes](#pattern-5-context-writes-updatecontext) | Step publishes metadata (confidence, language, sources) alongside its primary output |
+
+## Pattern 1: Constructor Injection
+
+Configuration known at build time — model, prompt template, threshold, API client. Same step class, different parameters, different behavior.
+
+```java
+static class TranslateStep implements Step<Object, Object> {
+    private final ChatClient chatClient;
+    private final String targetLanguage;
+
+    TranslateStep(ChatClient chatClient, String targetLanguage) {
+        this.chatClient = chatClient;
+        this.targetLanguage = targetLanguage;
+    }
+
+    @Override
+    public Object execute(AgentContext ctx, Object input) {
+        return chatClient.prompt()
+                .user("Translate this to " + targetLanguage + ": " + input)
+                .call().content();
+    }
+}
+
+// Same class, different config → different behavior
+Step<Object, Object> toFrench  = new TranslateStep(chat, "French");
+Step<Object, Object> toSpanish = new TranslateStep(chat, "Spanish");
+
+Workflow.<String, Object>define("translate")
+        .step(write)
+        .then(toFrench)   // or toSpanish — swap at build time
+        .run("the sunrise over the mountains");
+```
+
+**Use when**: Configuration is static — model selection, prompt templates, thresholds, API clients. Works exactly like a Spring `@Bean` with constructor injection.
+
+## Pattern 2: Input Chaining
+
+Each step receives the previous step's output as its `input` parameter. No context keys, no configuration — just linear data flow.
+
+```java
+Workflow.<String, Object>define("chain")
+        .step(Step.named("generate", (ctx, in) ->
+                chat.prompt().user("Write a story about: " + in).call().content()))
+        .then(Step.named("extract-character", (ctx, in) ->
+                chat.prompt().user("Extract the main character's name: " + in).call().content()))
+        .then(Step.named("describe-character", (ctx, in) ->
+                chat.prompt().user("Describe a character named: " + in).call().content()))
+        .run("a brave knight");
+```
+
+**Use when**: The pipeline is linear — step B only needs step A's output.
+
+## Pattern 3: Context Keys
+
+What if step C needs step A's output, but step B sits between them? The executor auto-propagates every step's output into `AgentContext` under `Steps.outputOf(stepName)`. Any downstream step can read any prior step's result by name.
+
+```java
+Workflow.<String, Object>define("context-keys")
+        .step(Step.named("generate-story", (ctx, in) ->
+                chat.prompt().user("Write a story about: " + in).call().content()))
+        .then(Step.named("score-story", (ctx, in) ->
+                chat.prompt().user("Rate this story 1-10: " + in).call().content()))
+        .then(Step.named("summarize", (ctx, in) -> {
+            // `in` is the score (from score-story via input chaining)
+            // Read the story from generate-story via context
+            Object story = ctx.get(Steps.outputOf("generate-story")).orElse("unknown");
+            return "Story: " + story + "\nScore: " + in;
+        }))
+        .run("a time-traveling cat");
+```
+
+### Typed context for structured data
+
+When steps produce structured data (lists, records, domain objects), downstream steps cast from the auto-propagated output:
+
+```java
+Step<Object, Object> generateTopics = Step.named("generate-topics", (ctx, in) -> {
+    String response = chat.prompt()
+            .user("List 3 blog topics about " + in).call().content();
+    return List.of(response.split("\n"));
+});
+
+Step<Object, Object> selectTopic = Step.named("select-topic", (ctx, in) -> {
+    List<String> topics = (List<String>) in;   // typed via input chaining
+    return chat.prompt()
+            .user("Pick the most interesting: " + String.join(", ", topics))
+            .call().content();
+});
+
+Step<Object, Object> writeDraft = Step.named("write-draft", (ctx, in) -> {
+    String selected = (String) in;
+    // Read the full topic list from step 1 via context
+    Object allTopics = ctx.get(Steps.outputOf("generate-topics")).orElse("unknown");
+    return chat.prompt()
+            .user("Write about: " + selected + "\nSelected from: " + allTopics)
+            .call().content();
+});
+
+Workflow.<String, Object>define("blog-pipeline")
+        .step(generateTopics)
+        .then(selectTopic)
+        .then(writeDraft)
+        .run("artificial intelligence");
+```
+
+**Use when**: A downstream step needs a non-adjacent prior step's output, or steps exchange structured data.
+
+## Pattern 4: Mixed — All Three Together
+
+Real-world steps combine constructor config + input chaining + context state:
+
+```java
+static class ReviewStep implements Step<Object, Object> {
+    private final ChatClient chatClient;
+    private final String reviewCriteria;     // constructor: what to review for
+    private final double passThreshold;       // constructor: quality bar
+
+    ReviewStep(ChatClient chatClient, String reviewCriteria, double passThreshold) {
+        this.chatClient = chatClient;
+        this.reviewCriteria = reviewCriteria;
+        this.passThreshold = passThreshold;
+    }
+
+    @Override
+    public Object execute(AgentContext ctx, Object input) {
+        // input = content to review (from previous step)
+        // reviewCriteria + passThreshold = constructor config
+        // ctx = iteration count, prior outputs, workflow state
+        int iteration = ctx.get(AgentContext.ITERATION_COUNT).orElse(0);
+
+        double score = parseScore(chatClient.prompt()
+                .user("Rate this for " + reviewCriteria + " (0-1): " + input)
+                .call().content());
+
+        return "Review [" + reviewCriteria + ", iteration=" + iteration
+                + "]: score=" + score
+                + " (" + (score >= passThreshold ? "PASS" : "FAIL") + ")";
+    }
+}
+
+// Same class, different criteria
+Step<Object, Object> clarityReview    = new ReviewStep(chat, "clarity", 0.7);
+Step<Object, Object> creativityReview = new ReviewStep(chat, "creativity", 0.6);
+```
+
+## Pattern 5: Context Writes (`updateContext`)
+
+A step's primary job is to return a value — the category string for branching, the translated text for the next step. But sometimes a step also knows *metadata* that other steps need: the confidence score, the detected language, the list of sources used.
+
+Without `updateContext()`, the only way to pass all of this is to return a record — which forces every downstream step to know about that record type, killing reusability. With `updateContext()`, the step returns its primary output AND publishes metadata as typed context keys.
+
+### Example: Classification with confidence and reasoning
+
+```java
+static class ClassifierStep implements Step<Object, Object> {
+    // Published constants — the step's "output contract"
+    static final ContextKey<Double> CONFIDENCE =
+            ContextKey.of("classifier.confidence", Double.class);
+    static final ContextKey<String> REASONING =
+            ContextKey.of("classifier.reasoning", String.class);
+
+    private final ChatClient chat;
+    private double confidence;
+    private String reasoning;
+
+    ClassifierStep(ChatClient chat) { this.chat = chat; }
+
+    @Override public String name() { return "classifier"; }
+
+    @Override
+    public Object execute(AgentContext ctx, Object input) {
+        String response = chat.prompt()
+                .user("Classify as 'medical' or 'legal'. "
+                        + "Reply: CATEGORY: <cat>\nCONFIDENCE: <0-1>\nREASONING: <why>\n\n"
+                        + "Request: " + input)
+                .call().content();
+
+        // Parse structured response
+        String category = "unknown";
+        for (String line : response.split("\n")) {
+            if (line.startsWith("CATEGORY:")) category = line.substring(9).strip().toLowerCase();
+            else if (line.startsWith("CONFIDENCE:")) {
+                try { confidence = Double.parseDouble(line.substring(11).strip()); }
+                catch (NumberFormatException e) { /* keep default */ }
+            }
+            else if (line.startsWith("REASONING:")) reasoning = line.substring(10).strip();
+        }
+        return category;  // primary output — for branch routing
+    }
+
+    @Override
+    public AgentContext updateContext(AgentContext ctx, Object output) {
+        return ctx.mutate()
+                .with(CONFIDENCE, confidence)
+                .with(REASONING, reasoning)
+                .build();
+    }
+}
+```
+
+The classifier returns `"medical"` as its primary output (used by the branch). The confidence and reasoning are published as side-channel metadata. Any downstream step reads them without knowing anything about the classifier's internals:
+
+```java
+Workflow.<String, Object>define("classify-pipeline")
+        .step(new ClassifierStep(chat))
+        .branch(output -> "medical".equals(output))
+            .then(Step.named("medical", (ctx, in) -> "Medical advice provided"))
+            .otherwise(Step.named("legal", (ctx, in) -> "Legal advice provided"))
+        .then(Step.named("audit", (ctx, in) -> {
+            // Generic audit step — reads metadata by key, doesn't know ClassifierStep
+            double conf = ctx.get(ClassifierStep.CONFIDENCE).orElse(-1.0);
+            String reason = ctx.get(ClassifierStep.REASONING).orElse("none");
+            return in + " [confidence=" + conf + ", reasoning=" + reason + "]";
+        }))
+        .run("I broke my leg, what should I do?");
+```
+
+### Example: Language detection as side-channel
+
+```java
+static class DetectAndTranslateStep implements Step<Object, Object> {
+    static final ContextKey<String> DETECTED_LANGUAGE =
+            ContextKey.of("translate.detectedLanguage", String.class);
+
+    private final ChatClient chat;
+    private String detectedLang;
+
+    DetectAndTranslateStep(ChatClient chat) { this.chat = chat; }
+
+    @Override public String name() { return "detect-and-translate"; }
+
+    @Override
+    public Object execute(AgentContext ctx, Object input) {
+        // ... call LLM, parse "LANGUAGE:" and "TRANSLATION:" from response ...
+        return translation;  // primary output — the English text
+    }
+
+    @Override
+    public AgentContext updateContext(AgentContext ctx, Object output) {
+        return ctx.mutate().with(DETECTED_LANGUAGE, detectedLang).build();
+    }
+}
+
+// Downstream step reads the language without coupling to the translator
+Step<Object, Object> audit = Step.named("audit", (ctx, in) -> {
+    String lang = ctx.get(DetectAndTranslateStep.DETECTED_LANGUAGE).orElse("unknown");
+    return "Translated from " + lang + ": " + in;
+});
+```
+
+**Use when**: A step produces a primary result AND secondary data (confidence, language, token counts, source lists). The step class owns `ContextKey` constants as its published output contract. Downstream steps read by key — no coupling to the producing step's record type.
+
+<Note>
+Most users never need `updateContext()`. Start with input chaining (Pattern 1). Add `Steps.outputOf()` when you need non-adjacent data (Pattern 3). Reach for `updateContext()` only when a step genuinely produces metadata that should travel separately from its primary output.
+</Note>
+
+## Quick Reference
+
+| Level | Pattern | Data source | Known when | Example |
+|-------|---------|------------|------------|---------|
+| **1** | **Input chaining** | Previous step's output | Runtime | Linear pipelines |
+| **1b** | **Constructor** | Step constructor args | Build time | Model, threshold, API client |
+| **2** | **Context keys** | Any prior step's output by name | Runtime | Non-adjacent steps |
+| **3** | **Context writes** | Step publishes typed metadata | Runtime | Confidence, language, sources |
+| **—** | **Mixed** | All of the above | Both | Real-world steps |
+
+## Comparison with Spring Batch
+
+| Spring Batch | Agent Workflow |
+|---|---|
+| `ExecutionContext.put("key", value)` | `updateContext()` → `ctx.mutate().with(KEY, value).build()` |
+| `ExecutionContext.get("key")` | `ctx.get(MyStep.MY_KEY)` — typed, no cast |
+| `@Value("#{jobParameters['x']}")` | Constructor injection on step class |
+| `ExecutionContext.put()` + promotion listener | `Steps.outputOf()` — automatic, no promotion needed |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
+    Full concept-by-concept comparison
+  </Card>
+  <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
+    Runnable integration tests including context writes
+  </Card>
+</CardGroup>

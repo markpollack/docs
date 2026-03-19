@@ -56,7 +56,8 @@
         "projects/agent-bench",
         "projects/agent-journal",
         "projects/agent-sandbox",
-        "projects/agent-tools-and-skills"
+        "projects/agent-tools",
+        "projects/agent-skills"
       ]
     },
     {
@@ -86,8 +87,10 @@
       "group": "Agent Workflow Docs",
       "pages": [
         "docs/agent-workflow/getting-started",
+        "docs/agent-workflow/parameterization",
         "docs/agent-workflow/examples",
         "docs/agent-workflow/choosing-a-pattern",
+        "docs/agent-workflow/spring-batch-mapping",
         "docs/agent-workflow/api-reference"
       ]
     },

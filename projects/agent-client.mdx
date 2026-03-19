@@ -1,15 +1,30 @@
 ---
 title: "Agent Client"
 description: "Autonomous CLI agent integrations for Spring AI — Claude Code, Gemini CLI, and SWE-bench agents"
-url: "https://springaicommunity.mintlify.app/projects/incubating/agent-client"
 ---
 
-<Note>
-This project is documented on the **Spring AI Community** site. Clicking through takes you there.
-</Note>
+Autonomous CLI agent integrations — Claude Code, Gemini CLI, and SWE-bench agents as first-class Spring services. Portable MCP server abstraction where the client resolves and the model translates, supporting multiple agent runtimes simultaneously. Includes auto-configuration and sandbox isolation.
 
-Autonomous CLI agent integrations — Claude Code, Gemini CLI, SWE-bench agents as first-class Spring services with portable MCP servers, auto-configuration, and sandbox isolation.
+Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk), [ACP Java SDK](/projects/acp-java-sdk)) and the structured execution layer ([Agent Workflow](/projects/agent-workflow)).
 
-<Card title="View on Spring AI Community →" icon="arrow-up-right-from-square" href="https://springaicommunity.mintlify.app/projects/incubating/agent-client">
-  Full documentation and getting started guide
-</Card>
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Project Overview" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/agent-client">
+    Architecture, supported runtimes, MCP server abstraction
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client">
+    Implementation — Spring Boot starters, sandbox backends
+  </Card>
+</CardGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Agent Sandbox" icon="shield" href="/projects/agent-sandbox">
+    Isolated execution for untrusted agent code — local, Docker, or E2B cloud
+  </Card>
+  <Card title="Agent Workflow" icon="rotate" href="/projects/agent-workflow">
+    Uses Agent Client under the hood for `ClaudeStep` and `AgentClientStep`
+  </Card>
+</CardGroup>

@@ -1,15 +1,66 @@
 ---
 title: "Agent Bench"
-description: "Enterprise Java agent benchmarking beyond SWE-bench"
-url: "https://springaicommunity.mintlify.app/projects/incubating/spring-ai-bench"
+description: "Benchmarking suite for Java-centric AI agents on enterprise development tasks"
 ---
 
-<Note>
-This project is documented on the **Spring AI Community** site (as Spring AI Bench). Clicking through takes you there.
-</Note>
+Spring AI Bench measures agents on real enterprise development tasks — issue triage, PR review, coverage uplift, compliance validation, dependency upgrades. Run benchmarks on your repos to measure your scenarios. Agent-agnostic: Claude, Gemini, Amazon Q, Amp, or any CLI tool that reads a file and writes files.
 
-Enterprise Java agent benchmarking — issue triage, PR review, coverage uplift, and migration tasks with full reproducibility. Goes beyond SWE-bench's Python-only focus.
+**If agents have evolved, benchmarks must evolve too.** SWE-bench measures 2023 Python patches. Spring AI Bench measures 2025 enterprise Java workflows.
 
-<Card title="View on Spring AI Community →" icon="arrow-up-right-from-square" href="https://springaicommunity.mintlify.app/projects/incubating/spring-ai-bench">
-  Full documentation, task types, and getting started guide
-</Card>
+## How It Works
+
+<Steps>
+  <Step title="Provide">
+    `bench provide` copies a workspace template and writes `INSTRUCTION.md` with the task.
+  </Step>
+  <Step title="Run any agent">
+    Claude, Gemini, a bash script — whatever reads the instruction and modifies the workspace.
+  </Step>
+  <Step title="Grade">
+    `bench grade` evaluates the workspace using YAML-configured judges from [Agent Judge](/projects/agent-judge).
+  </Step>
+</Steps>
+
+The filesystem is the contract. The provide/grade separation means any CLI tool can participate — no SDK integration required.
+
+## Benchmark Tracks
+
+| Track | Status | What it measures |
+|-------|--------|-----------------|
+| **Hello World** | Ready | File creation and basic infrastructure |
+| **Code Coverage** | In development | Coverage uplift on Spring projects |
+| **Issue Analysis** | In development | Automated triage and classification |
+| **PR Review** | In development | Risk assessment and structured reports |
+| **Static Analysis** | In development | Fix code quality issues, preserve functionality |
+
+## CLI
+
+```bash
+bench list                                          # Discover benchmarks
+bench provide --benchmark X --item Y --workspace DIR  # Set up workspace
+bench grade --benchmark X --item Y --workspace DIR    # Evaluate results
+bench run --benchmark X --agent claude-code           # Full pipeline
+```
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Full Documentation" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/spring-ai-bench">
+    Architecture, benchmark format, agent providers, coverage results
+  </Card>
+  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/spring-ai-bench">
+    Benchmark catalog, agent configs, report generator
+  </Card>
+  <Card title="Getting Started" icon="rocket" href="https://spring-ai-community.github.io/spring-ai-bench/getting-started.html">
+    Quick start guide and setup
+  </Card>
+  <Card title="Coverage Results" icon="chart-line" href="https://spring-ai-community.github.io/spring-ai-bench/index.html#_code_coverage_agent">
+    0% → 71.4% autonomous coverage uplift analysis
+  </Card>
+</CardGroup>
+
+## Role in the Lab
+
+- Provides the evaluation infrastructure for [Code Coverage](/experiments/code-coverage-v1) and [Issue Classification](/experiments/issue-classification) experiments
+- Uses [Agent Judge](/projects/agent-judge) for YAML-configured jury grading
+- Uses [Agent Sandbox](/projects/agent-sandbox) for isolated agent execution

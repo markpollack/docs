@@ -1,11 +1,11 @@
 ---
 title: "Agent Workflow"
-description: "Spring-native DSL for composing multi-step agentic pipelines with durability, tracing, and quality gates"
+description: "Spring-native DSL for composing multi-step agentic pipelines with typed context, crash recovery, and quality gates"
 ---
 
 ## Overview
 
-Agent Workflow is a Spring-native DSL for composing multi-step agentic pipelines. Developers write fluent workflow definitions that compile to a `WorkflowGraph` IR, execute via a swappable `PartitionHandler`, and record every transition for tracing and behavioral analysis.
+Agent Workflow lets you compose **steps** into a **workflow**. Each step does one thing — call an LLM, run a deterministic function, invoke an external agent. Steps pass data to each other through a typed **context** (key-value pairs that flow through the pipeline). The workflow definition compiles to an **intermediate representation** (a graph of nodes and edges), which means the same workflow code can execute in different ways — in-process, with JDBC crash recovery, or on Temporal — without changing a line.
 
 ```java
 Workflow.define("pr-review")
@@ -18,28 +18,49 @@ Workflow.define("pr-review")
     .run(event);
 ```
 
-## Why It Matters
+## Core Concepts
 
-**Step = full agentic loop.** A `ClaudeStep` runs a multi-turn LLM session internally — dozens of tool calls, minutes of execution — and returns a typed result. The workflow orchestrates *semantic* steps; the loop mechanics are internal. This is the opposite of frameworks where each LLM API call is a separate workflow activity.
+**Steps** are the building blocks. Each step takes input, does work, and produces output. Steps can be:
 
-**Durability is a deployment concern.** The same workflow code runs on `LocalPartitionHandler` (zero overhead), `CheckpointingPartitionHandler` (JDBC crash recovery), or `TemporalPartitionHandler` (distributed durability). Single `@Bean` swap — no workflow code changes.
+- **Deterministic** — a Java function (GitHub API call, string formatting, file parsing)
+- **LLM-powered** — a `ChatClientStep` (single Spring AI call), a `ClaudeStep` (full multi-turn agent session), or an `AgentClientStep` (external agent runtime)
 
-**10+ composable primitives.** Sequential, branch, while-do loop, do-while loop, parallel, dynamic parallel, LLM decision routing, quality gates with verdict feedback, supervisor, error recovery, terminate. The graph IR uses Java 21 sealed interfaces — every construct produces real nodes and typed edges, not opaque lambdas.
+A `ClaudeStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
+
+**Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
+
+**The graph IR** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
+- **Crash recovery** — if the app restarts mid-workflow, completed steps are skipped and execution resumes from the last checkpoint
+- **Tracing** — every step transition is recorded for observability and [Markov analysis](/methodology/markov-fingerprinting)
+- **Visualization** — the graph is inspectable at compile time
+
+**Portable runtimes.** Same workflow code, different durability — swap with a single `@Bean`:
+
+| Runtime | What it adds | Requires |
+|---------|-------------|----------|
+| `LocalPartitionHandler` | Nothing — in-process, zero overhead | Nothing (default) |
+| `CheckpointingPartitionHandler` | JDBC crash recovery | A `DataSource` |
 
 ## Documentation
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
-    Install, first workflow, four-layer architecture, durability graduation path
+    Steps, context, crash recovery, first workflow
+  </Card>
+  <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
+    4 patterns for getting data into steps
   </Card>
   <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
-    All 10+ primitives with code examples
+    10+ composable patterns with code
   </Card>
-  <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
-    8 runnable integration tests validated against GPT-4.1
+  <Card title="Examples" icon="flask" href="/docs/agent-workflow/examples">
+    8 tests validated against GPT-4.1
+  </Card>
+  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
+    Batch concepts → Agent Workflow
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    Step types, Workflow builder, WorkflowGraph IR, gates, PartitionHandler, TraceRecorder
+    Step, AgentContext, Gate, IR, PartitionHandler
   </Card>
 </CardGroup>
 

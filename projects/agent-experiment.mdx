@@ -1,0 +1,98 @@
+---
+title: "Agent Experiment"
+description: "End-to-end experiment driver for evaluating AI coding agents against fixture datasets"
+---
+
+## Overview
+
+Agent Experiment is the execution backbone of every experiment in this lab. It provides a complete pipeline for running reproducible evaluations: load fixture datasets, invoke agents, judge results with [Agent Judge](/projects/agent-judge) juries, persist structured results, and compare runs across variants.
+
+The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dependencies, while `experiment-claude` adds Claude Code SDK integration for agent invocation, LLM-based planning, and semantic evaluation.
+
+## Architecture
+
+<CardGroup cols={2}>
+  <Card title="Dataset" icon="database">
+    Git-managed fixture datasets with items, before/reference snapshots, and version tracking
+  </Card>
+  <Card title="ExperimentRunner" icon="play">
+    Orchestrates the full loop: load items, invoke agent, judge, aggregate, persist
+  </Card>
+  <Card title="Comparison Engine" icon="code-compare">
+    Compare runs across variants with per-judge deltas, regression detection, and summary statistics
+  </Card>
+  <Card title="Sessions & Sweeps" icon="layer-group">
+    Group variant results into sessions, group sessions into sweeps for multi-run analysis
+  </Card>
+</CardGroup>
+
+## Modules
+
+| Module | Description | Key Dependencies |
+|--------|-------------|------------------|
+| `experiment-core` | Datasets, runner, comparison, results, storage | agent-judge-core, agent-judge-exec, Jackson |
+| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | claude-code-sdk |
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/docs/experiment-driver/getting-started">
+    Run your first experiment: dataset, agent, jury, variant comparison
+  </Card>
+  <Card title="Creating Experiments" icon="flask" href="/docs/experiment-driver/creating-experiments">
+    Design datasets, configure variants, wire custom judges
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Build cascaded juries for tiered evaluation
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/experiment-driver/api-reference">
+    Core types, runner, comparison, storage, diagnostics
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>experiment-core</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+```java
+ExperimentConfig config = ExperimentConfig.builder()
+    .experimentName("my-experiment")
+    .datasetDir(Path.of("datasets/my-benchmark"))
+    .model("sonnet")
+    .promptTemplate("Your task: {{task}}")
+    .perItemTimeout(Duration.ofMinutes(10))
+    .build();
+
+DatasetManager dm = new FileSystemDatasetManager();
+ResultStore store = new FileSystemResultStore(resultsDir);
+
+ExperimentRunner runner = new ExperimentRunner(dm, jury, store, config);
+ExperimentResult result = runner.run(invoker);
+// result.passRate(), result.totalCostUsd(), result.items()
+```
+
+## Role in the Lab
+
+Agent Experiment is the execution layer that ties the other agent-suite projects together:
+
+- **[Agent Judge](/projects/agent-judge)** — Jury scores every item
+- **[Agent Journal](/projects/agent-journal)** — Traces captured during invocation
+- **[Agent Sandbox](/projects/agent-sandbox)** — Isolated execution environments
+- **[Agent Bench](/projects/agent-bench)** — Benchmark datasets consumed by experiments
+
+Used by every experiment in the lab:
+
+- [Code Coverage v1](/experiments/code-coverage-v1)
+- [Code Coverage v2](/experiments/code-coverage-v2)
+
+## Source
+
+<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-experiment">
+  Source code (BSL 1.1) — two modules, 477 tests
+</Card>

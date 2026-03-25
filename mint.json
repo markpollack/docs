@@ -87,6 +87,16 @@
           ]
         },
         "projects/agent-bench",
+        {
+          "group": "Agent Experiment",
+          "pages": [
+            "projects/agent-experiment",
+            "docs/experiment-driver/getting-started",
+            "docs/experiment-driver/creating-experiments",
+            "docs/experiment-driver/jury-system",
+            "docs/experiment-driver/api-reference"
+          ]
+        },
         "projects/agent-journal",
         "projects/agent-sandbox",
         "projects/agent-tools",

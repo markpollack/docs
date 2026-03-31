@@ -238,9 +238,9 @@ All releases shipped. The items below are improvements for the next release cycl
 
 ### P1 — Do before next release
 
-**agent-client cleanup** (pre-0.11.0, assessed 2026-03-31)
+**agent-client cleanup** (assessed + completed 2026-03-31)
 - [x] ~~Rename `spring-ai-agents-starters`~~ — Actively used, 5 provider starters, name is fine
-- [ ] Rename `spring-ai-agents-core` to `spring-ai-agent-launcher` — JBang launcher, 3 agent modules depend on it
+- [x] Renamed `spring-ai-agents-core` to `spring-ai-agent-launcher`
 - [x] ~~Rename `spring-ai-agents-judge`~~ — Not a thin wrapper; provides Spring-aware agent-as-judge integration, name is fine
 - [x] ~~`spring-ai-spring-boot-starters/spring-ai-starter-agent`~~ — Doesn't exist on disk, removed dead comment
 - [x] ~~`agent-models/spring-ai-swebench-agent`~~ — Doesn't exist on disk, removed dead comment
@@ -255,19 +255,18 @@ All releases shipped. The items below are improvements for the next release cycl
 ### P2 — Nice to have
 
 **Build consolidation**
-- [ ] Consolidate build-parent for Spring Boot projects (loopy uses inline release profile due to spring-boot-starter-parent conflict — need to resolve BOM import vs parent inheritance)
-- [ ] Add BashTool to `spring-ai-agent-utils` (currently only in agent-workflow `workflow-tools`; improved description avoids git-focused trails)
+- [ ] Consolidate build-parent for Spring Boot projects — **Decision**: keep inline release profile for Spring Boot projects (loopy). The duplication is one profile block per project. A shared parent that extends spring-boot-starter-parent would couple all projects to a specific Boot version. Current approach is simpler.
+
+**Tools & descriptions**
+- [x] Simplified Bash tool description in spring-ai-agent-utils (removed 78 lines of git protocol/examples that caused model fixation, replaced with 13-line concise version)
 
 **Docs & examples**
-- [ ] Consider creating examples repos for AgentWorks projects (agent-client, agent-workflow)
+- [ ] Extract AgentWorks examples from workflow-dsl-examples (competitive analysis repo) into a clean public examples repo — `~/projects/workflow-dsl-examples/` has the "ours" examples, need to strip LC4j comparison code
 - [x] Update agent-workflow CLAUDE.md module references (34 harness refs -> 0)
 
 **Agent bench**
-- [ ] Add `release.yml` to agent-bench when active development stabilizes
-- [x] ~~Push 22 commits~~ — Already pushed (dead code removal, Item->Task rename, design refactoring)
-
-**agent-client**
-- Same as P1: rename `spring-ai-agents-core` to `spring-ai-agent-launcher`
+- [x] Added `release.yml` to agent-bench
+- [x] ~~Push 22 commits~~ — Already pushed
 
 ---
 

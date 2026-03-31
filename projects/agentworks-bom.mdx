@@ -1,0 +1,78 @@
+---
+title: "AgentWorks BOM"
+description: "Bill of Materials for coordinated version management across all AgentWorks projects"
+---
+
+## Overview
+
+The AgentWorks BOM pins compatible versions of every library in the agent engineering stack — covering both `io.github.markpollack` and `org.springaicommunity` artifacts. Import it once and drop version tags from your dependency declarations.
+
+## Maven
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.github.markpollack</groupId>
+            <artifactId>agentworks-bom</artifactId>
+            <version>1.0.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<!-- Then just: -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>experiment-core</artifactId>
+    <!-- version managed by BOM -->
+</dependency>
+```
+
+## Managed Artifacts
+
+### Agent Engineering (io.github.markpollack)
+
+| Artifact | Version | Project |
+|----------|---------|---------|
+| `journal-core` | 0.9.0 | [Agent Journal](/projects/agent-journal) |
+| `claude-code-capture` | 0.9.0 | [Agent Journal](/projects/agent-journal) |
+| `workflow-api` | 0.1.0 | [Agent Workflow](/projects/agent-workflow) |
+| `workflow-core` | 0.1.0 | [Agent Workflow](/projects/agent-workflow) |
+| `workflow-tools` | 0.1.0 | [Agent Workflow](/projects/agent-workflow) |
+| `workflow-flows` | 0.1.0 | [Agent Workflow](/projects/agent-workflow) |
+| `workflow-agents` | 0.1.0 | [Agent Workflow](/projects/agent-workflow) |
+| `experiment-core` | 0.1.0 | [Agent Experiment](/projects/agent-experiment) |
+| `experiment-claude` | 0.1.0 | [Agent Experiment](/projects/agent-experiment) |
+| `loopy` | 0.3.0 | [Loopy](/projects/loopy) |
+
+### Community Libraries (org.springaicommunity)
+
+| Artifact | Version | Project |
+|----------|---------|---------|
+| `agent-judge-core` | 0.9.1 | [Agent Judge](/projects/agent-judge) |
+| `agent-judge-llm` | 0.9.1 | [Agent Judge](/projects/agent-judge) |
+| `agent-judge-exec` | 0.9.1 | [Agent Judge](/projects/agent-judge) |
+| `agent-judge-file` | 0.9.1 | [Agent Judge](/projects/agent-judge) |
+| `agent-sandbox-core` | 0.9.1 | [Agent Sandbox](/projects/agent-sandbox) |
+| `agent-sandbox-docker` | 0.9.1 | [Agent Sandbox](/projects/agent-sandbox) |
+| `agent-sandbox-e2b` | 0.9.1 | [Agent Sandbox](/projects/agent-sandbox) |
+| `spring-ai-agent-utils` | 0.6.0 | Spring AI Agent Utils |
+| `spring-testing-skills` | 0.9.0 | Spring Testing Skills |
+| `claude-code-sdk` | 1.0.0 | [Claude Agent SDK](/projects/claude-agent-sdk) |
+
+### Agent Client (org.springaicommunity.agents)
+
+| Artifact | Version | Project |
+|----------|---------|---------|
+| `spring-ai-agent-client` | 0.10.0 | [Agent Client](/projects/agent-client) |
+| `spring-ai-claude-agent` | 0.10.0 | [Agent Client](/projects/agent-client) |
+| `spring-ai-gemini` | 0.10.0 | [Agent Client](/projects/agent-client) |
+| `spring-ai-agent-model` | 0.10.0 | [Agent Client](/projects/agent-client) |
+
+## Source
+
+<Card title="GitHub" icon="github" href="https://github.com/markpollack/agentworks">
+  BOM source and release coordination
+</Card>

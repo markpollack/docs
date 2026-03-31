@@ -64,8 +64,9 @@
       ]
     },
     {
-      "group": "Agent Suite",
+      "group": "AgentWorks",
       "pages": [
+        "projects/agentworks-bom",
         {
           "group": "Agent Workflow",
           "pages": [

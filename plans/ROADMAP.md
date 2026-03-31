@@ -278,14 +278,10 @@ Deferred cleanup discovered during agent-client 0.10.0 release. Not blocking any
 - [x] ~~`spring-ai-agents-starters`~~ — Active, 5 provider starters, name is fine
 - [x] ~~`spring-ai-agents-core` → `spring-ai-agent-launcher`~~ Done
 
-**agent-client 0.11.0 naming cleanup**
-- [ ] Rename starters: `spring-ai-starter-agent-claude` → `agent-starter-claude` (and gemini, amp, codex, amazon-q)
-- [ ] Rename `spring-ai-advisors-judge` → `agent-advisors-judge`
-- [ ] Rename `spring-ai-agent-client` → `agent-client-core`
-- [ ] Rename `spring-ai-agent-model` → `agent-model`
-- [ ] Rename `spring-ai-claude-agent` → `agent-claude`
-- [ ] Rename `spring-ai-gemini` → `agent-gemini`
-- [ ] Update AgentWorks BOM with new artifactIds after release
+**agent-client 0.11.0 naming cleanup** — DONE
+- [x] Renamed all 19 artifactIds: dropped `spring-ai-` prefix
+- [x] Released agent-client 0.11.0 to Maven Central
+- [x] Updated AgentWorks BOM to 1.0.2 with new names
 - [x] ~~`spring-ai-agents-judge`~~ — Spring-aware agent-as-judge integration, name is fine
 - [x] ~~`spring-ai-spring-boot-starters/spring-ai-starter-agent`~~ — Doesn't exist on disk, comment removed
 - [x] ~~`agent-models/spring-ai-swebench-agent`~~ — Doesn't exist on disk, comment removed

@@ -65,14 +65,15 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 
 ## Why Deterministic Steps Matter
 
-The biggest insight from running real agent experiments: the AI shouldn't do everything. A PR merge workflow illustrates this:
+The biggest insight from running real agent experiments: the AI shouldn't do everything. This is the pattern Stripe describes in their [Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents) system, now shipping 1,300 PRs a week: *the model does not run the system — the system runs the model.*
+
+A real [PR merge workflow](/projects/spring-ai-project-mgmt) illustrates the point. The pipeline has 8 steps:
 
 ```
-fetchPR (deterministic) → analyzeDiff (LLM) → checkConflicts (deterministic)
-    → resolveConflicts (LLM) → runTests (deterministic) → merge (deterministic)
+checkoutPR → formatCode → collectContext → compile → squash → rebase → resolveConflicts → review
 ```
 
-Five of six steps are deterministic — GitHub API calls, git operations, build commands. Only two need LLM reasoning: analyzing the diff and resolving conflicts. The deterministic steps are free, fast, and perfectly reliable. The LLM steps are expensive and variable. By minimizing what the LLM needs to do, you reduce cost, increase reliability, and make the whole pipeline easier to debug.
+Six steps are deterministic — git operations, Java formatting, GitHub API calls, Maven compile. Only two need LLM reasoning: resolving merge conflicts and reviewing the diff. The deterministic steps are free, fast, and perfectly reliable. The LLM steps are expensive and variable. By minimizing what the LLM needs to do, you reduce cost, increase reliability, and make the whole pipeline easier to debug.
 
 This isn't obvious until you measure it. In our [code coverage experiments](/experiments/code-coverage-v2), adding a deterministic pre-analysis step cut agent steps by 27%. The agent still explored the codebase — but it read source files instead of decompiling JARs. Same attention budget, better allocation.
 

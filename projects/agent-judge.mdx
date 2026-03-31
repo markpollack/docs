@@ -3,7 +3,9 @@ title: "Agent Judge"
 description: "Agent-agnostic evaluation framework with deterministic, command, and LLM judges"
 ---
 
-Agent Judge is a pluggable evaluation framework for verifying AI agent task completion. It provides three kinds of judges — deterministic rules, command execution, and LLM-powered assessment — that compose into juries with configurable voting strategies. Zero coupling to any specific agent implementation.
+Judges are unit tests for your agent. You wouldn't ship application code without assertions — agents need the same discipline. Agent Judge provides the testing framework: deterministic rules, command execution, and LLM-powered assessment that compose into juries with configurable voting strategies.
+
+Just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`. Deterministic judges are free and fast — did it compile, did coverage go up? LLM judges handle the softer criteria — are the assertions meaningful, does the code follow conventions? Together, they score every agent run against the same rubric. When your judges pass consistently, your agent is ready for the field.
 
 The core module (`agent-judge-core`) has **zero external dependencies**. Specialized modules add command execution (`agent-judge-exec`) and LLM evaluation (`agent-judge-llm`).
 

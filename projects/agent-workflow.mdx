@@ -63,10 +63,23 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
   </Card>
 </CardGroup>
 
+## Why Deterministic Steps Matter
+
+The biggest insight from running real agent experiments: the AI shouldn't do everything. A PR merge workflow illustrates this:
+
+```
+fetchPR (deterministic) → analyzeDiff (LLM) → checkConflicts (deterministic)
+    → resolveConflicts (LLM) → runTests (deterministic) → merge (deterministic)
+```
+
+Five of six steps are deterministic — GitHub API calls, git operations, build commands. Only two need LLM reasoning: analyzing the diff and resolving conflicts. The deterministic steps are free, fast, and perfectly reliable. The LLM steps are expensive and variable. By minimizing what the LLM needs to do, you reduce cost, increase reliability, and make the whole pipeline easier to debug.
+
+This isn't obvious until you measure it. In our [code coverage experiments](/experiments/code-coverage-v2), adding a deterministic pre-analysis step cut agent steps by 27%. The agent still explored the codebase — but it read source files instead of decompiling JARs. Same attention budget, better allocation.
+
 ## Quick Links
 
-<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-harness">
-  Source code
+<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-workflow">
+  Source code (0.1.0 on Maven Central)
 </Card>
 
 ## Used In

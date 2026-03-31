@@ -1,0 +1,167 @@
+---
+title: "Jury System"
+description: "How Agent Bench grades agent output using cascaded tiers of judges"
+---
+
+## Overview
+
+Every benchmark defines a **jury** --- a cascade of judge tiers that evaluate the agent's workspace.
+Judges come from the [Agent Judge](/projects/agent-judge) project.
+Benchmarks wire them together in `benchmark.yaml`.
+
+## Cascaded Tiers
+
+Tiers run in order. Each tier has a **policy** that determines whether evaluation continues:
+
+| Policy | Behavior |
+|--------|----------|
+| `REJECT_ON_ANY_FAIL` | If any check fails, stop. Lower tiers are not evaluated. |
+| `ACCEPT_ON_ALL_PASS` | If all checks pass, continue. |
+| `FINAL_TIER` | Last tier. Its result is the overall verdict. |
+
+This is how the code-coverage benchmark grades:
+
+```yaml
+jury:
+  tiers:
+    - name: build
+      policy: REJECT_ON_ANY_FAIL
+      checks:
+        - type: maven-build
+          goals: [clean, test]
+    - name: coverage-preservation
+      policy: REJECT_ON_ANY_FAIL
+      checks:
+        - type: coverage-preservation
+    - name: coverage-improvement
+      policy: ACCEPT_ON_ALL_PASS
+      checks:
+        - type: coverage-improvement
+          min: 50.0
+    - name: test-quality
+      policy: FINAL_TIER
+      checks:
+        - type: test-quality-llm
+          prompt: prompts/judge-practice-adherence.txt
+          model: claude-sonnet-4-6
+```
+
+If the build fails (T0), coverage is never measured.
+If coverage regresses (T1), improvement is never checked.
+This prevents misleading scores from broken code.
+
+## Built-in Judge Types
+
+These are registered in `JudgeFactory` and available in any benchmark:
+
+| Type | Module | What it checks |
+|------|--------|----------------|
+| `file-exists` | agent-judge-core | A specific file exists in the workspace |
+| `file-content` | agent-judge-core | File content matches expected (exact or contains) |
+| `maven-build` | agent-judge-exec | `./mvnw <goals>` exits successfully |
+| `coverage-preservation` | agent-judge-exec | JaCoCo coverage >= baseline |
+| `coverage-improvement` | agent-judge-exec | JaCoCo coverage >= threshold |
+| `test-quality-llm` | agent-bench-agents | LLM evaluates test practice adherence |
+
+### file-exists
+
+```yaml
+- type: file-exists
+  path: hello.txt
+```
+
+### file-content
+
+```yaml
+- type: file-content
+  path: hello.txt
+  expected: "Hello World!"
+  match: EXACT    # or CONTAINS
+```
+
+### maven-build
+
+```yaml
+- type: maven-build
+  goals: [clean, test]
+```
+
+### coverage-improvement
+
+```yaml
+- type: coverage-improvement
+  min: 50.0       # Minimum instruction coverage percentage
+```
+
+### test-quality-llm
+
+```yaml
+- type: test-quality-llm
+  prompt: prompts/judge-rubric.txt   # Path relative to benchmark directory
+  model: claude-sonnet-4-6
+```
+
+The LLM judge reads the prompt file, evaluates the workspace, and returns structured scores.
+Requires running via `agent-bench-agents` module (which has the Claude SDK dependency).
+
+## Writing a Custom Judge
+
+Judges implement the `Judge` interface from agent-judge-core:
+
+```java
+public class MyJudge implements Judge {
+    @Override
+    public Judgment judge(JudgmentContext context) {
+        Path workspace = context.workspace();
+        // Inspect the workspace...
+        return Judgment.builder()
+            .status(JudgmentStatus.PASS)
+            .reasoning("Looks good")
+            .build();
+    }
+}
+```
+
+Register it in `JudgeFactory`:
+
+```java
+factory.register("my-check", config -> new MyJudge());
+```
+
+## Benchmark YAML Schema
+
+```yaml
+schema: bench.benchmark.v1
+name: my-benchmark
+version: "1.0"
+description: "What this benchmark measures"
+default-timeout: PT10M
+
+jury:
+  tiers:
+    - name: tier-name
+      policy: REJECT_ON_ANY_FAIL | ACCEPT_ON_ALL_PASS | FINAL_TIER
+      checks:
+        - type: <judge-type>
+          # ... judge-specific config
+```
+
+## Task YAML Schema
+
+Each task within a benchmark:
+
+```yaml
+schema: bench.task.v1
+id: my-task
+difficulty: easy | medium | hard
+instruction: |
+  What the agent should do.
+timeout: PT10M        # Optional, overrides benchmark default
+metadata:             # Optional, passed to judges
+  key: value
+setup:                # Optional, scripts run before agent
+  - "command 1"
+  - "command 2"
+post:                 # Optional, scripts run after agent, before grading
+  - "command 3"
+```

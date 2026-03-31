@@ -87,7 +87,16 @@
             "docs/experiment-driver/jury-system"
           ]
         },
-        "projects/agent-bench",
+        {
+          "group": "Agent Bench",
+          "pages": [
+            "projects/agent-bench",
+            "docs/agent-bench/getting-started",
+            "docs/agent-bench/agent-config",
+            "docs/agent-bench/jury-system",
+            "docs/agent-bench/cli-reference"
+          ]
+        },
         {
           "group": "Agent Experiment",
           "pages": [

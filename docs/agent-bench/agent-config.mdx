@@ -1,0 +1,106 @@
+---
+title: "Agent Configuration"
+description: "How to configure any CLI tool as an Agent Bench agent"
+---
+
+## Agent YAML Format
+
+An agent config is a YAML file with two fields:
+
+```yaml
+command: <shell command to run>
+timeout: <ISO 8601 duration>
+```
+
+The command runs via `bash -c` in the workspace directory.
+The agent should read `INSTRUCTION.md` and modify the workspace.
+
+## Examples
+
+### Claude Code
+
+```yaml
+command: claude --print --dangerously-skip-permissions "Read INSTRUCTION.md and follow the instructions precisely."
+timeout: PT45M
+```
+
+### Gemini CLI
+
+```yaml
+command: gemini -p "Read INSTRUCTION.md and follow the instructions."
+timeout: PT30M
+```
+
+### Shell Script
+
+```yaml
+command: ./my-agent.sh
+timeout: PT10M
+```
+
+Your script receives the workspace as its working directory:
+
+```bash
+#!/bin/bash
+# my-agent.sh
+INSTRUCTION=$(cat INSTRUCTION.md)
+# ... your agent logic here
+echo "Hello World!" > hello.txt
+```
+
+### Python Agent
+
+```yaml
+command: python3 /path/to/agent.py
+timeout: PT15M
+```
+
+## The Filesystem Contract
+
+When your agent runs, the workspace contains:
+
+| File | Description |
+|------|-------------|
+| `INSTRUCTION.md` | The task description (always present) |
+| Source files | Workspace template files (if the benchmark provides them) |
+
+Your agent should:
+1. Read `INSTRUCTION.md` to understand the task
+2. Create or modify files in the current directory
+3. Exit when done (zero or non-zero exit code)
+
+The benchmark grades the workspace contents after your agent exits.
+
+## Optional: Agent Journal
+
+If your agent writes a `journal.yaml` to the workspace, the benchmark parses it for efficiency metrics:
+
+```yaml
+schema: bench.journal.v1
+totalTurns: 8
+totalInputTokens: 4000
+totalOutputTokens: 2000
+totalCostUsd: 0.12
+durationMs: 15000
+phases:
+  - name: plan
+    turns: 3
+    inputTokens: 1500
+    outputTokens: 800
+    costUsd: 0.05
+    durationMs: 6000
+    toolUses:
+      read: 5
+      write: 2
+```
+
+Agents that don't produce a journal still get graded --- only efficiency metrics are missing.
+
+## Optional: Trajectory Reference
+
+If your agent writes a `trajectory-ref.txt` file containing a URI or path to trace data,
+the benchmark records it in the trial result for later analysis.
+
+```
+s3://my-bucket/traces/run-123.jsonl
+```

@@ -1,66 +1,97 @@
 ---
 title: "Agent Bench"
-description: "Benchmarking suite for Java-centric AI agents on enterprise development tasks"
+description: "Benchmarking suite for Java-centric AI agents on real-world software engineering tasks"
 ---
 
-Spring AI Bench measures agents on real enterprise development tasks — issue triage, PR review, coverage uplift, compliance validation, dependency upgrades. Run benchmarks on your repos to measure your scenarios. Agent-agnostic: Claude, Gemini, Amazon Q, Amp, or any CLI tool that reads a file and writes files.
+## Overview
 
-**If agents have evolved, benchmarks must evolve too.** SWE-bench measures 2023 Python patches. Spring AI Bench measures 2025 enterprise Java workflows.
+Agent Bench measures AI coding agents on real enterprise development tasks.
+Bring your agent, point it at a benchmark, and get graded results.
+
+The filesystem is the contract.
+Any CLI tool that reads `INSTRUCTION.md` and modifies the workspace can participate --- no SDK integration required.
 
 ## How It Works
 
 <Steps>
-  <Step title="Provide">
-    `bench provide` copies a workspace template and writes `INSTRUCTION.md` with the task.
+  <Step title="Configure your agent">
+    Write a 2-line YAML file with your agent's command and timeout.
   </Step>
-  <Step title="Run any agent">
-    Claude, Gemini, a bash script — whatever reads the instruction and modifies the workspace.
+  <Step title="Run a benchmark">
+    `bench run` sets up the workspace, invokes your agent, and grades the result.
   </Step>
-  <Step title="Grade">
-    `bench grade` evaluates the workspace using YAML-configured judges from [Agent Judge](/projects/agent-judge).
+  <Step title="Review results">
+    JSON results with accuracy, pass@k, per-tier jury scores, cost, and duration.
   </Step>
 </Steps>
 
-The filesystem is the contract. The provide/grade separation means any CLI tool can participate — no SDK integration required.
+## Architecture
 
-## Benchmark Tracks
+<CardGroup cols={2}>
+  <Card title="Benchmark Catalog" icon="list">
+    YAML-defined benchmarks with tasks, setup scripts, and difficulty levels
+  </Card>
+  <Card title="Agent Invocation" icon="robot">
+    Your agent runs as a subprocess in an isolated workspace --- any executable works
+  </Card>
+  <Card title="Jury System" icon="scale-balanced">
+    Cascaded tiers of judges from [Agent Judge](/projects/agent-judge) --- deterministic and LLM-based
+  </Card>
+  <Card title="Result Model" icon="chart-bar">
+    TrialResult per task, BenchmarkResult aggregate, pass@k, resume support
+  </Card>
+</CardGroup>
 
-| Track | Status | What it measures |
-|-------|--------|-----------------|
-| **Hello World** | Ready | File creation and basic infrastructure |
-| **Code Coverage** | In development | Coverage uplift on Spring projects |
-| **Issue Analysis** | In development | Automated triage and classification |
-| **PR Review** | In development | Risk assessment and structured reports |
-| **Static Analysis** | In development | Fix code quality issues, preserve functionality |
+## Quick Start
 
-## CLI
+```yaml
+# agents/my-agent.yaml
+command: claude --print --dangerously-skip-permissions "Read INSTRUCTION.md and follow the instructions."
+timeout: PT10M
+```
 
 ```bash
-bench list                                          # Discover benchmarks
-bench provide --benchmark X --item Y --workspace DIR  # Set up workspace
-bench grade --benchmark X --item Y --workspace DIR    # Evaluate results
-bench run --benchmark X --agent claude-code           # Full pipeline
+git clone https://github.com/spring-ai-community/agent-bench.git
+cd agent-bench
+./mvnw clean install -DskipTests
+
+# Run hello-world benchmark with your agent
+./mvnw exec:java -pl agent-bench-core \
+  -Dexec.args="run --benchmark hello-world --agent agents/my-agent.yaml"
 ```
+
+## Benchmarks
+
+| Benchmark | Difficulty | What it measures |
+|-----------|-----------|-----------------|
+| **hello-world** | Easy | File creation, basic agent infrastructure |
+| **code-coverage** | Medium | JUnit test generation, coverage uplift on Spring projects |
 
 ## Documentation
 
 <CardGroup cols={2}>
-  <Card title="Full Documentation" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/spring-ai-bench">
-    Architecture, benchmark format, agent providers, coverage results
+  <Card title="Getting Started" icon="rocket" href="/docs/agent-bench/getting-started">
+    Test your agent in 5 minutes
   </Card>
-  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/spring-ai-bench">
-    Benchmark catalog, agent configs, report generator
+  <Card title="Agent Configuration" icon="gear" href="/docs/agent-bench/agent-config">
+    How to configure any CLI tool as a benchmark agent
   </Card>
-  <Card title="Getting Started" icon="rocket" href="https://spring-ai-community.github.io/spring-ai-bench/getting-started.html">
-    Quick start guide and setup
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-bench/jury-system">
+    Cascaded tiers, built-in judges, custom judge types
   </Card>
-  <Card title="Coverage Results" icon="chart-line" href="https://spring-ai-community.github.io/spring-ai-bench/index.html#_code_coverage_agent">
-    0% → 71.4% autonomous coverage uplift analysis
+  <Card title="CLI Reference" icon="terminal" href="/docs/agent-bench/cli-reference">
+    All commands: run, resume, compare, list, grade
   </Card>
 </CardGroup>
 
 ## Role in the Lab
 
-- Provides the evaluation infrastructure for [Code Coverage](/experiments/code-coverage-v1) and [Issue Classification](/experiments/issue-classification) experiments
 - Uses [Agent Judge](/projects/agent-judge) for YAML-configured jury grading
-- Uses [Agent Sandbox](/projects/agent-sandbox) for isolated agent execution
+- Validated against [Code Coverage v2](/experiments/code-coverage-v2) experiment results
+- Agent-agnostic: Claude Code, Gemini, Amazon Q, or any CLI tool
+
+## Source
+
+<Card title="GitHub" icon="github" href="https://github.com/spring-ai-community/agent-bench">
+  Source code --- two modules, 211 tests
+</Card>

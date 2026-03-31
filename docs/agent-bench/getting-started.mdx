@@ -1,0 +1,156 @@
+---
+title: "Getting Started with Agent Bench"
+description: "Test your AI coding agent against benchmarks in 5 minutes"
+---
+
+## What You'll Do
+
+Run the hello-world benchmark with your own agent.
+You'll write a 2-line agent config, run the benchmark, and see a graded result.
+
+## Prerequisites
+
+- Java 17+
+- An AI coding agent with a CLI (Claude Code, Gemini CLI, or any executable)
+
+## Step 1: Clone and Build
+
+```bash
+git clone https://github.com/spring-ai-community/agent-bench.git
+cd agent-bench
+./mvnw clean install -DskipTests
+```
+
+## Step 2: Configure Your Agent
+
+Create a YAML file that tells the benchmark how to invoke your agent.
+The only requirements: a `command` that runs in a directory, and a `timeout`.
+
+```yaml
+# agents/my-agent.yaml
+command: claude --print --dangerously-skip-permissions "Read INSTRUCTION.md and follow the instructions precisely."
+timeout: PT5M
+```
+
+Your agent receives:
+- A **workspace directory** as its working directory
+- An **`INSTRUCTION.md`** file describing the task
+
+Your agent's job: read the instruction, modify the workspace, and exit.
+
+<Note>
+  `claude -p` (print mode) cannot write files --- it only outputs text.
+  Use `claude --print --dangerously-skip-permissions` for agents that need to create or modify files.
+</Note>
+
+### Other agents
+
+Any CLI tool works. Here are examples for different agents:
+
+```yaml
+# Gemini CLI
+command: gemini -p "Read INSTRUCTION.md and follow the instructions."
+timeout: PT5M
+```
+
+```yaml
+# Custom script
+command: ./my-agent.sh
+timeout: PT10M
+```
+
+```yaml
+# Python agent
+command: python3 agent.py --instruction INSTRUCTION.md
+timeout: PT15M
+```
+
+The benchmark doesn't care what your agent is --- only that it reads the instruction and writes to the workspace.
+
+## Step 3: Run the Benchmark
+
+```bash
+./mvnw exec:java -pl agent-bench-core \
+  -Dexec.args="run --benchmark hello-world --agent agents/my-agent.yaml"
+```
+
+You'll see output like:
+
+```
+Running: hello-world
+Workspace prepared at: runs/<uuid>/tasks/hello-world/workspace
+  hello-world: RESOLVED
+
+Benchmark: hello-world
+Accuracy: 100.0% (1/1)
+Duration: PT1M7.24S
+Results: runs/<uuid>/result.json
+```
+
+## Step 4: Review Results
+
+The benchmark writes structured results to `runs/<uuid>/`:
+
+```
+runs/<uuid>/
+  result.json           # Aggregate: accuracy, pass@k, agent name
+  run-metadata.json     # Provenance: timestamps, commit hash
+  bench.lock            # Config snapshot (for resume)
+  tasks/
+    hello-world/
+      result.json       # Per-task: resolved, scores, failure mode
+      workspace/        # Agent's working directory (preserved)
+```
+
+**result.json** contains the full evaluation:
+
+```json
+{
+  "benchmarkName": "hello-world",
+  "agentName": "claude --print ...",
+  "accuracy": 1.0,
+  "trials": [{
+    "taskId": "hello-world",
+    "resolved": true,
+    "failureMode": "NONE",
+    "scores": { "reasoning": "Content matches expected: Hello World!" }
+  }]
+}
+```
+
+## Step 5: Try Code Coverage
+
+The code-coverage benchmark is a real-world task: write JUnit tests for Spring Petclinic to maximize coverage.
+This requires the full judge stack, so use the `agent-bench-agents` module:
+
+```bash
+# Build spring-ai-agents dependency (needed for LLM judge)
+cd ../spring-ai-agents && ./mvnw clean install -DskipTests && cd ../agent-bench
+
+# Run code-coverage benchmark (45+ minutes)
+./mvnw exec:java -pl agent-bench-agents \
+  -Dexec.args="run --benchmark code-coverage --agent agents/my-agent.yaml"
+```
+
+The code-coverage jury evaluates in 4 tiers:
+
+1. **T0 Build**: Does `./mvnw test` pass?
+2. **T1 Coverage Preservation**: No regressions from baseline?
+3. **T2 Coverage Improvement**: Above 50% instruction coverage?
+4. **T3 Test Quality**: LLM judge scores practice adherence (test slices, assertions, patterns)
+
+If any tier fails, lower tiers are not evaluated.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Agent Configuration" icon="gear" href="/docs/agent-bench/agent-config">
+    Advanced agent config: timeouts, environment, multiple agents
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/docs/agent-bench/cli-reference">
+    All commands: run, resume, compare, list, grade
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-bench/jury-system">
+    How benchmarks are graded: tiers, policies, custom judges
+  </Card>
+</CardGroup>

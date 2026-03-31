@@ -1,0 +1,154 @@
+---
+title: "CLI Reference"
+description: "All Agent Bench commands, flags, and usage patterns"
+---
+
+## Running Commands
+
+Agent Bench runs via Maven exec plugin:
+
+```bash
+# Core module (T3 LLM judge abstains)
+./mvnw exec:java -pl agent-bench-core -Dexec.args="<command> [flags]"
+
+# Agents module (full judge stack including LLM-based T3)
+./mvnw exec:java -pl agent-bench-agents -Dexec.args="<command> [flags]"
+```
+
+Use `agent-bench-agents` when running benchmarks with LLM judges (like code-coverage).
+Use `agent-bench-core` for simple benchmarks (like hello-world) or when Spring AI Agents dependencies are unavailable.
+
+## Commands
+
+### list
+
+List available benchmarks.
+
+```bash
+./mvnw exec:java -pl agent-bench-core -Dexec.args="list"
+```
+
+### tasks
+
+List tasks in a benchmark.
+
+```bash
+./mvnw exec:java -pl agent-bench-core \
+  -Dexec.args="tasks --benchmark hello-world"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--benchmark` | Yes | Benchmark name |
+
+### run
+
+Run a benchmark end-to-end: set up workspace, invoke agent, grade result.
+
+```bash
+./mvnw exec:java -pl agent-bench-agents \
+  -Dexec.args="run --benchmark code-coverage --agent agents/claude-code.yaml"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--benchmark` | Yes | Benchmark name |
+| `--agent` | No | Path to agent config YAML. If omitted, workspace is prepared for manual grading. |
+| `--task` | No | Run only this specific task ID |
+| `--difficulty` | No | Filter tasks by difficulty: `easy`, `medium`, or `hard` |
+
+**Output**: Creates `runs/<uuid>/` with `result.json`, `run-metadata.json`, and per-task directories.
+
+### resume
+
+Resume an interrupted run. Skips tasks that already have a `result.json`.
+
+```bash
+./mvnw exec:java -pl agent-bench-agents \
+  -Dexec.args="resume --run-id 386aba4a-4285-45d2-bbf4-a159c00c3f3b"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--run-id` | Yes | UUID of the run to resume |
+
+### compare
+
+Compare results across multiple runs.
+
+```bash
+./mvnw exec:java -pl agent-bench-agents \
+  -Dexec.args="compare --runs runs/<uuid1> runs/<uuid2>"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--runs` | Yes | Two or more run directory paths |
+
+**Output**: Table comparing agent, accuracy, pass@k, cost, duration, and trial count.
+
+```
+Agent                Accuracy   Pass@1   Cost       Duration   Trials
+--------------------------------------------------------------------------
+claude-code          100.0%     100.0%   $0.0500    1m7s       1
+gemini               0.0%       0.0%     -          2m3s       1
+```
+
+### provide
+
+Set up a workspace for manual agent invocation (without running an agent).
+
+```bash
+./mvnw exec:java -pl agent-bench-core \
+  -Dexec.args="provide --benchmark hello-world --task hello-world --workspace /tmp/ws"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--benchmark` | Yes | Benchmark name |
+| `--task` | No | Task ID (if benchmark has multiple tasks) |
+| `--workspace` | Yes | Directory to set up |
+
+### grade
+
+Grade an existing workspace without running an agent.
+
+```bash
+./mvnw exec:java -pl agent-bench-core \
+  -Dexec.args="grade --benchmark hello-world --task hello-world --workspace /tmp/ws"
+```
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--benchmark` | Yes | Benchmark name |
+| `--task` | No | Task ID |
+| `--workspace` | Yes | Directory to evaluate |
+
+## Output Structure
+
+```
+runs/<uuid>/
+  result.json           # BenchmarkResult: accuracy, pass@k, trials
+  run-metadata.json     # RunMetadata: agent, timestamps, commit hash
+  bench.lock            # Config snapshot (used by resume)
+  tasks/
+    <task-id>/
+      result.json       # TrialResult: resolved, scores, failure mode
+      workspace/        # Agent's working directory (preserved)
+```
+
+## Failure Modes
+
+When a trial fails, the `failureMode` field classifies why:
+
+| Mode | Meaning |
+|------|---------|
+| `NONE` | Task resolved successfully |
+| `AGENT_TIMEOUT` | Agent process timed out |
+| `AGENT_ERROR` | Agent process exited with non-zero code |
+| `CONTEXT_LENGTH_EXCEEDED` | Agent hit LLM context length limit |
+| `SETUP_ERROR` | Setup script failed before agent ran |
+| `GRADE_ERROR` | Judge/grading itself failed |
+| `BUILD_FAILURE` | Maven build failed during grading |
+| `TEST_FAILURE` | Tests failed during grading |
+| `UNKNOWN` | Unclassified failure |

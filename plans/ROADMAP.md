@@ -46,7 +46,7 @@ Per `~/projects/agent-harness/plans/ROADMAP.md`. Git remote already points to `m
 - [x] Rename module directories (git mv)
 - [x] Update all pom.xml (artifactId, module, dependency references)
 - [x] Update all Java package declarations and imports
-- [ ] Update CLAUDE.md module references (deferred — local only)
+- [x] Update agent-workflow CLAUDE.md module references (done — 34 harness refs -> 0)
 - [x] Rename local directory: ~/projects/agent-harness -> ~/projects/agent-workflow
 - [x] Build passes (workflow-api, workflow-core, workflow-tools, workflow-flows)
 - [x] Commit and push
@@ -255,7 +255,7 @@ All releases shipped. The items below are improvements for the next release cycl
 ### P2 — Nice to have
 
 **Build consolidation**
-- [ ] Consolidate build-parent for Spring Boot projects — **Decision**: keep inline release profile for Spring Boot projects (loopy). The duplication is one profile block per project. A shared parent that extends spring-boot-starter-parent would couple all projects to a specific Boot version. Current approach is simpler.
+- [x] ~~Consolidate build-parent~~ — **Decision**: keep inline release profile for Spring Boot projects. Duplication is minimal (one profile block). A shared parent coupling all projects to a specific Boot version is worse.
 
 **Tools & descriptions**
 - [x] Simplified Bash tool description in spring-ai-agent-utils (removed 78 lines of git protocol/examples that caused model fixation, replaced with 13-line concise version)
@@ -276,7 +276,16 @@ Deferred cleanup discovered during agent-client 0.10.0 release. Not blocking any
 
 ### Legacy naming (assessed 2026-03-31)
 - [x] ~~`spring-ai-agents-starters`~~ — Active, 5 provider starters, name is fine
-- [ ] `spring-ai-agents-core` → rename to `spring-ai-agent-launcher` (JBang launcher)
+- [x] ~~`spring-ai-agents-core` → `spring-ai-agent-launcher`~~ Done
+
+**agent-client 0.11.0 naming cleanup**
+- [ ] Rename starters: `spring-ai-starter-agent-claude` → `agent-starter-claude` (and gemini, amp, codex, amazon-q)
+- [ ] Rename `spring-ai-advisors-judge` → `agent-advisors-judge`
+- [ ] Rename `spring-ai-agent-client` → `agent-client-core`
+- [ ] Rename `spring-ai-agent-model` → `agent-model`
+- [ ] Rename `spring-ai-claude-agent` → `agent-claude`
+- [ ] Rename `spring-ai-gemini` → `agent-gemini`
+- [ ] Update AgentWorks BOM with new artifactIds after release
 - [x] ~~`spring-ai-agents-judge`~~ — Spring-aware agent-as-judge integration, name is fine
 - [x] ~~`spring-ai-spring-boot-starters/spring-ai-starter-agent`~~ — Doesn't exist on disk, comment removed
 - [x] ~~`agent-models/spring-ai-swebench-agent`~~ — Doesn't exist on disk, comment removed

@@ -114,6 +114,13 @@
       ]
     },
     {
+      "group": "Agento",
+      "pages": [
+        "projects/agento-studio",
+        "projects/agento-university"
+      ]
+    },
+    {
       "group": "Supporting Projects",
       "pages": [
         "projects/claude-agent-sdk",

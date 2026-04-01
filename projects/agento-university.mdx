@@ -1,0 +1,36 @@
+---
+title: "Agento University"
+description: "Hierarchical multi-agent platform for continuous, autonomous management of software development projects"
+---
+
+<Note>
+  **Coming Soon** — Agento University is in active design. Follow progress on [GitHub](https://github.com/markpollack).
+</Note>
+
+Agento University is a platform for deploying autonomous agent teams that continuously maintain software projects. A **university** manages multiple **campuses** (codebases), each staffed by a **steward** agent that owns the intellectual context of its project — triaging issues, reviewing PRs, enforcing standards, and keeping documentation current.
+
+## How It Works
+
+The university metaphor maps directly to how GitHub organizations operate:
+
+| GitHub Concept | University Equivalent |
+|----------------|----------------------|
+| Organization | University |
+| Repository | Campus / Research Lab |
+| Maintainers | Principal Investigator |
+| Issues | Research questions |
+| Pull Requests | Papers submitted for review |
+| Code Review | Peer review |
+
+A **University Lead** (outer loop) coordinates campus stewards, routes cross-project concerns, and escalates decisions that span repositories.
+
+## Capabilities
+
+- **Campus stewards** — autonomous agents that maintain individual repositories: issue triage, PR review, coverage enforcement, documentation guardrails
+- **Hierarchical coordination** — the University Lead delegates work across campuses and resolves cross-cutting concerns
+- **AgentJars packaging** — deploy complete agent systems as Spring Boot Maven artifacts
+- **Workflow-driven** — each steward runs [Agent Workflow](/projects/agent-workflow) pipelines with quality gates and tiered judge evaluation
+
+## First Campus
+
+The reference implementation targets the [Spring AI Community](https://github.com/spring-ai-community) GitHub organization — a working steward for a real OSS community, proving the pattern at scale.

@@ -4,10 +4,55 @@ description: "Visual environment for designing, composing, and deploying autonom
 ---
 
 <Note>
-  **Coming Soon** — Agento Studio is in active design. Follow progress on [GitHub](https://github.com/markpollack).
+  **Coming Soon** — Agento Studio is in active design.
 </Note>
 
-Agento Studio is an interactive environment for creating autonomous agents. Design agent workflows, wire up tools and skills, configure judge rubrics, and deploy — all without leaving the studio.
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2rem',
+  margin: '2rem 0',
+  padding: '1.5rem 2rem',
+  borderRadius: '8px',
+  background: 'linear-gradient(135deg, rgba(232,168,32,0.06) 0%, rgba(2,9,21,0.95) 50%)',
+  border: '1px solid rgba(232,168,32,0.12)'
+}}>
+  <img src="/images/agento-hello.svg" alt="Agento waving hello" style={{width: '120px', flexShrink: 0}} />
+  <div>
+    <div style={{
+      fontFamily: 'Geist Mono, monospace',
+      fontSize: '1.15rem',
+      fontWeight: 400,
+      color: '#f0b429',
+      marginBottom: '0.5rem'
+    }}>Wouldn't you like to create your own Agento to help you...</div>
+    <div style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6}}>
+      Design agent workflows, wire up tools and skills, configure judge rubrics, measure what works, and ship — all without leaving the studio.
+    </div>
+  </div>
+</div>
+
+Agento Studio is an interactive environment for creating autonomous agents on the JVM. It takes the build-measure-improve cycle that every serious agent project needs and wraps it in tooling that makes each step repeatable.
+
+## What Makes It Different
+
+Most agent platforms stop at observation — traces, logs, dashboards. Agento Studio starts there and keeps going: it scaffolds your project, builds your knowledge base, sets up your judges, and tracks improvement across runs. Create, measure, improve.
+
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  gap: '1.5rem',
+  margin: '1.5rem 0',
+  padding: '1.25rem 1.5rem',
+  borderRadius: '8px',
+  background: 'rgba(52,93,160,0.06)',
+  border: '1px solid rgba(52,93,160,0.15)'
+}}>
+  <img src="/images/agento-field.svg" alt="Agento in the field" style={{width: '80px', flexShrink: 0}} />
+  <div style={{fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6}}>
+    <strong style={{color: '#58a6ff'}}>Your Agento in the field</strong> — running workflows, calling tools, building coverage. Every run produces a behavioral trace that feeds the improvement loop.
+  </div>
+</div>
 
 ## Built On
 

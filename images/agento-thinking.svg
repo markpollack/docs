@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="150" height="190" viewBox="0 0 160 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- FIX 2: single filter on group -->
+            <filter id="th-shadow" x="-28%" y="-18%" width="156%" height="150%">
+              <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.48"/>
+            </filter>
+          </defs>
+
+          <!-- ground shadow -->
+          <ellipse cx="80" cy="207" rx="44" ry="5" fill="#000" opacity="0.18"/>
+
+          <!-- thought bubbles — sit above everything -->
+          <circle cx="124" cy="44" r="18" fill="#12121e" stroke="#2a2a44" stroke-width="1.5" opacity="0.95"/>
+          <text x="124" y="50" text-anchor="middle" font-size="14">🤔</text>
+          <circle cx="112" cy="64" r="6"  fill="#12121e" stroke="#2a2a44" stroke-width="1" opacity="0.75"/>
+          <circle cx="118" cy="56" r="3.5" fill="#12121e" stroke="#2a2a44" stroke-width="1" opacity="0.55"/>
+
+          <!-- FIX 2: single grouped shadow for head + body -->
+          <g filter="url(#th-shadow)">
+            <!-- body -->
+            <rect x="26" y="84" width="108" height="108" rx="32"
+                  fill="#e8a820"
+                  stroke="#a06800" stroke-width="1.5"/>
+            <!-- head -->
+            <ellipse cx="80" cy="73" rx="48" ry="52"
+                     fill="#e8a820"
+                     stroke="#a06800" stroke-width="1.5"/>
+          </g>
+
+          <!-- chest terminal — orange EXPLORE tones -->
+          <rect x="42" y="106" width="76" height="54" rx="9" fill="#120e00" stroke="#3a2a00" stroke-width="1.5"/>
+          <rect x="50" y="114" width="50" height="3" rx="1.5" fill="#f0b429" opacity="0.9"/>
+          <rect x="50" y="121" width="36" height="3" rx="1.5" fill="#f0b429" opacity="0.65"/>
+          <rect x="50" y="128" width="44" height="3" rx="1.5" fill="#f0b429" opacity="0.45"/>
+          <text x="80" y="150" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#f0b429" opacity="0.85">EXPLORE 73%</text>
+
+          <!-- goggle band -->
+          <rect x="28" y="59" width="104" height="26" rx="13" fill="#12121e" opacity="0.9"/>
+
+          <!-- left goggle — pupils drifted UP (thinking upward gaze) -->
+          <circle cx="57"  cy="72" r="17" fill="#080e18" stroke="#2a3545" stroke-width="2"/>
+          <circle cx="57"  cy="72" r="12" fill="#121e30"/>
+          <circle cx="57"  cy="72" r="7"  fill="#0c1520"/>
+          <circle cx="57"  cy="67" r="4"  fill="#060d18"/>
+          <circle cx="55"  cy="66" r="1.3" fill="white" opacity="0.95"/>
+
+          <!-- right goggle — same upward gaze -->
+          <circle cx="103" cy="72" r="17" fill="#080e18" stroke="#2a3545" stroke-width="2"/>
+          <circle cx="103" cy="72" r="12" fill="#121e30"/>
+          <circle cx="103" cy="72" r="7"  fill="#0c1520"/>
+          <circle cx="103" cy="67" r="4"  fill="#060d18"/>
+          <circle cx="101" cy="66" r="1.3" fill="white" opacity="0.95"/>
+
+          <!-- bridge -->
+          <rect x="68" y="69" width="24" height="6" rx="3" fill="#12121e"/>
+
+          <!-- neutral / flat mouth -->
+          <line x1="66" y1="93" x2="94" y2="93" stroke="#7a5000" stroke-width="2.5" stroke-linecap="round"/>
+
+          <!-- antenna — slow thoughtful pulse -->
+          <line x1="80" y1="21" x2="80" y2="41" stroke="#b07208" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="80" cy="17" r="7" fill="#f0b429">
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="2.6s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="80" cy="17" r="3" fill="#ffd97d"/>
+
+          <!-- left arm — relaxed down -->
+          <path d="M 26 120 Q 10 136 16 158" stroke="#c07d0a" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <circle cx="16" cy="161" r="9" fill="#a86800" stroke="#7a5000" stroke-width="1"/>
+
+          <!-- right arm — relaxed down -->
+          <path d="M 134 120 Q 150 136 144 158" stroke="#c07d0a" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <circle cx="144" cy="161" r="9" fill="#a86800" stroke="#7a5000" stroke-width="1"/>
+
+          <!-- legs -->
+          <rect x="50" y="183" width="24" height="22" rx="9" fill="#b07208" stroke="#7a5000" stroke-width="1"/>
+          <rect x="86" y="183" width="24" height="22" rx="9" fill="#b07208" stroke="#7a5000" stroke-width="1"/>
+          <rect x="46" y="196" width="30" height="11" rx="5.5" fill="#12121e"/>
+          <rect x="84" y="196" width="30" height="11" rx="5.5" fill="#12121e"/>
+        </svg>

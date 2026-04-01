@@ -107,6 +107,7 @@
             "docs/experiment-driver/api-reference"
           ]
         },
+        "projects/agent-memory",
         "projects/agent-journal",
         "projects/agent-sandbox",
         "projects/agent-tools",

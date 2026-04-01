@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="150" height="190" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="f-shadow" x="-25%" y="-15%" width="150%" height="145%">
+                <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.55"/>
+              </filter>
+            </defs>
+            <ellipse cx="80" cy="197" rx="44" ry="6" fill="#000" opacity="0.2"/>
+            <!-- FIX 2: single group shadow -->
+            <g filter="url(#f-shadow)">
+              <rect x="26" y="76" width="108" height="108" rx="32"
+                    fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
+              <ellipse cx="80" cy="65" rx="48" ry="52"
+                       fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
+            </g>
+            <!-- hat -->
+            <rect x="24" y="24" width="112" height="9"  rx="4.5" fill="#0a1520"/>
+            <rect x="36" y="6"  width="88"  height="20" rx="5"   fill="#0a1520"/>
+            <rect x="36" y="23" width="88"  height="6"  rx="1"   fill="#162540"/>
+            <!-- chest terminal -->
+            <rect x="42" y="98" width="76" height="54" rx="9" fill="#07101e" stroke="#162540" stroke-width="1.5"/>
+            <rect x="50" y="106" width="38" height="3" rx="1.5" fill="#58a6ff" opacity="0.9"/>
+            <rect x="50" y="113" width="54" height="3" rx="1.5" fill="#58a6ff" opacity="0.6"/>
+            <rect x="50" y="120" width="30" height="3" rx="1.5" fill="#3fb950" opacity="0.85"/>
+            <rect x="50" y="127" width="46" height="3" rx="1.5" fill="#58a6ff" opacity="0.5"/>
+            <rect x="50" y="141" width="7"  height="3" rx="1"   fill="#58a6ff">
+              <animate attributeName="opacity" values="1;0;1" dur="0.9s" repeatCount="indefinite"/>
+            </rect>
+            <!-- 007 badge -->
+            <circle cx="106" cy="102" r="9" fill="#07101e" stroke="#1a3a6a" stroke-width="1.5"/>
+            <text x="106" y="106" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#58a6ff">007</text>
+            <!-- goggle band -->
+            <rect x="28" y="51" width="104" height="26" rx="13" fill="#08101a" opacity="0.92"/>
+            <!-- left goggle -->
+            <circle cx="57"  cy="64" r="17" fill="#080e18" stroke="#1e2d3d" stroke-width="2"/>
+            <circle cx="57"  cy="64" r="12" fill="#121e30"/>
+            <circle cx="57"  cy="64" r="7"  fill="#0c1520"/>
+            <circle cx="53"  cy="60" r="3"  fill="white" opacity="0.55"/>
+            <circle cx="57"  cy="65" r="3.5" fill="#060d18"/>
+            <circle cx="55"  cy="63" r="1.2" fill="white" opacity="0.9"/>
+            <!-- right goggle -->
+            <circle cx="103" cy="64" r="17" fill="#080e18" stroke="#1e2d3d" stroke-width="2"/>
+            <circle cx="103" cy="64" r="12" fill="#121e30"/>
+            <circle cx="103" cy="64" r="7"  fill="#0c1520"/>
+            <circle cx="99"  cy="60" r="3"  fill="white" opacity="0.55"/>
+            <circle cx="103" cy="65" r="3.5" fill="#060d18"/>
+            <circle cx="101" cy="63" r="1.2" fill="white" opacity="0.9"/>
+            <rect x="68" y="62" width="24" height="6" rx="3" fill="#08101a"/>
+            <!-- determined mouth -->
+            <path d="M 65 86 Q 80 90 95 86" stroke="#0d2550" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- antenna off -->
+            <line x1="80" y1="6" x2="80" y2="24" stroke="#1a2e4a" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- left arm + briefcase -->
+            <path d="M 26 112 Q 4 124 8 146" stroke="#1a3a6a" stroke-width="13" fill="none" stroke-linecap="round"/>
+            <rect x="-3" y="138" width="20" height="16" rx="3" fill="#0a1520" stroke="#2a3a5a" stroke-width="1.5"/>
+            <rect x="1"  y="135" width="12" height="5"  rx="2" fill="none" stroke="#2a3a5a" stroke-width="1.5"/>
+            <!-- right arm + comms device -->
+            <path d="M 134 112 Q 156 124 152 146" stroke="#1a3a6a" stroke-width="13" fill="none" stroke-linecap="round"/>
+            <circle cx="152" cy="149" r="9" fill="#0a1520" stroke="#2a3a5a" stroke-width="1"/>
+            <rect x="148" y="141" width="8" height="12" rx="2" fill="#060e1a"/>
+            <line x1="152" y1="139" x2="156" y2="133" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+            <!-- legs -->
+            <rect x="50" y="175" width="24" height="22" rx="9" fill="#1a3a6a" stroke="#0d2550" stroke-width="1"/>
+            <rect x="86" y="175" width="24" height="22" rx="9" fill="#1a3a6a" stroke="#0d2550" stroke-width="1"/>
+            <rect x="46" y="188" width="30" height="11" rx="5.5" fill="#080e18"/>
+            <rect x="84" y="188" width="30" height="11" rx="5.5" fill="#080e18"/>
+          </svg>

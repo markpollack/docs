@@ -4,10 +4,31 @@ description: "Hierarchical multi-agent platform for continuous, autonomous manag
 ---
 
 <Note>
-  **Coming Soon** — Agento University is in active design. Follow progress on [GitHub](https://github.com/markpollack).
+  **Coming Soon** — Agento University is in active design.
 </Note>
 
-Agento University is a platform for deploying autonomous agent teams that continuously maintain software projects. A **university** manages multiple **campuses** (codebases), each staffed by a **steward** agent that owns the intellectual context of its project — triaging issues, reviewing PRs, enforcing standards, and keeping documentation current.
+<div style={{
+  margin: '2rem 0',
+  padding: '1.5rem 2rem',
+  borderRadius: '8px',
+  background: 'linear-gradient(135deg, rgba(122,90,216,0.08) 0%, rgba(2,9,21,0.95) 60%)',
+  border: '1px solid rgba(122,90,216,0.15)',
+  textAlign: 'center'
+}}>
+  <img src="/images/agento-campus.svg" alt="A team of Agenti — thinker, field agent, professor, graduate, and greeter" style={{width: '100%', maxWidth: '480px', margin: '0 auto 1rem'}} />
+  <div style={{
+    fontFamily: 'Geist Mono, monospace',
+    fontSize: '1.15rem',
+    fontWeight: 400,
+    color: '#bc8cff',
+    marginBottom: '0.5rem'
+  }}>A team of Agenti, each one an expert on its codebase</div>
+  <div style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6}}>
+    One university lead coordinates campus stewards across your repositories — triaging issues, reviewing PRs, enforcing standards, keeping docs current. Hierarchical, not peer-based.
+  </div>
+</div>
+
+Agento University is a platform for deploying autonomous agent teams that continuously maintain software projects. A **university** manages multiple **campuses** (codebases), each staffed by a **steward** agent that owns the intellectual context of its project.
 
 ## How It Works
 
@@ -23,6 +44,22 @@ The university metaphor maps directly to how GitHub organizations operate:
 | Code Review | Peer review |
 
 A **University Lead** (outer loop) coordinates campus stewards, routes cross-project concerns, and escalates decisions that span repositories.
+
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  gap: '1.5rem',
+  margin: '1.5rem 0',
+  padding: '1.25rem 1.5rem',
+  borderRadius: '8px',
+  background: 'rgba(232,168,32,0.05)',
+  border: '1px solid rgba(232,168,32,0.12)'
+}}>
+  <img src="/images/agento-thinking.svg" alt="Agento thinking" style={{width: '80px', flexShrink: 0}} />
+  <div style={{fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6}}>
+    <strong style={{color: '#f0b429'}}>Every campus steward learns its domain</strong> — each Agento builds a knowledge base from the codebase it maintains, so its reviews and suggestions get sharper over time.
+  </div>
+</div>
 
 ## Capabilities
 

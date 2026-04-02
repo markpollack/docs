@@ -71,6 +71,7 @@
           "group": "Agent Workflow",
           "pages": [
             "projects/agent-workflow",
+            "docs/agent-workflow/agent-loop",
             "docs/agent-workflow/getting-started",
             "docs/agent-workflow/parameterization",
             "docs/agent-workflow/examples",

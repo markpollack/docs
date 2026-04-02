@@ -1,0 +1,171 @@
+---
+title: "AgentLoop"
+description: "Ready-to-use SWE agent — tools, session memory, observability, and a simple run/chat API backed by Spring AI's agent loop"
+---
+
+## What is AgentLoop?
+
+`AgentLoop` is a ready-to-use agent that packages everything you need to run an autonomous coding task: tools, system prompt, turn limits, cost limits, session memory, and observability. Under the hood it delegates to Spring AI's `ChatClient` + `AgentLoopAdvisor` for the actual tool-calling loop.
+
+Think of it as "batteries included" — one class, one builder call, working agent:
+
+```java
+AgentLoop agent = AgentLoop.builder()
+    .config(AgentLoop.Config.builder()
+        .maxTurns(10)
+        .workingDirectory(Path.of("/my/project"))
+        .build())
+    .model(chatModel)
+    .build();
+
+AgentLoop.Result result = agent.run("Add unit tests for the UserService class");
+
+System.out.println(result.status());    // COMPLETED
+System.out.println(result.output());    // "I've added 5 tests..."
+System.out.println(result.totalTokens()); // 12400
+```
+
+## Built-in Tools
+
+AgentLoop ships with a full set of SWE tools:
+
+| Tool | Source | Description |
+|------|--------|-------------|
+| `Bash` | workflow-tools | Shell commands (git, mvn, docker) |
+| `Read` / `Write` / `Edit` / `LS` | spring-ai-agent-utils | File operations |
+| `Glob` | spring-ai-agent-utils | Find files by pattern |
+| `Grep` | spring-ai-agent-utils | Search file contents |
+| `TodoWrite` | spring-ai-agent-utils | Task planning and tracking |
+| `Task` | spring-ai-agent-utils | Delegate to sub-agents |
+| `Submit` | AgentLoop (internal) | Submit final answer, terminates the loop |
+
+## Configuration
+
+`AgentLoop.Config` is a Java record with a builder:
+
+```java
+AgentLoop.Config config = AgentLoop.Config.builder()
+    .maxTurns(20)           // default: 20
+    .costLimit(1.0)         // default: $1.00
+    .commandTimeout(Duration.ofSeconds(30))  // default: 30s
+    .workingDirectory(Path.of("."))           // default: user.dir
+    .systemPrompt("Custom prompt...")         // default: built-in SWE prompt
+    .build();
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `maxTurns` | 20 | Max LLM invocations before termination |
+| `costLimit` | 1.0 | Max estimated cost in USD |
+| `commandTimeout` | 30s | Timeout for shell commands |
+| `workingDirectory` | `user.dir` | Root directory for file/shell tools |
+| `systemPrompt` | Built-in SWE prompt | System instructions for the agent |
+
+Configs are immutable records. Use `toBuilder()` to derive variants:
+
+```java
+AgentLoop.Config extended = config.toBuilder()
+    .maxTurns(50)
+    .build();
+```
+
+## Session Memory
+
+Enable session memory to preserve conversation context across multiple calls:
+
+```java
+AgentLoop agent = AgentLoop.builder()
+    .config(config)
+    .model(chatModel)
+    .sessionMemory()  // default in-memory implementation
+    .build();
+
+agent.run("Read the UserService class and summarize it");
+agent.run("Now add tests for the methods you found");  // remembers context
+agent.clearSession();  // reset when done
+```
+
+You can also pass a custom `ChatMemory` implementation:
+
+```java
+.sessionMemory(myJdbcChatMemory)
+```
+
+## Interactive Mode
+
+For TUI/CLI applications, interactive mode enables human-in-the-loop via `AskUserQuestionTool`:
+
+```java
+AgentCallback callback = new AgentCallback() {
+    @Override
+    public void onThinking() { System.out.print("Thinking..."); }
+
+    @Override
+    public String onQuestion(List<String> questions) {
+        // Present questions to user, return their answer
+        return scanner.nextLine();
+    }
+
+    @Override
+    public void onComplete() { System.out.println("Done."); }
+};
+
+AgentLoop agent = AgentLoop.builder()
+    .config(config)
+    .model(chatModel)
+    .interactive(true)
+    .agentCallback(callback)
+    .sessionMemory()
+    .build();
+
+agent.chat("Review this PR and ask me about anything unclear", callback);
+```
+
+## Result
+
+`AgentLoop.Result` is a record with execution details:
+
+```java
+AgentLoop.Result result = agent.run(task);
+
+result.status();           // COMPLETED, TURN_LIMIT_REACHED, TIMEOUT, STUCK, etc.
+result.output();           // Agent's final text output
+result.turnsCompleted();   // Number of LLM invocations
+result.toolCallsExecuted();// Total tool calls across all turns
+result.totalTokens();      // Total tokens consumed
+result.estimatedCost();    // Estimated cost in USD
+
+result.isSuccess();        // true if COMPLETED
+result.isFailure();        // true if FAILED
+```
+
+## Observability
+
+AgentLoop wires Micrometer observations for tool call tracking. You can also provide a custom `ToolCallListener`:
+
+```java
+AgentLoop agent = AgentLoop.builder()
+    .config(config)
+    .model(chatModel)
+    .toolCallListener(new LoggingToolCallListener())
+    .build();
+```
+
+## Relationship to LoopPattern
+
+`AgentLoop` is **not** a `LoopPattern` implementation. It's a higher-level construct:
+
+- **`LoopPattern`** — the abstract interface for loop algorithms (`TurnLimitedLoop`, `EvaluatorOptimizerLoop`, `StateMachineLoop`). Lives in `workflow-api`.
+- **`AgentLoop`** — a concrete, runnable agent that uses `AgentLoopAdvisor` internally. Lives in `workflow-agents`.
+
+`AgentLoop` is what you use when you want to _run_ an agent. `LoopPattern` is what you implement when you want to _create a new loop algorithm_.
+
+## Maven Coordinates
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-agents</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```

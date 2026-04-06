@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="150" height="190" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="160" height="200" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <!-- FIX 2: single filter on group -->
             <filter id="hw-shadow" x="-28%" y="-18%" width="156%" height="150%">

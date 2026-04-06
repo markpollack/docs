@@ -16,17 +16,13 @@
           <circle cx="112" cy="64" r="6"  fill="#12121e" stroke="#2a2a44" stroke-width="1" opacity="0.75"/>
           <circle cx="118" cy="56" r="3.5" fill="#12121e" stroke="#2a2a44" stroke-width="1" opacity="0.55"/>
 
-          <!-- FIX 2: single grouped shadow for head + body -->
-          <g filter="url(#th-shadow)">
-            <!-- body -->
-            <rect x="26" y="84" width="108" height="108" rx="32"
-                  fill="#e8a820"
-                  stroke="#a06800" stroke-width="1.5"/>
-            <!-- head -->
-            <ellipse cx="80" cy="73" rx="48" ry="52"
-                     fill="#e8a820"
-                     stroke="#a06800" stroke-width="1.5"/>
-          </g>
+          <!-- body + head -->
+          <rect x="26" y="84" width="108" height="108" rx="32"
+                fill="#e8a820"
+                stroke="#a06800" stroke-width="1.5"/>
+          <ellipse cx="80" cy="73" rx="48" ry="52"
+                   fill="#e8a820"
+                   stroke="#a06800" stroke-width="1.5"/>
 
           <!-- chest terminal — orange EXPLORE tones -->
           <rect x="42" y="106" width="76" height="54" rx="9" fill="#120e00" stroke="#3a2a00" stroke-width="1.5"/>

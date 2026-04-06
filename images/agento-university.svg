@@ -9,15 +9,13 @@
 
           <ellipse cx="80" cy="197" rx="44" ry="5" fill="#000" opacity="0.18"/>
 
-          <!-- FIX 2: single grouped shadow -->
-          <g filter="url(#pr-shadow)">
-            <rect x="26" y="76" width="108" height="108" rx="32"
-                  fill="#7a5ad8"
-                  stroke="#3a1a8a" stroke-width="1.5"/>
-            <ellipse cx="80" cy="65" rx="48" ry="52"
-                     fill="#7a5ad8"
-                     stroke="#3a1a8a" stroke-width="1.5"/>
-          </g>
+          <!-- body + head -->
+          <rect x="26" y="76" width="108" height="108" rx="32"
+                fill="#7a5ad8"
+                stroke="#3a1a8a" stroke-width="1.5"/>
+          <ellipse cx="80" cy="65" rx="48" ry="52"
+                   fill="#7a5ad8"
+                   stroke="#3a1a8a" stroke-width="1.5"/>
 
           <!-- mortar board — sits above shadow group so renders on top -->
           <polygon points="80,4 36,22 124,22" fill="#0d0820"/>

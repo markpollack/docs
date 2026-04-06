@@ -6,13 +6,11 @@
               </filter>
             </defs>
             <ellipse cx="80" cy="197" rx="44" ry="6" fill="#000" opacity="0.2"/>
-            <!-- FIX 2: single group shadow -->
-            <g filter="url(#f-shadow)">
-              <rect x="26" y="76" width="108" height="108" rx="32"
-                    fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
-              <ellipse cx="80" cy="65" rx="48" ry="52"
-                       fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
-            </g>
+            <!-- body + head -->
+            <rect x="26" y="76" width="108" height="108" rx="32"
+                  fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
+            <ellipse cx="80" cy="65" rx="48" ry="52"
+                     fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
             <!-- hat -->
             <rect x="24" y="24" width="112" height="9"  rx="4.5" fill="#0a1520"/>
             <rect x="36" y="6"  width="88"  height="20" rx="5"   fill="#0a1520"/>

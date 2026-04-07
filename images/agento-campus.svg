@@ -113,9 +113,9 @@
   <g transform="translate(78,38) scale(0.58)">
     <rect x="26" y="76" width="108" height="108" rx="32" fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
     <ellipse cx="80" cy="65" rx="48" ry="52" fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
-    <rect x="24" y="24" width="112" height="9" rx="4.5" fill="#0a1520"/>
-    <rect x="36" y="6" width="88" height="20" rx="5" fill="#0a1520"/>
-    <rect x="36" y="23" width="88" height="6" rx="1" fill="#162540"/>
+    <rect x="24" y="24" width="112" height="9" rx="4.5" fill="#1a3050" stroke="#2a4a70" stroke-width="1"/>
+    <rect x="36" y="6" width="88" height="20" rx="5" fill="#1a3050" stroke="#2a4a70" stroke-width="1"/>
+    <rect x="36" y="23" width="88" height="6" rx="1" fill="#243a5a"/>
     <rect x="42" y="98" width="76" height="54" rx="9" fill="#07101e" stroke="#162540" stroke-width="1.5"/>
     <rect x="50" y="106" width="38" height="3" rx="1.5" fill="#58a6ff" opacity="0.9"/>
     <rect x="50" y="113" width="54" height="3" rx="1.5" fill="#58a6ff" opacity="0.6"/>
@@ -159,8 +159,8 @@
   <g transform="translate(258,38) scale(0.58)">
     <rect x="26" y="76" width="108" height="108" rx="32" fill="#1c9050" stroke="#0a5020" stroke-width="1.5"/>
     <ellipse cx="80" cy="65" rx="48" ry="52" fill="#1c9050" stroke="#0a5020" stroke-width="1.5"/>
-    <polygon points="80,4 36,23 124,23" fill="#0a140a"/>
-    <rect x="36" y="21" width="88" height="11" rx="2" fill="#070e07"/>
+    <polygon points="80,4 36,23 124,23" fill="#0a2a12" stroke="#155a28" stroke-width="1"/>
+    <rect x="36" y="21" width="88" height="11" rx="2" fill="#102018" stroke="#155a28" stroke-width="1"/>
     <line x1="120" y1="23" x2="130" y2="37" stroke="#f0b429" stroke-width="2.5"/>
     <circle cx="130" cy="40" r="5" fill="#f0b429"/>
     <rect x="42" y="98" width="76" height="54" rx="9" fill="#041208" stroke="#155020" stroke-width="1.5"/>
@@ -198,8 +198,8 @@
   <g transform="translate(155,12) scale(0.72)">
     <rect x="26" y="76" width="108" height="108" rx="32" fill="#7a5ad8" stroke="#3a1a8a" stroke-width="1.5"/>
     <ellipse cx="80" cy="65" rx="48" ry="52" fill="#7a5ad8" stroke="#3a1a8a" stroke-width="1.5"/>
-    <polygon points="80,4 36,22 124,22" fill="#0d0820"/>
-    <rect x="36" y="20" width="88" height="11" rx="2" fill="#08050f"/>
+    <polygon points="80,4 36,22 124,22" fill="#1a1045" stroke="#2a1860" stroke-width="1"/>
+    <rect x="36" y="20" width="88" height="11" rx="2" fill="#14102a" stroke="#2a1860" stroke-width="1"/>
     <line x1="120" y1="22" x2="130" y2="38" stroke="#f0b429" stroke-width="2.5" stroke-linecap="round"/>
     <circle cx="130" cy="41" r="5" fill="#f0b429"/>
     <rect x="42" y="98" width="76" height="54" rx="9" fill="#0a0520" stroke="#2a1050" stroke-width="1.5"/>

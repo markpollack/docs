@@ -12,9 +12,9 @@
             <ellipse cx="80" cy="65" rx="48" ry="52"
                      fill="#345da0" stroke="#0d2550" stroke-width="1.5"/>
             <!-- hat -->
-            <rect x="24" y="24" width="112" height="9"  rx="4.5" fill="#0a1520"/>
-            <rect x="36" y="6"  width="88"  height="20" rx="5"   fill="#0a1520"/>
-            <rect x="36" y="23" width="88"  height="6"  rx="1"   fill="#162540"/>
+            <rect x="24" y="24" width="112" height="9"  rx="4.5" fill="#1a3050" stroke="#2a4a70" stroke-width="1"/>
+            <rect x="36" y="6"  width="88"  height="20" rx="5"   fill="#1a3050" stroke="#2a4a70" stroke-width="1"/>
+            <rect x="36" y="23" width="88"  height="6"  rx="1"   fill="#243a5a"/>
             <!-- chest terminal -->
             <rect x="42" y="98" width="76" height="54" rx="9" fill="#07101e" stroke="#162540" stroke-width="1.5"/>
             <rect x="50" y="106" width="38" height="3" rx="1.5" fill="#58a6ff" opacity="0.9"/>

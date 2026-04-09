@@ -1,0 +1,135 @@
+---
+title: "Agent Hooks"
+description: "Portable hook API for steering agent behavior at the tool-call boundary — write once, run on any runtime"
+---
+
+Every agent framework implements hooks differently.
+Claude Code has shell-based hooks. Strands has steering callbacks. Spring AI has advisors.
+Your safety policy, logging, and steering logic gets rewritten for each one.
+
+Agent Hooks is a portable Java API that lets you write hook logic once and run it on any runtime that has an adapter.
+The core module has zero dependencies — it defines the event model, decision types, and registry.
+Adapters (Spring AI today, Claude Agent SDK planned) wire the core into their runtime's tool-call lifecycle.
+Your hooks move with you when your agent infrastructure changes.
+
+## Why Hooks
+
+LLMs are probabilistic — prompt-based instructions drift under token pressure.
+Agents skip steps, forget constraints, and ignore guardrails.
+Hooks solve this by moving critical logic out of the prompt and into deterministic code that intercepts every tool call, the same way servlet filters intercept HTTP requests:
+
+- **Safety** — Block dangerous operations before they execute. A `Block` decision short-circuits immediately and cannot be overridden by later hooks.
+- **Observability** — Log every tool call, capture timing data, and feed traces into [Agent Journal](/projects/agent-journal) for behavioral analysis.
+- **Steering** — Modify tool inputs in flight. Subsequent hooks see the modified input, so transformations chain cleanly.
+
+## How It Works
+
+Hooks intercept at two points in the tool-call lifecycle:
+
+```
+BeforeToolCall ──► Tool Executes ──► AfterToolCall
+     │                                    │
+  Block?  ◄── short-circuit            Retry?
+  Modify? ◄── chains                   Log / observe
+  Proceed ◄── default                  Cleanup (reverse order)
+```
+
+Register hooks with type-safe generics and optional tool-name filtering:
+
+```java
+// Block all shell commands
+registry.onTool("shell.*", BeforeToolCall.class, event ->
+    HookDecision.block("Shell access disabled in this environment"));
+
+// Log every tool call
+registry.on(AfterToolCall.class, event -> {
+    log.info("{} completed in {}ms", event.toolName(), event.duration().toMillis());
+    return HookDecision.proceed();
+});
+
+// Redirect file writes to a sandbox directory
+registry.onTool("write.*", BeforeToolCall.class, event -> {
+    String sandboxed = event.toolInput()
+        .replace("/home/user", "/sandbox");
+    return HookDecision.modify(sandboxed);
+});
+```
+
+## Decision Model
+
+`HookDecision` is a sealed type with four variants:
+
+| Decision | When | Behavior |
+|----------|------|----------|
+| `Proceed` | Default | Tool executes normally |
+| `Block` | Safety / policy | Short-circuits immediately — later hooks never run |
+| `Modify` | Input transformation | Passes modified input to the next hook in the chain |
+| `Retry` | AfterToolCall only | Re-executes the tool (e.g., after transient failure) |
+
+Multiple hooks execute in priority order (default: 100, lower = earlier).
+AfterToolCall hooks fire in reverse priority order for proper cleanup semantics.
+
+## Modules
+
+| Module | What it does | Dependencies |
+|--------|-------------|-------------|
+| `agent-hooks-core` | Pure Java 17 API — events, decisions, registry | Zero (portable) |
+| `agent-hooks-spring` | Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Boot | Spring AI, Spring Boot |
+
+## Event Hierarchy
+
+The event system is open (unsealed) — you can define custom events for your runtime:
+
+| Event | Interface | Decisions |
+|-------|-----------|-----------|
+| `BeforeToolCall` | `ToolEvent` | Proceed, Block, Modify |
+| `AfterToolCall` | `ToolEvent` | Proceed, Retry |
+| `SessionStart` | `HookEvent` | Observation only |
+| `SessionEnd` | `HookEvent` | Observation only |
+
+## Quick Start
+
+```xml
+<!-- Core API (zero dependencies) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-hooks-core</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+
+<!-- Spring AI adapter (auto-configured) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-hooks-spring</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+With Spring Boot, implement `AgentHookProvider` and register it as a bean — auto-configuration handles the rest:
+
+```java
+@Component
+public class SecurityHooks implements AgentHookProvider {
+    @Override
+    public void registerHooks(AgentHookRegistry registry) {
+        registry.onTool("shell.*", BeforeToolCall.class, event ->
+            HookDecision.block("Shell access not permitted"));
+    }
+}
+```
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-hooks">
+    Core API and Spring AI adapter
+  </Card>
+  <Card title="Design Notes" icon="compass-drafting" href="https://github.com/markpollack/agent-hooks/blob/main/plans/DESIGN.md">
+    Architecture decisions, event hierarchy, dispatch semantics
+  </Card>
+</CardGroup>
+
+## Used By
+
+- **[Agent Workflow](/projects/agent-workflow)** — hooks apply automatically to any workflow step that invokes tools
+- **[Agent Journal](/projects/agent-journal)** — hook provider that logs tool-call events to a journal Run

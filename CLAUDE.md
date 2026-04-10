@@ -7,7 +7,15 @@ Mintlify documentation site for Pollack AI Lab. Published at `lab.pollack.ai`.
 **Repo**: `markpollack/docs` (GitHub)
 **Local**: `~/projects/pollack-ai-lab/`
 
-## Build
+## Deploy
+
+Mintlify auto-deploys on push to `main`. No build step, no CI config.
+
+```bash
+git push   # deploys to lab.pollack.ai
+```
+
+## Local Dev
 
 Mintlify CLI installed globally (`v4.2.255`).
 

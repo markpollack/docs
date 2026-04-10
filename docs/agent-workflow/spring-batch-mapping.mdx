@@ -20,7 +20,7 @@ If you know Spring Batch, you already know 80% of Agent Workflow. This page maps
 | `ExecutionContext.put()` + promotion | `Steps.outputOf()` auto-propagation | Share data between non-adjacent steps |
 | `ExecutionContext.put("key", value)` | `updateContext()` → `ctx.mutate().with(KEY, value).build()` | Publish typed metadata alongside primary output |
 | `StepRunner` | `StepRunner` | Same name, same concept — substrate for step execution |
-| `JobRepository` (JDBC) | Planned (JDBC `StepRunner`) | Crash recovery — resume from last completed step (not yet implemented) |
+| `JobRepository` (JDBC) | `CheckpointingStepRunner` | Crash recovery — resume from last completed step |
 
 ## Data Flow Patterns
 
@@ -86,11 +86,20 @@ Workflow.define("pipeline")
     .run(input);
 ```
 
-### JobRepository → StepRunner (planned)
+### JobRepository → CheckpointingStepRunner
 
 **Spring Batch**: `JobRepository` persists step execution state to JDBC. On restart, completed steps are skipped.
 
-**Agent Workflow**: The `StepRunner` interface is the seam for future crash recovery. Today only `LocalStepRunner` exists (in-process, zero overhead). JDBC-backed checkpointing is planned — the same pattern as Spring Batch's `JobRepository`, but for steps that cost $5 each instead of milliseconds.
+**Agent Workflow**: `CheckpointingStepRunner` does the same thing — persists step outputs to JDBC, skips completed steps on restart. Same pattern as Spring Batch's `JobRepository`, but for steps that cost $5 each instead of milliseconds. Swap one `@Bean`:
+
+```java
+@Bean StepRunner stepRunner(AgentStepExecutionReadRepository readRepo,
+                            AgentStepExecutionWriteRepository writeRepo) {
+    return new CheckpointingStepRunner(readRepo, writeRepo);
+}
+```
+
+See [Durability](/docs/agent-workflow/durability) for the full crash-and-resume example.
 
 ## What's Different
 
@@ -100,7 +109,7 @@ Workflow.define("pipeline")
 | **Step cost** | Free (CPU only) | $0.01-$5.00 per step (LLM tokens) |
 | **Data model** | Chunk-oriented (read-process-write) | Typed I/O (any input → any output) |
 | **Flow control** | Sequential, split, decision (SpEL expressions) | 10+ primitives (branch, loop, gate, supervisor, LLM decision) |
-| **Crash recovery** | JobRepository (always on) | StepRunner seam (planned) |
+| **Crash recovery** | JobRepository (always on) | `CheckpointingStepRunner` (opt-in per bean) |
 | **Error handling** | Skip/retry policies on chunks | `.onError()` routing to recovery steps |
 | **Quality gates** | Not built in | `JudgeGate` with verdict feedback and retry |
 

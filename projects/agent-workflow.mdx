@@ -35,7 +35,7 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 **Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
 
 **The graph** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
-- **Portable runtimes** — the graph decouples definition from execution. Ships with `LocalStepRunner` (in-process, zero overhead). `CheckpointingStepRunner` (JDBC crash recovery via `workflow-batch`) and `TemporalStepRunner` (distributed durable execution) are planned — same workflow code, swap a single `@Bean`
+- **Portable runtimes** — the graph decouples definition from execution. Ships with `LocalStepRunner` (in-process, zero overhead), `CheckpointingStepRunner` (JDBC crash recovery via `workflow-batch`), and `TemporalStepRunner` (distributed durable execution via `workflow-temporal`) — same workflow code, swap a single `@Bean`
 - **Tracing** — every step transition is recorded for observability and behavioral analysis via [Agent Journal](/projects/agent-journal)
 - **Steering** (planned) — runtime hooks that intercept before/after steps to enforce constraints, redirect behavior, or inject guidance. Deterministic or LLM-powered. Integrates with [Spring AI](https://spring.io/projects/spring-ai) advisors and the [Claude Agent SDK](/projects/claude-agent-sdk) hook system
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
@@ -61,6 +61,9 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
   <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
     Batch concepts → Agent Workflow
   </Card>
+  <Card title="Durability" icon="shield-halved" href="/docs/agent-workflow/durability">
+    Crash recovery, checkpointing, Temporal integration
+  </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
     Step, AgentContext, Gate, WorkflowGraph, StepRunner
   </Card>
@@ -83,7 +86,7 @@ This isn't obvious until you measure it. In our [code coverage experiments](/exp
 ## Quick Links
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-workflow">
-  Source code (0.2.0 on Maven Central)
+  Source code (0.3.0 on Maven Central)
 </Card>
 
 ## Used In

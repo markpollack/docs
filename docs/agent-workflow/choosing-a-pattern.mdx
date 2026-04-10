@@ -155,6 +155,29 @@ Workflow.define("resilient")
     .run(input);
 ```
 
+### BackTo (cyclic back-edge)
+
+Jump back to an earlier step when a condition is met — a lightweight escape hatch for retry patterns:
+
+```java
+Workflow.define("rebase-loop")
+    .step(rebase)
+    .step(runTests)
+    .backTo("rebase", result -> !"PASS".equals(result))
+    .step(merge)
+    .run(branch);
+```
+
+`backTo` creates an `EdgeCondition.BackEdge` in the graph IR — a real edge, visible in traces. The next `.step()` chains from the same node (not the back-edge target), so `merge` runs when the predicate returns `false`.
+
+Use `RunOptions.maxIterations()` as a circuit breaker to prevent infinite loops:
+
+```java
+.run(input, RunOptions.maxIterations(10));
+```
+
+**When to use `backTo` vs `repeatUntil`**: `repeatUntil` creates structured loop nodes (entry → body → check → exit). `backTo` is a single edge — no extra nodes, no loop wrapper. Use it when you need a quick "retry this section" without the overhead of a full loop construct.
+
 ### Terminate
 
 Exit early from anywhere:
@@ -173,7 +196,7 @@ Steps are the atomic unit. Each wraps a different kind of execution:
 | `ChatClientStep.of(chat, template)` | Single Spring AI call | Seconds |
 | `ClaudeStep.of(template)` | Full Claude CLI agent session | Minutes |
 | `AgentClientStep.of(client, template)` | AgentClient abstraction | Minutes |
-| `A2AStep.of(url)` (planned) | Remote A2A agent | Minutes |
+| `A2AStep.of(url)` | Remote A2A agent | Minutes |
 | `Steps.of(fn)` | Pure deterministic function | Milliseconds |
 | `Steps.retrying(n, step)` | Retry wrapper | Per attempt |
 | `Steps.outputOf("step-name")` | Read prior step's output | Instant |

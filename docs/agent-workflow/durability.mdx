@@ -1,0 +1,183 @@
+---
+title: "Durability"
+description: "Crash recovery, checkpointing, and distributed execution for agent workflows"
+---
+
+## The Graduation Path
+
+Agent Workflow separates workflow definition from execution. The `StepRunner` interface is the seam — swap the bean, not the workflow:
+
+| Level | Runner | What it adds |
+|-------|--------|-------------|
+| 0 | `LocalStepRunner` | In-process, zero overhead. Default. |
+| 1 | `CheckpointingStepRunner` | JDBC crash recovery — resume from last completed step |
+| 2 | `TemporalStepRunner` | Distributed durable execution via Temporal activities |
+
+Same workflow code at every level:
+
+```java
+// Level 0 — default, no persistence
+@Bean StepRunner stepRunner() {
+    return new LocalStepRunner();
+}
+
+// Level 1 — JDBC crash recovery
+@Bean StepRunner stepRunner(AgentStepExecutionReadRepository readRepo,
+                            AgentStepExecutionWriteRepository writeRepo) {
+    return new CheckpointingStepRunner(readRepo, writeRepo);
+}
+
+// Level 2 — Temporal durable execution
+@Bean StepRunner stepRunner() {
+    return new TemporalStepRunner("agent-tasks");
+}
+```
+
+## CheckpointingStepRunner
+
+Persists step outputs to a JDBC database. On restart with the same `runId`, completed steps are skipped — their cached output is returned directly.
+
+### How it works
+
+1. Before executing a step, queries by `(runId, stepName)` — the **checkpoint key**
+2. If a `COMPLETED` record exists, returns the cached `outputPayload` (skip)
+3. Otherwise, creates a `STARTED` record, executes the step, upgrades to `COMPLETED` with the serialized output
+4. On exception, records `FAILED` with the error message
+
+### Maven coordinates
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-batch</artifactId>
+    <version>0.3.0</version>
+</dependency>
+```
+
+Requires Spring Data JPA and a JDBC `DataSource` on the classpath. H2 works for development; Postgres or MySQL for production.
+
+### Crash-and-resume example
+
+A 4-step workflow crashes at step 3. On resume with the same `runId`, steps 1-2 are skipped (cached), steps 3-4 execute normally:
+
+```java
+// Define deterministic steps
+Step<String, String> step1 = Step.named("step-1", (ctx, in) -> in + "→1");
+Step<String, String> step2 = Step.named("step-2", (ctx, in) -> in + "→2");
+Step<String, String> step3 = Step.named("step-3", (ctx, in) -> {
+    if (shouldCrash()) throw new RuntimeException("crash!");
+    return in + "→3";
+});
+Step<String, String> step4 = Step.named("step-4", (ctx, in) -> in + "→4");
+
+var workflow = Workflow.<String, String>define("crash-resume")
+        .step(step1).step(step2).step(step3).step(step4)
+        .build();
+
+// First attempt — crashes at step 3
+// Steps 1-2 are persisted as COMPLETED, step-3 as FAILED
+var ctx = AgentContext.withRunId("run-1");
+var executor = new WorkflowExecutor(checkpointRunner, TraceRecorder.noop());
+executor.execute(workflow.graph(), ctx, "start"); // throws
+
+// Second attempt — same runId
+// Steps 1-2 SKIPPED (cached output returned), steps 3-4 execute
+String result = executor.execute(workflow.graph(), ctx, "start");
+// result: "start→1→2→3→4"
+```
+
+<Note>
+A complete runnable example is in [`workflow-dsl-examples/CrashRecoveryIT`](https://github.com/markpollack/workflow-dsl-examples) — `@DataJpaTest` + H2, no LLM needed.
+</Note>
+
+### JPA entities
+
+Two JPA entities back the checkpoint system:
+
+| Entity | Table | Purpose |
+|--------|-------|---------|
+| `AgentStepExecution` | `agent_step_executions` | Per-step checkpoint. Key: `(runId, stepName)` unique constraint. Tracks status, output, tokens, cost. |
+| `AgentFlowExecution` | `agent_flow_executions` | Per-run envelope. Tracks workflow name, steps total/completed, total cost. |
+
+Both use `BatchStatus` (severity-ordered enum ported from Spring Batch) and `ExitStatus` (embeddable record with severity-based composition via `and()`).
+
+## JdbcTraceRecorder
+
+Records every step transition to a `step_transitions` table. Auto-creates the table on first use.
+
+```java
+// From DataSource
+TraceRecorder recorder = new JdbcTraceRecorder(dataSource);
+
+// Or from JdbcTemplate
+TraceRecorder recorder = new JdbcTraceRecorder(jdbcTemplate);
+
+// Wire into executor
+var executor = new WorkflowExecutor(stepRunner, recorder);
+```
+
+Each `StepTransition` record includes: `run_id`, `workflow_name`, `from_step`, `to_step`, `timestamp`, `duration_ms`, `tokens_used`, `cost_usd`, `node_type`, `label`.
+
+Query traces for a run:
+
+```java
+JdbcTraceRecorder recorder = new JdbcTraceRecorder(dataSource);
+List<StepTransition> trace = recorder.getTrace("run-1");
+```
+
+## TemporalStepRunner
+
+Dispatches each step as a Temporal Activity. Steps must be registered with `StepActivityImpl` on the worker side.
+
+### Maven coordinates
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-temporal</artifactId>
+    <version>0.3.0</version>
+</dependency>
+```
+
+### Activity dispatch
+
+```java
+// Workflow side — configure the runner
+StepRunner runner = new TemporalStepRunner("agent-tasks");
+// Default timeouts: 10min start-to-close, 30s heartbeat
+
+// Custom timeouts
+StepRunner runner = new TemporalStepRunner("agent-tasks",
+        Duration.ofMinutes(30),   // start-to-close
+        Duration.ofMinutes(1));   // heartbeat
+```
+
+### Worker-side step registration
+
+```java
+// Register steps with the activity implementation
+StepActivityImpl activity = new StepActivityImpl();
+activity.registerStep(step1);
+activity.registerStep(step2);
+
+// Wire into Temporal worker
+Worker worker = factory.newWorker("agent-tasks");
+worker.registerActivitiesImplementations(activity);
+```
+
+Steps are resolved by name from a `ConcurrentHashMap` registry. The activity creates a fresh `AgentContext` with the `runId` for each execution.
+
+<Note>
+Steps dispatched via Temporal must be **idempotent** — Temporal may retry activities on timeout or failure.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    StepRunner interface, TraceRecorder, WorkflowExecutor
+  </Card>
+  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
+    How CheckpointingStepRunner maps to JobRepository
+  </Card>
+</CardGroup>

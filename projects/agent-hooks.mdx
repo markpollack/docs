@@ -9,7 +9,7 @@ Your safety policy, logging, and steering logic gets rewritten for each one.
 
 Agent Hooks is a portable Java API that lets you write hook logic once and run it on any runtime that has an adapter.
 The core module has zero dependencies — it defines the event model, decision types, and registry.
-Adapters (Spring AI today, Claude Agent SDK planned) wire the core into their runtime's tool-call lifecycle.
+Adapters (Spring AI and Claude Agent SDK) wire the core into their runtime's tool-call lifecycle.
 Your hooks move with you when your agent infrastructure changes.
 
 ## Why Hooks
@@ -75,6 +75,8 @@ AfterToolCall hooks fire in reverse priority order for proper cleanup semantics.
 |--------|-------------|-------------|
 | `agent-hooks-core` | Pure Java 17 API — events, decisions, registry | Zero (portable) |
 | `agent-hooks-spring` | Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Boot | Spring AI, Spring Boot |
+| `agent-hooks-claude` | Claude Agent SDK adapter — bridges hook providers to Claude CLI hooks via `AgentHookBridge` | Claude Code SDK (provided) |
+| `agent-hooks-gemini` | Gemini CLI adapter — stateless stdin/stdout dispatcher for Gemini's subprocess-per-event model | Jackson (compile) |
 
 ## Event Hierarchy
 
@@ -86,6 +88,17 @@ The event system is open (unsealed) — you can define custom events for your ru
 | `AfterToolCall` | `ToolEvent` | Proceed, Retry |
 | `SessionStart` | `HookEvent` | Observation only |
 | `SessionEnd` | `HookEvent` | Observation only |
+| `UserPromptSubmit` | `HookEvent` | Observation only (Claude adapter) |
+| `AgentStop` | `HookEvent` | Observation only (Claude adapter) |
+| `SubagentStop` | `HookEvent` | Observation only (Claude adapter) |
+| `PreCompact` | `HookEvent` | Observation only (Claude adapter) |
+| `GeminiBeforeAgent` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiAfterAgent` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiBeforeModel` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiAfterModel` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiBeforeToolSelection` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiNotification` | `HookEvent` | Observation only (Gemini adapter) |
+| `GeminiPreCompress` | `HookEvent` | Observation only (Gemini adapter) |
 
 ## Quick Start
 
@@ -105,24 +118,81 @@ The event system is open (unsealed) — you can define custom events for your ru
 </dependency>
 ```
 
-With Spring Boot, implement `AgentHookProvider` and register it as a bean — auto-configuration handles the rest:
+```xml
+<!-- Claude Agent SDK adapter -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-hooks-claude</artifactId>
+    <version>0.5.0</version>
+</dependency>
+```
+
+```xml
+<!-- Gemini CLI adapter (stateless subprocess) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-hooks-gemini</artifactId>
+    <version>0.5.0</version>
+</dependency>
+```
+
+## Write Once, Run Anywhere
+
+The same `AgentHookProvider` works on all three runtimes — this is the core value proposition.
 
 ```java
-@Component
+// This provider works on both Spring AI and Claude CLI
 public class SecurityHooks implements AgentHookProvider {
     @Override
     public void registerHooks(AgentHookRegistry registry) {
-        registry.onTool("shell.*", BeforeToolCall.class, event ->
+        registry.onTool("Bash", BeforeToolCall.class, event ->
             HookDecision.block("Shell access not permitted"));
     }
 }
 ```
 
+**Spring AI** — register as a `@Component` bean, auto-configuration handles the rest:
+
+```java
+@Component
+public class MySecurityHooks extends SecurityHooks {}
+```
+
+**Claude Agent SDK** — bridge into the Claude `HookRegistry`:
+
+```java
+AgentHookRegistry registry = new AgentHookRegistry();
+registry.register(new SecurityHooks());
+
+AgentHookBridge bridge = new AgentHookBridge(registry);
+bridge.registerInto(claudeHookRegistry);
+```
+
+The bridge registers callbacks for all six Claude hook events (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop, PreCompact). It converts Claude SDK types to core events, dispatches through your hooks, and maps decisions back to Claude's `HookOutput`.
+
+Tool call duration is tracked via wall-clock timing across the pre/post hook boundary.
+Each Claude session gets its own `HookContext` for isolated state and history.
+
+**Gemini CLI** — stateless subprocess dispatcher reads JSON from stdin:
+
+```java
+public class MyGeminiHooks {
+    public static void main(String[] args) throws Exception {
+        GeminiHookDispatcher.create(new SecurityHooks())
+            .run();  // reads stdin, dispatches, writes stdout, exits
+    }
+}
+```
+
+Gemini CLI spawns the hook process per event. The dispatcher maps all 11 Gemini events to core and Gemini-specific `HookEvent` records.
+`HookContext` is fresh per invocation — stateless hooks (security gates, audit logging) work out of the box.
+Note: Gemini BeforeTool can only allow or block — `Modify` is downgraded to allow with a warning.
+
 ## Documentation
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-hooks">
-    Core API and Spring AI adapter
+    Core API, Spring AI adapter, and Claude adapter
   </Card>
   <Card title="Design Notes" icon="compass-drafting" href="https://github.com/markpollack/agent-hooks/blob/main/plans/DESIGN.md">
     Architecture decisions, event hierarchy, dispatch semantics

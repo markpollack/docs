@@ -1,11 +1,7 @@
 ---
 title: "Agento Studio"
-description: "Visual environment for designing, composing, and deploying autonomous agents on the JVM"
+description: "A methodology and toolkit for building, testing, and improving AI agent knowledge bases"
 ---
-
-<Note>
-  **Coming Soon** — Agento Studio is in active design.
-</Note>
 
 <div style={{
   display: 'flex',
@@ -25,35 +21,91 @@ description: "Visual environment for designing, composing, and deploying autonom
       fontWeight: 400,
       color: '#f0b429',
       marginBottom: '0.5rem'
-    }}>Wouldn't you like to create your own Agento to help you...</div>
+    }}>Build, measure, and improve your agents.</div>
     <div style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6}}>
-      Design agent workflows, wire up tools and skills, configure judge rubrics, measure what works, and ship — all without leaving the studio.
+      Clone. Open Claude Code. Type a slash command. You're building a knowledge base in 5 minutes.
     </div>
   </div>
 </div>
 
-Agento Studio is an interactive environment for creating autonomous agents on the JVM. It takes the build-measure-improve cycle that every serious agent project needs and wraps it in tooling that makes each step repeatable.
+Agento Studio is a methodology and toolkit for building, testing, and improving AI agent knowledge bases. Built on the **Forge methodology** — a six-phase system that separates discovery from execution and treats evaluation as first-class.
 
-## What Makes It Different
+<a href="https://github.com/markpollack/agento-studio" style={{
+  display: 'inline-block',
+  padding: '0.6rem 1.5rem',
+  borderRadius: '6px',
+  background: 'rgba(232,168,32,0.15)',
+  border: '1px solid rgba(232,168,32,0.3)',
+  color: '#f0b429',
+  fontFamily: 'Geist Mono, monospace',
+  fontSize: '0.85rem',
+  textDecoration: 'none',
+  marginBottom: '1.5rem'
+}}>github.com/markpollack/agento-studio</a>
 
-Most agent platforms stop at observation — traces, logs, dashboards. Agento Studio starts there and keeps going: it scaffolds your project, builds your knowledge base, sets up your judges, and tracks improvement across runs. Create, measure, improve.
+## Quick Start
 
-<div style={{
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1.5rem',
-  margin: '1.5rem 0',
-  padding: '1.25rem 1.5rem',
-  borderRadius: '8px',
-  background: 'rgba(52,93,160,0.06)',
-  border: '1px solid rgba(52,93,160,0.15)'
-}}>
-  <img src="/images/agento-field.svg" alt="Agento in the field" style={{width: '80px', flexShrink: 0}} />
-  <div style={{fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6}}>
-    <strong style={{color: '#58a6ff'}}>Your Agento in the field</strong> — running workflows, calling tools, building coverage. Every run produces a behavioral trace that feeds the improvement loop.
-  </div>
-</div>
+```bash
+git clone https://github.com/markpollack/agento-studio.git
+cd agento-studio
+claude
+# then: /forge-kb ~/path/to/your/docs
+```
+
+From another project, use `--add-dir`:
+
+```bash
+claude --add-dir ~/agento-studio
+```
+
+## Slash Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/forge-project` | Scaffold a software project (Vision + Design + Roadmap) |
+| `/forge-research` | Bootstrap a research project |
+| `/forge-kb` | Structure a corpus for JIT context Q&A |
+| `/forge-eval-agent` | Set up agent evaluation with judges |
+| `/forge-steward` | Bootstrap ongoing project stewardship |
+| `/forge-research-kb` | Bootstrap a federated research-partner KB |
+| `/plan-to-roadmap` | Convert a plan into a tracked roadmap |
+| `/collect-status` | Produce a timestamped status report |
+
+## What's Inside
+
+**8 slash commands** — executable from Claude Code, not documentation to read.
+
+**13 concept docs** — Knowledge base architecture, discovery loops, judges, steward agents, research methodology.
+
+**11 templates** — Vision, design, roadmap, learnings, paper tracker, provenance — fill-in-the-blank for every phase output.
+
+**4 project variants** — Eval-agent, project, research, steward. Same six phases, different feedback loops.
+
+## Built with Forge
+
+Projects built using Agento Studio's Forge methodology:
+
+| Project | Variant | What it does |
+|---------|---------|-------------|
+| [Agent Workflow](/projects/agent-workflow) | Project | Pipeline composition for agent loops |
+| [Agent Judge](/projects/agent-judge) | Project | Deterministic + AI judge framework |
+| [Agent Bench](/projects/agent-bench) | Project | Benchmark runner for agent evaluation |
+| [Agent Experiment](/projects/agent-experiment) | Eval-Agent | Experiment driver with sweep management |
+| [Agent Skills](/projects/agent-skills) | Project | Domain knowledge packaging |
+| [Agent Client](/projects/agent-client) | Steward | Claude SDK Java wrapper |
+| [Agent Hooks](/projects/agent-hooks) | Project | Lifecycle hooks for agent pipelines |
+| [Agent Memory](/projects/agent-memory) | Project | Persistent memory for agent sessions |
+| [Agent Journal](/projects/agent-journal) | Project | Behavioral trace capture |
+| [Loopy](/projects/loopy) | Project | CLI agent product |
+| [Code Coverage v1](/experiments/code-coverage-v1) | Eval-Agent | Baseline code coverage experiment |
+| [Code Coverage v2](/experiments/code-coverage-v2) | Eval-Agent | Knowledge ablation experiment |
+| [Code Coverage v3](/experiments/code-coverage-v3) | Eval-Agent | Multi-project generalization |
+| [Issue Classification](/experiments/issue-classification) | Eval-Agent | SWE-bench classification experiment |
 
 ## Built On
 
 Agento Studio builds on the AgentWorks stack — [Agent Workflow](/projects/agent-workflow) for pipeline composition, [Agent Judge](/projects/agent-judge) for evaluation, and [Agent Skills](/projects/agent-skills) for domain knowledge.
+
+## License
+
+BSL 1.1 — converts to Apache 2.0 on April 1, 2029.

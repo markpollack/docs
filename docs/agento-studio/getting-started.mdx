@@ -1,0 +1,241 @@
+---
+title: "Your First Research Agent"
+description: "Build a file-based research KB and teach an AI agent to navigate it — in 20 minutes"
+---
+
+You're going to build a file-based research knowledge base and teach an AI agent to navigate it. By the end, you'll ask a question about coding agents and get a grounded answer — sourced from real papers, not training data.
+
+**Time**: ~20 minutes. **Result**: A working research KB with 5 papers, routing tables, and a research partner you can query.
+
+## What You're Building
+
+This is not a chatbot. It's not a vector database. It's a structured file system that an agent reads directly — markdown files with routing tables that guide the agent to the right context.
+
+Three ideas make it work:
+
+1. **Knowledge lives in files** — summaries, routing tables, and metadata are plain markdown in git
+2. **The agent reads those files directly** — no embeddings, no vector search, no retrieval pipeline
+3. **Routing tables guide the agent to the right context** — this replaces vector search for this class of problems
+
+The agent runs a simple loop: read a file, decide what to read next, synthesize an answer. It's not guessing. It reads files, follows routing tables, and composes answers from that context.
+
+## Prerequisites
+
+- Python 3 (any recent version — no pip packages needed)
+- Git
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
+- Internet access (for arXiv downloads)
+
+## Step 1: Clone and Scaffold
+
+Clone Agento Studio and scaffold your research KB:
+
+```bash
+git clone https://github.com/markpollack/agento-studio.git ~/agento-studio
+cd ~/agento-studio
+claude
+```
+
+Once Claude Code opens, run the slash command:
+
+```
+/forge-research-kb ~/my-research-kb "How do coding agents use tools?"
+```
+
+The skill asks a few questions about your research scope, then scaffolds the project:
+
+```
+~/my-research-kb/
+├── CLAUDE.md                    # Session bridge — teaches agent how to use this KB
+├── plans/
+│   ├── VISION.md                # Research questions
+│   └── supporting_docs/
+│       └── paper-tracker.md     # Bibliography with status tracking
+├── papers/
+│   └── summaries/               # Per-paper structured summaries
+└── findings/                    # Cross-cutting analysis
+```
+
+Open a new Claude Code session inside your KB:
+
+```bash
+cd ~/my-research-kb
+claude --add-dir ~/agento-studio
+```
+
+## Step 2: Seed Your Paper Tracker
+
+Tell Claude Code to populate the tracker with seed papers:
+
+```
+Add these 5 seed papers to plans/supporting_docs/paper-tracker.md:
+
+- Yao et al. (2023) — ReAct (arXiv: 2210.03629)
+- Yang et al. (2024) — SWE-agent (arXiv: 2405.15793)
+- Jimenez et al. (2024) — SWE-bench (arXiv: 2310.06770)
+- Wang et al. (2024) — LLM Agents Survey (arXiv: 2308.11432)
+- Anthropic — Building Effective Agents (blog, no arXiv ID)
+
+Use the tracker's existing table format. Set all to P0, Unread.
+```
+
+Claude Code reads the tracker template, matches its column format, and adds the papers.
+
+## Step 3: Ingest Papers — The Deterministic Layer
+
+Run the arXiv ingest script to download PDFs, metadata, and LaTeX source:
+
+```bash
+python3 ~/agento-studio/scripts/arxiv_ingest.py \
+  --from-tracker \
+  --tracker-file plans/supporting_docs/paper-tracker.md \
+  --papers-dir papers
+```
+
+You'll see progress as each paper downloads:
+
+```
+Resolved 4 arXiv IDs.
+[1/4] 2210.03629
+[2/4] 2405.15793
+[3/4] 2310.06770
+[4/4] 2308.11432
+Done.
+Stats: success=4 partial=0 failed=0 skipped=0
+```
+
+This is the foundation. If the structure is inconsistent, the agent cannot navigate it reliably. The scripts enforce a predictable layout that the agent depends on.
+
+<Note>
+The Anthropic blog post doesn't have an arXiv ID — fetch it separately using Claude Code's WebFetch or save it manually.
+</Note>
+
+## Step 4: Generate Your First Summary
+
+Ask Claude Code to read a paper and write a structured summary:
+
+```
+Read the LaTeX source for ReAct (papers/source/2210.03629/) and write a summary
+to papers/summaries/react-reasoning-acting.md using this format:
+
+## Yao et al. (2023) — ReAct
+**arXiv**: 2210.03629
+**Status**: Summarized
+
+### Key Contribution
+{1-2 sentences}
+
+### Key Findings
+- {finding 1}
+- {finding 2}
+
+### Methodology
+{How they tested it}
+
+### Limitations
+{What they didn't cover}
+
+### Connections
+- Relates to: {other papers}
+```
+
+Claude Code reads the `.tex` files directly and produces a grounded summary. Update the paper tracker to mark it as `Summarized`.
+
+## Quick Test — Your First Query
+
+Now ask a question:
+
+```
+What is the ReAct pattern?
+```
+
+The agent reads your summary and answers from it — not from training data. You'll see it navigate to `papers/summaries/react-reasoning-acting.md` and cite specific findings.
+
+Repeat Step 4 for the remaining papers, then continue.
+
+## Step 5: Build Routing Tables
+
+With summaries written, create the routing layer. Create `papers/summaries/index.md`:
+
+```markdown
+# Paper Summaries
+
+| Summary | Read when... |
+|---------|-------------|
+| [react-reasoning-acting.md](react-reasoning-acting.md) | Question involves reasoning + acting, thought-action loops |
+| [swe-agent-interface.md](swe-agent-interface.md) | Question involves agent-computer interfaces, SWE-bench tooling |
+| [swe-bench-benchmark.md](swe-bench-benchmark.md) | Question involves coding benchmarks, evaluation |
+| [llm-agents-survey.md](llm-agents-survey.md) | Question involves agent taxonomy, broad landscape |
+| [anthropic-effective-agents.md](anthropic-effective-agents.md) | Question involves practical patterns, production systems |
+
+## Not Covered
+
+- Multi-agent orchestration (single-agent tool use only)
+- Non-coding agent domains
+- Reinforcement learning approaches
+- Commercial platform internals (LangChain, CrewAI)
+```
+
+The `Read when...` column is the core mechanism. When the agent gets a question, it reads this table and follows the link whose description matches. **If the agent answers poorly, this table is usually the problem.**
+
+The `Not Covered` section prevents the agent from searching for content that doesn't exist.
+
+## Step 6: Ask a Real Question
+
+Ask something that requires cross-summary reasoning:
+
+```
+How does SWE-agent's approach to tool use differ from the ReAct pattern?
+```
+
+The agent reads the routing table, identifies two relevant summaries, reads both, and synthesizes a comparison with citations from each paper.
+
+## If It Doesn't Work
+
+When the agent gives a wrong or weak answer, the fix is always in the knowledge — not in prompts.
+
+| Symptom | Fix |
+|---------|-----|
+| Wrong answer | Routing table `Read when...` descriptions don't match the question |
+| Missing detail | Summaries are too shallow — add more content |
+| Hallucination | `Not Covered` section is missing a topic |
+
+This system improves by editing knowledge, not tuning prompts.
+
+## Step 7: Validate Your KB
+
+Run the health check to catch structural issues:
+
+```
+/kb-reindex
+```
+
+This checks for orphan files, broken cross-references, stale indexes, and missing "Not Covered" sections. Routing gaps are the most common cause of weak agent answers.
+
+## What You Learned
+
+- Routing tables replace vector search for this class of problems
+- Knowledge improves by editing files, not tuning prompts
+- Structure enables agent navigation — the agent reads, decides, synthesizes
+
+## Why This Works
+
+Instead of probabilistic retrieval:
+- You control exactly what the agent reads
+- Context selection is explicit, not fuzzy
+- Improvements are local — edit a file, not a system
+
+This trades automation for control — and that's the point.
+
+## What Just Happened
+
+You built a research partner that answers questions grounded in real papers. This same pattern scales to codebases, issue trackers, and multi-agent systems.
+
+This is an example of the [Forge methodology](/projects/agento-studio) — a way to build agent-native knowledge systems incrementally.
+
+## Next Steps
+
+- **Add more papers** — Expand the tracker, run the batch pipeline, write summaries
+- **Synthesize themes** — Write cross-cutting analysis in `findings/`
+- **Federate** — Connect this KB to other projects via `KB-FEDERATION.md`
+- **Explore the full methodology** — See the [Agento Studio project page](/projects/agento-studio)

@@ -60,6 +60,15 @@
             "docs/loopy/extending",
             "docs/loopy/cli-reference"
           ]
+        },
+        {
+          "group": "Bud",
+          "pages": [
+            "projects/bud",
+            "docs/bud/getting-started",
+            "docs/bud/tools-reference",
+            "docs/bud/architecture"
+          ]
         }
       ]
     },
@@ -120,7 +129,13 @@
     {
       "group": "Agento",
       "pages": [
-        "projects/agento-studio",
+        {
+          "group": "Agento Studio",
+          "pages": [
+            "projects/agento-studio",
+            "docs/agento-studio/getting-started"
+          ]
+        },
         "projects/agento-university"
       ]
     },

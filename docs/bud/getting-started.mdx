@@ -1,0 +1,102 @@
+---
+title: "Getting Started"
+description: "Install Bud and scaffold your first Spring Boot project"
+---
+
+## Prerequisites
+
+- **Java 21+** on PATH
+- **Claude Code** installed and authenticated ([claude.ai/code](https://claude.ai/code))
+- **JetBrains IDE** 2026.1+ with AI Assistant plugin enabled
+
+## Install from Release
+
+```bash
+curl -L https://github.com/markpollack/bud/releases/download/v0.1.0/bud-acp-server-0.1.0-unix.tar.gz | tar xz
+cd bud-acp-server-0.1.0
+```
+
+## Install from Source
+
+```bash
+git clone https://github.com/markpollack/bud.git
+cd bud
+./mvnw package -DskipTests
+```
+
+This produces:
+- `bud-acp-server/target/bud-acp-server-0.1.0-jar-with-dependencies.jar` — the ACP agent
+- `bud-mcp-server/target/bud-mcp-server-0.1.0.jar` — the MCP tool server
+
+## Configure JetBrains
+
+Create or edit `~/.jetbrains/acp.json`:
+
+```json
+{
+  "default_mcp_settings": {},
+  "agent_servers": {
+    "Bud": {
+      "command": "java",
+      "args": [
+        "-Dbud.mcp.jar=/path/to/bud/bud-mcp-server/target/bud-mcp-server-0.1.0.jar",
+        "-jar",
+        "/path/to/bud/bud-acp-server/target/bud-acp-server-0.1.0-jar-with-dependencies.jar"
+      ]
+    }
+  }
+}
+```
+
+<Warning>
+Replace `/path/to/bud` with the absolute path to your cloned repository. The `-Dbud.mcp.jar` system property tells the ACP agent where to find the MCP tool server.
+</Warning>
+
+Restart your JetBrains IDE after editing the config.
+
+## Your First Project
+
+1. Open any project in IntelliJ
+2. Open **AI Chat** tool window
+3. Select **"Bud"** from the agent dropdown
+4. Type: `create a REST app called hello-api in /tmp`
+
+Bud will scaffold a complete Spring Boot REST project with:
+- `GreetingController` with GET endpoint
+- `GreetingService` with business logic
+- `ProblemDetail` error handling
+- Working tests
+- Maven wrapper
+
+## Verify
+
+```bash
+cd /tmp/hello-api
+./mvnw test
+```
+
+## Try More Commands
+
+```
+add actuator to /tmp/hello-api
+```
+
+```
+analyze the project at /tmp/hello-api
+```
+
+```
+list available project templates
+```
+
+## How It Works
+
+When you send a message to Bud in AI Chat:
+
+1. JetBrains sends the prompt to Bud's ACP agent over stdio
+2. Bud forwards the goal to Claude Code CLI with its 16 MCP tools registered
+3. Claude Code picks the right tools (e.g., `create_project`, `add_actuator`)
+4. The tools execute deterministically — no LLM involved in the actual scaffolding
+5. Results stream back through ACP to your chat window
+
+The first prompt may take 30-60 seconds (CLI startup + MCP server startup + LLM reasoning). Subsequent prompts in the same session are faster.

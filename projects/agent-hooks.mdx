@@ -9,7 +9,7 @@ Your safety policy, logging, and steering logic gets rewritten for each one.
 
 Agent Hooks is a portable Java API that lets you write hook logic once and run it on any runtime that has an adapter.
 The core module has zero dependencies — it defines the event model, decision types, and registry.
-Adapters (Spring AI and Claude Agent SDK) wire the core into their runtime's tool-call lifecycle.
+Adapters (Spring AI, Claude Agent SDK, and Gemini CLI) wire the core into their runtime's tool-call lifecycle.
 Your hooks move with you when your agent infrastructure changes.
 
 ## Why Hooks
@@ -107,14 +107,14 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-core</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.2</version>
 </dependency>
 
 <!-- Spring AI adapter (auto-configured) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-spring</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.2</version>
 </dependency>
 ```
 
@@ -123,7 +123,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-claude</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.2</version>
 </dependency>
 ```
 
@@ -132,7 +132,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-gemini</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.2</version>
 </dependency>
 ```
 
@@ -141,7 +141,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 The same `AgentHookProvider` works on all three runtimes — this is the core value proposition.
 
 ```java
-// This provider works on both Spring AI and Claude CLI
+// This provider works on Spring AI, Claude CLI, and Gemini CLI
 public class SecurityHooks implements AgentHookProvider {
     @Override
     public void registerHooks(AgentHookRegistry registry) {
@@ -192,7 +192,7 @@ Note: Gemini BeforeTool can only allow or block — `Modify` is downgraded to al
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-hooks">
-    Core API, Spring AI adapter, and Claude adapter
+    Core API, Spring AI adapter, Claude adapter, and Gemini adapter
   </Card>
   <Card title="Design Notes" icon="compass-drafting" href="https://github.com/markpollack/agent-hooks/blob/main/plans/DESIGN.md">
     Architecture decisions, event hierarchy, dispatch semantics

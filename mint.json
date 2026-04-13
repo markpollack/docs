@@ -18,7 +18,7 @@
   },
   "topbarCtaButton": {
     "name": "Latest Experiment",
-    "url": "/experiments/code-coverage-v2"
+    "url": "/experiments/code-coverage-v3"
   },
   "anchors": [
     {
@@ -153,6 +153,7 @@
         "experiments/index",
         "experiments/code-coverage-v1",
         "experiments/code-coverage-v2",
+        "experiments/code-coverage-v3",
         "experiments/issue-classification"
       ]
     }

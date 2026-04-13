@@ -1,0 +1,126 @@
+---
+title: "Code Coverage v3 — The Exemplar Effect"
+description: "When existing tests use older patterns, skills can't override them. The codebase is the agent's primary teacher."
+---
+
+<div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+  <span style={{background: '#22c55e', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>COMPLETE</span>
+  <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Apr 2026</span>
+</div>
+
+## Hypothesis
+
+When existing test files use older patterns, the agent will follow those patterns even when skills explicitly teach the newer ones. The codebase is a stronger signal than knowledge injection.
+
+## Setup
+
+| Parameter | Value |
+|-----------|-------|
+| **Target** | spring-petclinic (Boot 4.0.1) |
+| **Variants** | 2 |
+| **N-count** | 3 per variant (6 sessions total) |
+| **Evaluation** | Three-tier jury (T0-T2) |
+| **Model** | Claude Sonnet 4.6 |
+| **Baseline coverage** | 64.9% (stripped from full suite) |
+| **Existing test files** | 6 (using `mockMvc.perform()`, no `flush()`/`clear()`) |
+
+## The 2 Variants
+
+| # | Name | What the agent has |
+|---|------|--------------------|
+| 1 | simple | Two-line prompt. No process guidance. |
+| 2 | hardened-skills | Seven-step structured prompt. Explicit stopping condition. Read-existing-tests-first instruction. |
+
+Both variants have the same [Spring testing skills](https://github.com/spring-ai-community/spring-testing-skills) installed globally.
+
+## Results (N=3)
+
+| Variant | N | Mean Cost | Mean Turns | T2 Quality | Final Coverage |
+|---------|---|-----------|------------|------------|----------------|
+| simple | 3 | $3.60 | 47.0 | 0.667 | 95.2% |
+| hardened-skills | 3 | $3.46 | 46.7 | 0.667 | 92.9% |
+
+### Per-Run Breakdown
+
+| Run | Variant | Cost | Turns | Duration | Final Cov. | T1 | T2 |
+|-----|---------|------|-------|----------|------------|-----|-----|
+| n1 | simple | $4.07 | 42 | 20.3 min | 95.3% | 0.608 | 0.667 |
+| n1 | hardened-skills | $3.99 | 52 | 16.9 min | 94.6% | 0.595 | 0.667 |
+| n2 | simple | $3.72 | 52 | 18.0 min | 94.6% | 0.595 | 0.667 |
+| n2 | hardened-skills | $2.62 | 37 | 12.5 min | 89.2% | 0.486 | 0.667 |
+| n3 | simple | $3.00 | 47 | 13.0 min | 95.6% | 0.615 | 0.667 |
+| n3 | hardened-skills | $3.77 | 51 | 16.4 min | 94.9% | 0.601 | 0.667 |
+
+### T2 Quality Breakdown
+
+| T2 Criterion | Score | Passed? |
+|---|---|---|
+| test_slice_selection | 1.00 | Yes |
+| assertion_quality | 0.80 | Yes |
+| error_and_edge_case_coverage | 0.80 | Yes |
+| domain_specific_test_patterns | **0.30** | **No** |
+| coverage_target_selection | 0.80 | Yes |
+| version_aware_patterns | **0.30** | **No** |
+| **Average (T2)** | **0.667** | — |
+
+## Behavioral Analysis
+
+Despite identical quality scores, the two variants navigate the codebase differently.
+
+| Metric | simple | hardened-skills |
+|--------|--------|-----------------|
+| Orientation phase | 72% of calls | 65% of calls |
+| First file read | `PetClinicApplication.java` | `pom.xml` |
+| Read order | production code first | existing tests first |
+| Redundant reads per run | 16.7 | 4.3 |
+| Avg tool calls | 84 | 61 |
+| Expected steps (Markov) | 260 | 164 |
+
+<Frame>
+  <img src="/images/state-diagram-combined-v3.png" alt="Combined state diagram showing both variants" />
+</Frame>
+
+*Each arrow shows: simple value → hardened-skills value. The EXPLORE self-loop drops from 0.87 to 0.70 (less re-reading). The WRITE→BUILD arrow more than doubles (0.22 → 0.47) — the agent builds sooner.*
+
+<Frame>
+  <img src="/images/efficiency-vs-quality-v3.png" alt="4x fewer redundant reads, 37% fewer expected steps, same quality" />
+</Frame>
+
+*4x fewer redundant reads. 37% fewer expected steps. Same quality. The efficiency story is invisible if you only look at the T2 score.*
+
+## The Exemplar Effect: v2 vs v3
+
+| | v2 (zero tests) | v3 (existing tests) | What changed |
+|---|---|---|---|
+| Coverage (simple) | 92–94% | 89–96% | Converges either way |
+| T2/T3 quality | 0.783–0.878 | 0.667 | Exemplar patterns cap quality |
+| version_aware | 0.70–1.00 | **0.30** | Existing files use `perform()` |
+| domain_specific | 0.70–0.90 | **0.30** | Existing files lack flush/clear |
+
+## Key Findings
+
+1. **The codebase is the agent's primary teacher.** Skills and prompts are secondary signals. If the existing code demonstrates older patterns, the agent will reproduce them — even when it has explicit knowledge of the better approach.
+2. **Quality ceilings come from exemplars, not prompts.** T2 = 0.667 across all 6 runs. Two variants, three runs each, identical quality score. The ceiling moved when the existing tests changed (v2 vs v3), not when the prompt changed.
+3. **Efficiency gains are still real.** 37% fewer expected steps, 4x fewer redundant reads, half as many reading-loop cycles. Prompt hardening and skills make the agent faster — they just can't make it better when the codebase says otherwise.
+4. **Fix the code, not the prompt.** The highest-leverage intervention for agent quality is updating the exemplars the agent will see.
+
+## What Comes Next
+
+**v4: Fix the exemplar — but not by hand.** A separate "Boot best-practices upgrade" step — skill-driven, focused, run *before* the test-writing agent starts. Fix the code the agent will imitate, then let it imitate. Prediction: T2 rises to ≥0.85.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Experiment Repo" icon="github" href="https://github.com/markpollack/experiment-code-coverage-v3">
+    Variant configs, analysis scripts, raw traces
+  </Card>
+  <Card title="Blog: When You Come to a Fork in the Code" icon="newspaper" href="https://blog.pollack.ai/when-you-come-to-a-fork-in-the-code-take-it/">
+    Narrative walkthrough of the exemplar effect
+  </Card>
+  <Card title="Results Report (PDF)" icon="file" href="/images/results-code-coverage-v3.pdf">
+    Full quantitative results with figures and tables
+  </Card>
+  <Card title="v2 Experiment" icon="flask" href="/experiments/code-coverage-v2">
+    The previous experiment — skills vs knowledge bases with zero existing tests
+  </Card>
+</CardGroup>

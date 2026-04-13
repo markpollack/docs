@@ -16,13 +16,17 @@ Structured skills (SkillsJars) outperform flat knowledge injection — not becau
 
 | Parameter | Value |
 |-----------|-------|
-| **Target** | spring-petclinic |
+| **Target** | spring-petclinic (Boot 4.0.1) |
 | **Variants** | 7 |
 | **N-count** | 3 per variant (20 sessions total) |
 | **Evaluation** | Four-tier jury (T0-T3) |
+| **Model** | Claude Sonnet 4 |
 | **Agent engine** | [Agent Workflow](/projects/agent-workflow) |
+| **Starting coverage** | 0% (all tests deleted) |
 
 ## The 7 Variants
+
+Each variant adds one variable on top of the previous. This isolates the effect of each intervention.
 
 | # | Name | What it adds |
 |---|------|-------------|
@@ -46,18 +50,107 @@ Structured skills (SkillsJars) outperform flat knowledge injection — not becau
 | hardened | 103.0 | $4.08 | 0.850 |
 | simple | 109.5 | $3.47 | 0.783 |
 
+<Frame>
+  <img src="/images/cost-steps-comparison-v2.png" alt="Mean cost and step count per variant" />
+</Frame>
+
+*Cost and step count across 7 variants. Skills+preanalysis (variant 6) achieves the lowest step count without inflating cost. Plan-act (variant 7) pays $5.11 for marginal quality gain.*
+
 ## Key Findings
 
-1. **Prompt hardening is the biggest quality driver** — simple → hardened: +0.067 quality, -6% steps. A free gain from structural discipline alone.
-2. **Pre-analysis drives efficiency at a quality cost** — hardened+preanalysis: -22% steps but quality drops to 0.789. Tight plans miss edge cases.
-3. **Skills fix pre-analysis's quality regression** — hardened+skills+preanalysis: -31% steps AND quality = 0.850 (matches hardened). Best tradeoff in the experiment.
-4. **KB is a pure efficiency play on known codebases** — hardened+kb: -24% steps, quality flat. On novel codebases the effect should be larger.
-5. **Plan-act is high variance** — highest quality ceiling (0.878) but also highest cost ($5.11) and rework spiral risk.
-6. **Markov model predicts step counts** — zero mean bias in leave-one-out cross-validation despite formal rejection of first-order assumption.
+### 1. Prompt hardening is the biggest quality driver
+
+simple → hardened: +0.067 quality, -6% steps. A free gain from structural discipline alone — no knowledge injection, just telling the agent when to stop and how to structure its work.
+
+### 2. Pre-analysis drives efficiency at a quality cost
+
+hardened+preanalysis: -22% steps but quality drops to 0.789. The agent follows its pre-analysis plan too rigidly, missing edge cases it would have discovered through exploration. Same attention budget, worse allocation.
+
+### 3. Skills fix pre-analysis's quality regression
+
+hardened+skills+preanalysis: -31% steps AND quality = 0.850 (matches hardened). Skills give the agent the right vocabulary for each step, so it doesn't waste attention discovering patterns. Best tradeoff in the experiment.
+
+### 4. KB is a pure efficiency play on known codebases
+
+hardened+kb: -24% steps, quality flat. The knowledge base eliminates JAR inspection cycles (the agent no longer needs to discover Spring Boot 4 import changes). On novel codebases the effect should be larger.
+
+### 5. Plan-act is high variance
+
+Highest quality ceiling (0.878) but also highest cost ($5.11) and rework spiral risk. The two-phase approach (deep exploration then sustained writing) occasionally gets stuck in fix loops.
+
+### 6. Markov model predicts step counts
+
+Zero mean bias in leave-one-out cross-validation despite formal rejection of the first-order assumption. The model is wrong in theory but useful in practice.
+
+## Behavioral Analysis
+
+Every tool call across all 20 sessions was classified into one of 9 behavioral states using the [Markov fingerprinting](/methodology/markov-fingerprinting) methodology. This reveals *how* variants differ, not just *whether* they produce different outcomes.
+
+### Transition Probability Matrix
+
+<Frame>
+  <img src="/images/transition-probability-matrix-v2.png" alt="Transition probability matrix across all variants" />
+</Frame>
+
+*Each cell shows the probability of transitioning from one behavioral state to another. Darker cells = higher probability. The diagonal (self-loops) dominates — agents spend most time repeating the same type of action.*
+
+### The JAR Cluster: Knowledge Friction
+
+The most distinctive behavioral signature was the JAR_INSPECT cluster — the agent downloading and inspecting Spring Boot JARs to discover import paths that changed between Boot 3 and Boot 4.
+
+<Frame>
+  <img src="/images/state-diagram-jar-loop-v2.png" alt="JAR inspection loop — the agent stuck in a discovery cycle" />
+</Frame>
+
+*Without knowledge injection, the agent cycles through JAR inspection trying to discover Boot 4 import changes. This loop consumed 6–18% of all tool calls in variants without KB or skills.*
+
+<Frame>
+  <img src="/images/state-diagram-jar-fixed-v2.png" alt="JAR loop eliminated with skills" />
+</Frame>
+
+*With skills or KB providing the correct imports, the JAR inspection loop disappears entirely. The agent goes straight from reading to writing.*
+
+### Loop Amplification
+
+<Frame>
+  <img src="/images/loop-amplification-v2.png" alt="Expected cycles through each behavioral loop" />
+</Frame>
+
+*The Markov fundamental matrix predicts how many times the agent cycles through each loop before absorbing. Skills+preanalysis cuts the EXPLORE loop from 189 expected cycles to 93 — same attention budget, better allocation.*
+
+### Intervention Deltas
+
+<Frame>
+  <img src="/images/intervention-delta-v2.png" alt="How each intervention changes transition probabilities" />
+</Frame>
+
+*Each panel shows the change in transition probabilities when adding one intervention. Red = increased probability, blue = decreased. Skills most visibly reduce the EXPLORE self-loop and increase WRITE→BUILD transitions.*
+
+### Sankey Flow Comparison
+
+<Frame>
+  <img src="/images/sankey-flow-comparison-v2.png" alt="Sankey flow comparing simple vs hardened+skills+preanalysis" />
+</Frame>
+
+*Tool-call flow from left to right. The simple variant (top) shows wide, diffuse flows through many states. The skills+preanalysis variant (bottom) is narrower and more directed — fewer detours, more time writing.*
+
+### Behavioral Heatmaps
+
+<Frame>
+  <img src="/images/heatmap-simple-v2.png" alt="Behavioral heatmap — simple variant" />
+</Frame>
+
+*Simple variant: broad exploration, scattered writes, high JAR_INSPECT activity. The agent discovers everything through trial and error.*
+
+<Frame>
+  <img src="/images/heatmap-hardened-skills-preanalysis-v2.png" alt="Behavioral heatmap — hardened+skills+preanalysis" />
+</Frame>
+
+*Skills+preanalysis: focused exploration phase, then sustained writing. JAR_INSPECT is eliminated. The agent knows what it needs and writes it.*
 
 ## What Comes Next
 
-The PetClinic model floor (agents already know PetClinic well) limits how much knowledge injection can differentiate. The follow-up experiment targets **Apache Fineract** — a novel, complex codebase where the agent has no prior knowledge — to test whether skills make a larger difference on unfamiliar territory.
+The follow-up experiment ([Code Coverage v3](/experiments/code-coverage-v3)) tests what happens when the agent has skills but the existing codebase demonstrates older patterns. Spoiler: the codebase wins.
 
 ## Resources
 
@@ -68,7 +161,7 @@ The PetClinic model floor (agents already know PetClinic well) limits how much k
   <Card title="Blog: I Read My Agent's Diary" icon="newspaper" href="https://blog.pollack.ai/i-read-my-agents-diary/">
     Narrative walkthrough of the behavioral analysis
   </Card>
-  <Card title="Results Report (PDF)" icon="file" href="/images/results-v3.pdf">
+  <Card title="Results Report (PDF)" icon="file" href="/images/results-code-coverage-v2.pdf">
     Full quantitative results with figures and tables
   </Card>
   <Card title="Reading Agent Behavior (PDF)" icon="file" href="/images/markov-primer-v2.pdf">
@@ -76,5 +169,8 @@ The PetClinic model floor (agents already know PetClinic well) limits how much k
   </Card>
   <Card title="v1 Baseline Experiment" icon="flask" href="/experiments/code-coverage-v1">
     The first experiment establishing the methodology
+  </Card>
+  <Card title="v3 Follow-up: The Exemplar Effect" icon="flask" href="/experiments/code-coverage-v3">
+    What happens when existing code contradicts skill guidance
   </Card>
 </CardGroup>

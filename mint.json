@@ -82,12 +82,13 @@
             "projects/agent-workflow",
             "docs/agent-workflow/agent-loop",
             "docs/agent-workflow/getting-started",
+            "docs/agent-workflow/annotation-model",
             "docs/agent-workflow/parameterization",
             "docs/agent-workflow/examples",
             "docs/agent-workflow/choosing-a-pattern",
-            "docs/agent-workflow/spring-batch-mapping",
             "docs/agent-workflow/api-reference",
-            "docs/agent-workflow/durability"
+            "docs/agent-workflow/durability",
+            "docs/agent-workflow/spring-batch-mapping"
           ]
         },
         "projects/agent-client",

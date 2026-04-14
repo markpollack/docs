@@ -185,6 +185,65 @@ try {
 
 Resolution order: per-agent handlers on the agent instance first, then cross-cutting advice in registration order.
 
+## Spring Boot Wiring
+
+In a Spring Boot application, wire the registry and resolver as beans in a `@Configuration` class:
+
+```java
+@Configuration(proxyBeanMethods = false)
+public class AgentConfig {
+
+    @Bean
+    AgentExceptionHandlerResolver agentExceptionHandlerResolver(
+            MyErrorAdvice errorAdvice) {  // @AgentAdvice bean
+        return new AgentExceptionHandlerResolver(List.of(errorAdvice));
+    }
+
+    @Bean
+    AgentRegistry agentRegistry(PrReviewAgent prReviewAgent) {
+        return new AgentRegistry(Map.of("pr-review", prReviewAgent));
+    }
+}
+```
+
+Spring injects the `@Agent` and `@AgentAdvice` beans by type. The registry and resolver become injectable anywhere you need them — HTTP controllers, message listeners, MCP tool handlers.
+
+### Disambiguating steps with @Qualifier
+
+When two steps share the same `Step<I, O>` signature, Spring can't tell them apart by type alone. Use `@Qualifier` on both the bean definition and the injection point:
+
+```java
+@Component
+@Qualifier("assess-code-quality")
+@StepName("assess-code-quality")
+public class AssessCodeQualityStep implements Step<PrContext, AssessmentResult> {
+    // ...
+}
+
+@Component
+@Qualifier("assess-backport")
+@StepName("assess-backport")
+public class AssessBackportStep implements Step<PrContext, AssessmentResult> {
+    // ...
+}
+```
+
+Then inject by qualifier in the agent constructor:
+
+```java
+@Agent("pr-review")
+public class PrReviewAgent implements AgentHandler<PrEvent, ReviewReport> {
+
+    public PrReviewAgent(
+            @Qualifier("assess-code-quality") Step<PrContext, AssessmentResult> quality,
+            @Qualifier("assess-backport") Step<PrContext, AssessmentResult> backport) {
+        // ...
+    }
+}
+```
+
+This is the standard Spring pattern — `@StepName` gives you a stable checkpoint key, `@Qualifier` gives you injection disambiguation.
+
 ## Injecting Durability with withExecutor()
 
 By default, `Workflow.run()` creates a `WorkflowExecutor` with `LocalStepRunner` (in-process, no persistence). Use `withExecutor()` to inject a configured executor with a durable `StepRunner`:

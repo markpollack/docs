@@ -29,7 +29,7 @@ Key classes:
 
 ### bud-mcp-server
 
-Spring Boot 4.1.0-M2 application that wraps bud-core with 19 `@McpTool`-annotated methods. Communicates via stdio JSON-RPC (MCP protocol). This is the tool layer — it has no AI, no LLM calls, no opinions about what to do. It just exposes deterministic operations.
+Spring Boot 4.1.0-M2 application that wraps bud-core with 23 `@McpTool`-annotated methods. Communicates via stdio JSON-RPC (MCP protocol). This is the tool layer — it has no AI, no LLM calls, no opinions about what to do. It just exposes deterministic operations.
 
 ### bud-acp-server
 
@@ -72,7 +72,7 @@ The execution planner applies a 6-rule cascade to determine the tier. Rules are 
 │  Claude Code CLI (Expander)         │
 │  ← MCP protocol (stdio JSON-RPC) → │
 ├─────────────────────────────────────┤
-│  Bud MCP Server (19 tools)          │
+│  Bud MCP Server (23 tools)          │
 │  ← Java method calls →              │
 ├─────────────────────────────────────┤
 │  bud-core (pure Java)               │

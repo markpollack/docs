@@ -1,0 +1,320 @@
+---
+title: "Annotation Model"
+description: "Declare agents with @Agent, compose workflows inside AgentHandler, and wire exception handling with @ExceptionHandler and @AgentAdvice"
+---
+
+## Why an Annotation Model?
+
+Steps and workflows are the plumbing. Agents are the product — the thing you expose to HTTP endpoints, MCP servers, message listeners, and other agents. The annotation model gives you a programming model for declaring agents, naming them, describing them, handling their errors, and looking them up by name at runtime.
+
+If you've used `@Controller` + `@ControllerAdvice` in Spring MVC, you already know how this works. `@Agent` is to `AgentHandler` what `@Controller` is to your handler methods.
+
+## AgentHandler\<I, O\>
+
+The entry-point contract for agents. A `@FunctionalInterface` that takes context and input, returns output:
+
+```java
+@FunctionalInterface
+public interface AgentHandler<I, O> {
+    O handle(AgentContext ctx, I input);
+}
+```
+
+**Lambda form** — for simple cases:
+
+```java
+AgentHandler<String, String> echo = (ctx, input) -> input.toUpperCase();
+String result = echo.handle(AgentContext.create(), "hello"); // "HELLO"
+```
+
+**Class-based form** — for production agents that compose a `Workflow` internally:
+
+```java
+public class CodeReviewAgent implements AgentHandler<String, ReviewReport> {
+
+    private final Step<String, String> fetchDiff = Step.named("fetch-diff",
+            (ctx, prUrl) -> gitHub.fetchDiff(prUrl));
+
+    private final Step<String, ReviewReport> analyze = Step.named("analyze",
+            (ctx, diff) -> llm.analyze(diff));
+
+    @Override
+    public ReviewReport handle(AgentContext ctx, String prUrl) {
+        return Workflow.<String, ReviewReport>define("code-review")
+                .step(fetchDiff)
+                .then(analyze)
+                .run(prUrl, ctx);
+    }
+}
+```
+
+`AgentHandler` is pure Java — no Spring dependency. It lives in `workflow-api` so it's portable across any runtime.
+
+## @Agent
+
+Marks a class as a named agent and registers it as a Spring bean:
+
+```java
+@Agent("code-review")
+public class CodeReviewAgent implements AgentHandler<String, ReviewReport> {
+    // ...
+}
+```
+
+`@Agent` is a Spring `@Component` stereotype — classes annotated with it are picked up by component scanning. The `value()` is the unique agent name used for registry lookup and protocol addressing.
+
+## @StepName and @Description
+
+Two metadata annotations for steps and agents:
+
+```java
+@StepName("analyze-diff")
+@Description("Parses a PR diff and extracts changed files and hunks")
+public class AnalyzeDiffStep implements Step<PrEvent, String> {
+    // ...
+}
+```
+
+**@StepName** pins a stable name for checkpoint and Temporal keys. When you rename the class, the checkpoint key stays the same — crash recovery and Temporal replay still match the right execution record. Without it, `Step.name()` (which defaults to the class simple name) is used.
+
+**@Description** provides a human-readable description for traces, visualization, and protocol tool listings. Can be placed on types or methods.
+
+Both are pure Java annotations — no Spring dependency, no runtime cost.
+
+### StepNames utility
+
+`StepNames.resolve(step)` reads the `@StepName` annotation; falls back to `step.name()` if absent:
+
+```java
+StepNames.resolve(new AnalyzeDiffStep());  // "analyze-diff" (from annotation)
+StepNames.resolve(Step.named("foo", ...)); // "foo" (from name() method)
+```
+
+## AgentRegistry
+
+An immutable map of name → handler. Manual construction — you decide what goes in:
+
+```java
+AgentRegistry registry = new AgentRegistry(Map.of(
+    "code-review", codeReviewAgent,
+    "security-audit", securityAuditAgent
+));
+
+AgentHandler<?, ?> agent = registry.get("code-review").orElseThrow();
+Set<String> names = registry.names();  // ["code-review", "security-audit"]
+```
+
+The registry is defensive-copied at construction (`Map.copyOf()`). Subsequent changes to the source map don't affect it.
+
+<Note>
+Auto-configuration that scans `@Agent` beans and populates `AgentRegistry` automatically is planned but not yet implemented. For now, construct the registry manually or in a `@Configuration` class.
+</Note>
+
+## Exception Handling
+
+Exception handling mirrors Spring MVC's `@ExceptionHandler` + `@ControllerAdvice` pattern exactly. Two scopes:
+
+1. **Per-agent** — `@ExceptionHandler` methods inside an `@Agent` class handle that agent's exceptions
+2. **Cross-cutting** — `@ExceptionHandler` methods inside an `@AgentAdvice` class handle exceptions from any agent
+
+Per-agent handlers take priority. When multiple handlers match, the most specific exception type wins (subclass beats superclass).
+
+### Per-agent handling
+
+```java
+@Agent("code-review")
+public class CodeReviewAgent implements AgentHandler<String, ReviewReport> {
+
+    @Override
+    public ReviewReport handle(AgentContext ctx, String prUrl) {
+        return Workflow.<String, ReviewReport>define("code-review")
+                .step(fetchDiff)
+                .then(analyze)
+                .run(prUrl, ctx);
+    }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ReviewReport handleRateLimit(RateLimitException ex) {
+        return new ReviewReport("Rate limited — try again later", "SKIP");
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ReviewReport handleBudget(IllegalStateException ex, AgentContext ctx) {
+        log.warn("Agent {} exceeded budget", ctx.runId());
+        return new ReviewReport("Budget exceeded: " + ex.getMessage(), "SKIP");
+    }
+}
+```
+
+Handler methods support two signatures:
+- `ReturnType method(ExceptionType ex)` — just the exception
+- `ReturnType method(ExceptionType ex, AgentContext ctx)` — exception plus context
+
+The exception type can be declared explicitly in `@ExceptionHandler(SomeException.class)` or inferred from the method's first parameter.
+
+### Cross-cutting handling
+
+```java
+@AgentAdvice
+public class GlobalErrorHandler {
+
+    @ExceptionHandler(Exception.class)
+    public Object handleAny(Exception ex, AgentContext ctx) {
+        log.error("Agent {} failed: {}", ctx.runId(), ex.getMessage());
+        return Map.of("error", ex.getMessage(), "runId", ctx.runId());
+    }
+}
+```
+
+`@AgentAdvice` is a Spring `@Component` — picked up by component scanning, applies to all agents.
+
+### Using the resolver
+
+`AgentExceptionHandlerResolver` ties it together. Pass it the `@AgentAdvice` instances at construction, then call `resolve()` on exception:
+
+```java
+var resolver = new AgentExceptionHandlerResolver(List.of(globalErrorHandler));
+
+try {
+    return agent.handle(ctx, input);
+} catch (Exception ex) {
+    return resolver.resolve(agent, ex, ctx)
+            .orElseThrow(() -> ex);  // re-throw if no handler matched
+}
+```
+
+Resolution order: per-agent handlers on the agent instance first, then cross-cutting advice in registration order.
+
+## Injecting Durability with withExecutor()
+
+By default, `Workflow.run()` creates a `WorkflowExecutor` with `LocalStepRunner` (in-process, no persistence). Use `withExecutor()` to inject a configured executor with a durable `StepRunner`:
+
+```java
+// Configure executor with JDBC checkpointing
+WorkflowExecutor executor = new WorkflowExecutor(
+        checkpointingStepRunner,
+        jdbcTraceRecorder
+);
+
+// Inject into workflow — both run() and build() paths work
+String result = Workflow.<String, String>define("durable-review")
+        .withExecutor(executor)
+        .step(fetchDiff)
+        .then(analyze)
+        .run(prUrl, ctx);
+
+// Or build a reusable Workflow that remembers the executor
+Workflow<String, String> workflow = Workflow.<String, String>define("review")
+        .withExecutor(executor)
+        .step(fetchDiff)
+        .then(analyze)
+        .build();
+
+workflow.execute(ctx, prUrl);  // uses the injected executor
+```
+
+This works on both `WorkflowBuilder` and `SupervisorBuilder`. See [Durability](/docs/agent-workflow/durability) for the full graduation path from `LocalStepRunner` → `CheckpointingStepRunner` → `TemporalStepRunner`.
+
+## Full Example
+
+A complete PR review agent using all 5 annotations:
+
+```java
+// -- Domain types --
+record PrEvent(String prUrl, String diff) {}
+record ReviewReport(String summary, String recommendation) {}
+
+// -- Steps with stable names --
+@StepName("analyze-diff")
+@Description("Parses a PR diff and extracts changed files")
+public class AnalyzeDiffStep implements Step<PrEvent, String> {
+    @Override
+    public String execute(AgentContext ctx, PrEvent event) {
+        return llm.analyze(event.diff());
+    }
+    @Override public String name() { return "AnalyzeDiffStep"; }
+}
+
+@StepName("produce-review")
+@Description("Produces a structured review report")
+public class ProduceReviewStep implements Step<String, ReviewReport> {
+    @Override
+    public ReviewReport execute(AgentContext ctx, String analysis) {
+        return new ReviewReport(analysis, "LGTM");
+    }
+    @Override public String name() { return "ProduceReviewStep"; }
+}
+
+// -- Agent --
+@Agent("pr-review")
+@Description("Reviews a pull request and produces a structured report")
+public class PrReviewAgent implements AgentHandler<PrEvent, ReviewReport> {
+
+    private final Step<PrEvent, String> analyze = new AnalyzeDiffStep();
+    private final Step<String, ReviewReport> review = new ProduceReviewStep();
+
+    @Override
+    public ReviewReport handle(AgentContext ctx, PrEvent event) {
+        return Workflow.<PrEvent, ReviewReport>define("pr-review")
+                .step(analyze)
+                .then(review)
+                .run(event, ctx);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ReviewReport handleBudget(IllegalStateException ex) {
+        return new ReviewReport("Budget exceeded: " + ex.getMessage(), "SKIP");
+    }
+}
+
+// -- Cross-cutting error handling --
+@AgentAdvice
+public class GlobalErrorHandler {
+    @ExceptionHandler(Exception.class)
+    public Object handleAny(Exception ex, AgentContext ctx) {
+        return new ReviewReport("Error: " + ex.getMessage(), "ERROR");
+    }
+}
+
+// -- Wiring --
+AgentRegistry registry = new AgentRegistry(Map.of(
+    "pr-review", new PrReviewAgent()
+));
+
+var resolver = new AgentExceptionHandlerResolver(
+    List.of(new GlobalErrorHandler())
+);
+```
+
+<Tip>
+A runnable version of this example — with real LLM calls, `AgentRegistry` lookup, `StepNames` resolution, and exception handler tests — is in [AnnotationModelIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/AnnotationModelIT.java) in the [workflow-dsl-examples](https://github.com/markpollack/workflow-dsl-examples) repo.
+</Tip>
+
+## Annotation Summary
+
+| Annotation | Target | Module | Purpose |
+|-----------|--------|--------|---------|
+| `@StepName` | Type | workflow-api | Stable checkpoint/Temporal key |
+| `@Description` | Type, Method | workflow-api | Human-readable description |
+| `@ExceptionHandler` | Method | workflow-api | Marks exception handler methods |
+| `@Agent` | Type | workflow-flows | Spring stereotype for `AgentHandler` beans |
+| `@AgentAdvice` | Type | workflow-flows | Spring stereotype for cross-cutting error handlers |
+
+The first three are pure Java — zero Spring dependency, portable across any runtime. The last two are Spring stereotypes that enable component scanning and auto-discovery.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Durability" icon="shield-halved" href="/docs/agent-workflow/durability">
+    Crash recovery with CheckpointingStepRunner and Temporal integration
+  </Card>
+  <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
+    Branch, loop, parallel, decision, gate, supervisor — 10+ composable patterns
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    Step, AgentContext, Gate, WorkflowGraph, StepRunner
+  </Card>
+  <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
+    Steps, context, your first workflow
+  </Card>
+</CardGroup>

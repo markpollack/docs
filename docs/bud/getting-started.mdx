@@ -11,10 +11,10 @@ description: "Install Bud and scaffold your first Spring Boot project"
 
 ## Install from Release
 
-```bash
-curl -L https://github.com/markpollack/bud/releases/download/v0.1.0/bud-acp-server-0.1.0-unix.tar.gz | tar xz
-cd bud-acp-server-0.1.0
-```
+Download both JARs from the [v0.2.0 release](https://github.com/markpollack/bud/releases/tag/v0.2.0) to a directory (e.g. `~/bud/`):
+
+- `bud-acp-server-0.2.0-jar-with-dependencies.jar` — the ACP agent
+- `bud-mcp-server-0.2.0.jar` — the MCP tool server
 
 ## Install from Source
 
@@ -25,8 +25,8 @@ cd bud
 ```
 
 This produces:
-- `bud-acp-server/target/bud-acp-server-0.1.0-jar-with-dependencies.jar` — the ACP agent
-- `bud-mcp-server/target/bud-mcp-server-0.1.0.jar` — the MCP tool server
+- `bud-acp-server/target/bud-acp-server-*-jar-with-dependencies.jar`
+- `bud-mcp-server/target/bud-mcp-server-*.jar`
 
 ## Configure JetBrains
 
@@ -34,14 +34,13 @@ Create or edit `~/.jetbrains/acp.json`:
 
 ```json
 {
-  "default_mcp_settings": {},
   "agent_servers": {
     "Bud": {
       "command": "java",
       "args": [
-        "-Dbud.mcp.jar=/path/to/bud/bud-mcp-server/target/bud-mcp-server-0.1.0.jar",
+        "-Dbud.mcp.jar=/path/to/bud-mcp-server-0.2.0.jar",
         "-jar",
-        "/path/to/bud/bud-acp-server/target/bud-acp-server-0.1.0-jar-with-dependencies.jar"
+        "/path/to/bud-acp-server-0.2.0-jar-with-dependencies.jar"
       ]
     }
   }
@@ -49,7 +48,7 @@ Create or edit `~/.jetbrains/acp.json`:
 ```
 
 <Warning>
-Replace `/path/to/bud` with the absolute path to your cloned repository. The `-Dbud.mcp.jar` system property tells the ACP agent where to find the MCP tool server.
+Replace `/path/to` with the absolute path where you saved the JARs. The `-Dbud.mcp.jar` system property tells the ACP agent where to find the MCP tool server.
 </Warning>
 
 Restart your JetBrains IDE after editing the config.
@@ -75,28 +74,65 @@ cd /tmp/hello-api
 ./mvnw test
 ```
 
-## Try More Commands
+## What You Can Ask
 
-```
-add actuator to /tmp/hello-api
-```
+Bud understands natural language and routes your request to the right approach. Here are 25 tested prompts organized by what Bud does with them.
 
-```
-analyze the project at /tmp/hello-api
-```
+### Cached templates (instant, no LLM code gen)
 
-```
-list available project templates
-```
+These match one of Bud's 8 built-in templates — fast and deterministic:
+
+| Prompt | Template |
+|--------|----------|
+| "create a simple spring boot app" | `spring-boot-minimal` |
+| "create a basic spring boot application" | `spring-boot-minimal` |
+| "create a greeting api" | `spring-boot-rest` |
+| "create a hello world rest service" | `spring-boot-rest` |
+| "spring boot app with actuator" | `spring-boot-actuator` |
+| "create an app with health checks" | `spring-boot-actuator` |
+| "create a batch job" | `spring-boot-batch` |
+| "build a CSV processing batch application" | `spring-boot-batch` |
+| "create a scheduled task processor" | `spring-boot-scheduling` |
+| "rest api with security" | `spring-boot-security` |
+| "create a secure web application" | `spring-boot-security` |
+| "create a spring boot app with JPA" | `spring-boot-jpa` |
+| "create a rest api without database" | `spring-boot-rest` |
+| "build an api with no database" | `spring-boot-rest` |
+
+### Domain apps (LLM-expanded with real business code)
+
+These have specific business entities — Bud scaffolds a base project and expands it with domain models, repositories, services, and controllers:
+
+| Prompt | Domain |
+|--------|--------|
+| "build a todo api" | Todo CRUD |
+| "build a customer management system" | Customer entities |
+| "create a customer tracking system" | Customer tracking |
+| "create an inventory management api" | Inventory |
+| "build an order processing system with JPA" | Order processing |
+| "create an employee directory application" | Employee directory |
+| "build a product catalog service" | Product catalog |
+| "build a hotel reservation and booking system" | Reservations |
+| "build an e-commerce backend with payments" | E-commerce |
+
+### Edge cases (handled gracefully)
+
+| Prompt | Behavior |
+|--------|----------|
+| "spring boot management system" | Too vague — builds minimal app, no over-expansion |
+| "create a spring boot app with JPA and security" | Multi-capability — picks best match |
 
 ## How It Works
 
 When you send a message to Bud in AI Chat:
 
 1. JetBrains sends the prompt to Bud's ACP agent over stdio
-2. Bud forwards the goal to Claude Code CLI with its 16 MCP tools registered
-3. Claude Code picks the right tools (e.g., `create_project`, `add_actuator`)
-4. The tools execute deterministically — no LLM involved in the actual scaffolding
+2. Bud's LLM classifier (Sonnet) analyzes the intent — capabilities, domain entities, template match
+3. The execution planner routes to the right tier:
+   - **CACHE** — matches a built-in template, instant scaffolding
+   - **INITIALIZR** — generates via start.spring.io (Boot 3.x, Gradle)
+   - **EXPAND** — scaffolds a base then generates domain-specific code
+4. Tools execute deterministically — no LLM in the actual scaffolding
 5. Results stream back through ACP to your chat window
 
-The first prompt may take 30-60 seconds (CLI startup + MCP server startup + LLM reasoning). Subsequent prompts in the same session are faster.
+The first prompt may take 30-60 seconds (CLI startup + classification + MCP server startup). Subsequent prompts in the same session are faster.

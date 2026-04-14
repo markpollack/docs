@@ -9,12 +9,12 @@ description: "Three modules, two protocols, zero API keys"
 bud/
 ├── bud-core          Pure Java library (zero Spring dependencies)
 ├── bud-mcp-server    Spring Boot app with @McpTool annotations
-└── bud-acp-server    ACP agent via AgentClient
+└── bud-acp-server    ACP agent — LLM classification + orchestration
 ```
 
 ### bud-core
 
-The foundation. Template extraction, POM mutation (via `maven-model`), JavaParser-based refactoring, project analysis. **Zero Spring framework dependencies** — enforced by ArchUnit rules.
+The foundation. Template extraction, POM mutation (via `maven-model`), JavaParser-based refactoring, project analysis, intent classification, and execution planning. **Zero Spring framework dependencies** — enforced by ArchUnit rules.
 
 Key classes:
 - `TemplateExtractor` — Extracts project templates from classpath using JDK ClassLoader + manifest files
@@ -23,6 +23,9 @@ Key classes:
 - `RecipeCatalog` — Composable recipes (actuator, security, CI, native image, etc.)
 - `StartersCatalog` — Searchable index of Spring Boot starters
 - `BootProjectAnalyzer` — Analyze existing projects for dependencies, structure, test strategy
+- `BudWorkflow` — Full pipeline orchestrator: normalize → classify → resolve → plan → execute → recipes → explain
+- `ExecutionPlanner` — Routes resolved intents to CACHE, INITIALIZR, or EXPAND tiers
+- `TemplateSemanticCache` — Subset-matching cache: intent capabilities ⊆ template capabilities
 
 ### bud-mcp-server
 
@@ -30,19 +33,43 @@ Spring Boot 4.1.0-M2 application that wraps bud-core with 16 `@McpTool`-annotate
 
 ### bud-acp-server
 
-The product. An ACP agent that receives natural language prompts, delegates to an `AgentClient` (which spawns Claude Code CLI with the MCP tools registered), and streams results back to the IDE.
+The product. An ACP agent with two LLM roles:
+
+- **Classifier** (Sonnet, ~$0.01/call) — Analyzes prompts via structured output JSON schema. Extracts capabilities, domain entities, template matches, and overlay level.
+- **Expander** (Sonnet, ~$0.19/call) — Generates domain-specific code for EXPAND-tier requests. Only invoked for business domain prompts.
+
+## Three-Tier Routing
+
+When Bud receives a prompt, it classifies the intent and routes to one of three execution tiers:
+
+```
+"create a greeting api"           → CACHE (spring-boot-rest template)
+"spring boot app with Gradle"     → INITIALIZR (start.spring.io)
+"build a customer management app" → EXPAND (scaffold + domain code gen)
+```
+
+| Tier | When | Speed | LLM Cost |
+|------|------|-------|----------|
+| **CACHE** | Prompt matches one of 8 built-in templates | ~1s | Classification only |
+| **INITIALIZR** | Boot 3.x, Gradle, or no template match | ~3s | Classification only |
+| **EXPAND** | Business domain entity detected | ~30s | Classification + code gen |
+
+The execution planner applies a 6-rule cascade to determine the tier. Rules are ordered so that domain prompts with entities (customer, order, inventory) always route to EXPAND, even if a template partially matches.
 
 ## Protocol Stack
 
 ```
 ┌─────────────────────────────────────┐
 │  JetBrains IDE (AI Chat)            │
-│  ← ACP protocol (stdio JSON-RPC) → │
+│  ← ACP protocol (stdio NDJSON)   → │
 ├─────────────────────────────────────┤
 │  BudAgent (@AcpAgent)               │
-│  ← AgentClient →                    │
+│  ← BudWorkflow pipeline →          │
 ├─────────────────────────────────────┤
-│  Claude Code CLI                    │
+│  LlmIntentClassifier (Sonnet)       │
+│  ← Claude Code SDK →               │
+├─────────────────────────────────────┤
+│  Claude Code CLI (Expander)         │
 │  ← MCP protocol (stdio JSON-RPC) → │
 ├─────────────────────────────────────┤
 │  Bud MCP Server (16 tools)          │
@@ -58,14 +85,12 @@ Two protocol boundaries, both stdio-based:
 
 ## Enterprise Model
 
-Every other ACP registry agent requires an API key. Bud is different:
-
 - **No API key** — Bud delegates to your enterprise-approved CLI
 - **No billing exposure** — the CLI handles authentication and billing
 - **No compliance review** — your IT department already approved the CLI
 - **Deterministic tools** — the MCP tools don't call any LLM; scaffolding is pure code generation
 
-The LLM is only involved in **tool selection** (deciding which MCP tools to call based on your prompt). The actual project creation is deterministic.
+The LLM is involved in two places: **intent classification** (understanding what you asked for) and **code expansion** (generating domain-specific code for business apps). The template scaffolding itself is deterministic.
 
 ## Key Dependencies
 
@@ -74,9 +99,9 @@ The LLM is only involved in **tool selection** (deciding which MCP tools to call
 | `javaparser-core` 3.28.0 | AST-based package rename | bud-core |
 | `maven-model` 3.9.6 | POM read/write | bud-core |
 | `spring-ai-starter-mcp-server` | `@McpTool` + stdio transport | bud-mcp-server |
-| `acp-agent-support` 0.10.0 | `@AcpAgent` + ACP runtime | bud-acp-server |
-| `agent-client-core` 0.12.0 | Portable CLI abstraction | bud-acp-server |
-| `agent-claude` 0.12.0 | Claude Code CLI provider | bud-acp-server |
+| `acp-agent-support` | `@AcpAgent` + ACP runtime | bud-acp-server |
+| `agent-client-core` | Portable CLI abstraction | bud-acp-server |
+| `agent-claude` | Claude Code CLI provider | bud-acp-server |
 
 ## Lineage
 

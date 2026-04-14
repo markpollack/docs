@@ -29,7 +29,7 @@ Key classes:
 
 ### bud-mcp-server
 
-Spring Boot 4.1.0-M2 application that wraps bud-core with 16 `@McpTool`-annotated methods. Communicates via stdio JSON-RPC (MCP protocol). This is the tool layer — it has no AI, no LLM calls, no opinions about what to do. It just exposes deterministic operations.
+Spring Boot 4.1.0-M2 application that wraps bud-core with 19 `@McpTool`-annotated methods. Communicates via stdio JSON-RPC (MCP protocol). This is the tool layer — it has no AI, no LLM calls, no opinions about what to do. It just exposes deterministic operations.
 
 ### bud-acp-server
 
@@ -50,7 +50,7 @@ When Bud receives a prompt, it classifies the intent and routes to one of three 
 
 | Tier | When | Speed | LLM Cost |
 |------|------|-------|----------|
-| **CACHE** | Prompt matches one of 8 built-in templates | ~1s | Classification only |
+| **CACHE** | Prompt matches one of 9 built-in templates | ~1s | Classification only |
 | **INITIALIZR** | Boot 3.x, Gradle, or no template match | ~3s | Classification only |
 | **EXPAND** | Business domain entity detected | ~30s | Classification + code gen |
 
@@ -72,7 +72,7 @@ The execution planner applies a 6-rule cascade to determine the tier. Rules are 
 │  Claude Code CLI (Expander)         │
 │  ← MCP protocol (stdio JSON-RPC) → │
 ├─────────────────────────────────────┤
-│  Bud MCP Server (16 tools)          │
+│  Bud MCP Server (19 tools)          │
 │  ← Java method calls →              │
 ├─────────────────────────────────────┤
 │  bud-core (pure Java)               │

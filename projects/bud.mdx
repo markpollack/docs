@@ -5,14 +5,14 @@ description: "Spring Boot development agent for the ACP registry"
 
 ## Overview
 
-Bud is a Spring Boot development agent that scaffolds, modifies, and analyzes Spring Boot projects through 16 deterministic MCP tools. It runs as an ACP agent in JetBrains IDEs (and any ACP-compatible editor), delegating to the developer's enterprise-approved CLI.
+Bud is a Spring Boot development agent that scaffolds, modifies, and analyzes Spring Boot projects through 19 deterministic MCP tools. It runs as an ACP agent in JetBrains IDEs (and any ACP-compatible editor), delegating to the developer's enterprise-approved CLI.
 
 **No API key needed.** Bud delegates to whichever CLI your IT department provisioned — Claude Code for v1, with Gemini CLI and Codex planned. The billing, security review, and compliance audit are someone else's problem.
 
 ## Key Features
 
-- **16 MCP tools** — `create_project`, `add_dependency`, `add_actuator`, `add_security`, `analyze_project`, and more
-- **8 project templates** — REST, JPA, Security, Actuator, Batch, Scheduling, Spring AI, Minimal
+- **19 MCP tools** — `create_project`, `add_dependency`, `add_actuator`, `add_security`, `analyze_project`, and more
+- **9 project templates** — REST, JPA, Security, Actuator, Batch, Scheduling, Thymeleaf, Spring AI, Minimal
 - **Enterprise-safe** — All tools are deterministic (no LLM calls). The LLM comes from your approved CLI.
 - **IDE-native** — Shows up in JetBrains AI Chat dropdown via ACP protocol
 - **Production templates** — Constructor injection, slice tests, ProblemDetail errors, proper layering
@@ -24,7 +24,7 @@ IDE (JetBrains / Zed / VS Code)
   └─ ACP Client
        └─ Bud ACP Agent
             └─ AgentClient → Claude Code CLI
-                 └─ Bud MCP Server (16 tools)
+                 └─ Bud MCP Server (19 tools)
                       └─ bud-core (pure Java library)
 ```
 
@@ -35,7 +35,7 @@ IDE (JetBrains / Zed / VS Code)
     Install Bud and scaffold your first project
   </Card>
   <Card title="Tools & Templates" icon="wrench" href="/docs/bud/tools-reference">
-    All 16 tools and 8 templates with descriptions
+    All 19 tools and 9 templates with descriptions
   </Card>
   <Card title="Architecture" icon="diagram-project" href="/docs/bud/architecture">
     Three modules, two protocols, zero API keys

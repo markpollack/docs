@@ -11,10 +11,9 @@ description: "Install Bud and scaffold your first Spring Boot project"
 
 ## Install from Release
 
-Download both JARs from the [v0.2.0 release](https://github.com/markpollack/bud/releases/tag/v0.2.0) to a directory (e.g. `~/bud/`):
+Download the fat JAR from the [v0.4.0 release](https://github.com/markpollack/bud/releases/tag/v0.4.0):
 
-- `bud-acp-server-0.2.0-jar-with-dependencies.jar` — the ACP agent
-- `bud-mcp-server-0.2.0.jar` — the MCP tool server
+- `bud-acp-server-0.4.0-jar-with-dependencies.jar` — the ACP agent
 
 ## Install from Source
 
@@ -26,7 +25,6 @@ cd bud
 
 This produces:
 - `bud-acp-server/target/bud-acp-server-*-jar-with-dependencies.jar`
-- `bud-mcp-server/target/bud-mcp-server-*.jar`
 
 ## Configure JetBrains
 
@@ -38,9 +36,8 @@ Create or edit `~/.jetbrains/acp.json`:
     "Bud": {
       "command": "java",
       "args": [
-        "-Dbud.mcp.jar=/path/to/bud-mcp-server-0.2.0.jar",
         "-jar",
-        "/path/to/bud-acp-server-0.2.0-jar-with-dependencies.jar"
+        "/path/to/bud-acp-server-0.4.0-jar-with-dependencies.jar"
       ]
     }
   }
@@ -48,7 +45,7 @@ Create or edit `~/.jetbrains/acp.json`:
 ```
 
 <Warning>
-Replace `/path/to` with the absolute path where you saved the JARs. The `-Dbud.mcp.jar` system property tells the ACP agent where to find the MCP tool server.
+Replace `/path/to` with the absolute path where you saved the JAR.
 </Warning>
 
 Restart your JetBrains IDE after editing the config.
@@ -76,11 +73,11 @@ cd /tmp/hello-api
 
 ## What You Can Ask
 
-Bud understands natural language and routes your request to the right approach. Here are 25 tested prompts organized by what Bud does with them.
+Bud understands natural language and routes your request to the right approach. Here are tested prompts organized by what Bud does with them.
 
 ### Cached templates (instant, no LLM code gen)
 
-These match one of Bud's 8 built-in templates — fast and deterministic:
+These match one of Bud's 9 built-in templates — fast and deterministic:
 
 | Prompt | Template |
 |--------|----------|

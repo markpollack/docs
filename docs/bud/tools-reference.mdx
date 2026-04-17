@@ -1,18 +1,18 @@
 ---
-title: "Tools & Templates"
-description: "All 23 MCP tools and 9 project templates"
+title: "Tools & Reference Projects"
+description: "All 23 MCP tools and 9 reference projects"
 ---
 
 ## Tools (23)
 
-All tools are deterministic — no LLM calls, no API keys needed. The LLM comes from your CLI.
+All tools are deterministic — no LLM calls, no API keys needed. LLM calls run on your enterprise-approved CLI.
 
 ### Scaffolding
 
 | Tool | Description |
 |------|-------------|
-| `create_project` | Scaffold a new Spring Boot project from a template. Parameters: `name`, `groupId`, `outputDir`, `template` (optional), `javaVersion` (optional) |
-| `list_templates` | List all available project templates with descriptions |
+| `create_project` | Scaffold a new Spring Boot project. Parameters: `name`, `groupId`, `outputDir`, `template` (optional — selects reference project), `javaVersion` (optional) |
+| `list_templates` | List all available reference projects with descriptions |
 
 ### Dependencies
 
@@ -55,9 +55,9 @@ All tools are deterministic — no LLM calls, no API keys needed. The LLM comes 
 |------|-------------|
 | `analyze_project` | Analyze an existing Spring Boot project — dependencies, structure, test coverage |
 
-## Templates (9)
+## Reference Projects (9)
 
-All templates target **Spring Boot 4.1.0-M2** and produce projects that compile with passing tests.
+Each reference project is a complete, working Spring Boot 4.1.0-M2 application — compiles, tests pass, follows production conventions. Bud uses these as starting points when your request matches a known pattern, then AI adapts them when you need domain-specific code.
 
 ### spring-boot-minimal
 

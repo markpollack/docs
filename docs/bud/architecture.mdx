@@ -14,18 +14,18 @@ bud/
 
 ### bud-core
 
-The foundation. Template extraction, POM mutation (via `maven-model`), JavaParser-based refactoring, project analysis, intent classification, and execution planning. **Zero Spring framework dependencies** — enforced by ArchUnit rules.
+The foundation. Reference project extraction, POM mutation (via `maven-model`), JavaParser-based refactoring, project analysis, intent classification, and execution planning. **Zero Spring framework dependencies** — enforced by ArchUnit rules.
 
 Key classes:
-- `TemplateExtractor` — Extracts project templates from classpath using JDK ClassLoader + manifest files
+- `TemplateExtractor` — Extracts reference projects from classpath using JDK ClassLoader + manifest files
 - `PomMutator` — Read/write Maven POM files (add/remove dependencies, set versions, add plugins)
-- `JavaParserRefactor` — AST-based package rename for extracted templates
+- `JavaParserRefactor` — AST-based package rename for extracted projects
 - `RecipeCatalog` — Composable recipes (actuator, security, CI, native image, etc.)
 - `StartersCatalog` — Searchable index of Spring Boot starters
 - `BootProjectAnalyzer` — Analyze existing projects for dependencies, structure, test strategy
 - `BudWorkflow` — Full pipeline orchestrator: normalize → classify → resolve → plan → execute → recipes → explain
 - `ExecutionPlanner` — Routes resolved intents to CACHE, INITIALIZR, or EXPAND tiers
-- `TemplateSemanticCache` — Subset-matching cache: intent capabilities ⊆ template capabilities
+- `TemplateSemanticCache` — Subset-matching cache: intent capabilities ⊆ reference project capabilities
 
 ### bud-mcp-server
 
@@ -35,26 +35,26 @@ Spring Boot 4.1.0-M2 application that wraps bud-core with 23 `@McpTool`-annotate
 
 The product. An ACP agent with two LLM roles:
 
-- **Classifier** (Sonnet, ~$0.01/call) — Analyzes prompts via structured output JSON schema. Extracts capabilities, domain entities, template matches, and overlay level.
-- **Expander** (Sonnet, ~$0.19/call) — Generates domain-specific code for EXPAND-tier requests. Only invoked for business domain prompts.
+- **Classifier** (Sonnet via your approved CLI, ~$0.01/call) — Analyzes prompts via structured output JSON schema. Extracts capabilities, domain entities, best-fit reference project, and overlay level.
+- **Expander** (Sonnet via your approved CLI, ~$0.19/call) — Generates domain-specific code for EXPAND-tier requests. Only invoked for business domain prompts.
 
 ## Three-Tier Routing
 
 When Bud receives a prompt, it classifies the intent and routes to one of three execution tiers:
 
 ```
-"create a greeting api"           → CACHE (spring-boot-rest template)
+"create a greeting api"           → CACHE (spring-boot-rest reference project)
 "spring boot app with Gradle"     → INITIALIZR (start.spring.io)
-"build a customer management app" → EXPAND (scaffold + domain code gen)
+"build a customer management app" → EXPAND (reference project + AI domain code gen)
 ```
 
 | Tier | When | Speed | LLM Cost |
 |------|------|-------|----------|
-| **CACHE** | Prompt matches one of 9 built-in templates | ~1s | Classification only |
-| **INITIALIZR** | Boot 3.x, Gradle, or no template match | ~3s | Classification only |
+| **CACHE** | Prompt matches one of 9 reference projects | ~1s | Classification only |
+| **INITIALIZR** | Boot 3.x, Gradle, or no reference match | ~3s | Classification only |
 | **EXPAND** | Business domain entity detected | ~30s | Classification + code gen |
 
-The execution planner applies a 6-rule cascade to determine the tier. Rules are ordered so that domain prompts with entities (customer, order, inventory) always route to EXPAND, even if a template partially matches.
+The execution planner applies a 6-rule cascade to determine the tier. Rules are ordered so that domain prompts with entities (customer, order, inventory) always route to EXPAND, even if a reference project partially matches.
 
 ## Protocol Stack
 
@@ -67,9 +67,9 @@ The execution planner applies a 6-rule cascade to determine the tier. Rules are 
 │  ← BudWorkflow pipeline →          │
 ├─────────────────────────────────────┤
 │  LlmIntentClassifier (Sonnet)       │
-│  ← Claude Code SDK →               │
+│  ← AgentClient SDK →               │
 ├─────────────────────────────────────┤
-│  Claude Code CLI (Expander)         │
+│  Your Approved CLI (Expander)       │
 │  ← MCP protocol (stdio JSON-RPC) → │
 ├─────────────────────────────────────┤
 │  Bud MCP Server (23 tools)          │
@@ -85,12 +85,13 @@ Two protocol boundaries, both stdio-based:
 
 ## Enterprise Model
 
-- **No API key** — Bud delegates to your enterprise-approved CLI
+- **No API key** — Bud delegates all LLM calls to your enterprise-approved agentic CLI (Claude Code, Gemini CLI, Codex, etc.)
 - **No billing exposure** — the CLI handles authentication and billing
 - **No compliance review** — your IT department already approved the CLI
-- **Deterministic tools** — the MCP tools don't call any LLM; scaffolding is pure code generation
+- **Swap providers freely** — change your CLI, Bud keeps working. No vendor lock-in on the AI side.
+- **Deterministic tools** — the 23 MCP tools don't call any LLM; scaffolding is pure code operations
 
-The LLM is involved in two places: **intent classification** (understanding what you asked for) and **code expansion** (generating domain-specific code for business apps). The template scaffolding itself is deterministic.
+The LLM (running on your approved CLI) is involved in two places: **intent classification** (understanding what you asked for) and **code expansion** (generating domain-specific code for business apps). The reference project scaffolding itself is deterministic.
 
 ## Key Dependencies
 
@@ -103,10 +104,3 @@ The LLM is involved in two places: **intent classification** (understanding what
 | `agent-client-core` | Portable CLI abstraction | bud-acp-server |
 | `agent-claude` | Claude Code CLI provider | bud-acp-server |
 
-## Lineage
-
-```
-Spring CLI ai add (2023, one-shot, OpenAI only)
-  → Loopy (agentic loop, Spring skills/tools, multi-turn)
-    → Bud (ACP agent for Spring development, portable across IDEs)
-```

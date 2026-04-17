@@ -6,8 +6,8 @@ description: "Install Bud and build your first Spring Boot project"
 ## Prerequisites
 
 - **Java 21+** on PATH
-- **Claude Code** installed and authenticated ([claude.ai/code](https://claude.ai/code))
-- **JetBrains IDE** 2026.1+ with AI Assistant plugin enabled
+- **An agentic CLI** installed and authenticated (e.g., [Claude Code](https://claude.ai/code), Gemini CLI, Codex)
+- **An ACP-compatible IDE** — JetBrains 2026.1+, Zed, VS Code, or any editor with ACP support
 
 ## Install from Release
 
@@ -75,11 +75,11 @@ cd /tmp/hello-api
 
 Bud understands natural language and routes your request to the right approach. Here are tested prompts organized by what Bud does with them.
 
-### Cached templates (instant, no LLM code gen)
+### Known patterns (instant, no LLM code gen)
 
-These match one of Bud's 9 built-in templates — fast and deterministic:
+These match one of Bud's 9 reference projects — Bud uses proven, working code directly:
 
-| Prompt | Template |
+| Prompt | Reference Project |
 |--------|----------|
 | "create a simple spring boot app" | `spring-boot-minimal` |
 | "create a basic spring boot application" | `spring-boot-minimal` |
@@ -124,12 +124,12 @@ These have specific business entities — Bud scaffolds a base project and expan
 When you send a message to Bud in AI Chat:
 
 1. JetBrains sends the prompt to Bud's ACP agent over stdio
-2. Bud's LLM classifier (Sonnet) analyzes the intent — capabilities, domain entities, template match
+2. Bud's LLM classifier (Sonnet, running on your approved CLI) analyzes the intent — capabilities, domain entities, best-fit reference project
 3. The execution planner routes to the right tier:
-   - **CACHE** — matches a built-in template, instant scaffolding
+   - **CACHE** — matches a reference project, uses working code directly
    - **INITIALIZR** — generates via start.spring.io (Boot 3.x, Gradle)
-   - **EXPAND** — scaffolds a base then generates domain-specific code
-4. Tools execute deterministically — no LLM in the actual scaffolding
+   - **EXPAND** — starts from a reference project, then AI generates domain-specific code
+4. Tools execute deterministically — no LLM in the actual scaffolding. Your CLI is only used for classification and domain code generation.
 5. Results stream back through ACP to your chat window
 
 The first prompt may take 30-60 seconds (CLI startup + classification + MCP server startup). Subsequent prompts in the same session are faster.

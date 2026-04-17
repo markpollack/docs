@@ -1,21 +1,27 @@
 ---
 title: "Bud"
-description: "ACP agent for Spring Boot development — templates when they fit, AI when they don't"
+description: "ACP agent for Spring Boot development — proven patterns as a starting point, AI to adapt them"
 ---
+
+<Note>
+**Early Stage** — Bud is functional but under active development. The scaffolding and modification tools work end-to-end, but CLI provider portability (beyond Claude Code) and code generation into existing projects are in progress for v0.5.0.
+</Note>
 
 ## Overview
 
-Bud is a Spring Boot development agent that understands what you're building, modifies existing projects through conversation, and generates domain code following Spring Boot conventions when patterns aren't enough. Not another template-driven scaffolder — an LLM classifies intent and expands domain code when templates can't cover it. It runs as an ACP agent in JetBrains, Zed, VS Code — any ACP-compatible editor.
+Bud is a Spring Boot development agent that lives in your IDE. Select Bud and say "create a REST app" or "add JPA to my project." It understands what you're building and does the work — creating new projects, modifying existing ones, managing dependencies — all through conversation.
 
-**Zero API keys.** Bud delegates to your enterprise's approved CLI for all LLM calls. The agent carries no model credentials — your IT department controls the AI provider.
+**Zero API keys. Your CLI, your rules.** Bud makes no direct LLM calls and carries no model credentials. It delegates to whatever agentic CLI your enterprise has approved — Claude Code, Gemini CLI, Codex. Your IT department controls the AI provider, the billing, and the compliance story. Bud is the agent; your CLI is the brain.
 
-## Key Features
+**ACP-native.** Bud is an ACP agent — any IDE that supports the Agent Communication Protocol can host it. JetBrains, Zed, VS Code, and any future ACP-compatible editor.
 
-- **23 MCP tools** — `create_project`, `add_dependency`, `add_actuator`, `add_security`, `analyze_project`, and more
-- **9 project templates** — REST, JPA, Security, Actuator, Batch, Scheduling, Thymeleaf, Spring AI, Minimal
-- **Enterprise-safe** — All tools are deterministic (no LLM calls). The LLM comes from your approved CLI.
-- **IDE-native** — Shows up in JetBrains AI Chat dropdown via ACP protocol
-- **Production templates** — Constructor injection, slice tests, ProblemDetail errors, proper layering
+## How It Works
+
+Bud ships with 9 production-quality reference projects (REST, JPA, Security, Batch, and more) that follow Spring Boot conventions — constructor injection, slice tests, proper layering. When your request fits a known pattern, Bud uses that working code directly. When it doesn't, the LLM on your approved CLI classifies your intent and generates domain-specific code that follows the same conventions.
+
+- **23 deterministic tools** — `create_project`, `add_dependency`, `add_actuator`, `analyze_project`, and more. No LLM calls — pure code operations.
+- **9 reference projects** — Production-quality starting points, not stubs. REST, JPA, Security, Actuator, Batch, Scheduling, Thymeleaf, Spring AI, Minimal.
+- **Modify existing projects** — Add dependencies, apply recipes, analyze project structure through conversation.
 
 ## Architecture
 
@@ -23,8 +29,8 @@ Bud is a Spring Boot development agent that understands what you're building, mo
 IDE (JetBrains / Zed / VS Code)
   └─ ACP Client
        └─ Bud ACP Agent
-            └─ AgentClient → Claude Code CLI
-                 └─ Bud MCP Server (23 tools)
+            └─ AgentClient → Your Approved CLI (Claude Code, Gemini CLI, Codex...)
+                 └─ Bud MCP Server (23 deterministic tools)
                       └─ bud-core (pure Java library)
 ```
 
@@ -34,8 +40,8 @@ IDE (JetBrains / Zed / VS Code)
   <Card title="Getting Started" icon="play" href="/docs/bud/getting-started">
     Install Bud and build your first project
   </Card>
-  <Card title="Tools & Templates" icon="wrench" href="/docs/bud/tools-reference">
-    All 23 tools and 9 templates with descriptions
+  <Card title="Tools & Reference Projects" icon="wrench" href="/docs/bud/tools-reference">
+    All 23 tools and 9 reference projects
   </Card>
   <Card title="Architecture" icon="diagram-project" href="/docs/bud/architecture">
     Three modules, two protocols, zero API keys
@@ -44,11 +50,8 @@ IDE (JetBrains / Zed / VS Code)
 
 ## Quick Links
 
-<CardGroup cols={2}>
+<CardGroup cols={1}>
   <Card title="GitHub" icon="github" href="https://github.com/markpollack/bud">
     Source code and releases
-  </Card>
-  <Card title="Loopy" icon="rotate" href="/projects/loopy">
-    Bud's origin — extracted from Loopy's boot layer
   </Card>
 </CardGroup>

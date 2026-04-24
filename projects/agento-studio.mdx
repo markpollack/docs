@@ -30,7 +30,18 @@ description: "A systematic approach to growing AI agents — judges tell you if 
 
 Agento Studio is a systematic approach to growing AI agents. A **judge** tells you if the agent got it right. A **journal** tells you why it behaved the way it did. You need both — without the judge you're guessing, without the journal you're tuning blind.
 
-Currently in active development.
+<a href="https://github.com/markpollack/agento-studio" style={{
+  display: 'inline-block',
+  padding: '0.6rem 1.5rem',
+  borderRadius: '6px',
+  background: 'rgba(232,168,32,0.15)',
+  border: '1px solid rgba(232,168,32,0.3)',
+  color: '#f0b429',
+  fontFamily: 'Geist Mono, monospace',
+  fontSize: '0.85rem',
+  textDecoration: 'none',
+  marginBottom: '1.5rem'
+}}>github.com/markpollack/agento-studio</a>
 
 ## How It Works
 
@@ -59,6 +70,23 @@ More agents are in development. Each one goes through the same cycle: run on rea
 
 - [I Read My Agent's Diary](https://blog.pollack.ai/i-read-my-agents-diary/) — Markov chain analysis of agent tool-call traces across eval-agent experiments
 - [Look Ma, No RAG!](https://blog.pollack.ai/look-ma-no-rag/) — How the knowledge layer works: routing tables, two KB types, federation, and health checks
+
+## Try It
+
+```bash
+git clone https://github.com/markpollack/agento-studio.git ~/agento-studio
+cd ~/agento-studio
+claude
+# then: /forge-research-kb ~/my-research-kb "your topic here"
+```
+
+From another project, use `--add-dir`:
+
+```bash
+claude --add-dir ~/agento-studio
+```
+
+The [getting-started guide](https://github.com/markpollack/agento-studio/blob/main/guides/getting-started-research-kb.md) walks through building your first research-partner KB end-to-end — five seed papers, 20 minutes, a working research agent at the end.
 
 ## License
 

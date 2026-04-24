@@ -53,9 +53,18 @@ Agento Studio is a systematic approach to growing AI agents. A **judge** tells y
 
 Each lever you can turn — skills, knowledge bases, pre-analysis, steering hooks — gets validated through this loop, not assumed to help.
 
-## Agents
+## What You Can Build
 
-Software development agents built and grown through the judge + journal loop:
+The methodology supports four project variants — each with its own feedback loop:
+
+| Variant | Use when... | Feedback loop |
+|---------|-------------|---------------|
+| **Eval-Agent** | Building an autonomous agent with judge-based evaluation | Loss optimization — judges score each run, journal explains behavior |
+| **Project** | Bootstrapping a library, service, or application | QA review loop with vision → design → roadmap |
+| **Research** | Investigating a question or testing hypotheses | Vision ↔ research iteration, multi-roadmap pattern |
+| **Steward** | Ongoing maintenance of a project or domain | Health monitoring — continuous, not convergent |
+
+### Agents Built So Far
 
 | Agent | What it does |
 |-------|-------------|
@@ -64,7 +73,7 @@ Software development agents built and grown through the judge + journal loop:
 | [Code Coverage](/experiments/code-coverage-v3) | Generate tests to hit coverage targets across multiple projects |
 | Liquibase → Flyway | Migration agent for database schema tooling conversion |
 
-More agents are in development. Each one goes through the same cycle: run on real tasks, judge the output, read the journal, fix the hotspots, run again.
+Each one goes through the same cycle: run on real tasks, judge the output, read the journal, fix the hotspots, run again.
 
 ## Blog
 
@@ -73,6 +82,8 @@ More agents are in development. Each one goes through the same cycle: run on rea
 
 ## Try It
 
+The repo includes slash commands in `.claude/commands/` — they're available automatically when you launch Claude Code from within the repo:
+
 ```bash
 git clone https://github.com/markpollack/agento-studio.git ~/agento-studio
 cd ~/agento-studio
@@ -80,7 +91,7 @@ claude
 # then: /forge-research-kb ~/my-research-kb "your topic here"
 ```
 
-From another project, use `--add-dir`:
+To use the commands from another project, add the repo as a context directory:
 
 ```bash
 claude --add-dir ~/agento-studio

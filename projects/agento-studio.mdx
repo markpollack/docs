@@ -30,20 +30,7 @@ description: "A systematic approach to growing AI agents — judges tell you if 
 
 Agento Studio is a systematic approach to growing AI agents. A **judge** tells you if the agent got it right. A **journal** tells you why it behaved the way it did. You need both — without the judge you're guessing, without the journal you're tuning blind.
 
-The toolkit gives you the feedback loop: skills, knowledge bases, judges, journals, and the eval harness to prove the whole stack actually improves outcomes. Built on the **Forge methodology** — a six-phase system that separates discovery from execution and treats evaluation as first-class.
-
-<a href="https://github.com/markpollack/agento-studio" style={{
-  display: 'inline-block',
-  padding: '0.6rem 1.5rem',
-  borderRadius: '6px',
-  background: 'rgba(232,168,32,0.15)',
-  border: '1px solid rgba(232,168,32,0.3)',
-  color: '#f0b429',
-  fontFamily: 'Geist Mono, monospace',
-  fontSize: '0.85rem',
-  textDecoration: 'none',
-  marginBottom: '1.5rem'
-}}>github.com/markpollack/agento-studio</a>
+Currently in active development — Electron GUI and backend.
 
 ## How It Works
 
@@ -55,43 +42,7 @@ The toolkit gives you the feedback loop: skills, knowledge bases, judges, journa
 
 Each lever you can turn — skills, knowledge bases, pre-analysis, steering hooks — gets validated through this loop, not assumed to help.
 
-## Quick Start
-
-```bash
-git clone https://github.com/markpollack/agento-studio.git
-cd agento-studio
-claude
-# then: /forge-kb ~/path/to/your/docs
-```
-
-From another project, use `--add-dir`:
-
-```bash
-claude --add-dir ~/agento-studio
-```
-
-## Blog
-
-- [Look Ma, No RAG!](https://blog.pollack.ai/look-ma-no-rag/) — How the knowledge layer works: routing tables, two KB types, federation, health checks, and the 25-question validation test
-- [I Read My Agent's Diary](https://blog.pollack.ai/i-read-my-agents-diary/) — Markov chain analysis of agent tool-call traces across eval-agent experiments
-
-## What's Inside
-
-### Methodology
-
-Every project starts with structured discovery before any code is written:
-
-- **Vision** — what are we building and why
-- **Design** — how will it work, what are the trade-offs
-- **Roadmap** — step-by-step execution plan with QA review
-
-4 project variants (eval-agent, project, research, steward) share the same six-phase Forge methodology with different feedback loops. 13 concept docs and 11 templates make it repeatable.
-
-### Knowledge Bases
-
-Agent-native knowledge systems using routing tables instead of RAG. Two types: **Research-Partner** (broad, theme-based synthesis) and **Code-Agent** (narrow, task-driven lookup with YAML frontmatter). Federation connects KBs across projects. Health checks keep them honest.
-
-### Agents
+## Agents
 
 Software development agents built and grown through the judge + journal loop:
 
@@ -104,38 +55,10 @@ Software development agents built and grown through the judge + journal loop:
 
 More agents are in development. Each one goes through the same cycle: run on real tasks, judge the output, read the journal, fix the hotspots, run again.
 
-### 10 Slash Commands
+## Blog
 
-Executable from Claude Code, not documentation to read.
-
-| Command | What it does |
-|---------|-------------|
-| `/forge-project` | Scaffold a software project (Vision + Design + Roadmap) |
-| `/forge-research` | Bootstrap a research project |
-| `/forge-kb` | Structure a corpus for JIT context Q&A |
-| `/forge-research-kb` | Bootstrap a federated research-partner KB |
-| `/forge-eval-agent` | Set up agent evaluation with judges |
-| `/forge-steward` | Bootstrap ongoing project stewardship |
-| `/plan-to-roadmap` | Convert a plan into a tracked roadmap |
-| `/collect-status` | Produce a timestamped status report |
-| `/ingest-status` | Absorb a project's status report into the KB |
-| `/kb-reindex` | Run health checks across all federated KBs |
-
-## Infrastructure
-
-The stack that agents and the feedback loop run on:
-
-| Project | What it does |
-|---------|-------------|
-| [Agent Workflow](/projects/agent-workflow) | Pipeline composition for agent loops |
-| [Agent Judge](/projects/agent-judge) | Deterministic + AI judge framework |
-| [Agent Bench](/projects/agent-bench) | Benchmark runner for agent evaluation |
-| [Agent Experiment](/projects/agent-experiment) | Experiment driver with sweep management |
-| [Agent Skills](/projects/agent-skills) | Domain knowledge packaging |
-| [Agent Client](/projects/agent-client) | Claude SDK Java wrapper |
-| [Agent Hooks](/projects/agent-hooks) | Lifecycle hooks for agent pipelines |
-| [Agent Memory](/projects/agent-memory) | Persistent memory for agent sessions |
-| [Agent Journal](/projects/agent-journal) | Behavioral trace capture |
+- [I Read My Agent's Diary](https://blog.pollack.ai/i-read-my-agents-diary/) — Markov chain analysis of agent tool-call traces across eval-agent experiments
+- [Look Ma, No RAG!](https://blog.pollack.ai/look-ma-no-rag/) — How the knowledge layer works: routing tables, two KB types, federation, and health checks
 
 ## License
 

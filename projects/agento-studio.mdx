@@ -1,6 +1,6 @@
 ---
 title: "Agento Studio"
-description: "A methodology and toolkit for building, testing, and improving AI agent knowledge bases"
+description: "A systematic approach to growing AI agents — judges tell you if the agent worked, journals tell you why"
 ---
 
 <div style={{
@@ -21,14 +21,16 @@ description: "A methodology and toolkit for building, testing, and improving AI 
       fontWeight: 400,
       color: '#f0b429',
       marginBottom: '0.5rem'
-    }}>Build, measure, and improve your agents.</div>
+    }}>Grow your agents, don't just prompt them.</div>
     <div style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6}}>
-      Clone. Open Claude Code. Type a slash command. You're building a knowledge base in 5 minutes.
+      Run. Judge. Read the journal. Fix the hotspot. Run again. That's the loop that turns unpredictable agents into reliable ones.
     </div>
   </div>
 </div>
 
-Agento Studio is a methodology and toolkit for building, testing, and improving AI agent knowledge bases. Built on the **Forge methodology** — a six-phase system that separates discovery from execution and treats evaluation as first-class.
+Agento Studio is a systematic approach to growing AI agents. A **judge** tells you if the agent got it right. A **journal** tells you why it behaved the way it did. You need both — without the judge you're guessing, without the journal you're tuning blind.
+
+The toolkit gives you the feedback loop: skills, knowledge bases, judges, journals, and the eval harness to prove the whole stack actually improves outcomes. Built on the **Forge methodology** — a six-phase system that separates discovery from execution and treats evaluation as first-class.
 
 <a href="https://github.com/markpollack/agento-studio" style={{
   display: 'inline-block',
@@ -42,6 +44,16 @@ Agento Studio is a methodology and toolkit for building, testing, and improving 
   textDecoration: 'none',
   marginBottom: '1.5rem'
 }}>github.com/markpollack/agento-studio</a>
+
+## How It Works
+
+1. **Run** the agent on a real task
+2. **Judge** the output — did it actually work? (correctness)
+3. **Read the journal** — why did it behave that way? (behavior)
+4. **Fix the hotspot** — better skill, better prompt, better tool
+5. **Run again** — measure if it improved
+
+Each lever you can turn — skills, knowledge bases, pre-analysis, steering hooks — gets validated through this loop, not assumed to help.
 
 ## Quick Start
 
@@ -58,7 +70,43 @@ From another project, use `--add-dir`:
 claude --add-dir ~/agento-studio
 ```
 
-## Slash Commands
+## Blog
+
+- [Look Ma, No RAG!](https://blog.pollack.ai/look-ma-no-rag/) — How the knowledge layer works: routing tables, two KB types, federation, health checks, and the 25-question validation test
+- [I Read My Agent's Diary](https://blog.pollack.ai/i-read-my-agents-diary/) — Markov chain analysis of agent tool-call traces across eval-agent experiments
+
+## What's Inside
+
+### Methodology
+
+Every project starts with structured discovery before any code is written:
+
+- **Vision** — what are we building and why
+- **Design** — how will it work, what are the trade-offs
+- **Roadmap** — step-by-step execution plan with QA review
+
+4 project variants (eval-agent, project, research, steward) share the same six-phase Forge methodology with different feedback loops. 13 concept docs and 11 templates make it repeatable.
+
+### Knowledge Bases
+
+Agent-native knowledge systems using routing tables instead of RAG. Two types: **Research-Partner** (broad, theme-based synthesis) and **Code-Agent** (narrow, task-driven lookup with YAML frontmatter). Federation connects KBs across projects. Health checks keep them honest.
+
+### Agents
+
+Software development agents built and grown through the judge + journal loop:
+
+| Agent | What it does |
+|-------|-------------|
+| [PR Merge](/projects/loopy) | Automated pull request review, merge, and pipeline orchestration |
+| [Issue Classification](/experiments/issue-classification) | Categorize and triage issues (tested against SWE-bench) |
+| [Code Coverage](/experiments/code-coverage-v3) | Generate tests to hit coverage targets across multiple projects |
+| Liquibase → Flyway | Migration agent for database schema tooling conversion |
+
+More agents are in development. Each one goes through the same cycle: run on real tasks, judge the output, read the journal, fix the hotspots, run again.
+
+### 10 Slash Commands
+
+Executable from Claude Code, not documentation to read.
 
 | Command | What it does |
 |---------|-------------|
@@ -73,45 +121,21 @@ claude --add-dir ~/agento-studio
 | `/ingest-status` | Absorb a project's status report into the KB |
 | `/kb-reindex` | Run health checks across all federated KBs |
 
-## Blog
+## Infrastructure
 
-- [Look Ma, No RAG!](https://blog.pollack.ai/look-ma-no-rag/) — How the knowledge layer works: routing tables, two KB types, federation, health checks, and the 25-question validation test
-- [I Read My Agent's Diary](https://blog.pollack.ai/i-read-my-agents-diary/) — Markov chain analysis of agent tool-call traces across eval-agent experiments
+The stack that agents and the feedback loop run on:
 
-## What's Inside
-
-**10 slash commands** — executable from Claude Code, not documentation to read.
-
-**13 concept docs** — Knowledge base architecture, discovery loops, judges, steward agents, research methodology.
-
-**11 templates** — Vision, design, roadmap, learnings, paper tracker, provenance — fill-in-the-blank for every phase output.
-
-**4 project variants** — Eval-agent, project, research, steward. Same six phases, different feedback loops.
-
-## Built with Forge
-
-Projects built using Agento Studio's Forge methodology:
-
-| Project | Variant | What it does |
-|---------|---------|-------------|
-| [Agent Workflow](/projects/agent-workflow) | Project | Pipeline composition for agent loops |
-| [Agent Judge](/projects/agent-judge) | Project | Deterministic + AI judge framework |
-| [Agent Bench](/projects/agent-bench) | Project | Benchmark runner for agent evaluation |
-| [Agent Experiment](/projects/agent-experiment) | Eval-Agent | Experiment driver with sweep management |
-| [Agent Skills](/projects/agent-skills) | Project | Domain knowledge packaging |
-| [Agent Client](/projects/agent-client) | Steward | Claude SDK Java wrapper |
-| [Agent Hooks](/projects/agent-hooks) | Project | Lifecycle hooks for agent pipelines |
-| [Agent Memory](/projects/agent-memory) | Project | Persistent memory for agent sessions |
-| [Agent Journal](/projects/agent-journal) | Project | Behavioral trace capture |
-| [Loopy](/projects/loopy) | Project | CLI agent product |
-| [Code Coverage v1](/experiments/code-coverage-v1) | Eval-Agent | Baseline code coverage experiment |
-| [Code Coverage v2](/experiments/code-coverage-v2) | Eval-Agent | Knowledge ablation experiment |
-| [Code Coverage v3](/experiments/code-coverage-v3) | Eval-Agent | Multi-project generalization |
-| [Issue Classification](/experiments/issue-classification) | Eval-Agent | SWE-bench classification experiment |
-
-## Built On
-
-Agento Studio builds on the AgentWorks stack — [Agent Workflow](/projects/agent-workflow) for pipeline composition, [Agent Judge](/projects/agent-judge) for evaluation, and [Agent Skills](/projects/agent-skills) for domain knowledge.
+| Project | What it does |
+|---------|-------------|
+| [Agent Workflow](/projects/agent-workflow) | Pipeline composition for agent loops |
+| [Agent Judge](/projects/agent-judge) | Deterministic + AI judge framework |
+| [Agent Bench](/projects/agent-bench) | Benchmark runner for agent evaluation |
+| [Agent Experiment](/projects/agent-experiment) | Experiment driver with sweep management |
+| [Agent Skills](/projects/agent-skills) | Domain knowledge packaging |
+| [Agent Client](/projects/agent-client) | Claude SDK Java wrapper |
+| [Agent Hooks](/projects/agent-hooks) | Lifecycle hooks for agent pipelines |
+| [Agent Memory](/projects/agent-memory) | Persistent memory for agent sessions |
+| [Agent Journal](/projects/agent-journal) | Behavioral trace capture |
 
 ## License
 

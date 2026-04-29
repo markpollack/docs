@@ -12,13 +12,37 @@ public interface Step<I, O> {
     String name();
     O execute(AgentContext ctx, I input);
 
+    default AgentContext updateContext(AgentContext ctx, O output) { return ctx; }
+
     default Class<?> inputType()  { return Object.class; }
     default Class<?> outputType() { return Object.class; }
 
     static <I,O> Step<I,O> named(String name, BiFunction<AgentContext, I, O> fn);
-    static <I,O> Step<I,O> noop();
+    static <T> Step<T,T> noop();           // anonymous pass-through
+    static <T> Step<T,T> noop(String name); // named pass-through — referenceable in IR
 }
 ```
+
+**`updateContext()`** — override to publish side-channel metadata alongside the primary output. Called by the executor after `execute()`. The `output` parameter is the value returned by `execute()` — derive metadata from it directly rather than capturing state in fields:
+
+```java
+class ClassifierStep implements Step<String, ClassificationResult> {
+    @Override
+    public ClassificationResult execute(AgentContext ctx, String input) {
+        return runModel(input);  // rich result carries all data
+    }
+
+    @Override
+    public AgentContext updateContext(AgentContext ctx, ClassificationResult output) {
+        return ctx.mutate()
+            .with(CONFIDENCE, output.confidence())
+            .with(DETECTED_LABEL, output.label())
+            .build();
+    }
+}
+```
+
+The primary output (`ClassificationResult`) flows forward as the next step's input; metadata (confidence, label) flows via context keys. Default implementation returns `ctx` unchanged.
 
 **AgentStep** marker — implement on steps that make LLM calls for correct `NodeType.AGENT` cost tracking:
 
@@ -56,7 +80,8 @@ Workflow.<I, O>define("name")
     .step(step)                                    // first step
     .then(step)                                    // chain
     .branch(predicate).then(a).otherwise(b)        // conditional
-    .parallel(step1, step2)                        // static fan-out
+    .gather(step1, step2)                          // homogeneous fan-out → List<Object>
+    .parallel(step1, step2)                        // enrichment fan-out → fork input unchanged, branches write to context
     .parallel(itemsSupplier, stepFactory)           // dynamic fan-out
     .repeatUntil(predicate).step(a).end()          // while-do
     .repeatUntilOutput(predicate).step(a).end()    // do-while
@@ -111,6 +136,29 @@ public interface Gate<O> {
 
 On failure, `Verdict` written to `AgentContext.JUDGE_VERDICT`. Reflector transforms verdict into constructive feedback for the retry step.
 
+### Gate.updateContext()
+
+Gates implement `updateContext()` just like steps do. Override it to write the gate's assessment to `AgentContext` — both the `onPass` and `onFail` branches can then read it:
+
+```java
+class AssessCodeQualityGate implements Gate<PrContext> {
+    static final ContextKey<Assessment> QUALITY_ASSESSMENT = ContextKey.of("quality-assessment", Assessment.class);
+
+    private Assessment assessment;
+
+    @Override
+    public GateDecision evaluate(AgentContext ctx, PrContext pr) {
+        assessment = runJudge(pr);
+        return assessment.score() >= threshold ? GateDecision.PASS : GateDecision.FAIL;
+    }
+
+    @Override
+    public AgentContext updateContext(AgentContext ctx, PrContext pr) {
+        return ctx.mutate().with(QUALITY_ASSESSMENT, assessment).build();
+    }
+}
+```
+
 ## AgentContext
 
 Immutable, threaded through every step. Copy-on-write via `mutate()`.
@@ -138,6 +186,39 @@ ctx.mutate().with(key, value).build()
 ```
 
 `ContextKey<T>` implements Bloch's Typesafe Heterogeneous Container (Effective Java Item 33).
+
+### mergeFrom
+
+```java
+AgentContext merged = base.mergeFrom(donor);
+```
+
+Overlays all entries from `donor` onto `base`. Donor wins on key conflict. Returns a new immutable instance. Used internally by `WorkflowExecutor` to propagate sub-workflow context writes back to the parent — you rarely call this directly, but it is part of the public API if you need manual context composition.
+
+## Sub-workflow Composition
+
+A `Workflow` implements `Step`, so it can be used anywhere a step is expected — as a sequential step, inside a branch, inside a gate path, or inside a parallel branch. The executor handles the nesting transparently:
+
+```java
+Workflow<PrContext, AssessmentResult> aiAssessment = Workflow.<PrContext, AssessmentResult>define("ai-assessment")
+    .step(assessCodeQuality)    // updateContext() writes QUALITY_ASSESSMENT
+    .then(assessBackport)       // updateContext() writes BACKPORT_ASSESSMENT
+    .build();
+
+Workflow.<Integer, Path>define("pr-review")
+    .step(fetchPrContext)       // writes PR_CONTEXT to ctx
+    .branch(skipAi)
+        .then(skipStep)
+        .otherwise(aiAssessment) // sub-workflow — context writes propagate back
+    .then(qualityJudge)         // reads QUALITY_ASSESSMENT and BACKPORT_ASSESSMENT ✓
+    .run(prNumber);
+```
+
+**How it works**: The executor detects `step instanceof Workflow` and runs it inline rather than dispatching through the `StepRunner`. The sub-workflow receives the parent's current context, executes normally, and the final context (including all `updateContext()` writes from every nested step) is merged back into the parent via `mergeFrom()`. Leaf steps still go through the `StepRunner` (so `TemporalStepRunner` dispatch works correctly for individual steps).
+
+**Nesting is unlimited**: sub-workflows can contain sub-workflows. Each level merges its context writes back up the chain.
+
+**Parallel branches**: context writes from parallel sub-workflow branches are merged at the join node. If two branches write to the same key, the last branch to complete wins.
 
 ## RunOptions
 
@@ -241,6 +322,25 @@ Untyped steps (lambdas) break the typed chain — no check across the gap:
 
 Use in CI to validate workflow structure without making LLM calls.
 
+## WorkflowAbortException
+
+Thrown by a step to abort the workflow and return a typed result. Unlike an unhandled exception (which propagates as an error), `WorkflowAbortException` is caught by the executor and its carried result becomes the workflow's output:
+
+```java
+class QualityGateStep implements Step<ReviewResult, Path> {
+    @Override
+    public Path execute(AgentContext ctx, ReviewResult result) {
+        if (result.isTooRisky()) {
+            // abort — caller receives the error report, not an exception
+            throw new WorkflowAbortException(writeErrorReport(result));
+        }
+        return writeApprovalReport(result);
+    }
+}
+```
+
+Use `WorkflowAbortException` when a step detects an unrecoverable condition but can still produce a meaningful output — for example, a typed error response, a failure report, or a structured rejection. Prefer it over returning `null` or throwing a raw exception when the caller needs to distinguish "completed with degraded output" from "crashed."
+
 ## StepRunner
 
 The substrate swap seam. Same workflow code, different durability:
@@ -260,6 +360,17 @@ Three runners are available:
 | `TemporalStepRunner` | Distributed durable execution via `workflow-temporal` | Available |
 
 Same workflow code — swap the `@Bean`, not the workflow. See [Durability](/docs/agent-workflow/durability) for setup and crash-recovery examples.
+
+**Operator retry (`CheckpointManager`)**: FAILED steps are not retried automatically — the system holds them until an operator decides the failure was transient. `CheckpointManager.resetFailedSteps(runId)` deletes FAILED records; re-running with the same `runId` then skips COMPLETED steps and retries the reset ones.
+
+```java
+CheckpointManager manager = new CheckpointManager(readRepo, writeRepo);
+manager.getRunState("run-1");        // inspect: what completed, what failed
+manager.resetFailedSteps("run-1");   // delete FAILED records (only if transient)
+executor.execute(graph, ctx, input); // retry — COMPLETED skipped, reset steps re-run
+```
+
+**Sub-workflows are always inline**: a `Workflow` used as a step bypasses the `StepRunner` entirely and runs in-process. Only leaf steps go through the runner. This is intentional — `TemporalStepRunner` dispatches to a separate activity worker thread and cannot carry full parent context; sub-workflows must stay in-process to propagate context correctly.
 
 ## TraceRecorder
 

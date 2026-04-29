@@ -279,20 +279,11 @@ Most users never need `updateContext()`. Start with input chaining (Pattern 1). 
 | **3** | **Context writes** | Step publishes typed metadata | Runtime | Confidence, language, sources |
 | **—** | **Mixed** | All of the above | Both | Real-world steps |
 
-## Comparison with Spring Batch
-
-| Spring Batch | Agent Workflow |
-|---|---|
-| `ExecutionContext.put("key", value)` | `updateContext()` → `ctx.mutate().with(KEY, value).build()` |
-| `ExecutionContext.get("key")` | `ctx.get(MyStep.MY_KEY)` — typed, no cast |
-| `@Value("#{jobParameters['x']}")` | Constructor injection on step class |
-| `ExecutionContext.put()` + promotion listener | `Steps.outputOf()` — automatic, no promotion needed |
-
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
-    Full concept-by-concept comparison
+  <Card title="DSL Primitives" icon="sitemap" href="/docs/agent-workflow/choosing-a-pattern">
+    Sequential, parallel, gate, loop, branch, and more
   </Card>
   <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
     Runnable integration tests including context writes

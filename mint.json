@@ -87,8 +87,7 @@
             "docs/agent-workflow/examples",
             "docs/agent-workflow/choosing-a-pattern",
             "docs/agent-workflow/api-reference",
-            "docs/agent-workflow/durability",
-            "docs/agent-workflow/spring-batch-mapping"
+            "docs/agent-workflow/durability"
           ]
         },
         "projects/agent-client",

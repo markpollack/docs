@@ -78,14 +78,45 @@ Workflow.define("score-loop")
     .run(initialInput);
 ```
 
-### Parallel (static fan-out)
+### Gather (homogeneous fan-out)
 
-Run steps concurrently, collect results:
+Run steps concurrently, collect all results into a `List<Object>` that becomes the input to the next step. Use when all branches produce the same type and downstream needs everything together:
 
 ```java
 List<Object> results = (List<Object>) Workflow.define("gather")
-    .parallel(findMeals, findMovies)
+    .gather(findMeals, findMovies)
     .run("romantic");
+```
+
+Chain directly into a join step:
+
+```java
+String summary = (String) Workflow.<String, Object>define("parallel-review")
+    .gather(reviewStep, auditStep)
+    .then(Step.named("summarize", (ctx, in) -> {
+        List<Object> parts = (List<Object>) in;
+        return String.join("+", parts.stream().map(Object::toString).toList());
+    }))
+    .run("input");
+```
+
+### Parallel (enrichment fan-out)
+
+Run steps concurrently; the join passes the **fork input through unchanged**. Each branch writes its output to a named context key (`Steps.outputOf(branchName)`). Use when branches produce different types and downstream reads from context:
+
+```java
+Step<String, String> reviewStep = Step.named("review", (ctx, in) -> "review-done");
+Step<String, String> auditStep  = Step.named("audit",  (ctx, in) -> "audit-done");
+
+Workflow.<String, Object>define("parallel-review")
+    .parallel(reviewStep, auditStep)
+    .then(Step.named("report", (ctx, in) -> {
+        // in == fork input ("pr-123"), unchanged
+        String reviewResult = ctx.get(Steps.outputOf("review")).orElseThrow();
+        String auditResult  = ctx.get(Steps.outputOf("audit")).orElseThrow();
+        return reviewResult + " | " + auditResult;
+    }))
+    .run("pr-123");
 ```
 
 ### Parallel (dynamic fan-out)

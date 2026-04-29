@@ -56,12 +56,47 @@ Persists step outputs to a JDBC database. On restart with the same `runId`, comp
 
 Requires Spring Data JPA and a JDBC `DataSource` on the classpath. H2 works for development; Postgres or MySQL for production.
 
-### Crash-and-resume example
+### Restart semantics
 
-A 4-step workflow crashes at step 3. On resume with the same `runId`, steps 1-2 are skipped (cached), steps 3-4 execute normally:
+`runId` is the stable identity for a workflow instance. **COMPLETED steps are skipped permanently for that `runId`.** FAILED steps are not automatically retried — the system leaves them in place until an operator explicitly decides to retry.
+
+This is intentional. Not all failures are transient: a bad prompt, a schema mismatch, or a programming error will fail again without a fix. Automatic retry would mask the real problem.
+
+### Crash-and-resume with CheckpointManager
+
+When a step fails, call `CheckpointManager.getRunState()` to inspect what happened, then `resetFailedSteps()` only after confirming the failure was transient:
 
 ```java
-// Define deterministic steps
+var manager = new CheckpointManager(readRepo, writeRepo);
+var ctx = AgentContext.withRunId("run-1");
+var executor = new WorkflowExecutor(checkpointRunner, TraceRecorder.noop());
+
+// First attempt — crashes at step-c
+try {
+    executor.execute(workflow.graph(), ctx, "start");
+} catch (RuntimeException e) {
+    // step-a and step-b: COMPLETED; step-c: FAILED
+}
+
+// Operator inspects state
+List<AgentStepExecution> state = manager.getRunState("run-1");
+// diagnose: was this a transient network blip? a permanent config error?
+
+// Only reset if the failure was transient
+int reset = manager.resetFailedSteps("run-1");  // deletes the FAILED record(s)
+// reset == 1 (step-c)
+
+// Retry with same runId — step-a and step-b skipped, step-c retried
+String result = executor.execute(workflow.graph(), ctx, "start");
+```
+
+`resetFailedSteps` deletes FAILED records; COMPLETED records are untouched. The next execution creates a fresh STARTED record for each reset step and re-runs it.
+
+### Basic crash-and-resume example
+
+A 4-step workflow crashes at step 3. After operator reset, steps 1-2 are skipped (cached), step 3 retried:
+
+```java
 Step<String, String> step1 = Step.named("step-1", (ctx, in) -> in + "→1");
 Step<String, String> step2 = Step.named("step-2", (ctx, in) -> in + "→2");
 Step<String, String> step3 = Step.named("step-3", (ctx, in) -> {
@@ -74,14 +109,15 @@ var workflow = Workflow.<String, String>define("crash-resume")
         .step(step1).step(step2).step(step3).step(step4)
         .build();
 
-// First attempt — crashes at step 3
-// Steps 1-2 are persisted as COMPLETED, step-3 as FAILED
+// First attempt — step-3 fails
 var ctx = AgentContext.withRunId("run-1");
 var executor = new WorkflowExecutor(checkpointRunner, TraceRecorder.noop());
 executor.execute(workflow.graph(), ctx, "start"); // throws
 
-// Second attempt — same runId
-// Steps 1-2 SKIPPED (cached output returned), steps 3-4 execute
+// Operator diagnoses, decides it was transient, resets
+new CheckpointManager(readRepo, writeRepo).resetFailedSteps("run-1");
+
+// Retry — steps 1-2 SKIPPED (cached), steps 3-4 execute
 String result = executor.execute(workflow.graph(), ctx, "start");
 // result: "start→1→2→3→4"
 ```
@@ -99,7 +135,21 @@ Two JPA entities back the checkpoint system:
 | `AgentStepExecution` | `agent_step_executions` | Per-step checkpoint. Key: `(runId, stepName)` unique constraint. Tracks status, output, tokens, cost. |
 | `AgentFlowExecution` | `agent_flow_executions` | Per-run envelope. Tracks workflow name, steps total/completed, total cost. |
 
-Both use `BatchStatus` (severity-ordered enum ported from Spring Batch) and `ExitStatus` (embeddable record with severity-based composition via `and()`).
+Both use `BatchStatus` (severity-ordered enum) and `ExitStatus` (embeddable record with severity-based composition via `and()`).
+
+### Typed output deserialization
+
+Each checkpoint stores the step's output type alongside its serialized payload. On restore, `CheckpointingStepRunner` uses `Class.forName(outputType)` to deserialize back to the original type rather than raw `Object`. This means that when a step is skipped and its cached output is returned to the next step, the type is preserved:
+
+```java
+// Step produces a typed result
+Step<String, SummaryReport> summarize = new SummarizeStep(chat);
+
+// First run — step executes, checkpoint stores SummaryReport.class + JSON payload
+// Second run (restart) — checkpoint restores SummaryReport, not Map or String
+```
+
+Steps that declare `outputType()` participate fully. `Step.named()` lambdas return `Object.class` by default — deserialization falls back to Jackson's type inference for those.
 
 ## JdbcTraceRecorder
 
@@ -171,13 +221,17 @@ Steps are resolved by name from a `ConcurrentHashMap` registry. The activity cre
 Steps dispatched via Temporal must be **idempotent** — Temporal may retry activities on timeout or failure.
 </Note>
 
+<Note>
+**Sub-workflows run inline, not as activities.** A `Workflow` used as a step inside another `Workflow` bypasses the `TemporalStepRunner` and executes in-process. Only leaf steps are dispatched as Temporal activities. This is required for correct context propagation — the activity worker receives only the `runId`, not the full parent context.
+</Note>
+
 ## Related
 
 <CardGroup cols={2}>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
     StepRunner interface, TraceRecorder, WorkflowExecutor
   </Card>
-  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
-    How CheckpointingStepRunner maps to JobRepository
+  <Card title="DSL Primitives" icon="sitemap" href="/docs/agent-workflow/choosing-a-pattern">
+    Sequential, parallel, gate, loop, branch, and more
   </Card>
 </CardGroup>

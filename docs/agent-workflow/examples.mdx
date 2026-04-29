@@ -334,6 +334,55 @@ The supervisor generates a routing prompt from agent names and descriptions. Eac
 
 ---
 
+## 9. Sub-workflow Composition
+
+A `Workflow` implements `Step` — nest one workflow inside another. Context writes from the inner workflow propagate back to the outer automatically.
+
+```java
+static final ContextKey<String> QUALITY_KEY   = ContextKey.of("quality",  String.class);
+static final ContextKey<String> SENTIMENT_KEY = ContextKey.of("sentiment", String.class);
+
+// Inner step that writes to context via updateContext()
+class AnalyzeQualityStep implements Step<String, String> {
+    @Override public String name() { return "analyze-quality"; }
+    @Override public String execute(AgentContext ctx, String input) {
+        return chat.prompt()
+                .user("Rate this text quality as HIGH, MEDIUM, or LOW: " + input)
+                .call().content().strip();
+    }
+    @Override public AgentContext updateContext(AgentContext ctx, String output) {
+        return ctx.mutate().with(QUALITY_KEY, output).build();
+    }
+}
+
+// Sub-workflow: analyze text, then summarize
+Workflow<String, String> analyzeAndSummarize = Workflow.<String, String>define("analyze")
+        .step(new AnalyzeQualityStep())
+        .then(Step.named("summarize", (ctx, in) ->
+                chat.prompt()
+                        .user("Summarize in one sentence: " + in)
+                        .call().content()))
+        .build();
+
+// Outer workflow uses sub-workflow as a step, then reads its context writes
+AtomicReference<String> capturedQuality = new AtomicReference<>();
+
+String result = (String) Workflow.<String, Object>define("outer")
+        .step(analyzeAndSummarize)   // sub-workflow — context propagates back
+        .then(Step.named("read-ctx", (ctx, in) -> {
+            capturedQuality.set(ctx.get(QUALITY_KEY).orElse("missing"));
+            return in;
+        }))
+        .run("The quick brown fox jumps over the lazy dog.");
+
+assertThat(capturedQuality.get()).isIn("HIGH", "MEDIUM", "LOW");  // written inside sub-workflow ✓
+assertThat(result).isNotBlank();
+```
+
+Sub-workflows can be used anywhere a step is accepted: `.then()`, `.branch()`, `.otherwise()`, `.onPass()`, `.onFail()`, and `.parallel()`. Nesting is unlimited.
+
+---
+
 ## Testing Strategy
 
 These examples demonstrate the assertion pattern for LLM-backed tests:
@@ -353,4 +402,4 @@ export OPENAI_API_KEY=sk-...
 ./mvnw verify -Dgroups=ours
 ```
 
-All 8 tests run against real GPT-4.1 calls.
+All 9 tests run against real GPT-4.1 calls.

@@ -91,6 +91,8 @@ The context is immutable — each step gets a snapshot, mutations produce a new 
 
 The framework auto-populates `Steps.outputOf("step-name")` after each step, so any downstream step can read any prior step's output by name.
 
+**Sub-workflow context propagation**: when a `Workflow` is used as a step inside another `Workflow`, its internal context mutations propagate back to the parent automatically. All `updateContext()` writes from nested steps are visible to downstream steps in the parent — no workarounds needed.
+
 ## Your First Workflow
 
 ```java
@@ -150,10 +152,10 @@ Control flow compiles to real graph structure: a branch is 4 nodes + 4 edges; a 
   <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
     10+ composable patterns — branch, loop, parallel, decision, gate, supervisor
   </Card>
-  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
-    How Agent Workflow maps to Spring Batch concepts
+  <Card title="Durability" icon="database" href="/docs/agent-workflow/durability">
+    Crash recovery, checkpointing, and distributed execution
   </Card>
   <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
-    8 runnable integration tests validated against GPT-4.1
+    9 runnable integration tests validated against GPT-4.1
   </Card>
 </CardGroup>

@@ -43,6 +43,36 @@ Agento Studio is a systematic approach to growing AI agents. A **judge** tells y
   marginBottom: '1.5rem'
 }}>github.com/markpollack/agento-studio</a>
 
+## Agents Are Workflows
+
+An agent isn't a magic black box — it's a workflow. Each step is either **deterministic** (build, lint, test, measure coverage) or an **AI step** (reason about an error, generate code, decide what to fix next). What people casually call "an agent" is usually just the AI step — one node in a larger pipeline.
+
+```
+fetch PR  →  rebase  →  detect conflicts  →  run tests  →  fix & retest  →  cleanup  →  build gate
+ [determ.]   [determ.]     [deterministic]    [determ.]       [AI step]      [determ.]    [judge]
+                                                                                            │
+                                                              ┌────────────────────────┐    │ pass
+                                                              │ version-pattern judge  │◄───┘
+                                                              │    [deterministic]     │
+                                                              └──────────┬─────────────┘
+                                                                         │
+                                                              ┌──────────┴─────────────┐
+                                                              │    parallel AI steps   │
+                                                              │  assess-code-quality   │
+                                                              │  assess-backport       │
+                                                              └──────────┬─────────────┘
+                                                                         │
+                                                              ┌──────────┴─────────────┐
+                                                              │   quality judge → report│
+                                                              └────────────────────────┘
+```
+
+This is the actual [AgentWorks PR Review](https://github.com/markpollack/agentworks-pr-review) pipeline — seven deterministic steps, a judge gate, then parallel AI assessment only if the build passes. Most of the workflow never touches an LLM.
+
+This is exactly the pattern Stripe arrived at independently with their [Minions system](https://blog.pollack.ai/stripe-convergence/) — 1,300+ PRs per week at $1T scale. They call the pattern "blueprints": deterministic nodes interleaved with agent nodes. As Stripe's Alistair Gray put it: *"Blueprints combine the determinism of workflows with agents' flexibility in dealing with the unknown."*
+
+The insight behind Agento Studio: **the workflow structure matters more than the model powering the AI steps.** Better prompts, targeted knowledge, and deterministic checkpoints consistently outperform model upgrades. That's the thesis — `knowledge + structured execution > model` — and the build-measure-improve loop below is how you prove it for your agent.
+
 ## How It Works
 
 1. **Run** the agent on a real task

@@ -34,10 +34,10 @@ Pre-assemble sub-workflows as named Spring beans. The top-level workflow takes p
 ```java
 // 4 arguments — each one a named structural unit
 public PrReviewDslWorkflow(
-    Workflow<Integer, PrContext> contextPhase,    // fetch → rebase → conflict → tests
+    Workflow<Integer, Object> contextPhase,    // fetch → rebase → conflict → tests → cleanup
     BuildGate buildGate,
-    Workflow<PrContext, Path> assessAndReport,    // AI assessment path
-    Workflow<PrContext, Path> earlyReport)        // T0 failure path
+    Workflow<Object, Path> assessAndReport,    // T0 pass: version check → AI → report
+    Workflow<Object, Path> earlyReport)        // T0 fail: assemble → report
 ```
 
 The constructor body becomes a pure description of how the phases connect — no wiring, no service lookups:
@@ -54,18 +54,18 @@ this.pipeline = Workflow.<Integer, Path>define("pr-review")
 
 ## The Factory
 
-The Spring `@Configuration` class is the wiring hub. It assembles each phase as a `@Bean`:
+The Spring `@Configuration` class is the wiring hub. It assembles each phase as a `@Bean`. Because `Workflow<I, O>` implements `Step<I, O>`, sub-workflows compose directly into parent workflows with no adapter needed.
 
 ```java
 @Configuration
-public class PrReviewConfig {
+public class DslWorkflowConfig {
 
     @Bean
-    Workflow<Integer, PrContext> contextPhase(
+    Workflow<Integer, Object> contextPhase(
             FetchPrContextStep fetch, RebaseStep rebase,
             ConflictDetectionStep conflict, RunTestsStep tests,
             FixAndRetestStep fix, CleanupStep cleanup) {
-        return Workflow.<Integer, PrContext>define("context-phase")
+        return Workflow.<Integer, Object>define("context-phase")
             .step(fetch)
             .then(rebase)
             .then(conflict)
@@ -76,18 +76,23 @@ public class PrReviewConfig {
     }
 
     @Bean
-    Workflow<PrContext, Path> assessAndReport(
-            VersionPatternStep versionPattern,
+    Workflow<Object, Object> aiAssessment(
             Step<PrContext, ?> assessCodeQuality,
-            Step<PrContext, ?> assessBackport,
-            QualityJudgeStep qualityJudge,
-            AssembleReportStep assembleReport,
-            GenerateReportStep generateReport) {
-        Workflow<Object, Object> aiAssessment = Workflow.<Object, Object>define("ai-assessment")
+            Step<PrContext, ?> assessBackport) {
+        return Workflow.<Object, Object>define("ai-assessment")
             .step(new ExtractPrContextStep())
             .parallel(assessCodeQuality, assessBackport)
             .build();
-        return Workflow.<PrContext, Path>define("assess-and-report")
+    }
+
+    @Bean
+    Workflow<Object, Path> assessAndReport(
+            VersionPatternStep versionPattern,
+            Workflow<Object, Object> aiAssessment,
+            QualityJudgeStep qualityJudge,
+            AssembleReportStep assembleReport,
+            GenerateReportStep generateReport) {
+        return Workflow.<Object, Path>define("assess-and-report")
             .step(versionPattern)
             .then(aiAssessment)
             .then(qualityJudge)
@@ -97,7 +102,7 @@ public class PrReviewConfig {
     }
 
     @Bean
-    Workflow<PrContext, Path> earlyReport(
+    Workflow<Object, Path> earlyReport(
             AssembleReportStep assembleReport,
             GenerateReportStep generateReport) {
         return Workflow.<Object, Path>define("early-report")
@@ -108,10 +113,10 @@ public class PrReviewConfig {
 
     @Bean
     PrReviewDslWorkflow prReviewDslWorkflow(
-            Workflow<Integer, PrContext> contextPhase,
+            Workflow<Integer, Object> contextPhase,
             BuildGate buildGate,
-            Workflow<PrContext, Path> assessAndReport,
-            Workflow<PrContext, Path> earlyReport) {
+            Workflow<Object, Path> assessAndReport,
+            Workflow<Object, Path> earlyReport) {
         return new PrReviewDslWorkflow(contextPhase, buildGate, assessAndReport, earlyReport);
     }
 }

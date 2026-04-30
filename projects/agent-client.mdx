@@ -1,20 +1,55 @@
 ---
 title: "Agent Client"
-description: "Autonomous CLI agent integrations for Spring AI — Claude Code, Gemini CLI, and SWE-bench agents"
+description: "Portable Java API for autonomous CLI agents — Claude Code, Codex, Gemini, Amazon Q, and Amp"
 ---
 
-Autonomous CLI agent integrations — Claude Code, Gemini CLI, and SWE-bench agents as first-class Spring services. Portable MCP server abstraction where the client resolves and the model translates, supporting multiple agent runtimes simultaneously. Includes auto-configuration and sandbox isolation.
+Portable Java API for autonomous CLI agents. No Spring Boot required — build a model, create a client, run a goal. Optional Spring Boot starters for auto-configuration.
 
-Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk), [ACP Java SDK](/projects/acp-java-sdk)) and the structured execution layer ([Agent Workflow](/projects/agent-workflow)).
+Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk)) and higher-level orchestration ([Agent Workflow](/projects/agent-workflow)).
+
+**Version 0.15.0** — [Maven Central](https://central.sonatype.com/search?q=g:org.springaicommunity.agents)
+
+## Architecture
+
+Three layers, each usable independently:
+
+| Layer | Module | Framework Deps |
+|-------|--------|---------------|
+| **Core API** | `agent-client-core` | None — plain Java |
+| **Spring Boot Auto-Config** | `agent-client-spring-boot-autoconfigure` | Spring Boot |
+| **Starters** | `agent-starter-claude`, etc. | Spring Boot |
+
+```java
+// Plain Java — no Spring Boot needed
+ClaudeAgentModel model = ClaudeAgentModel.builder()
+    .defaultOptions(ClaudeAgentOptions.builder().yolo(true).build())
+    .build();
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run("Create hello.txt");
+```
+
+## Providers
+
+Claude Code, Codex (OpenAI), Gemini CLI, Amazon Q, Amp. Provider selection at construction time — everything after `AgentClient.create(model)` is portable.
+
+## LOOSE / STRICT Modes
+
+`AgentClientMode` controls default permissiveness. LOOSE (default) bypasses sandbox restrictions and git checks for frictionless evaluation. STRICT requires explicit opt-in.
 
 ## Documentation
 
 <CardGroup cols={2}>
-  <Card title="Project Overview" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/agent-client">
-    Architecture, supported runtimes, MCP server abstraction
+  <Card title="Getting Started" icon="rocket" href="https://springaicommunity.mintlify.app/agent-client/howto/getting-started">
+    Plain Java quick start — no Spring Boot required
+  </Card>
+  <Card title="Reference" icon="book" href="https://springaicommunity.mintlify.app/agent-client/reference/portable-options">
+    Configuration options for all providers
+  </Card>
+  <Card title="Tutorial" icon="graduation-cap" href="https://springaicommunity.mintlify.app/agent-client/tutorial/index">
+    Progressive lessons from first task to multi-provider
   </Card>
   <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client">
-    Implementation — Spring Boot starters, sandbox backends
+    GitHub repository
   </Card>
 </CardGroup>
 
@@ -22,9 +57,9 @@ Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/c
 
 <CardGroup cols={2}>
   <Card title="Agent Sandbox" icon="shield" href="/projects/agent-sandbox">
-    Isolated execution for untrusted agent code — local, Docker, or E2B cloud
+    Isolated execution — local, Docker, or E2B cloud
   </Card>
   <Card title="Agent Workflow" icon="rotate" href="/projects/agent-workflow">
-    Uses Agent Client under the hood for `ClaudeStep` and `AgentClientStep`
+    Uses Agent Client for `ClaudeStep` and `AgentClientStep`
   </Card>
 </CardGroup>

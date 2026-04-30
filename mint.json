@@ -86,6 +86,7 @@
             "docs/agent-workflow/parameterization",
             "docs/agent-workflow/examples",
             "docs/agent-workflow/choosing-a-pattern",
+            "docs/agent-workflow/wiring",
             "docs/agent-workflow/api-reference",
             "docs/agent-workflow/durability"
           ]

@@ -1,0 +1,168 @@
+---
+title: "Wiring Complex Pipelines"
+description: "How to structure the constructor and Spring configuration for workflows with many collaborating steps"
+---
+
+## The Problem
+
+A real pipeline has many steps — fetch context, rebase, run tests, run AI assessments, judge output, generate a report. Passing every leaf step to a single top-level constructor produces an argument list that's hard to read, hard to test, and hard to explain:
+
+```java
+// 13 arguments — too much to take in at once
+public PrReviewDslWorkflow(
+    FetchPrContextStep fetchPrContext,
+    RebaseStep rebaseStep,
+    ConflictDetectionStep conflictDetection,
+    RunTestsStep runTests,
+    FixAndRetestStep fixAndRetestStep,
+    CleanupStep cleanupStep,
+    BuildGate buildGate,
+    VersionPatternStep versionPatternStep,
+    Step<PrContext, ?> assessCodeQuality,
+    Step<PrContext, ?> assessBackport,
+    QualityJudgeStep qualityJudgeStep,
+    AssembleReportStep assembleReportStep,
+    GenerateReportStep generateReport)
+```
+
+The fix is not cosmetic. The constructor is wrong at the **level of abstraction** — it describes leaves when it should describe structure.
+
+## The Pattern
+
+Pre-assemble sub-workflows as named Spring beans. The top-level workflow takes phases, not leaves:
+
+```java
+// 4 arguments — each one a named structural unit
+public PrReviewDslWorkflow(
+    Workflow<Integer, PrContext> contextPhase,    // fetch → rebase → conflict → tests
+    BuildGate buildGate,
+    Workflow<PrContext, Path> assessAndReport,    // AI assessment path
+    Workflow<PrContext, Path> earlyReport)        // T0 failure path
+```
+
+The constructor body becomes a pure description of how the phases connect — no wiring, no service lookups:
+
+```java
+this.pipeline = Workflow.<Integer, Path>define("pr-review")
+    .step(contextPhase)
+    .gate(buildGate)
+        .onPass(assessAndReport)
+        .onFail(earlyReport)
+    .end()
+    .build();
+```
+
+## The Factory
+
+The Spring `@Configuration` class is the wiring hub. It assembles each phase as a `@Bean`:
+
+```java
+@Configuration
+public class PrReviewConfig {
+
+    @Bean
+    Workflow<Integer, PrContext> contextPhase(
+            FetchPrContextStep fetch, RebaseStep rebase,
+            ConflictDetectionStep conflict, RunTestsStep tests,
+            FixAndRetestStep fix, CleanupStep cleanup) {
+        return Workflow.<Integer, PrContext>define("context-phase")
+            .step(fetch)
+            .then(rebase)
+            .then(conflict)
+            .then(tests)
+            .then(fix)
+            .then(cleanup)
+            .build();
+    }
+
+    @Bean
+    Workflow<PrContext, Path> assessAndReport(
+            VersionPatternStep versionPattern,
+            Step<PrContext, ?> assessCodeQuality,
+            Step<PrContext, ?> assessBackport,
+            QualityJudgeStep qualityJudge,
+            AssembleReportStep assembleReport,
+            GenerateReportStep generateReport) {
+        Workflow<Object, Object> aiAssessment = Workflow.<Object, Object>define("ai-assessment")
+            .step(new ExtractPrContextStep())
+            .parallel(assessCodeQuality, assessBackport)
+            .build();
+        return Workflow.<PrContext, Path>define("assess-and-report")
+            .step(versionPattern)
+            .then(aiAssessment)
+            .then(qualityJudge)
+            .then(assembleReport)
+            .then(generateReport)
+            .build();
+    }
+
+    @Bean
+    Workflow<PrContext, Path> earlyReport(
+            AssembleReportStep assembleReport,
+            GenerateReportStep generateReport) {
+        return Workflow.<Object, Path>define("early-report")
+            .step(assembleReport)
+            .then(generateReport)
+            .build();
+    }
+
+    @Bean
+    PrReviewDslWorkflow prReviewDslWorkflow(
+            Workflow<Integer, PrContext> contextPhase,
+            BuildGate buildGate,
+            Workflow<PrContext, Path> assessAndReport,
+            Workflow<PrContext, Path> earlyReport) {
+        return new PrReviewDslWorkflow(contextPhase, buildGate, assessAndReport, earlyReport);
+    }
+}
+```
+
+The factory assembles the pieces; the workflow describes only their arrangement. Each bean is independently inspectable and testable.
+
+## Why This Structure
+
+**Separation of concerns**: the workflow is a structural description — it answers "what runs when." The factory is the wiring layer — it answers "what object gets what dependency." Mixing them produces the 13-argument constructor.
+
+**Independent testability**: each sub-workflow is a `Workflow` bean that can be tested in isolation with a minimal set of mock steps. You don't need to construct all 13 collaborators to test the AI assessment phase:
+
+```java
+// Test the AI assessment phase in isolation
+Workflow<PrContext, Path> assessAndReport = new PrReviewConfig()
+    .assessAndReport(versionPattern, mockAssessCode, mockAssessBackport,
+                     qualityJudge, assembleReport, generateReport);
+
+Path result = assessAndReport.execute(ctx, prContext);
+assertThat(result).exists();
+```
+
+**Readable at every level**: a reader of `PrReviewDslWorkflow` sees the four phases and the gate. A reader of `PrReviewConfig.assessAndReport()` sees the five steps. Neither method is overwhelmed by the other's details.
+
+## What Other Frameworks Do
+
+This is the standard pattern across Java workflow and batch frameworks:
+
+- **LangChain4j** — `@SequenceAgent(subAgents = {A.class, B.class})` references agents (phases), not the services inside them. The orchestrator doesn't know how agent `A` is wired.
+- **Google ADK Java** — `SequentialAgent.builder().addSubAgent(parallelAgent).build()` where `parallelAgent` is already assembled. Leaf services stay inside sub-agents.
+- **Spring Batch** — `Job` references `Step` beans. A `Step` may contain an `ItemReader`, `ItemProcessor`, and `ItemWriter`, but the job definition never sees those — it sees only the step.
+
+The consistent rule: **the top-level orchestrator describes structure; the factory describes wiring.**
+
+## Summary
+
+| Concern | Where it lives |
+|---------|---------------|
+| Pipeline structure (what runs when) | `PrReviewDslWorkflow` constructor |
+| Sub-workflow assembly | `@Bean` methods in `@Configuration` |
+| Leaf step construction | `@Bean` methods in `@Configuration` |
+| Service/judge injection | `@Bean` method parameters |
+
+The workflow constructor should be readable to anyone who wants to understand the pipeline. The configuration class should be readable to anyone who wants to understand how dependencies flow in.
+
+<CardGroup cols={2}>
+  <Card title="DSL Primitives" icon="sitemap" href="/docs/agent-workflow/choosing-a-pattern">
+    Full vocabulary of composable primitives
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    Sub-workflow composition, AgentContext, StepRunner
+  </Card>
+</CardGroup>

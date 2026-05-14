@@ -1,0 +1,217 @@
+---
+title: "Jury System"
+description: "Combine judges with voting strategies, tiered cascades, and jury composition"
+---
+
+## Why a Jury?
+
+A single judge gives you a single score.
+A jury gives you **diagnostic information** — when something fails, you know *where* in the stack it failed and *why*.
+
+Agent Judge provides two jury types:
+
+| Jury | Use when |
+|------|----------|
+| `SimpleJury` | All judges evaluate the same tier — aggregate with voting |
+| `CascadedJury` | Judges are organized in cost tiers — fail fast on cheap checks, escalate to expensive ones |
+
+## SimpleJury
+
+Run multiple judges and aggregate results with a voting strategy:
+
+```java
+SimpleJury jury = SimpleJury.builder()
+    .judge(new FileExistsJudge("output.txt"))
+    .judge(BuildSuccessJudge.maven("compile"), 2.0)  // Weight of 2.0
+    .judge(new FileContentJudge("output.txt", "expected", FileContentJudge.MatchMode.CONTAINS))
+    .votingStrategy(new MajorityVotingStrategy())
+    .parallel(true)   // Execute judges concurrently (default)
+    .build();
+
+Verdict verdict = jury.vote(context);
+```
+
+### Builder API
+
+| Method | Description | Default |
+|--------|-------------|---------|
+| `.judge(Judge)` | Add judge with weight 1.0 | — |
+| `.judge(Judge, double)` | Add judge with custom weight | — |
+| `.votingStrategy(VotingStrategy)` | Aggregation method (required) | — |
+| `.parallel(boolean)` | Concurrent execution | `true` |
+| `.executor(Executor)` | Custom thread pool for parallel execution | Common pool |
+
+### Reading the Verdict
+
+```java
+Verdict verdict = jury.vote(context);
+
+// Aggregated result
+Judgment overall = verdict.aggregated();
+System.out.println(overall.status());    // PASS or FAIL
+System.out.println(overall.reasoning()); // "Majority passed (2/3)"
+
+// Individual results
+verdict.individualByName().forEach((name, judgment) ->
+    System.out.println(name + " -> " + judgment.status()));
+
+// Weights used
+Map<String, Double> weights = verdict.weights();
+```
+
+---
+
+## Voting Strategies
+
+| Strategy | Pass condition | Best for |
+|----------|---------------|----------|
+| `MajorityVotingStrategy` | `passCount > failCount` | General purpose |
+| `ConsensusStrategy` | All judges agree | High-stakes evaluation |
+| `AverageVotingStrategy` | `average(scores) >= 0.5` | Continuous scores |
+| `WeightedAverageStrategy` | `weightedAvg(scores) >= 0.5` | Judges with different importance |
+| `MedianVotingStrategy` | `median(scores) >= 0.5` | Outlier-resistant scoring |
+
+### Configuring MajorityVotingStrategy
+
+```java
+MajorityVotingStrategy strategy = new MajorityVotingStrategy(
+    TiePolicy.FAIL,              // What to do on a tie
+    ErrorPolicy.TREAT_AS_FAIL    // How to handle ERROR judgments
+);
+```
+
+**TiePolicy** — when pass count equals fail count:
+
+| Policy | Behavior |
+|--------|----------|
+| `TiePolicy.PASS` | Optimistic — resolve ties as PASS |
+| `TiePolicy.FAIL` | Pessimistic — resolve ties as FAIL (default) |
+| `TiePolicy.ABSTAIN` | Neutral — no verdict |
+
+**ErrorPolicy** — when a judge returns `JudgmentStatus.ERROR`:
+
+| Policy | Behavior |
+|--------|----------|
+| `ErrorPolicy.TREAT_AS_FAIL` | Count errors as failures (default) |
+| `ErrorPolicy.TREAT_AS_ABSTAIN` | Skip errors from vote count |
+| `ErrorPolicy.IGNORE` | Exclude errors entirely |
+
+---
+
+## CascadedJury
+
+A cascaded jury organizes judges into tiers.
+Each tier is itself a jury (typically a `SimpleJury`).
+Tiers execute sequentially — if a cheap tier already has a verdict, expensive tiers never run.
+
+```java
+// Tier 1: Deterministic (free, instant)
+Jury deterministic = SimpleJury.builder()
+    .judge(new FileExistsJudge("src/main/java/App.java"))
+    .judge(BuildSuccessJudge.maven("compile"))
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+
+// Tier 2: Structural (free, compares against reference)
+Jury structural = SimpleJury.builder()
+    .judge(new FileComparisonJudge())
+    .votingStrategy(new ConsensusStrategy())
+    .build();
+
+// Tier 3: Semantic (LLM cost)
+Jury semantic = SimpleJury.builder()
+    .judge(new CorrectnessJudge(chatClientBuilder))
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+
+CascadedJury jury = CascadedJury.builder()
+    .tier("deterministic", deterministic, TierPolicy.REJECT_ON_ANY_FAIL)
+    .tier("structural", structural, TierPolicy.ACCEPT_ON_ALL_PASS)
+    .tier("semantic", semantic, TierPolicy.FINAL_TIER)
+    .build();
+
+Verdict verdict = jury.vote(context);
+```
+
+### Tier Policies
+
+| Policy | Behavior | Typical use |
+|--------|----------|-------------|
+| `REJECT_ON_ANY_FAIL` | Stop immediately if any judge in this tier fails | Guardrails: must compile, files must exist |
+| `ACCEPT_ON_ALL_PASS` | Stop if all judges pass — no need to escalate | Consensus gate: structural checks |
+| `FINAL_TIER` | Always runs, always produces a verdict | Last tier (required) |
+
+<Warning>
+  The last tier in a `CascadedJury` **must** use `TierPolicy.FINAL_TIER`.
+  The builder validates this at build time.
+</Warning>
+
+### Inspecting Tier Results
+
+```java
+Verdict verdict = jury.vote(context);
+
+// Overall result
+System.out.println(verdict.aggregated().status());
+
+// Per-tier sub-verdicts
+for (Verdict tierVerdict : verdict.subVerdicts()) {
+    System.out.println("Tier: " + tierVerdict.aggregated().reasoning());
+    tierVerdict.individualByName().forEach((name, j) ->
+        System.out.println("  " + name + " -> " + j.status()));
+}
+```
+
+---
+
+## Jury Composition
+
+### Named Judges
+
+Wrap any judge with a name for readable verdict output:
+
+```java
+Judge named = Judges.named(myJudge, "build-check", "Verifies compilation");
+```
+
+Without names, judges get auto-generated identifiers in the verdict.
+
+### Combining Juries
+
+The `Juries` utility class provides shortcuts:
+
+```java
+import io.github.markpollack.judge.jury.Juries;
+
+// Quick jury from judges
+Jury quick = Juries.fromJudges(new MajorityVotingStrategy(), judge1, judge2, judge3);
+
+// Meta-jury: combine two juries
+Jury meta = Juries.combine(jury1, jury2, new ConsensusStrategy());
+
+// Multiple juries with a shared strategy
+Jury combined = Juries.allOf(new AverageVotingStrategy(), jury1, jury2, jury3);
+```
+
+---
+
+## Choosing a Pattern
+
+| Scenario | Use |
+|----------|-----|
+| Same-tier judges, single vote | `SimpleJury` with majority or consensus |
+| Weighted importance among judges | `SimpleJury` with `WeightedAverageStrategy` |
+| Cheap-then-expensive evaluation | `CascadedJury` with 2-3 tiers |
+| Multiple evaluation dimensions | `Juries.combine()` to merge sub-juries |
+| Quick one-off check | `Judges.and()` or `Judges.allOf()` (no jury overhead) |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Built-in Judges" icon="list" href="/docs/agent-judge/built-in-judges">
+    Complete catalog of judges to wire into juries
+  </Card>
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Build domain-specific judges for your evaluation criteria
+  </Card>
+</CardGroup>

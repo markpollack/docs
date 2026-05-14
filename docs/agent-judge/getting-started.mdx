@@ -1,0 +1,142 @@
+---
+title: "Getting Started with Agent Judge"
+description: "Add evaluation to your agent pipeline in 5 minutes"
+---
+
+## What is Agent Judge?
+
+Agent Judge is an evaluation framework for AI agent output.
+It provides deterministic rules, command execution checks, and LLM-powered assessment that compose into juries with configurable voting strategies.
+Think of judges as unit tests for your agent — you wouldn't ship code without assertions, and agents need the same discipline.
+
+The core module has **zero external dependencies**.
+Specialized modules add command execution and LLM evaluation.
+
+## Prerequisites
+
+- Java 21+
+- Maven 3.9+ (or Gradle 8+)
+- For LLM judges: Spring AI and an API key (Anthropic, OpenAI, etc.)
+
+## Add the Dependency
+
+Add the modules you need with explicit versions:
+
+```xml
+<dependencies>
+    <!-- Core: deterministic judges, juries, scoring (zero deps) -->
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-judge-core</artifactId>
+        <version>0.9.2</version>
+    </dependency>
+
+    <!-- Optional: command execution judges (build, shell) -->
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-judge-exec</artifactId>
+        <version>0.9.2</version>
+    </dependency>
+
+    <!-- Optional: LLM-powered judges (requires Spring AI) -->
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-judge-llm</artifactId>
+        <version>0.9.2</version>
+    </dependency>
+</dependencies>
+```
+
+## Your First Judge
+
+Check whether a file exists in an agent's workspace:
+
+```java
+import io.github.markpollack.judge.fs.FileExistsJudge;
+import io.github.markpollack.judge.context.JudgmentContext;
+import io.github.markpollack.judge.result.Judgment;
+import io.github.markpollack.judge.context.ExecutionStatus;
+
+Judge judge = new FileExistsJudge("README.md");
+
+JudgmentContext context = JudgmentContext.builder()
+    .goal("Create a README")
+    .workspace(Path.of("/my/project"))
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofSeconds(30))
+    .build();
+
+Judgment result = judge.judge(context);
+
+System.out.println(result.status());    // PASS or FAIL
+System.out.println(result.reasoning()); // "File README.md exists" or "File README.md not found"
+```
+
+Every judge takes a `JudgmentContext` (what the agent was asked to do and where it worked) and returns a `Judgment` (score, status, reasoning, and granular checks).
+
+## Add a Build Judge
+
+Verify the project still compiles after the agent modified it:
+
+```java
+import io.github.markpollack.judge.exec.BuildSuccessJudge;
+
+Judge buildJudge = BuildSuccessJudge.maven("clean", "compile");
+Judgment result = buildJudge.judge(context);
+
+System.out.println(result.status());    // PASS if exit code 0
+System.out.println(result.reasoning()); // Build output summary
+```
+
+`BuildSuccessJudge.maven()` auto-detects the `./mvnw` wrapper.
+Use `BuildSuccessJudge.gradle()` for Gradle projects.
+
+<Note>
+  Command judges require the `agent-judge-exec` module.
+  They run real processes in the workspace directory.
+</Note>
+
+## Combine into a Jury
+
+Run multiple judges together and aggregate results with a voting strategy:
+
+```java
+import io.github.markpollack.judge.jury.SimpleJury;
+import io.github.markpollack.judge.jury.MajorityVotingStrategy;
+import io.github.markpollack.judge.jury.Verdict;
+
+SimpleJury jury = SimpleJury.builder()
+    .judge(new FileExistsJudge("README.md"))
+    .judge(BuildSuccessJudge.maven("compile"))
+    .judge(new FileExistsJudge("src/main/java"))
+    .votingStrategy(new MajorityVotingStrategy())
+    .parallel(true)
+    .build();
+
+Verdict verdict = jury.vote(context);
+
+System.out.println(verdict.aggregated().status()); // PASS (majority wins)
+
+// Inspect individual results
+verdict.individualByName().forEach((name, judgment) ->
+    System.out.println(name + " -> " + judgment.status())
+);
+```
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Tutorial: Build an Evaluation Pipeline" icon="graduation-cap" href="/docs/agent-judge/tutorial">
+    Step-by-step guide from single judge to multi-judge jury
+  </Card>
+  <Card title="Built-in Judges" icon="gavel" href="/docs/agent-judge/built-in-judges">
+    Complete catalog of every judge across all modules
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    SimpleJury, CascadedJury, voting strategies, and composition
+  </Card>
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Lambda judges, DeterministicJudge, LLMJudge template method
+  </Card>
+</CardGroup>

@@ -1,0 +1,436 @@
+---
+title: "API Reference"
+description: "All public types, interfaces, and records in Agent Judge"
+---
+
+## Core Types
+
+### Judge
+
+The fundamental evaluation interface. A functional interface for lambda and method reference support.
+
+```java
+@FunctionalInterface
+public interface Judge {
+    Judgment judge(JudgmentContext context);
+}
+```
+
+Use directly as a lambda, or extend `DeterministicJudge` / `LLMJudge` for metadata support.
+
+### AsyncJudge
+
+Asynchronous variant for non-blocking evaluation:
+
+```java
+public interface AsyncJudge {
+    CompletableFuture<Judgment> judgeAsync(JudgmentContext context);
+}
+```
+
+### ReactiveJudge
+
+Reactive variant for Spring WebFlux / Project Reactor:
+
+```java
+public interface ReactiveJudge {
+    Mono<Judgment> judge(JudgmentContext context);
+}
+```
+
+### DeterministicJudge
+
+Abstract base class for rule-based judges. Provides `JudgeWithMetadata` support:
+
+```java
+public abstract class DeterministicJudge implements Judge, JudgeWithMetadata {
+    protected DeterministicJudge(String name, String description)
+    public JudgeMetadata metadata()
+}
+```
+
+### NamedJudge
+
+Composition wrapper that attaches metadata to any judge (including lambdas):
+
+```java
+Judge named = Judges.named(myLambda, "check-name", "description");
+Judge typed = Judges.named(myLambda, "check-name", "description", JudgeType.DETERMINISTIC);
+```
+
+### JudgeWithMetadata
+
+Marker interface for judges that expose identity:
+
+```java
+public interface JudgeWithMetadata {
+    JudgeMetadata metadata();
+}
+```
+
+Infrastructure code can use `instanceof JudgeWithMetadata` for discovery:
+
+```java
+if (judge instanceof JudgeWithMetadata jwm) {
+    log.info("Running: {}", jwm.metadata().name());
+}
+```
+
+### JudgeMetadata
+
+Identity record:
+
+```java
+public record JudgeMetadata(String name, String description, JudgeType type)
+```
+
+### JudgeType
+
+```java
+public enum JudgeType {
+    DETERMINISTIC,
+    LLM_POWERED,
+    HYBRID,
+    AGENT
+}
+```
+
+---
+
+## Context
+
+### JudgmentContext
+
+All evaluation inputs in one immutable record:
+
+```java
+public record JudgmentContext(
+    String goal,
+    Path workspace,
+    Duration executionTime,
+    Instant startedAt,
+    Optional<String> agentOutput,
+    ExecutionStatus status,
+    Optional<Throwable> error,
+    Map<String, Object> metadata
+)
+```
+
+**Builder methods:**
+
+| Method | Type | Required |
+|--------|------|----------|
+| `goal(String)` | The agent's task description | Yes |
+| `workspace(Path)` | Directory the agent modified | Yes |
+| `status(ExecutionStatus)` | Agent execution outcome | Yes |
+| `startedAt(Instant)` | When execution began | Yes |
+| `executionTime(Duration)` | How long execution took | Yes |
+| `agentOutput(String)` | Text output from the agent | No |
+| `error(Throwable)` | Exception if execution failed | No |
+| `metadata(String, Object)` | Arbitrary key-value pairs | No |
+| `metadata(Map<String, Object>)` | Bulk metadata | No |
+
+```java
+JudgmentContext context = JudgmentContext.builder()
+    .goal("Add REST endpoint")
+    .workspace(Path.of("/project"))
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofMinutes(2))
+    .agentOutput("Created HelloController.java")
+    .metadata("expectedDir", Path.of("/reference"))
+    .build();
+```
+
+### ExecutionStatus
+
+```java
+public enum ExecutionStatus {
+    SUCCESS, FAILED, TIMEOUT, CANCELLED, UNKNOWN
+}
+```
+
+---
+
+## Results
+
+### Judgment
+
+Immutable evaluation result:
+
+```java
+public record Judgment(
+    Score score,
+    JudgmentStatus status,
+    String reasoning,
+    List<Check> checks,
+    Map<String, Object> metadata
+)
+```
+
+**Static factory methods:**
+
+```java
+Judgment.pass("Build succeeded")
+Judgment.fail("File not found")
+Judgment.abstain("Not enough information")
+Judgment.error("Timeout", exception)
+```
+
+**Builder:**
+
+```java
+Judgment.builder()
+    .score(new BooleanScore(true))
+    .status(JudgmentStatus.PASS)
+    .reasoning("All checks passed")
+    .check(Check.pass("compile", "Compilation succeeded"))
+    .check(Check.pass("tests", "All tests passed"))
+    .metadata("duration", Duration.ofSeconds(45))
+    .build();
+```
+
+**Utility methods:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `pass()` | `boolean` | `true` if status == PASS |
+| `elapsed()` | `Duration` | Elapsed time from metadata |
+| `error()` | `Throwable` | Error from metadata |
+
+### JudgmentStatus
+
+```java
+public enum JudgmentStatus {
+    PASS, FAIL, ABSTAIN, ERROR
+}
+```
+
+### Check
+
+Granular sub-assertion within a judgment:
+
+```java
+public record Check(String name, String description, boolean passed)
+```
+
+**Factory methods:**
+
+```java
+Check.pass("file_exists", "File found at expected path")
+Check.fail("content_match", "Expected header not found")
+```
+
+---
+
+## Score Types
+
+`Score` is a sealed interface with three permitted implementations:
+
+### BooleanScore
+
+Simple pass/fail:
+
+```java
+public record BooleanScore(boolean value) implements Score
+```
+
+```java
+new BooleanScore(true)   // pass
+new BooleanScore(false)  // fail
+```
+
+### NumericalScore
+
+Continuous scoring with bounds:
+
+```java
+public record NumericalScore(double value, double min, double max) implements Score
+```
+
+```java
+NumericalScore score = NumericalScore.of(85.0, 0.0, 100.0);
+double normalized = score.normalized();  // 0.85 (scaled to [0, 1])
+```
+
+### CategoricalScore
+
+Discrete categories from a fixed set:
+
+```java
+public record CategoricalScore(String category, Set<String> allowedCategories) implements Score
+```
+
+```java
+CategoricalScore score = CategoricalScore.of(
+    "GOOD", Set.of("EXCELLENT", "GOOD", "FAIR", "POOR"));
+```
+
+### Scores Utility
+
+Convert between score types for heterogeneous aggregation:
+
+```java
+double normalized = Scores.toNormalized(anyScore);
+```
+
+---
+
+## Composition
+
+### Judges Utility
+
+Static methods for creating and composing judges:
+
+| Method | Description |
+|--------|-------------|
+| `named(Judge, String)` | Wrap with a name |
+| `named(Judge, String, String)` | Wrap with name and description |
+| `named(Judge, String, String, JudgeType)` | Wrap with full metadata |
+| `alwaysPass(String)` | Test judge that always passes |
+| `alwaysFail(String)` | Test judge that always fails |
+| `tryMetadata(Judge)` | Extract metadata if available (`Optional<JudgeMetadata>`) |
+| `and(Judge, Judge)` | Short-circuit AND |
+| `or(Judge, Judge)` | Short-circuit OR |
+| `allOf(Judge...)` | All must pass (variadic AND) |
+| `anyOf(Judge...)` | Any can pass (variadic OR) |
+
+---
+
+## Jury System
+
+### Jury Interface
+
+```java
+public interface Jury {
+    Verdict vote(JudgmentContext context);
+}
+```
+
+### SimpleJury
+
+Flat multi-judge aggregation. See [Jury System](/docs/agent-judge/jury-system) for full usage.
+
+**Builder:**
+
+| Method | Description |
+|--------|-------------|
+| `.judge(Judge)` | Add with weight 1.0 |
+| `.judge(Judge, double)` | Add with custom weight |
+| `.votingStrategy(VotingStrategy)` | Required |
+| `.parallel(boolean)` | Default `true` |
+| `.executor(Executor)` | Custom thread pool |
+
+### CascadedJury
+
+Sequential tiered evaluation. See [Jury System](/docs/agent-judge/jury-system#cascadedjury) for full usage.
+
+**Builder:**
+
+| Method | Description |
+|--------|-------------|
+| `.tier(String, Jury, TierPolicy)` | Add a named tier |
+| `.build()` | Validates last tier is `FINAL_TIER` |
+
+### Verdict
+
+```java
+public record Verdict(
+    Judgment aggregated,
+    List<Judgment> individual,
+    Map<String, Judgment> individualByName,
+    Map<String, Double> weights,
+    List<Verdict> subVerdicts
+)
+```
+
+| Field | Description |
+|-------|-------------|
+| `aggregated` | The voting strategy's aggregated result |
+| `individual` | All individual judge results (ordered) |
+| `individualByName` | Results keyed by judge name |
+| `weights` | Weight assigned to each judge |
+| `subVerdicts` | Per-tier verdicts (CascadedJury only) |
+
+### VotingStrategy
+
+```java
+public interface VotingStrategy {
+    Judgment aggregate(List<Judgment> judgments, Map<String, Double> weights);
+    String getName();
+}
+```
+
+**Implementations:**
+
+| Class | Constructor |
+|-------|------------|
+| `MajorityVotingStrategy` | `()` or `(TiePolicy, ErrorPolicy)` |
+| `ConsensusStrategy` | `()` |
+| `AverageVotingStrategy` | `()` |
+| `WeightedAverageStrategy` | `()` |
+| `MedianVotingStrategy` | `()` |
+
+### TierPolicy
+
+```java
+public enum TierPolicy {
+    REJECT_ON_ANY_FAIL,   // Stop on failure
+    ACCEPT_ON_ALL_PASS,   // Stop on full pass
+    FINAL_TIER            // Always produces verdict (required for last tier)
+}
+```
+
+### TiePolicy
+
+```java
+public enum TiePolicy {
+    PASS,     // Optimistic
+    FAIL,     // Pessimistic (default)
+    ABSTAIN   // Neutral
+}
+```
+
+### ErrorPolicy
+
+```java
+public enum ErrorPolicy {
+    TREAT_AS_FAIL,     // Default
+    TREAT_AS_ABSTAIN,
+    IGNORE
+}
+```
+
+### Juries Utility
+
+```java
+// Quick jury from judges
+Jury jury = Juries.fromJudges(strategy, judge1, judge2, judge3);
+
+// Combine two juries into a meta-jury
+Jury meta = Juries.combine(jury1, jury2, strategy);
+
+// Multiple juries
+Jury all = Juries.allOf(strategy, jury1, jury2, jury3);
+```
+
+---
+
+## Module Coordinates
+
+| Module | Artifact | Key Dependencies |
+|--------|----------|-----------------|
+| Core | `io.github.markpollack:agent-judge-core` | None (zero deps) |
+| Exec | `io.github.markpollack:agent-judge-exec` | agent-sandbox |
+| File | `io.github.markpollack:agent-judge-file` | JavaParser, Maven Model |
+| LLM | `io.github.markpollack:agent-judge-llm` | Spring AI ChatClient |
+
+Add modules with explicit versions:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-core</artifactId>
+    <version>0.9.2</version>
+</dependency>
+```

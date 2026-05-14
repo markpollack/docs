@@ -1,0 +1,247 @@
+---
+title: "Tutorial: Build an Evaluation Pipeline"
+description: "Step by step — from a single judge to a multi-judge jury that grades agent output"
+sidebarTitle: "Evaluation Pipeline"
+---
+
+## What You'll Build
+
+An evaluation pipeline that verifies an AI agent's modifications to a Maven project.
+By the end you'll have three judges — file existence, build success, and content validation — combined into a jury with majority voting.
+
+## Prerequisites
+
+- Java 21+
+- A Maven project directory to evaluate (any Spring Boot starter project works)
+- The `agent-judge-core` and `agent-judge-exec` dependencies ([setup](/docs/agent-judge/getting-started#add-the-dependency))
+
+## Step 1: Create the Evaluation Context
+
+Every evaluation starts with a `JudgmentContext` — it describes what the agent was asked to do and where it worked.
+
+```java
+import io.github.markpollack.judge.context.JudgmentContext;
+import io.github.markpollack.judge.context.ExecutionStatus;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+
+Path workspace = Path.of("/path/to/agent/workspace");
+
+JudgmentContext context = JudgmentContext.builder()
+    .goal("Add a REST controller with a /hello endpoint")
+    .workspace(workspace)
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofMinutes(2))
+    .build();
+```
+
+The context is immutable and shared across all judges.
+It carries the agent's goal, workspace path, execution status, and timing — everything a judge needs to evaluate the result without knowing which agent produced it.
+
+## Step 2: Evaluate with a Single Judge
+
+Start with the simplest possible check — does a file exist?
+
+```java
+import io.github.markpollack.judge.fs.FileExistsJudge;
+import io.github.markpollack.judge.result.Judgment;
+import io.github.markpollack.judge.Judge;
+
+Judge fileJudge = new FileExistsJudge("src/main/java/com/example/HelloController.java");
+Judgment result = fileJudge.judge(context);
+
+System.out.println("Status:    " + result.status());
+System.out.println("Score:     " + result.score());
+System.out.println("Reasoning: " + result.reasoning());
+```
+
+Output when the file exists:
+```
+Status:    PASS
+Score:     BooleanScore[value=true]
+Reasoning: File src/main/java/com/example/HelloController.java exists
+```
+
+Every `Judgment` contains:
+- **score** — `BooleanScore`, `NumericalScore`, or `CategoricalScore`
+- **status** — `PASS`, `FAIL`, `ABSTAIN`, or `ERROR`
+- **reasoning** — human-readable explanation
+- **checks** — granular sub-assertions (useful for complex judges)
+
+## Step 3: Add a Build Judge
+
+File existence is necessary but not sufficient — the code also needs to compile.
+Add a command judge that runs the Maven build:
+
+```java
+import io.github.markpollack.judge.exec.BuildSuccessJudge;
+
+Judge buildJudge = BuildSuccessJudge.maven("clean", "compile");
+Judgment buildResult = buildJudge.judge(context);
+
+System.out.println("Build: " + buildResult.status());
+System.out.println(buildResult.reasoning());
+```
+
+`BuildSuccessJudge.maven()` auto-detects the `./mvnw` wrapper in the workspace directory.
+It runs the specified goals and checks the exit code — zero means pass.
+
+<Note>
+  Build judges execute real processes.
+  The default timeout is 10 minutes.
+  Make sure the workspace has a valid Maven project before running.
+</Note>
+
+## Step 4: Compose with Judges.and()
+
+Before reaching for a jury, you can compose judges with simple boolean logic:
+
+```java
+import io.github.markpollack.judge.Judges;
+
+Judge combined = Judges.and(fileJudge, buildJudge);
+Judgment result = combined.judge(context);
+
+System.out.println("Combined: " + result.status());
+```
+
+`Judges.and()` short-circuits — if the file doesn't exist, the build never runs.
+This is useful when one check is a precondition for another.
+
+Other composition operators:
+
+```java
+// OR: pass if either judge passes
+Judge fallback = Judges.or(mavenBuild, gradleBuild);
+
+// All must pass (variadic AND)
+Judge all = Judges.allOf(fileJudge, buildJudge, contentJudge);
+
+// Any can pass (variadic OR)
+Judge any = Judges.anyOf(check1, check2, check3);
+```
+
+## Step 5: Build a Jury
+
+When you need more than boolean composition — weighted scoring, named results, parallel execution — use a `SimpleJury`:
+
+```java
+import io.github.markpollack.judge.jury.SimpleJury;
+import io.github.markpollack.judge.jury.MajorityVotingStrategy;
+import io.github.markpollack.judge.jury.Verdict;
+import io.github.markpollack.judge.fs.FileContentJudge;
+
+// Three judges with different weights
+Judge fileExists = Judges.named(
+    new FileExistsJudge("src/main/java/com/example/HelloController.java"),
+    "file-exists", "Controller file created");
+
+Judge buildSucceeds = Judges.named(
+    BuildSuccessJudge.maven("clean", "compile"),
+    "build-success", "Project compiles");
+
+Judge contentValid = Judges.named(
+    new FileContentJudge("src/main/java/com/example/HelloController.java",
+        "@RestController", FileContentJudge.MatchMode.CONTAINS),
+    "has-annotation", "Uses @RestController");
+
+SimpleJury jury = SimpleJury.builder()
+    .judge(fileExists, 1.0)
+    .judge(buildSucceeds, 2.0)    // Build is weighted 2x
+    .judge(contentValid, 1.0)
+    .votingStrategy(new MajorityVotingStrategy())
+    .parallel(true)
+    .build();
+
+Verdict verdict = jury.vote(context);
+```
+
+Now inspect the verdict:
+
+```java
+// Aggregated result
+System.out.println("Overall: " + verdict.aggregated().status());
+System.out.println("Reason:  " + verdict.aggregated().reasoning());
+
+// Individual results by judge name
+verdict.individualByName().forEach((name, judgment) ->
+    System.out.printf("  %-15s %s  %s%n",
+        name, judgment.status(), judgment.reasoning())
+);
+
+// Weights used
+System.out.println("Weights: " + verdict.weights());
+```
+
+Example output:
+```
+Overall: PASS
+Reason:  Majority passed (3/3)
+  file-exists     PASS  File src/main/java/com/example/HelloController.java exists
+  build-success   PASS  Build succeeded (exit code 0)
+  has-annotation  PASS  File contains "@RestController"
+Weights: {file-exists=1.0, build-success=2.0, has-annotation=1.0}
+```
+
+<Note>
+  `Judges.named()` wraps any judge with a name and description.
+  Without it, judges get auto-generated names, making the verdict harder to read.
+</Note>
+
+## Step 6: Add an LLM Judge (Optional)
+
+Deterministic judges handle objective criteria — did it compile, does the file exist?
+For subjective evaluation — is the code well-structured, does it follow conventions? — add an LLM judge.
+
+```java
+import io.github.markpollack.judge.llm.CorrectnessJudge;
+import org.springframework.ai.chat.client.ChatClient;
+
+// Requires agent-judge-llm + Spring AI dependency
+CorrectnessJudge llmJudge = new CorrectnessJudge(chatClientBuilder);
+
+SimpleJury jury = SimpleJury.builder()
+    .judge(fileExists, 1.0)
+    .judge(buildSucceeds, 2.0)
+    .judge(contentValid, 1.0)
+    .judge(Judges.named(llmJudge, "correctness", "LLM evaluates goal completion"), 1.5)
+    .votingStrategy(new MajorityVotingStrategy())
+    .parallel(true)
+    .build();
+```
+
+The `CorrectnessJudge` sends the goal and agent output to an LLM and asks whether the agent accomplished its task.
+It costs tokens — but combined with free deterministic judges, you get both speed and depth.
+
+<Warning>
+  LLM judges require the `agent-judge-llm` module, Spring AI on the classpath, and a valid API key.
+  They are significantly slower and more expensive than deterministic judges.
+  Use them for criteria that can't be checked structurally.
+</Warning>
+
+## What You Built
+
+You started with a single file-existence check and built up to a weighted jury with four judges spanning three cost tiers:
+
+| Judge | Type | Cost | What it checks |
+|-------|------|------|---------------|
+| FileExistsJudge | Deterministic | Free | File was created |
+| BuildSuccessJudge | Command | Compute | Project compiles |
+| FileContentJudge | Deterministic | Free | File contains expected content |
+| CorrectnessJudge | LLM | Tokens | Agent achieved the goal |
+
+This is the core pattern: **cheap judges run first and filter; expensive judges confirm**.
+In production, you can formalize this with a `CascadedJury` that stops evaluation early when cheap judges already have a verdict.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Lambda judges, DeterministicJudge subclasses, and LLMJudge template method
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    CascadedJury, voting strategies, and jury composition
+  </Card>
+</CardGroup>

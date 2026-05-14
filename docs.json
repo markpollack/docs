@@ -1,0 +1,194 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Pollack AI Lab",
+  "colors": {
+    "primary": "#4fc3f7",
+    "light": "#81d4fa",
+    "dark": "#0097a7"
+  },
+  "favicon": "/logo/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Projects",
+        "groups": [
+          {
+            "group": "",
+            "pages": [
+              "index"
+            ]
+          },
+          {
+            "group": "Projects",
+            "pages": [
+              "projects/index",
+              {
+                "group": "Loopy",
+                "pages": [
+                  "projects/loopy",
+                  "docs/loopy/getting-started",
+                  "docs/loopy/extending",
+                  "docs/loopy/cli-reference"
+                ]
+              },
+              {
+                "group": "Bud",
+                "pages": [
+                  "projects/bud",
+                  "docs/bud/getting-started",
+                  "docs/bud/tools-reference",
+                  "docs/bud/architecture"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "AgentWorks",
+            "pages": [
+              "projects/agentworks-bom",
+              {
+                "group": "Agent Workflow",
+                "pages": [
+                  "projects/agent-workflow",
+                  "docs/agent-workflow/agent-loop",
+                  "docs/agent-workflow/getting-started",
+                  "docs/agent-workflow/annotation-model",
+                  "docs/agent-workflow/parameterization",
+                  "docs/agent-workflow/examples",
+                  "docs/agent-workflow/choosing-a-pattern",
+                  "docs/agent-workflow/wiring",
+                  "docs/agent-workflow/api-reference",
+                  "docs/agent-workflow/durability"
+                ]
+              },
+              "projects/agent-client",
+              {
+                "group": "Agent Judge",
+                "pages": [
+                  "projects/agent-judge",
+                  "docs/agent-judge/getting-started",
+                  {
+                    "group": "Tutorial",
+                    "pages": [
+                      "docs/agent-judge/tutorial",
+                      "docs/agent-judge/custom-judge"
+                    ]
+                  },
+                  "docs/agent-judge/jury-system",
+                  "docs/agent-judge/built-in-judges",
+                  "docs/agent-judge/api-reference",
+                  "docs/agent-judge/design-philosophy"
+                ]
+              },
+              {
+                "group": "Agent Bench",
+                "pages": [
+                  "projects/agent-bench",
+                  "docs/agent-bench/getting-started",
+                  "docs/agent-bench/agent-config",
+                  "docs/agent-bench/jury-system",
+                  "docs/agent-bench/cli-reference"
+                ]
+              },
+              {
+                "group": "Agent Experiment",
+                "pages": [
+                  "projects/agent-experiment",
+                  "docs/experiment-driver/getting-started",
+                  "docs/experiment-driver/creating-experiments",
+                  "docs/experiment-driver/jury-system",
+                  "docs/experiment-driver/api-reference"
+                ]
+              },
+              "projects/agent-hooks",
+              "projects/agent-memory",
+              "projects/agent-journal",
+              "projects/agent-sandbox",
+              "projects/agent-tools",
+              "projects/agent-skills"
+            ]
+          },
+          {
+            "group": "Agento",
+            "pages": [
+              {
+                "group": "Agento Studio",
+                "pages": [
+                  "projects/agento-studio",
+                  "docs/agento-studio/getting-started"
+                ]
+              },
+              "projects/agento-university"
+            ]
+          },
+          {
+            "group": "Supporting Projects",
+            "pages": [
+              "projects/claude-agent-sdk",
+              "projects/acp-java-sdk",
+              "projects/spring-ai-a2a"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Experiments",
+        "groups": [
+          {
+            "group": "Experiments",
+            "pages": [
+              "experiments/index",
+              "experiments/code-coverage-v1",
+              "experiments/code-coverage-v2",
+              "experiments/code-coverage-v3",
+              "experiments/issue-classification"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Blog",
+          "href": "https://blog.pollack.ai",
+          "icon": "newspaper"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/markpollack",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/lab-light.svg",
+    "dark": "/logo/lab-dark.svg"
+  },
+  "background": {
+    "color": {
+      "dark": "#020915"
+    }
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Latest Experiment",
+      "href": "/experiments/code-coverage-v3"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/markpollack",
+      "x": "https://x.com/markpollack",
+      "linkedin": "https://linkedin.com/in/markpollack"
+    }
+  },
+  "integrations": {
+    "plausible": {
+      "domain": "lab.pollack.ai"
+    }
+  }
+}

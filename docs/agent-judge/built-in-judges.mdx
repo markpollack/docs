@@ -1,0 +1,282 @@
+---
+title: "Built-in Judges"
+description: "Complete catalog of every judge across all modules"
+---
+
+## agent-judge-core
+
+Zero external dependencies. These judges work in any Java project.
+
+### FileExistsJudge
+
+Verifies that a file exists in the workspace.
+
+```java
+Judge judge = new FileExistsJudge("src/main/java/App.java");
+Judgment result = judge.judge(context);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `DETERMINISTIC` |
+| Constructor | `new FileExistsJudge(String filePath)` |
+
+The file path is resolved relative to `context.workspace()`.
+
+### FileContentJudge
+
+Verifies that a file's content matches expected criteria.
+Supports three matching modes:
+
+```java
+// Exact match
+Judge exact = new FileContentJudge("config.json", expectedContent);
+
+// Contains substring
+Judge contains = new FileContentJudge("output.log", "BUILD SUCCESS", FileContentJudge.MatchMode.CONTAINS);
+
+// Regex pattern
+Judge regex = new FileContentJudge("version.txt", "\\d+\\.\\d+\\.\\d+", FileContentJudge.MatchMode.REGEX);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `DETERMINISTIC` |
+| Default mode | `MatchMode.EXACT` (when 2-arg constructor used) |
+| Checks | `file_exists`, `file_readable`, `content_match` |
+
+Produces three granular checks, so on failure you can distinguish "file not found" from "file found but content wrong."
+
+### SupersetDiffJudge
+
+Verifies that the workspace files are a superset of the expected files — the agent added content without removing existing files.
+
+```java
+Judge judge = new SupersetDiffJudge();
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `DETERMINISTIC` |
+| Constructor | `new SupersetDiffJudge()` |
+
+Reads `expectedDir` from `context.metadata()` to find the reference directory.
+
+---
+
+## agent-judge-exec
+
+Requires `agent-judge-exec` dependency. Executes real processes in the workspace.
+
+### BuildSuccessJudge
+
+Runs a Maven or Gradle build and checks the exit code.
+
+```java
+// Maven — auto-detects ./mvnw wrapper
+Judge maven = BuildSuccessJudge.maven("clean", "compile");
+
+// Gradle — auto-detects ./gradlew wrapper
+Judge gradle = BuildSuccessJudge.gradle("build", "test");
+
+// Custom command string
+Judge custom = new BuildSuccessJudge("make all");
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `DETERMINISTIC` |
+| Default timeout | 10 minutes |
+| Wrapper detection | Checks for `mvnw`/`gradlew` in workspace, falls back to system `mvn`/`gradle` |
+
+### CommandJudge
+
+Executes an arbitrary shell command and verifies the exit code.
+
+```java
+// Default: expect exit code 0, 2 minute timeout
+Judge simple = new CommandJudge("ls README.md");
+
+// Custom exit code and timeout
+Judge custom = new CommandJudge("grep -c TODO src/App.java", 0, Duration.ofSeconds(30));
+
+// With custom sandbox factory
+Judge sandboxed = new CommandJudge("mvn test", 0, Duration.ofMinutes(5),
+    path -> DockerSandbox.builder().workDir(path).build());
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `DETERMINISTIC` |
+| Default exit code | `0` |
+| Default timeout | 2 minutes |
+| Metadata keys | `command`, `exitCode`, `output`, `duration` |
+
+### ClassVersionJudge
+
+Validates Java class file bytecode version.
+
+```java
+// Java 17 = class version 61
+Judge judge = new ClassVersionJudge(61);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Common versions | Java 8=52, Java 11=55, Java 17=61, Java 21=65 |
+
+### CoveragePreservationJudge
+
+Parses JaCoCo XML report and checks that line coverage hasn't dropped more than a threshold.
+
+```java
+// Allow up to 5% coverage drop
+Judge judge = new CoveragePreservationJudge(5.0);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Input | JaCoCo XML report at `target/site/jacoco/jacoco.xml` |
+| Threshold | Maximum allowed percentage drop |
+
+### CoverageImprovementJudge
+
+Checks that coverage improved by at least a target amount.
+
+```java
+// Require at least 10% improvement
+Judge judge = new CoverageImprovementJudge(10.0);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `NumericalScore` |
+| Input | JaCoCo XML report |
+
+---
+
+## agent-judge-file
+
+Requires `agent-judge-file` dependency. Compares agent output files against reference implementations using structural/semantic comparison.
+
+### FileComparisonJudge
+
+Composite judge that dispatches to the appropriate comparator based on file type.
+
+```java
+Judge judge = new FileComparisonJudge();
+```
+
+| File type | Dispatches to |
+|-----------|--------------|
+| `pom.xml` | `MavenSemanticJudge` |
+| `*.xml` | `XmlSemanticJudge` |
+| `*.java` | `JavaSemanticJudge` |
+| Everything else | `TextFileJudge` |
+
+Walks the `expectedDir` from `context.metadata()` and compares each file against the workspace.
+
+### JavaSemanticJudge
+
+AST-based Java file comparison using JavaParser.
+Ignores whitespace, comments, and import ordering — compares structure, not formatting.
+
+```java
+Judge judge = new JavaSemanticJudge();
+```
+
+### MavenSemanticJudge
+
+Semantic comparison of Maven POM files.
+Compares dependency lists, plugin configurations, and properties without requiring identical XML formatting.
+
+```java
+Judge judge = new MavenSemanticJudge();
+```
+
+### XmlSemanticJudge
+
+Structure-aware XML comparison.
+Normalizes whitespace and attribute ordering before comparison.
+
+```java
+Judge judge = new XmlSemanticJudge();
+```
+
+### TextFileJudge
+
+Plain text comparison with whitespace normalization.
+
+```java
+Judge judge = new TextFileJudge();
+```
+
+---
+
+## agent-judge-llm
+
+Requires `agent-judge-llm` dependency and Spring AI on the classpath.
+
+### CorrectnessJudge
+
+Uses an LLM to evaluate whether the agent accomplished its goal.
+
+```java
+CorrectnessJudge judge = new CorrectnessJudge(chatClientBuilder);
+Judgment result = judge.judge(context);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `LLM_POWERED` |
+| Input | `context.goal()` + `context.agentOutput()` |
+| Cost | LLM tokens per evaluation |
+
+Sends the goal and agent output to the LLM, asks for a YES/NO determination with reasoning.
+
+### LLMJudge (Abstract Base)
+
+Template method base class for building custom LLM judges.
+Subclass and implement two methods:
+
+```java
+public class QualityJudge extends LLMJudge {
+
+    public QualityJudge(ChatClient.Builder chatClientBuilder) {
+        super("quality", "Rates code quality 0-10", chatClientBuilder);
+    }
+
+    @Override
+    protected String buildPrompt(JudgmentContext context) {
+        return "Rate this code quality 0-10:\n" +
+            context.agentOutput().orElse("");
+    }
+
+    @Override
+    protected Judgment parseResponse(String response, JudgmentContext context) {
+        double score = extractScore(response);
+        return Judgment.builder()
+            .score(NumericalScore.of(score, 0, 10))
+            .status(score >= 7 ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
+            .reasoning(response)
+            .build();
+    }
+}
+```
+
+| Method | Purpose |
+|--------|---------|
+| `buildPrompt(JudgmentContext)` | Construct the evaluation prompt |
+| `parseResponse(String, JudgmentContext)` | Parse LLM response into a Judgment |
+
+The base class handles LLM invocation — you focus on prompt design and response parsing.
+
+See [Writing Custom Judges](/docs/agent-judge/custom-judge) for a complete walkthrough.

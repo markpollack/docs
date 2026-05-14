@@ -1,0 +1,129 @@
+---
+title: "Design Philosophy"
+description: "Why Agent Judge is built the way it is — zero deps, functional interface, sealed scores, cascaded cost"
+---
+
+## Judges Are Unit Tests for Agents
+
+The core analogy: just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`.
+
+You wouldn't ship application code without assertions.
+Agents need the same discipline — automated, repeatable evaluation that runs after every execution and catches regressions before they reach users.
+
+This framing drives several design decisions:
+- Judges should be **cheap to write** (one functional interface, one method)
+- Judges should be **cheap to run** (deterministic judges cost nothing)
+- Judges should **compose** (juries aggregate judges like test suites aggregate tests)
+- Results should be **actionable** (reasoning and checks, not just pass/fail)
+
+## Zero-Dependency Core
+
+`agent-judge-core` has no external dependencies. Not Spring, not Spring AI, not Jackson — nothing.
+
+This means you can evaluate agent output in:
+- A plain Java application
+- A JUnit test
+- A CLI tool
+- A Spring Boot service
+- A serverless function
+
+The module layering adds dependencies only when needed:
+
+```
+agent-judge-core    (zero deps)
+    ↓
+agent-judge-exec    (+ agent-sandbox)
+agent-judge-file    (+ JavaParser, Maven Model)
+agent-judge-llm     (+ Spring AI ChatClient)
+```
+
+If all you need is file checks and boolean logic, you pay for nothing you don't use.
+
+## Functional Interface Discipline
+
+`Judge` is a `@FunctionalInterface` with a single method and no default methods:
+
+```java
+@FunctionalInterface
+public interface Judge {
+    Judgment judge(JudgmentContext context);
+}
+```
+
+This is deliberate. A single-method interface means:
+- **Lambdas** work: `ctx -> Judgment.pass("ok")`
+- **Method references** work: `this::evaluateBuild`
+- **Composition** uses the `Judges` utility class, not interface default methods
+
+Metadata is handled through composition (`NamedJudge` wraps any judge) and the `JudgeWithMetadata` marker interface, not through method defaults on `Judge` itself.
+This avoids the combinatorial explosion of default method interactions and keeps the core contract minimal.
+
+## Sealed Score Hierarchy
+
+`Score` is a sealed interface with three implementations:
+
+```java
+public sealed interface Score permits BooleanScore, NumericalScore, CategoricalScore
+```
+
+Sealed types give you **compile-time exhaustiveness** — a `switch` expression over `Score` will warn you if you miss a case.
+This matters when aggregating heterogeneous scores in a jury.
+
+The three types cover the evaluation spectrum:
+
+| Type | Use | Example |
+|------|-----|---------|
+| `BooleanScore` | Binary pass/fail | Did it compile? Does the file exist? |
+| `NumericalScore` | Continuous scoring with bounds | Code quality 7.5/10, coverage 85% |
+| `CategoricalScore` | Discrete categories | EXCELLENT / GOOD / FAIR / POOR |
+
+The `Scores` utility handles cross-type normalization so a jury with mixed score types can still aggregate cleanly.
+
+## Cascaded Cost Model
+
+Not all evaluation is equal cost:
+
+| Tier | Judge type | Cost | Latency | Example |
+|------|-----------|------|---------|---------|
+| 0 | Deterministic | Free | Microseconds | File exists, content match |
+| 1 | Command | Compute | Seconds-minutes | Build, test execution |
+| 2 | File comparison | Free | Milliseconds | AST diff, POM comparison |
+| 3 | LLM | Tokens | Seconds | Semantic correctness |
+
+The `CascadedJury` codifies this: **fail fast on cheap checks, escalate only when necessary**.
+
+```
+Tier 1 (REJECT_ON_ANY_FAIL)  →  fails?  →  STOP: verdict is FAIL
+         ↓ passes
+Tier 2 (ACCEPT_ON_ALL_PASS)  →  all pass?  →  STOP: verdict is PASS
+         ↓ mixed
+Tier 3 (FINAL_TIER)          →  always runs  →  verdict from LLM assessment
+```
+
+If the project doesn't compile, there's no point running an LLM judge to evaluate code quality.
+The cascaded pattern saves both time and money.
+
+## Agent-Agnostic by Design
+
+`JudgmentContext` doesn't import any agent framework.
+It describes what happened (goal, workspace, status, timing) without coupling to how it happened.
+
+The workspace-centric pattern:
+1. An agent modifies a directory
+2. A judge inspects the directory
+3. The judge doesn't know or care which agent made the changes
+
+This decoupling means the same jury works with Claude Code, Gemini CLI, a custom Python agent, or a human developer.
+The `JudgeAgentClient` bridge interface extends this to agent-as-judge evaluation without hard dependencies.
+
+## Immutable Records
+
+All result types are Java records: `Judgment`, `Verdict`, `Check`, `Score`, `JudgmentContext`, `JudgeMetadata`.
+
+Records are:
+- **Immutable** — no accidental mutation between judges
+- **Value-based** — equality by content, not identity
+- **Pattern-matchable** — `if (score instanceof NumericalScore(var v, var min, var max))`
+- **Serializable** — trivial JSON/logging support
+
+Combined with sealed types, this gives you a type-safe, exhaustive, immutable evaluation data model.

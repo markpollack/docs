@@ -1,0 +1,292 @@
+---
+title: "Tutorial: Writing Custom Judges"
+description: "Build your own deterministic and LLM-powered judges"
+sidebarTitle: "Custom Judges"
+---
+
+## What You'll Build
+
+Two custom judges: a deterministic one that checks for a required annotation in Java files, and an LLM judge that evaluates code quality on a 0-10 scale.
+You'll wire both into a jury alongside built-in judges.
+
+This tutorial builds on [Build an Evaluation Pipeline](/docs/agent-judge/tutorial).
+You should be comfortable with `JudgmentContext`, `Judgment`, and `SimpleJury` before starting.
+
+## Step 1: Lambda Judge
+
+The simplest custom judge is a lambda — three lines:
+
+```java
+import io.github.markpollack.judge.Judge;
+import io.github.markpollack.judge.result.Judgment;
+
+Judge timestampCheck = context -> {
+    Path logFile = context.workspace().resolve("agent.log");
+    if (Files.exists(logFile)) {
+        return Judgment.pass("Agent log exists");
+    }
+    return Judgment.fail("No agent log found");
+};
+```
+
+`Judge` is a `@FunctionalInterface` with a single method: `judge(JudgmentContext) -> Judgment`.
+Any lambda or method reference that matches this signature is a judge.
+
+Lambda judges work well for one-off checks.
+For production judges, extend a base class to get metadata and structured checks.
+
+## Step 2: Extend DeterministicJudge
+
+For a judge you'll reuse, extend `DeterministicJudge`.
+It implements `JudgeWithMetadata` so infrastructure code (logging, metrics, verdict reporting) can discover the judge's name and type.
+
+```java
+import io.github.markpollack.judge.DeterministicJudge;
+import io.github.markpollack.judge.context.JudgmentContext;
+import io.github.markpollack.judge.result.Check;
+import io.github.markpollack.judge.result.Judgment;
+import io.github.markpollack.judge.result.JudgmentStatus;
+import io.github.markpollack.judge.score.BooleanScore;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class AnnotationJudge extends DeterministicJudge {
+
+    private final String annotation;
+    private final String filePath;
+
+    public AnnotationJudge(String filePath, String annotation) {
+        super("annotation-check",
+            String.format("Verifies %s contains @%s", filePath, annotation));
+        this.filePath = filePath;
+        this.annotation = annotation;
+    }
+
+    @Override
+    public Judgment judge(JudgmentContext context) {
+        Path file = context.workspace().resolve(filePath);
+
+        if (!Files.exists(file)) {
+            return Judgment.builder()
+                .score(new BooleanScore(false))
+                .status(JudgmentStatus.FAIL)
+                .reasoning("File not found: " + filePath)
+                .check(Check.fail("file_exists", "File not found"))
+                .build();
+        }
+
+        try {
+            String content = Files.readString(file);
+            boolean found = content.contains("@" + annotation);
+
+            return Judgment.builder()
+                .score(new BooleanScore(found))
+                .status(found ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
+                .reasoning(found
+                    ? "@" + annotation + " found in " + filePath
+                    : "@" + annotation + " missing from " + filePath)
+                .check(Check.pass("file_exists", "File found"))
+                .check(found
+                    ? Check.pass("annotation_present", "@" + annotation + " present")
+                    : Check.fail("annotation_present", "@" + annotation + " not found"))
+                .build();
+        }
+        catch (Exception e) {
+            return Judgment.error("Failed to read file: " + e.getMessage(), e);
+        }
+    }
+}
+```
+
+Key patterns:
+
+- **Constructor** calls `super(name, description)` — this becomes `metadata()` for logging and verdicts
+- **Checks** provide granular sub-assertions — on failure, you can distinguish "file not found" from "file found but annotation missing"
+- **`Judgment.error()`** handles unexpected failures without crashing the jury
+
+Usage:
+
+```java
+Judge judge = new AnnotationJudge(
+    "src/main/java/com/example/HelloController.java",
+    "RestController");
+
+Judgment result = judge.judge(context);
+// metadata().name() -> "annotation-check"
+// metadata().type() -> DETERMINISTIC
+```
+
+## Step 3: Add Metadata to Lambda Judges
+
+If you prefer lambdas but still want metadata, use `Judges.named()`:
+
+```java
+import io.github.markpollack.judge.Judges;
+
+Judge wrapped = Judges.named(
+    timestampCheck,
+    "timestamp-check",
+    "Verifies agent log exists",
+    JudgeType.DETERMINISTIC);
+
+// Now infrastructure can discover the name
+if (wrapped instanceof JudgeWithMetadata jwm) {
+    System.out.println(jwm.metadata().name()); // "timestamp-check"
+}
+```
+
+**When to use what:**
+
+| Approach | Metadata | Checks | Best for |
+|----------|----------|--------|----------|
+| Lambda | No (unless wrapped) | No | One-off, inline checks |
+| `Judges.named(lambda)` | Yes | No | Named lambdas in juries |
+| `DeterministicJudge` subclass | Yes | Yes | Reusable, production judges |
+
+## Step 4: Write a Custom LLM Judge
+
+For criteria that can't be checked structurally, extend `LLMJudge`.
+It uses the template method pattern — you implement two methods:
+
+1. `buildPrompt()` — construct the evaluation prompt from the context
+2. `parseResponse()` — parse the LLM's response into a `Judgment`
+
+The base class handles the LLM call.
+
+```java
+import io.github.markpollack.judge.llm.LLMJudge;
+import io.github.markpollack.judge.context.JudgmentContext;
+import io.github.markpollack.judge.result.Judgment;
+import io.github.markpollack.judge.result.JudgmentStatus;
+import io.github.markpollack.judge.score.NumericalScore;
+import org.springframework.ai.chat.client.ChatClient;
+
+public class CodeQualityJudge extends LLMJudge {
+
+    public CodeQualityJudge(ChatClient.Builder chatClientBuilder) {
+        super("code-quality", "Rates code quality 0-10", chatClientBuilder);
+    }
+
+    @Override
+    protected String buildPrompt(JudgmentContext context) {
+        return """
+            You are a senior Java developer reviewing code.
+
+            The agent was asked to: %s
+
+            The agent produced the following output:
+            %s
+
+            Rate the code quality on a scale of 0-10. Consider:
+            - Readability and naming conventions
+            - Error handling
+            - Adherence to the stated goal
+            - Use of appropriate patterns
+
+            Respond with exactly one line in this format:
+            SCORE: <number> REASON: <brief explanation>
+            """.formatted(
+                context.goal(),
+                context.agentOutput().orElse("(no output captured)"));
+    }
+
+    @Override
+    protected Judgment parseResponse(String response, JudgmentContext context) {
+        try {
+            String scorePart = response.substring(
+                response.indexOf("SCORE:") + 6,
+                response.indexOf("REASON:")).trim();
+            String reasonPart = response.substring(
+                response.indexOf("REASON:") + 7).trim();
+
+            double score = Double.parseDouble(scorePart);
+
+            return Judgment.builder()
+                .score(NumericalScore.of(score, 0, 10))
+                .status(score >= 7.0 ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
+                .reasoning(reasonPart)
+                .metadata("raw_score", score)
+                .build();
+        }
+        catch (Exception e) {
+            return Judgment.error("Failed to parse LLM response: " + response, e);
+        }
+    }
+}
+```
+
+Usage:
+
+```java
+Judge qualityJudge = new CodeQualityJudge(chatClientBuilder);
+Judgment result = qualityJudge.judge(context);
+
+// result.score() -> NumericalScore(7.5, 0.0, 10.0)
+// result.score().normalized() -> 0.75
+// result.status() -> PASS (score >= 7.0)
+```
+
+<Note>
+  LLM judges require the `agent-judge-llm` module and Spring AI.
+  Always handle parse failures gracefully — `Judgment.error()` prevents one broken response from crashing the jury.
+</Note>
+
+## Step 5: Wire Custom Judges into a Jury
+
+Combine your custom judges with built-in ones:
+
+```java
+SimpleJury jury = SimpleJury.builder()
+    // Built-in deterministic
+    .judge(Judges.named(
+        new FileExistsJudge("src/main/java/com/example/HelloController.java"),
+        "file-exists", "Controller created"), 1.0)
+    .judge(Judges.named(
+        BuildSuccessJudge.maven("compile"),
+        "build", "Project compiles"), 2.0)
+
+    // Custom deterministic
+    .judge(new AnnotationJudge(
+        "src/main/java/com/example/HelloController.java",
+        "RestController"), 1.0)
+
+    // Custom LLM
+    .judge(Judges.named(
+        new CodeQualityJudge(chatClientBuilder),
+        "quality", "Code quality assessment"), 1.5)
+
+    .votingStrategy(new WeightedAverageStrategy())
+    .parallel(true)
+    .build();
+
+Verdict verdict = jury.vote(context);
+
+verdict.individualByName().forEach((name, judgment) ->
+    System.out.printf("%-20s %s  %s%n",
+        name, judgment.status(), judgment.reasoning()));
+```
+
+The `WeightedAverageStrategy` normalizes all scores to [0, 1] and computes a weighted average.
+Build success (weight 2.0) matters more than file existence (weight 1.0), and quality (weight 1.5) falls in between.
+
+## What You Built
+
+| Judge | Base class | Score | What it checks |
+|-------|-----------|-------|---------------|
+| `timestampCheck` | Lambda | Boolean | Agent log exists |
+| `AnnotationJudge` | `DeterministicJudge` | Boolean | File contains `@RestController` |
+| `CodeQualityJudge` | `LLMJudge` | Numerical (0-10) | Code quality assessment |
+
+The progression: **lambda** (quick checks) -> **DeterministicJudge** (production checks with metadata and sub-assertions) -> **LLMJudge** (semantic evaluation that can't be checked structurally).
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Built-in Judges" icon="list" href="/docs/agent-judge/built-in-judges">
+    Complete catalog — see what's already available before writing custom judges
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    CascadedJury for tiered evaluation, voting strategy configuration
+  </Card>
+</CardGroup>

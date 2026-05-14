@@ -5,9 +5,24 @@ description: "Agent-agnostic evaluation framework with deterministic, command, a
 
 Judges are unit tests for your agent. You wouldn't ship application code without assertions — agents need the same discipline. Agent Judge provides the testing framework: deterministic rules, command execution, and LLM-powered assessment that compose into juries with configurable voting strategies.
 
-Just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`. Deterministic judges are free and fast — did it compile, did coverage go up? LLM judges handle the softer criteria — are the assertions meaningful, does the code follow conventions? Together, they score every agent run against the same rubric. When your judges pass consistently, your agent is ready for the field.
+Just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`. Deterministic judges are free and fast — did it compile, does the file exist? LLM judges handle the softer criteria — are the assertions meaningful, does the code follow conventions? Together, they score every agent run against the same rubric.
 
-The core module (`agent-judge-core`) has **zero external dependencies**. Specialized modules add command execution (`agent-judge-exec`) and LLM evaluation (`agent-judge-llm`).
+The core module (`agent-judge-core`) has **zero external dependencies**. Specialized modules add command execution (`agent-judge-exec`), file comparison (`agent-judge-file`), and LLM evaluation (`agent-judge-llm`).
+
+## Quick Start
+
+```java
+Judge fileCheck = new FileExistsJudge("README.md");
+Judge buildCheck = BuildSuccessJudge.maven("compile");
+
+SimpleJury jury = SimpleJury.builder()
+    .judge(fileCheck)
+    .judge(buildCheck, 2.0)
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+
+Verdict verdict = jury.vote(context);
+```
 
 ## Core Abstractions
 
@@ -26,28 +41,29 @@ The core module (`agent-judge-core`) has **zero external dependencies**. Special
 |------|--------|------|---------|
 | **Deterministic** | `agent-judge-core` | Free | `FileExistsJudge`, `FileContentJudge`, custom rules |
 | **Command** | `agent-judge-exec` | Compute only | `BuildSuccessJudge` (Maven/Gradle), `CommandJudge` |
+| **File Comparison** | `agent-judge-file` | Free | `JavaSemanticJudge`, `MavenSemanticJudge`, AST-based diffs |
 | **LLM** | `agent-judge-llm` | Token cost | `CorrectnessJudge`, custom LLM evaluation |
-| **Agent** | `agent-judge-agent` | Agent cost | Delegate evaluation to an AI agent |
 
 ## Documentation
 
 <CardGroup cols={2}>
-  <Card title="Full Documentation" icon="book" href="https://springaicommunity.mintlify.app/projects/incubating/agent-judge">
-    API reference, built-in judges, jury system, voting strategies, code examples
+  <Card title="Getting Started" icon="rocket" href="/docs/agent-judge/getting-started">
+    Add evaluation to your agent pipeline in 5 minutes
   </Card>
-  <Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-judge">
-    6 modules — core, exec, llm, agent, advisor, BOM
+  <Card title="Tutorial: Evaluation Pipeline" icon="graduation-cap" href="/docs/agent-judge/tutorial">
+    Build a multi-judge jury step by step
   </Card>
-</CardGroup>
-
-## Guides
-
-<CardGroup cols={2}>
-  <Card title="Building a Jury" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
-    Wire judges into a cascaded jury for experiment evaluation
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Lambda judges, DeterministicJudge, LLMJudge template method
   </Card>
-  <Card title="LLM as Judge (Blog)" icon="newspaper" href="https://springaicommunity.mintlify.app/blog/agents/llm-as-judge">
-    Judge design, rubric creation, scoring patterns
+  <Card title="Built-in Judges" icon="list" href="/docs/agent-judge/built-in-judges">
+    Complete catalog of every judge across all modules
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    SimpleJury, CascadedJury, voting strategies, composition
+  </Card>
+  <Card title="API Reference" icon="book" href="/docs/agent-judge/api-reference">
+    All public types, interfaces, and records
   </Card>
 </CardGroup>
 
@@ -56,3 +72,14 @@ The core module (`agent-judge-core`) has **zero external dependencies**. Special
 - **[Agent Workflow](/projects/agent-workflow)** — `JudgeGate` wraps a jury as a quality checkpoint in workflow pipelines
 - **[Agent Experiment](/docs/experiment-driver/getting-started)** — jury system scores agent output across all experiments
 - **[Agent Client](/projects/agent-client)** — `JudgeAdvisor` integrates evaluation into agent execution loops
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-judge">
+    4 modules — core, exec, file, llm
+  </Card>
+  <Card title="Design Philosophy" icon="lightbulb" href="/docs/agent-judge/design-philosophy">
+    Why zero deps, functional interface, sealed scores, cascaded cost
+  </Card>
+</CardGroup>

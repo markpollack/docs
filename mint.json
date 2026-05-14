@@ -43,12 +43,6 @@
   ],
   "navigation": [
     {
-      "group": "",
-      "pages": [
-        "index"
-      ]
-    },
-    {
       "group": "Projects",
       "pages": [
         "projects/index",
@@ -96,7 +90,18 @@
           "group": "Agent Judge",
           "pages": [
             "projects/agent-judge",
-            "docs/experiment-driver/jury-system"
+            "docs/agent-judge/getting-started",
+            {
+              "group": "Tutorial",
+              "pages": [
+                "docs/agent-judge/tutorial",
+                "docs/agent-judge/custom-judge"
+              ]
+            },
+            "docs/agent-judge/jury-system",
+            "docs/agent-judge/built-in-judges",
+            "docs/agent-judge/api-reference",
+            "docs/agent-judge/design-philosophy"
           ]
         },
         {

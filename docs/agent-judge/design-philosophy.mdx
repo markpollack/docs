@@ -139,7 +139,7 @@ Each framework bridge module follows the same pattern:
 
 1. **Provided-scope dependency** on the framework — the bridge doesn't pull the framework into your classpath; you already have it.
 2. **JudgmentContextBuilder** — a static utility that converts framework-specific output (`ChatResponse`, `Result<T>`, `AIAgent`, `AgentClientResponse`) into a `JudgmentContext`.
-3. **Evaluator** — a static convenience class with 4 methods (Judge/Jury x with/without extra metadata) that combines execution + context building + evaluation into a one-liner.
+3. **Evaluator** — a static convenience class with Judge/Jury overloads, including variants that accept extra metadata, combining execution + context building + evaluation into a one-liner.
 4. **Metadata key conventions** — public constants where available (`SpringAiMetadataKeys`, `AgentClientMetadataKeys`), and documented metadata keys for values such as model name, finish reason, token usage, sources, or agent ID.
 
 The bridge code is typically 30-100 lines. It maps framework-specific response metadata (token usage, finish reason, model name) into `JudgmentContext.metadata()` where judges can optionally inspect it.

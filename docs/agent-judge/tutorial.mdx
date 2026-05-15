@@ -115,6 +115,8 @@ This is useful when one check is a precondition for another.
 Other composition operators:
 
 ```java
+import io.github.markpollack.judge.fs.FileContentJudge;
+
 Judge contentJudge = new FileContentJudge(
     "src/main/java/com/example/HelloController.java",
     "@RestController", FileContentJudge.MatchMode.CONTAINS);
@@ -139,7 +141,7 @@ import io.github.markpollack.judge.jury.MajorityVotingStrategy;
 import io.github.markpollack.judge.jury.Verdict;
 import io.github.markpollack.judge.fs.FileContentJudge;
 
-// Three judges with different weights
+// Three named judges with weights
 Judge fileExists = Judges.named(
     new FileExistsJudge("src/main/java/com/example/HelloController.java"),
     "file-exists", "Controller file created");
@@ -284,7 +286,7 @@ Verdict verdict = KoogEvaluator.evaluate(
 System.out.println(verdict.aggregated().status());
 ```
 
-Bridge evaluators either run a framework call or adapt an existing response into a `JudgmentContext`. The judges and jury don't change — swap `KoogEvaluator` for `SpringAiEvaluator`, `LangChain4jEvaluator`, or `AgentClientEvaluator`.
+Bridge evaluators either adapt an existing framework response or wrap a framework call/supplier that produces one. The judges and jury don't change — swap `KoogEvaluator` for `SpringAiEvaluator`, `LangChain4jEvaluator`, or `AgentClientEvaluator`.
 
 ## What's Next
 

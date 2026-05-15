@@ -176,6 +176,7 @@ Judge withFloor = new CoverageImprovementJudge(20.0, 60.0);
 | Score type | `NumericalScore` (0.0 to 1.0) |
 | Input | JaCoCo XML report |
 | Baseline | `context.metadata().get("baselineCoverage")` — same as `CoveragePreservationJudge` |
+| Minimum floor | Optional — fails if current coverage is below the floor, regardless of improvement |
 
 ---
 

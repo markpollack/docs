@@ -3,11 +3,11 @@ title: "Design Philosophy"
 description: "Why Agent Judge is built the way it is — zero deps, functional interface, sealed scores, cascaded cost"
 ---
 
-## Judges Are Unit Tests for Agents
+## Judges Are Like Unit Tests for Agents
 
 The core analogy: just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`.
 
-You wouldn't ship application code without assertions.
+You wouldn't ship application code without tests or assertions.
 Agents need the same discipline — automated, repeatable evaluation that runs after every execution and catches regressions before they reach users.
 
 This framing drives several design decisions:
@@ -30,14 +30,20 @@ This means you can evaluate agent output in:
 The module layering adds dependencies only when needed:
 
 ```
-agent-judge-core    (zero deps)
+agent-judge-core              (zero deps)
     ↓
-agent-judge-exec    (+ agent-sandbox)
-agent-judge-file    (+ JavaParser, Maven Model)
-agent-judge-llm     (+ Spring AI ChatClient)
+agent-judge-exec              (+ agent-sandbox)
+agent-judge-file              (+ JavaParser, Maven Model)
+agent-judge-llm               (+ Spring AI ChatClient)
+agent-judge-rag               (+ agent-judge-llm)
+agent-judge-spring-ai         (+ Spring AI Model, provided)
+agent-judge-langchain4j       (+ LangChain4j, provided)
+agent-judge-koog              (+ Koog Agents, provided)
+agent-judge-agent-client      (+ AgentClient, provided)
 ```
 
 If all you need is file checks and boolean logic, you pay for nothing you don't use.
+Framework bridge modules use provided-scope dependencies — they assume you already have the framework on your classpath.
 
 ## Functional Interface Discipline
 
@@ -81,14 +87,14 @@ The `Scores` utility handles cross-type normalization so a jury with mixed score
 
 ## Cascaded Cost Model
 
-Not all evaluation is equal cost:
+Not all evaluation is equal cost. A typical cascade orders checks from cheapest and most decisive to most expensive:
 
-| Tier | Judge type | Cost | Latency | Example |
-|------|-----------|------|---------|---------|
-| 0 | Deterministic | Free | Microseconds | File exists, content match |
-| 1 | Command | Compute | Seconds-minutes | Build, test execution |
-| 2 | File comparison | Free | Milliseconds | AST diff, POM comparison |
-| 3 | LLM | Tokens | Seconds | Semantic correctness |
+| Category | Judge type | Cost | Latency | Example |
+|----------|-----------|------|---------|---------|
+| Deterministic | File checks, content match | Free | Microseconds | `FileExistsJudge`, `FileContentJudge` |
+| File comparison | AST diff, POM comparison | Free | Milliseconds | `JavaSemanticJudge`, `MavenSemanticJudge` |
+| Command | Build, test execution | Compute | Seconds-minutes | `BuildSuccessJudge`, `CommandJudge` |
+| LLM | Semantic correctness, RAG | Tokens | Seconds | `CorrectnessJudge`, `FaithfulnessJudge` |
 
 The `CascadedJury` codifies this: **fail fast on cheap checks, escalate only when necessary**.
 
@@ -103,6 +109,75 @@ Tier 3 (FINAL_TIER)          →  always runs  →  verdict from LLM assessment
 If the project doesn't compile, there's no point running an LLM judge to evaluate code quality.
 The cascaded pattern saves both time and money.
 
+## Frameworks Are Vertical, Evaluation Is Horizontal
+
+Agent runtimes are vertical stacks — Spring AI, LangChain4j, Koog, and CLI-delegated agents (via AgentClient) each provide their own execution model, memory, tool calling, and observability.
+Evaluation cuts across all of them.
+
+```
+            Agent runtimes / frameworks
+    Spring AI     LangChain4j     Koog     AgentClient (CLI agents)
+        |              |           |              |
+        v              v           v              v
+-----------------------------------------------------------------
+                     Agent Judge
+             horizontal evaluation layer
+-----------------------------------------------------------------
+   Build success, file checks, AST comparison, coverage,
+   tool-use metadata checks, RAG faithfulness, hallucination,
+   LLM-as-judge, juries, cascaded juries
+```
+
+A `FaithfulnessJudge` doesn't care whether the answer came from a Spring AI ChatClient, a LangChain4j AiService, a Koog agent, or Claude Code via AgentClient.
+It evaluates the (question, context, answer) triple the same way.
+
+This is the core architectural bet: **evaluation is framework-neutral, and the bridge layer is thin**.
+
+## Adapter Module Architecture
+
+Each framework bridge module follows the same pattern:
+
+1. **Provided-scope dependency** on the framework — the bridge doesn't pull the framework into your classpath; you already have it.
+2. **JudgmentContextBuilder** — a static utility that converts framework-specific output (`ChatResponse`, `Result<T>`, `AIAgent`, `AgentClientResponse`) into a `JudgmentContext`.
+3. **Evaluator** — a static convenience class with 4 methods (Judge/Jury x with/without extra metadata) that combines execution + context building + evaluation into a one-liner.
+4. **Metadata key conventions** — public constants where available (`SpringAiMetadataKeys`, `AgentClientMetadataKeys`), and documented metadata keys for values such as model name, finish reason, token usage, sources, or agent ID.
+
+The bridge code is typically 30-100 lines. It maps framework-specific response metadata (token usage, finish reason, model name) into `JudgmentContext.metadata()` where judges can optionally inspect it.
+
+This keeps the core zero-dependency, keeps bridges thin, and means new framework support is a single module addition — not a core change.
+
+## Best-of-Breed Evaluation Patterns
+
+Agent Judge borrows from patterns that have emerged across modern evaluation systems, including Python-first eval frameworks, SaaS evaluation platforms, and JVM projects such as Dokimos.
+
+The goal is not to clone any one framework. It is to bring the strongest ideas into a JVM-native, framework-neutral library:
+
+| Pattern | Why it matters in Agent Judge |
+|---------|-------------------------------|
+| Evaluators as small composable functions | Keeps judges easy to write, test, and reuse |
+| Structured verdicts, not raw booleans | Gives humans and automation enough information to act |
+| Mixed deterministic and LLM-based checks | Lets cheap checks catch obvious failures before expensive semantic checks |
+| Aggregation / voting | Supports juries instead of one fragile evaluator |
+| Dataset and per-execution evaluation as separate concerns | Keeps Agent Judge focused on "did this execution work?" while leaving bulk experiment orchestration to other tools |
+| Metadata-rich evaluation context | Lets judges reason about status, token usage, sources, tool calls, and workspace state without coupling to a framework |
+| Cost-aware escalation | Avoids paying for LLM judging when deterministic checks already reject the run |
+
+Agent Judge is intentionally JVM-native rather than a thin wrapper around a Python eval stack: it understands workspaces, Maven builds, Java source structure, typed records, sealed scores, and Java framework integration points.
+
+## Judge vs Journal
+
+Agent Judge draws a sharp boundary between **inputs to judges** and **narrative trace**.
+
+Judges legitimately reason about:
+- Token usage, tool executions, retrieved sources — these are structured outputs that affect verdict logic
+- Finish reason, execution status, timing — these determine whether evaluation is even meaningful
+
+Judges do NOT consume:
+- Intermediate responses, full conversation history, private reasoning traces, or step-by-step narrative logs — this is cognitive observability, not evaluation input
+
+The second category belongs to a separate concern (agent-journal) that captures the narrative of how an agent arrived at its answer.
+Mixing trace data into evaluation context would couple judges to specific agent architectures and make the `JudgmentContext` contract framework-specific — exactly what the horizontal layer avoids.
+
 ## Agent-Agnostic by Design
 
 `JudgmentContext` doesn't import any agent framework.
@@ -114,16 +189,15 @@ The workspace-centric pattern:
 3. The judge doesn't know or care which agent made the changes
 
 This decoupling means the same jury works with Claude Code, Gemini CLI, a custom Python agent, or a human developer.
-The `JudgeAgentClient` bridge interface extends this to agent-as-judge evaluation without hard dependencies.
 
 ## Immutable Records
 
-All result types are Java records: `Judgment`, `Verdict`, `Check`, `Score`, `JudgmentContext`, `JudgeMetadata`.
+Most evaluation data types are Java records: `Judgment`, `Verdict`, `Check`, `JudgmentContext`, and `JudgeMetadata`. `Score` is a sealed interface with record implementations (`BooleanScore`, `NumericalScore`, `CategoricalScore`).
 
 Records are:
 - **Immutable** — no accidental mutation between judges
 - **Value-based** — equality by content, not identity
 - **Pattern-matchable** — `if (score instanceof NumericalScore(var v, var min, var max))`
-- **Serializable** — trivial JSON/logging support
+- **Easy to serialize** — record components map cleanly to JSON/logging formats without requiring serialization dependencies in core
 
 Combined with sealed types, this gives you a type-safe, exhaustive, immutable evaluation data model.

@@ -1,7 +1,11 @@
 ---
 title: "Built-in Judges"
-description: "Complete catalog of every judge across all modules"
+description: "Catalog of built-in judges across Agent Judge modules"
 ---
+
+<Note>
+This page covers judge-family modules only. Framework bridges (`agent-judge-spring-ai`, `agent-judge-langchain4j`, `agent-judge-koog`, `agent-judge-agent-client`) are documented in the [API Reference](/docs/agent-judge/api-reference#framework-bridge-evaluators).
+</Note>
 
 ## agent-judge-core
 
@@ -59,11 +63,12 @@ Judge judge = new SupersetDiffJudge();
 
 | Property | Value |
 |----------|-------|
-| Score type | `BooleanScore` |
+| Score type | `NumericalScore` (proportion of files matched) |
 | Judge type | `DETERMINISTIC` |
-| Constructor | `new SupersetDiffJudge()` |
+| Constructor | `new SupersetDiffJudge()` or `new SupersetDiffJudge(Set.of(".mvn/", "mvnw"))` |
 
-Reads `expectedDir` from `context.metadata()` to find the reference directory.
+Reads the reference directory from `context.metadata().get("expectedDir")` (a `Path` or `String`).
+Abstains if the key is missing. Extra files in the workspace are allowed — this is superset semantics, not exact match.
 
 ---
 
@@ -104,9 +109,8 @@ Judge simple = new CommandJudge("ls README.md");
 // Custom exit code and timeout
 Judge custom = new CommandJudge("grep -c TODO src/App.java", 0, Duration.ofSeconds(30));
 
-// With custom sandbox factory
-Judge sandboxed = new CommandJudge("mvn test", 0, Duration.ofMinutes(5),
-    path -> DockerSandbox.builder().workDir(path).build());
+// With custom sandbox factory (e.g., Docker-based execution)
+Judge sandboxed = new CommandJudge("mvn test", 0, Duration.ofMinutes(5), sandboxFactory);
 ```
 
 | Property | Value |
@@ -133,32 +137,45 @@ Judge judge = new ClassVersionJudge(61);
 
 ### CoveragePreservationJudge
 
-Parses JaCoCo XML report and checks that line coverage hasn't dropped more than a threshold.
+Parses JaCoCo XML report and checks that line coverage hasn't dropped more than a threshold compared to a baseline.
 
 ```java
-// Allow up to 5% coverage drop
-Judge judge = new CoveragePreservationJudge(5.0);
+// Allow up to 5% coverage drop (default threshold)
+Judge judge = new CoveragePreservationJudge();
+
+// Custom threshold
+Judge strict = new CoveragePreservationJudge(2.0);
 ```
 
 | Property | Value |
 |----------|-------|
 | Score type | `BooleanScore` |
 | Input | JaCoCo XML report at `target/site/jacoco/jacoco.xml` |
-| Threshold | Maximum allowed percentage drop |
+| Baseline | `context.metadata().get("baselineCoverage")` — a `Double` (line coverage %) or `CoverageMetrics` |
+| Threshold | Maximum allowed percentage-point drop (default 5.0) |
+
+Abstains if `baselineCoverage` is missing from metadata. Fails if no JaCoCo report is found.
 
 ### CoverageImprovementJudge
 
-Checks that coverage improved by at least a target amount.
+Measures coverage improvement as a continuous score, normalized to [0, 1].
 
 ```java
-// Require at least 10% improvement
-Judge judge = new CoverageImprovementJudge(10.0);
+// Score normalized against max improvement of 50 percentage points (default)
+Judge judge = new CoverageImprovementJudge();
+
+// Custom normalization ceiling: 20pp improvement = score 1.0
+Judge custom = new CoverageImprovementJudge(20.0);
+
+// With minimum coverage floor: fail if below 60% regardless of improvement
+Judge withFloor = new CoverageImprovementJudge(20.0, 60.0);
 ```
 
 | Property | Value |
 |----------|-------|
-| Score type | `NumericalScore` |
+| Score type | `NumericalScore` (0.0 to 1.0) |
 | Input | JaCoCo XML report |
+| Baseline | `context.metadata().get("baselineCoverage")` — same as `CoveragePreservationJudge` |
 
 ---
 
@@ -181,7 +198,7 @@ Judge judge = new FileComparisonJudge();
 | `*.java` | `JavaSemanticJudge` |
 | Everything else | `TextFileJudge` |
 
-Walks the `expectedDir` from `context.metadata()` and compares each file against the workspace.
+Reads the reference directory from `context.metadata().get("expectedDir")` (a `Path`) and compares each file against the workspace.
 
 ### JavaSemanticJudge
 
@@ -280,3 +297,98 @@ public class QualityJudge extends LLMJudge {
 The base class handles LLM invocation — you focus on prompt design and response parsing.
 
 See [Writing Custom Judges](/docs/agent-judge/custom-judge) for a complete walkthrough.
+
+---
+
+## agent-judge-rag
+
+Requires `agent-judge-rag` dependency. LLM-powered judges for evaluating retrieval-augmented generation pipelines.
+
+All RAG judges use the `RagContext` metadata convention:
+
+| Metadata key | Description | Fallback |
+|-------------|-------------|----------|
+| `rag.question` | The user's question | `context.goal()` |
+| `rag.context` | Retrieved context (String or List) | `langchain4j.sources` |
+| `rag.answer` | The generated answer | `context.agentOutput()` |
+
+RAG judges return `ABSTAIN` when required metadata is missing rather than producing misleading verdicts.
+
+### FaithfulnessJudge
+
+Evaluates whether every claim in the answer is grounded in the provided context.
+An answer that is factually correct but not supported by the given context is considered unfaithful.
+
+```java
+Judge judge = new FaithfulnessJudge(chatClientBuilder);
+Judgment result = judge.judge(context);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `LLM_POWERED` |
+| Requires | `rag.context` + `rag.answer` (or fallbacks) |
+| ABSTAIN when | Context or answer is empty, or LLM response unparseable |
+
+### ContextualRelevanceJudge
+
+Evaluates whether the retrieved context is relevant to the question.
+A natural first-tier judge in a `CascadedJury` — if the context is irrelevant, evaluating faithfulness or hallucination is meaningless.
+
+```java
+Judge judge = new ContextualRelevanceJudge(chatClientBuilder);
+Judgment result = judge.judge(context);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `LLM_POWERED` |
+| Requires | `rag.context` (or fallback) |
+| ABSTAIN when | Context is empty, or LLM response unparseable |
+
+### HallucinationJudge
+
+Detects specific claims in the answer that are not supported by the context.
+Unlike `FaithfulnessJudge` which asks "is the answer grounded?", this judge asks "what specifically was made up?" with per-claim analysis.
+
+The most expensive RAG judge — a natural final-tier judge in a `CascadedJury`.
+
+```java
+Judge judge = new HallucinationJudge(chatClientBuilder);
+Judgment result = judge.judge(context);
+```
+
+| Property | Value |
+|----------|-------|
+| Score type | `BooleanScore` |
+| Judge type | `LLM_POWERED` |
+| Requires | `rag.context` + `rag.answer` (or fallbacks) |
+| ABSTAIN when | Context or answer is empty, or LLM response unparseable |
+
+### RAG Jury Example
+
+Compose the three RAG judges into a cascaded jury for cost-efficient evaluation:
+
+```java
+SimpleJury relevanceTier = SimpleJury.builder()
+    .judge(new ContextualRelevanceJudge(chatClientBuilder))
+    .votingStrategy(new MajorityVotingStrategy())
+    .build();
+
+SimpleJury faithfulnessTier = SimpleJury.builder()
+    .judge(new FaithfulnessJudge(chatClientBuilder))
+    .judge(new HallucinationJudge(chatClientBuilder))
+    .votingStrategy(new ConsensusStrategy())
+    .build();
+
+CascadedJury ragJury = CascadedJury.builder()
+    .tier("relevance", relevanceTier, TierPolicy.REJECT_ON_ANY_FAIL)
+    .tier("grounding", faithfulnessTier, TierPolicy.FINAL_TIER)
+    .build();
+
+Verdict verdict = ragJury.vote(context);
+```
+
+If the context isn't relevant, the grounding tier never runs — saving tokens.

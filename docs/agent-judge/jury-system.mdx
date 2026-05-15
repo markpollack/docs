@@ -5,15 +5,19 @@ description: "Combine judges with voting strategies, tiered cascades, and jury c
 
 ## Why a Jury?
 
-A single judge gives you a single score.
-A jury gives you **diagnostic information** — when something fails, you know *where* in the stack it failed and *why*.
+A single judge gives you one judgment.
+A jury aggregates multiple judgments into a verdict with **diagnostic information** — when something fails, you can see which checks failed, which tier failed, and why.
 
 Agent Judge provides two jury types:
 
 | Jury | Use when |
 |------|----------|
-| `SimpleJury` | All judges evaluate the same tier — aggregate with voting |
+| `SimpleJury` | All judges run as peers — aggregate with voting |
 | `CascadedJury` | Judges are organized in cost tiers — fail fast on cheap checks, escalate to expensive ones |
+
+<Note>
+The snippets below omit imports for brevity. See [API Reference](/docs/agent-judge/api-reference#packages) for package names.
+</Note>
 
 ## SimpleJury
 
@@ -59,6 +63,10 @@ verdict.individualByName().forEach((name, judgment) ->
 Map<String, Double> weights = verdict.weights();
 ```
 
+<Note>
+`SimpleJury` aggregates peers. It does not provide fail-fast cost control. Use `CascadedJury` when you want cheap checks to prevent expensive judges from running.
+</Note>
+
 ---
 
 ## Voting Strategies
@@ -93,8 +101,8 @@ MajorityVotingStrategy strategy = new MajorityVotingStrategy(
 | Policy | Behavior |
 |--------|----------|
 | `ErrorPolicy.TREAT_AS_FAIL` | Count errors as failures (default) |
-| `ErrorPolicy.TREAT_AS_ABSTAIN` | Skip errors from vote count |
-| `ErrorPolicy.IGNORE` | Exclude errors entirely |
+| `ErrorPolicy.TREAT_AS_ABSTAIN` | Count the judge as having abstained |
+| `ErrorPolicy.IGNORE` | Exclude the errored judge from the vote count and diagnostics |
 
 ---
 
@@ -105,14 +113,15 @@ Each tier is itself a jury (typically a `SimpleJury`).
 Tiers execute sequentially — if a cheap tier already has a verdict, expensive tiers never run.
 
 ```java
-// Tier 1: Deterministic (free, instant)
+// Tier 1: Deterministic guardrails
 Jury deterministic = SimpleJury.builder()
     .judge(new FileExistsJudge("src/main/java/App.java"))
     .judge(BuildSuccessJudge.maven("compile"))
     .votingStrategy(new MajorityVotingStrategy())
     .build();
 
-// Tier 2: Structural (free, compares against reference)
+// Tier 2: Structural (cheap, compares against reference)
+// Requires context.metadata().get("expectedDir") to point at the reference directory
 Jury structural = SimpleJury.builder()
     .judge(new FileComparisonJudge())
     .votingStrategy(new ConsensusStrategy())
@@ -138,8 +147,8 @@ Verdict verdict = jury.vote(context);
 | Policy | Behavior | Typical use |
 |--------|----------|-------------|
 | `REJECT_ON_ANY_FAIL` | Stop immediately if any judge in this tier fails | Guardrails: must compile, files must exist |
-| `ACCEPT_ON_ALL_PASS` | Stop if all judges pass — no need to escalate | Consensus gate: structural checks |
-| `FINAL_TIER` | Always runs, always produces a verdict | Last tier (required) |
+| `ACCEPT_ON_ALL_PASS` | Stop if all judges pass — accept without escalating to later tiers | Consensus gate when this tier is strong enough on its own |
+| `FINAL_TIER` | Runs when reached and produces the final verdict | Last tier (required) |
 
 <Warning>
   The last tier in a `CascadedJury` **must** use `TierPolicy.FINAL_TIER`.
@@ -209,7 +218,7 @@ Jury combined = Juries.allOf(new AverageVotingStrategy(), jury1, jury2, jury3);
 
 <CardGroup cols={2}>
   <Card title="Built-in Judges" icon="list" href="/docs/agent-judge/built-in-judges">
-    Complete catalog of judges to wire into juries
+    Catalog of judges to wire into juries
   </Card>
   <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
     Build domain-specific judges for your evaluation criteria

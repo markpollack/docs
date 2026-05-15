@@ -1,16 +1,21 @@
 ---
 title: "Getting Started with Agent Judge"
-description: "Add evaluation to your agent pipeline in 5 minutes"
+description: "Add evaluation to your agent pipeline"
 ---
 
 ## What is Agent Judge?
 
 Agent Judge is an evaluation framework for AI agent output.
-It provides deterministic rules, command execution checks, and LLM-powered assessment that compose into juries with configurable voting strategies.
-Think of judges as unit tests for your agent — you wouldn't ship code without assertions, and agents need the same discipline.
+It provides deterministic rules, command execution checks, file comparison, RAG evaluation, and LLM-powered assessment that compose into juries with configurable voting strategies.
+Think of judges as like unit tests for your agent: executable checks that decide whether an agent output satisfies a goal. You wouldn't ship application code without tests or assertions, and agents need the same discipline.
 
 The core module has **zero external dependencies**.
-Specialized modules add command execution and LLM evaluation.
+Framework bridge modules let you evaluate output from Spring AI, LangChain4j, Koog, and CLI-delegated agents (via AgentClient) — the same judges and juries work across all of them.
+
+## License
+
+Agent Judge is licensed under BSL 1.1.
+Internal enterprise use is welcome. Commercial redistribution requires a separate agreement — see the LICENSE file for details.
 
 ## Prerequisites
 
@@ -20,42 +25,45 @@ Specialized modules add command execution and LLM evaluation.
 
 ## Add the Dependency
 
-Add the modules you need with explicit versions:
+Start with the core module, then add only the modules you need:
 
 ```xml
-<dependencies>
-    <!-- Core: deterministic judges, juries, scoring (zero deps) -->
-    <dependency>
-        <groupId>io.github.markpollack</groupId>
-        <artifactId>agent-judge-core</artifactId>
-        <version>0.9.2</version>
-    </dependency>
-
-    <!-- Optional: command execution judges (build, shell) -->
-    <dependency>
-        <groupId>io.github.markpollack</groupId>
-        <artifactId>agent-judge-exec</artifactId>
-        <version>0.9.2</version>
-    </dependency>
-
-    <!-- Optional: LLM-powered judges (requires Spring AI) -->
-    <dependency>
-        <groupId>io.github.markpollack</groupId>
-        <artifactId>agent-judge-llm</artifactId>
-        <version>0.9.2</version>
-    </dependency>
-</dependencies>
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-core</artifactId>
+    <version>0.10.0</version>
+</dependency>
 ```
+
+**Optional modules** — add as needed:
+
+| Module | Artifact | What it adds |
+|--------|----------|-------------|
+| Exec | `agent-judge-exec` | Build, shell, and coverage judges |
+| File | `agent-judge-file` | AST, POM, XML, and text comparison |
+| LLM | `agent-judge-llm` | LLM-powered judges (requires Spring AI) |
+| RAG | `agent-judge-rag` | Faithfulness, hallucination, relevance |
+| Spring AI bridge | `agent-judge-spring-ai` | Evaluates `ChatResponse` output |
+| LangChain4j bridge | `agent-judge-langchain4j` | Evaluates `Result<T>` output |
+| Koog bridge | `agent-judge-koog` | Evaluates `AIAgent` output |
+| AgentClient bridge | `agent-judge-agent-client` | Evaluates CLI-agent output |
+
+All modules share the same groupId (`io.github.markpollack`) and version.
 
 ## Your First Judge
 
 Check whether a file exists in an agent's workspace:
 
 ```java
+import io.github.markpollack.judge.Judge;
 import io.github.markpollack.judge.fs.FileExistsJudge;
 import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Judgment;
 import io.github.markpollack.judge.context.ExecutionStatus;
+import io.github.markpollack.judge.result.Judgment;
+
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 
 Judge judge = new FileExistsJudge("README.md");
 
@@ -123,6 +131,92 @@ verdict.individualByName().forEach((name, judgment) ->
     System.out.println(name + " -> " + judgment.status())
 );
 ```
+
+## Evaluate Framework Output
+
+Framework bridge modules convert agent output into `JudgmentContext` automatically.
+The same judges and juries work regardless of which framework produced the output.
+
+| Runtime | Input type | Bridge |
+|---------|-----------|--------|
+| Spring AI | `ChatResponse` | `SpringAiEvaluator` |
+| LangChain4j | `Result<T>` | `LangChain4jEvaluator` |
+| Koog | `AIAgent` | `KoogEvaluator` |
+| AgentClient | `AgentClientResponse` | `AgentClientEvaluator` |
+
+<Note>
+Bridge modules do not bring framework runtimes transitively. Add the Spring AI, LangChain4j, Koog, or AgentClient dependency your application already uses.
+</Note>
+
+### Spring AI
+
+```java
+import io.github.markpollack.judge.springai.SpringAiEvaluator;
+
+Judgment result = SpringAiEvaluator.evaluate(
+    "Summarize the document",
+    () -> chatClient.prompt().user(prompt).call().chatResponse(),
+    new FileExistsJudge("summary.md"));
+```
+
+### LangChain4j
+
+```java
+import io.github.markpollack.judge.langchain4j.LangChain4jEvaluator;
+
+Judgment result = LangChain4jEvaluator.evaluate(
+    "Summarize the document",
+    goal -> assistant.chat(goal),
+    new FileExistsJudge("summary.md"));
+```
+
+### Koog
+
+```java
+import io.github.markpollack.judge.koog.KoogEvaluator;
+
+Judgment result = KoogEvaluator.evaluate(
+    agent, "Summarize the document",
+    new FileExistsJudge("summary.md"));
+```
+
+### AgentClient (CLI agents)
+
+```java
+import io.github.markpollack.judge.agentclient.AgentClientEvaluator;
+
+Judgment result = AgentClientEvaluator.evaluate(
+    "Fix the build", workspace,
+    () -> agentClient.run("Fix the build"),
+    BuildSuccessJudge.maven("compile"));
+```
+
+Each evaluator has a jury overload — pass a `Jury` instead of a `Judge` to get a `Verdict`.
+
+## Evaluate RAG Pipelines
+
+The RAG module provides LLM-powered judges for retrieval-augmented generation:
+
+```java
+import io.github.markpollack.judge.rag.FaithfulnessJudge;
+import io.github.markpollack.judge.rag.RagContext;
+
+JudgmentContext context = JudgmentContext.builder()
+    .goal("What is Spring Boot?")
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofSeconds(2))
+    .metadata(RagContext.QUESTION_KEY, "What is Spring Boot?")
+    .metadata(RagContext.CONTEXT_KEY, "Spring Boot is a framework that simplifies...")
+    .metadata(RagContext.ANSWER_KEY, "Spring Boot simplifies application development.")
+    .build();
+
+FaithfulnessJudge judge = new FaithfulnessJudge(chatClientBuilder);
+Judgment result = judge.judge(context);
+```
+
+Three RAG judges are available: `FaithfulnessJudge`, `ContextualRelevanceJudge`, and `HallucinationJudge`.
+See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for details.
 
 ## What's Next
 

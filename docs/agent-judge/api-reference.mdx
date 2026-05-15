@@ -3,6 +3,23 @@ title: "API Reference"
 description: "All public types, interfaces, and records in Agent Judge"
 ---
 
+## Packages
+
+| Package | Contains |
+|---------|----------|
+| `io.github.markpollack.judge` | Core judge interfaces and utilities |
+| `io.github.markpollack.judge.context` | `JudgmentContext`, `ExecutionStatus` |
+| `io.github.markpollack.judge.result` | `Judgment`, `JudgmentStatus`, `Check` |
+| `io.github.markpollack.judge.score` | `Score`, `BooleanScore`, `NumericalScore`, `CategoricalScore` |
+| `io.github.markpollack.judge.jury` | `Jury`, `Verdict`, voting strategies |
+| `io.github.markpollack.judge.springai` | Spring AI bridge |
+| `io.github.markpollack.judge.langchain4j` | LangChain4j bridge |
+| `io.github.markpollack.judge.koog` | Koog bridge |
+| `io.github.markpollack.judge.agentclient` | AgentClient bridge |
+| `io.github.markpollack.judge.rag` | RAG judges and `RagContext` |
+
+---
+
 ## Core Types
 
 ### Judge
@@ -43,11 +60,13 @@ public interface ReactiveJudge {
 Abstract base class for rule-based judges. Provides `JudgeWithMetadata` support:
 
 ```java
-public abstract class DeterministicJudge implements Judge, JudgeWithMetadata {
+public abstract class DeterministicJudge implements JudgeWithMetadata {
     protected DeterministicJudge(String name, String description)
     public JudgeMetadata metadata()
 }
 ```
+
+`JudgeWithMetadata` extends `Judge`, so `DeterministicJudge` is also a `Judge`.
 
 ### NamedJudge
 
@@ -146,9 +165,18 @@ JudgmentContext context = JudgmentContext.builder()
 
 ```java
 public enum ExecutionStatus {
-    SUCCESS, FAILED, TIMEOUT, CANCELLED, UNKNOWN
+    SUCCESS, FAILED, TIMEOUT, CANCELLED, REFUSED, UNKNOWN
 }
 ```
+
+| Value | Meaning |
+|-------|---------|
+| `SUCCESS` | Agent completed normally |
+| `FAILED` | Agent threw an exception or returned an error |
+| `TIMEOUT` | Execution exceeded time limit |
+| `CANCELLED` | Execution was cancelled |
+| `REFUSED` | Model declined the request (content filter) |
+| `UNKNOWN` | Status could not be determined |
 
 ---
 
@@ -211,12 +239,13 @@ public enum JudgmentStatus {
 Granular sub-assertion within a judgment:
 
 ```java
-public record Check(String name, String description, boolean passed)
+public record Check(String name, boolean passed, String message)
 ```
 
 **Factory methods:**
 
 ```java
+Check.pass("file_exists")
 Check.pass("file_exists", "File found at expected path")
 Check.fail("content_match", "Expected header not found")
 ```
@@ -416,7 +445,174 @@ Jury all = Juries.allOf(strategy, jury1, jury2, jury3);
 
 ---
 
+## Framework Bridge Evaluators
+
+Each framework bridge provides an `Evaluator` (one-liner convenience) and a `JudgmentContextBuilder` (full control).
+All evaluators follow the same 4-method pattern: Judge/Jury x with/without extra metadata.
+
+| Runtime | Input type | Evaluator | Context builder |
+|---------|-----------|-----------|----------------|
+| Spring AI | `ChatResponse` | `SpringAiEvaluator` | `SpringAiJudgmentContextBuilder` |
+| LangChain4j | `Result<T>` | `LangChain4jEvaluator` | `LangChain4jJudgmentContextBuilder` |
+| Koog | `AIAgent` | `KoogEvaluator` | `KoogJudgmentContextBuilder` |
+| AgentClient | `AgentClientResponse` | `AgentClientEvaluator` | `AgentClientJudgmentContextBuilder` |
+
+<Note>
+Bridge modules declare framework dependencies with provided scope. Your application must already include the corresponding framework/runtime dependency.
+</Note>
+
+### SpringAiEvaluator
+
+Bridges Spring AI `ChatResponse` output to agent-judge evaluation.
+Uses `Supplier<ChatResponse>` because Spring AI ChatClient calls don't take the goal as an argument at call time.
+
+```java
+// One-liner with a judge
+Judgment result = SpringAiEvaluator.evaluate(
+    "Summarize the document",
+    () -> chatClient.prompt().user(prompt).call().chatResponse(),
+    myJudge);
+
+// One-liner with a jury
+Verdict verdict = SpringAiEvaluator.evaluate(
+    "Summarize the document",
+    () -> chatClient.prompt().user(prompt).call().chatResponse(),
+    myJury);
+```
+
+**Metadata extracted** (constants in `SpringAiMetadataKeys`):
+
+| Key | Source |
+|-----|--------|
+| `springai.responseId` | `ChatResponse.getMetadata().getId()` |
+| `springai.model` | `ChatResponse.getMetadata().getModel()` |
+| `springai.finishReason` | Generation finish reason |
+| `springai.usage.promptTokens` | Prompt token count |
+| `springai.usage.completionTokens` | Completion token count |
+| `springai.usage.totalTokens` | Total token count |
+| `springai.hasToolCalls` | Whether tool calls were made |
+| `springai.toolCalls` | Best-effort tool-call requests (not a full execution trace) |
+
+**Finish reason mapping**: `stop` → SUCCESS, `tool_calls` → SUCCESS, `length` → SUCCESS (indicates truncation; judges may choose to abstain), `content_filter` → REFUSED, null → UNKNOWN
+
+### LangChain4jEvaluator
+
+Bridges LangChain4j `Result<T>` to agent-judge evaluation.
+Uses `Function<String, Result<T>>` because LangChain4j AiServices are dynamic proxies — there's no common agent interface.
+
+```java
+Judgment result = LangChain4jEvaluator.evaluate(
+    "Summarize the document",
+    goal -> assistant.chat(goal),
+    myJudge);
+```
+
+**Metadata extracted**:
+
+| Key | Source |
+|-----|--------|
+| `langchain4j.tokenUsage` | `Result.tokenUsage()` |
+| `langchain4j.toolExecutions` | `Result.toolExecutions()` |
+| `langchain4j.sources` | `Result.sources()` (also used as RAG context fallback) |
+| `langchain4j.finishReason` | `Result.finishReason().name()` |
+
+**Finish reason mapping**: `STOP`/`TOOL_EXECUTION` → SUCCESS, `LENGTH` → SUCCESS (indicates truncation; judges may choose to abstain), `CONTENT_FILTER` → REFUSED, `OTHER` → UNKNOWN
+
+### KoogEvaluator
+
+Bridges JetBrains Koog `AIAgent` to agent-judge evaluation.
+Calls `agent.run(input)` directly — Koog's native Java API is synchronous from the caller's perspective.
+
+```java
+Judgment result = KoogEvaluator.evaluate(agent, "Summarize the document", myJudge);
+```
+
+**Metadata extracted**:
+
+| Key | Source |
+|-----|--------|
+| `koog.agentId` | `agent.getId()` |
+
+### AgentClientEvaluator
+
+Bridges CLI-delegated agents (Claude Code, Codex, Gemini CLI, Amazon Q, etc.) via AgentClient.
+Uses `Supplier<AgentClientResponse>` to keep process execution inside AgentClient.
+
+```java
+Judgment result = AgentClientEvaluator.evaluate(
+    "Fix the build", workspace,
+    () -> agentClient.run("Fix the build"),
+    myJudge);
+```
+
+**Metadata extracted** (constants in `AgentClientMetadataKeys`):
+
+| Key | Source |
+|-----|--------|
+| `agentclient.model` | `response.getMetadata().getModel()` |
+| `agentclient.sessionId` | `response.getMetadata().getSessionId()` |
+| `agentclient.finishReason` | `response.getMetadata().getFinishReason()` |
+
+`AgentClientJudgmentContextBuilder` also maps result text to `agentOutput`, success/failure to `ExecutionStatus`, workspace to `JudgmentContext.workspace`, and metadata duration to `executionTime`.
+
+### JudgmentContextBuilder (All Bridges)
+
+For full control, use the `JudgmentContextBuilder` directly:
+
+```java
+// Build context from a pre-existing response
+JudgmentContext ctx = SpringAiJudgmentContextBuilder.from(
+    chatResponse, "goal", startedAt, duration);
+
+// Or execute and capture in one step
+JudgmentContext ctx = SpringAiJudgmentContextBuilder.execute(
+    "goal", () -> chatClient.prompt().user(prompt).call().chatResponse());
+```
+
+Each bridge's builder follows the same two-entry-point pattern: `from()` for pre-existing responses, `execute()` for wrapping the call.
+Both have overloads accepting `Map<String, Object> extraMetadata` for attaching run IDs, experiment tags, etc.
+
+---
+
+## RAG Evaluation
+
+### RagContext
+
+Static helper for extracting RAG metadata from a `JudgmentContext`:
+
+```java
+String question = RagContext.question(context);       // rag.question or goal
+Optional<String> ctx = RagContext.context(context);   // rag.context or langchain4j.sources
+Optional<String> answer = RagContext.answer(context); // rag.answer or agentOutput
+```
+
+**Metadata key constants**:
+
+| Constant | Value | Fallback |
+|----------|-------|----------|
+| `RagContext.QUESTION_KEY` | `rag.question` | `context.goal()` |
+| `RagContext.CONTEXT_KEY` | `rag.context` | `langchain4j.sources` |
+| `RagContext.ANSWER_KEY` | `rag.answer` | `context.agentOutput()` |
+
+The `context()` method handles both `String` and `List<?>` values — lists are joined with newlines.
+
+### RAG Judges
+
+All three RAG judges extend `LLMJudge` and return `ABSTAIN` when required metadata is missing:
+
+| Judge | Evaluates | Requires |
+|-------|-----------|----------|
+| `FaithfulnessJudge` | Is the answer grounded in the context? | context + answer |
+| `ContextualRelevanceJudge` | Is the context relevant to the question? | context |
+| `HallucinationJudge` | Does the answer contain unsupported claims? | context + answer |
+
+See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for usage examples.
+
+---
+
 ## Module Coordinates
+
+**Judge families:**
 
 | Module | Artifact | Key Dependencies |
 |--------|----------|-----------------|
@@ -424,6 +620,16 @@ Jury all = Juries.allOf(strategy, jury1, jury2, jury3);
 | Exec | `io.github.markpollack:agent-judge-exec` | agent-sandbox |
 | File | `io.github.markpollack:agent-judge-file` | JavaParser, Maven Model |
 | LLM | `io.github.markpollack:agent-judge-llm` | Spring AI ChatClient |
+| RAG | `io.github.markpollack:agent-judge-rag` | agent-judge-llm |
+
+**Framework bridges:**
+
+| Module | Artifact | Key Dependencies (provided) |
+|--------|----------|-----------------------------|
+| Spring AI | `io.github.markpollack:agent-judge-spring-ai` | Spring AI Model |
+| LangChain4j | `io.github.markpollack:agent-judge-langchain4j` | LangChain4j |
+| Koog | `io.github.markpollack:agent-judge-koog` | Koog Agents |
+| AgentClient | `io.github.markpollack:agent-judge-agent-client` | AgentClient |
 
 Add modules with explicit versions:
 
@@ -431,6 +637,6 @@ Add modules with explicit versions:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-judge-core</artifactId>
-    <version>0.9.2</version>
+    <version>0.10.0</version>
 </dependency>
 ```

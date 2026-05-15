@@ -1,17 +1,41 @@
 ---
 title: "Agent Judge"
-description: "Agent-agnostic evaluation framework with deterministic, command, and LLM judges"
+description: "Framework-neutral evaluation layer for AI agent output across Spring AI, LangChain4j, Koog, and CLI agents"
 ---
 
-Judges are unit tests for your agent. You wouldn't ship application code without assertions — agents need the same discipline. Agent Judge provides the testing framework: deterministic rules, command execution, and LLM-powered assessment that compose into juries with configurable voting strategies.
+Judges are like unit tests for your agent: executable checks that decide whether an agent output satisfies a goal. You wouldn't ship application code without tests or assertions; agents need the same discipline.
 
-Just as JUnit gives you `assertEquals` and AssertJ gives you `assertThat`, Agent Judge gives you `FileExistsJudge`, `BuildSuccessJudge`, and `CorrectnessJudge`. Deterministic judges are free and fast — did it compile, does the file exist? LLM judges handle the softer criteria — are the assertions meaningful, does the code follow conventions? Together, they score every agent run against the same rubric.
+Agent Judge provides the evaluation framework: deterministic rules, command execution, file comparison, RAG evaluation, and LLM-powered assessment. Judges compose into juries with configurable voting strategies, so cheap deterministic checks can run before expensive LLM judges.
 
-The core module (`agent-judge-core`) has **zero external dependencies**. Specialized modules add command execution (`agent-judge-exec`), file comparison (`agent-judge-file`), and LLM evaluation (`agent-judge-llm`).
+Agent runtimes are vertical stacks — Spring AI, LangChain4j, Koog, and CLI-delegated agents each provide their own execution model. **Evaluation cuts across all of them.** Each bridge converts framework output into a `JudgmentContext`; the same judges and juries then evaluate the result.
+
+```
+        Spring AI     LangChain4j     Koog     AgentClient
+            |              |           |             |
+            v              v           v             v
+-----------------------------------------------------------------
+                         Agent Judge
+                 horizontal evaluation layer
+-----------------------------------------------------------------
+   Build checks, file checks, AST comparison, RAG faithfulness,
+   hallucination checks, LLM-as-judge, juries, cascaded juries
+```
+
+The core module (`agent-judge-core`) has **zero external dependencies** and contains the evaluation abstractions plus basic deterministic judges. Four additional judge-family modules add command execution, file comparison, LLM evaluation, and RAG assessment. Four framework bridge modules connect to Spring AI, LangChain4j, Koog, and AgentClient.
 
 ## Quick Start
 
+Every runtime is adapted into a `JudgmentContext`, then evaluated by judges and juries:
+
 ```java
+JudgmentContext context = JudgmentContext.builder()
+    .goal("Add a REST controller")
+    .workspace(Path.of("/my/project"))
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofMinutes(2))
+    .build();
+
 Judge fileCheck = new FileExistsJudge("README.md");
 Judge buildCheck = BuildSuccessJudge.maven("compile");
 
@@ -35,7 +59,7 @@ Verdict verdict = jury.vote(context);
   </Card>
 </CardGroup>
 
-## Judge Types
+## Judge Families
 
 | Type | Module | Cost | Example |
 |------|--------|------|---------|
@@ -43,12 +67,39 @@ Verdict verdict = jury.vote(context);
 | **Command** | `agent-judge-exec` | Compute only | `BuildSuccessJudge` (Maven/Gradle), `CommandJudge` |
 | **File Comparison** | `agent-judge-file` | Free | `JavaSemanticJudge`, `MavenSemanticJudge`, AST-based diffs |
 | **LLM** | `agent-judge-llm` | Token cost | `CorrectnessJudge`, custom LLM evaluation |
+| **RAG** | `agent-judge-rag` | Token cost | `FaithfulnessJudge`, `HallucinationJudge`, `ContextualRelevanceJudge` |
+
+## Framework Bridges
+
+| Framework | Module | Evaluator |
+|-----------|--------|-----------|
+| Spring AI | `agent-judge-spring-ai` | `SpringAiEvaluator` adapts `ChatResponse` |
+| LangChain4j | `agent-judge-langchain4j` | `LangChain4jEvaluator` adapts `Result<T>` |
+| Koog | `agent-judge-koog` | `KoogEvaluator` adapts `AIAgent` output |
+| AgentClient | `agent-judge-agent-client` | `AgentClientEvaluator` adapts CLI-agent responses |
+
+See [API Reference](/docs/agent-judge/api-reference#framework-bridge-evaluators) for exact method signatures.
+
+## Installation
+
+Each module is published separately under `io.github.markpollack`:
+
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-judge-core</artifactId>
+  <version>0.10.0</version>
+</dependency>
+```
+
+Start with `agent-judge-core`, then add only the judge-family or bridge modules you need.
+See [Getting Started](/docs/agent-judge/getting-started#add-the-dependency) for the full dependency list.
 
 ## Documentation
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="rocket" href="/docs/agent-judge/getting-started">
-    Add evaluation to your agent pipeline in 5 minutes
+    Add evaluation to your agent pipeline
   </Card>
   <Card title="Tutorial: Evaluation Pipeline" icon="graduation-cap" href="/docs/agent-judge/tutorial">
     Build a multi-judge jury step by step
@@ -67,17 +118,15 @@ Verdict verdict = jury.vote(context);
   </Card>
 </CardGroup>
 
-## Role in the Lab
+## License
 
-- **[Agent Workflow](/projects/agent-workflow)** — `JudgeGate` wraps a jury as a quality checkpoint in workflow pipelines
-- **[Agent Experiment](/docs/experiment-driver/getting-started)** — jury system scores agent output across all experiments
-- **[Agent Client](/projects/agent-client)** — `JudgeAdvisor` integrates evaluation into agent execution loops
+Agent Judge is source-available under BSL 1.1. Internal enterprise use is welcome; commercial redistribution or competing hosted/managed offerings require permission.
 
 ## Resources
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-judge">
-    4 modules — core, exec, file, llm
+    9 modules — 5 judge families + 4 framework bridges
   </Card>
   <Card title="Design Philosophy" icon="lightbulb" href="/docs/agent-judge/design-philosophy">
     Why zero deps, functional interface, sealed scores, cascaded cost

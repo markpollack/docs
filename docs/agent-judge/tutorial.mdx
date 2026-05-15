@@ -1,6 +1,6 @@
 ---
 title: "Tutorial: Build an Evaluation Pipeline"
-description: "Step by step — from a single judge to a multi-judge jury that grades agent output"
+description: "Build an evaluation pipeline from a single judge to a multi-judge jury"
 sidebarTitle: "Evaluation Pipeline"
 ---
 
@@ -13,7 +13,9 @@ By the end you'll have three judges — file existence, build success, and conte
 
 - Java 21+
 - A Maven project directory to evaluate (any Spring Boot starter project works)
-- The `agent-judge-core` and `agent-judge-exec` dependencies ([setup](/docs/agent-judge/getting-started#add-the-dependency))
+- `agent-judge-core` and `agent-judge-exec` ([setup](/docs/agent-judge/getting-started#add-the-dependency))
+- Optional: `agent-judge-llm` for Step 6
+- Optional: `agent-judge-koog` for the bridge example
 
 ## Step 1: Create the Evaluation Context
 
@@ -113,14 +115,18 @@ This is useful when one check is a precondition for another.
 Other composition operators:
 
 ```java
+Judge contentJudge = new FileContentJudge(
+    "src/main/java/com/example/HelloController.java",
+    "@RestController", FileContentJudge.MatchMode.CONTAINS);
+
 // OR: pass if either judge passes
-Judge fallback = Judges.or(mavenBuild, gradleBuild);
+Judge fallback = Judges.or(fileJudge, buildJudge);
 
 // All must pass (variadic AND)
 Judge all = Judges.allOf(fileJudge, buildJudge, contentJudge);
 
 // Any can pass (variadic OR)
-Judge any = Judges.anyOf(check1, check2, check3);
+Judge any = Judges.anyOf(fileJudge, buildJudge, contentJudge);
 ```
 
 ## Step 5: Build a Jury
@@ -200,6 +206,7 @@ import io.github.markpollack.judge.llm.CorrectnessJudge;
 import org.springframework.ai.chat.client.ChatClient;
 
 // Requires agent-judge-llm + Spring AI dependency
+ChatClient.Builder chatClientBuilder = /* configured Spring AI ChatClient.Builder */;
 CorrectnessJudge llmJudge = new CorrectnessJudge(chatClientBuilder);
 
 SimpleJury jury = SimpleJury.builder()
@@ -232,8 +239,52 @@ You started with a single file-existence check and built up to a weighted jury w
 | FileContentJudge | Deterministic | Free | File contains expected content |
 | CorrectnessJudge | LLM | Tokens | Agent achieved the goal |
 
-This is the core pattern: **cheap judges run first and filter; expensive judges confirm**.
-In production, you can formalize this with a `CascadedJury` that stops evaluation early when cheap judges already have a verdict.
+This is the core pattern: **use cheap judges to catch obvious failures, and reserve expensive judges for semantic confirmation**.
+In production, formalize this with a `CascadedJury` that runs cheap tiers first and stops early when they already have a verdict.
+
+<Note>
+The tutorial uses `SimpleJury` with parallel execution for readability. Production pipelines often use `CascadedJury` to avoid running LLM judges when deterministic checks already fail.
+</Note>
+
+## Bonus: Evaluate a Framework Agent
+
+The tutorial above builds `JudgmentContext` manually.
+When you're evaluating output from a specific framework, the bridge modules do this for you.
+
+Here's the same evaluation pipeline, but with the context built automatically from a Koog agent:
+
+```java
+import io.github.markpollack.judge.Judge;
+import io.github.markpollack.judge.Judges;
+import io.github.markpollack.judge.fs.FileExistsJudge;
+import io.github.markpollack.judge.exec.BuildSuccessJudge;
+import io.github.markpollack.judge.koog.KoogEvaluator;
+import io.github.markpollack.judge.jury.SimpleJury;
+import io.github.markpollack.judge.jury.MajorityVotingStrategy;
+import io.github.markpollack.judge.jury.Verdict;
+import ai.koog.agents.core.agent.AIAgent;
+
+AIAgent<String, String> agent = /* configured Koog agent */;
+
+SimpleJury jury = SimpleJury.builder()
+    .judge(Judges.named(
+        new FileExistsJudge("src/main/java/com/example/HelloController.java"),
+        "file-exists", "Controller created"), 1.0)
+    .judge(Judges.named(
+        BuildSuccessJudge.maven("clean", "compile"),
+        "build-success", "Project compiles"), 2.0)
+    .votingStrategy(new MajorityVotingStrategy())
+    .parallel(true)
+    .build();
+
+// KoogEvaluator runs the agent and evaluates its output in one call
+Verdict verdict = KoogEvaluator.evaluate(
+    agent, "Add a REST controller with a /hello endpoint", jury);
+
+System.out.println(verdict.aggregated().status());
+```
+
+Bridge evaluators either run a framework call or adapt an existing response into a `JudgmentContext`. The judges and jury don't change — swap `KoogEvaluator` for `SpringAiEvaluator`, `LangChain4jEvaluator`, or `AgentClientEvaluator`.
 
 ## What's Next
 

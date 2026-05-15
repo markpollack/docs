@@ -82,7 +82,7 @@ Judge typed = Judges.named(myLambda, "check-name", "description", JudgeType.DETE
 Marker interface for judges that expose identity:
 
 ```java
-public interface JudgeWithMetadata {
+public interface JudgeWithMetadata extends Judge {
     JudgeMetadata metadata();
 }
 ```

@@ -282,7 +282,7 @@ public class QualityJudge extends LLMJudge {
     protected Judgment parseResponse(String response, JudgmentContext context) {
         double score = extractScore(response);
         return Judgment.builder()
-            .score(NumericalScore.of(score, 0, 10))
+            .score(new NumericalScore(score, 0, 10))
             .status(score >= 7 ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
             .reasoning(response)
             .build();

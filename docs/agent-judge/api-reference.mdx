@@ -278,8 +278,12 @@ public record NumericalScore(double value, double min, double max) implements Sc
 ```
 
 ```java
-NumericalScore score = NumericalScore.of(85.0, 0.0, 100.0);
+NumericalScore score = new NumericalScore(85.0, 0.0, 100.0);
 double normalized = score.normalized();  // 0.85 (scaled to [0, 1])
+
+// Convenience factories
+NumericalScore zeroToOne = NumericalScore.normalized(0.85);
+NumericalScore zeroToTen = NumericalScore.outOfTen(7.5);
 ```
 
 ### CategoricalScore
@@ -287,12 +291,12 @@ double normalized = score.normalized();  // 0.85 (scaled to [0, 1])
 Discrete categories from a fixed set:
 
 ```java
-public record CategoricalScore(String category, Set<String> allowedCategories) implements Score
+public record CategoricalScore(String value, List<String> allowedValues) implements Score
 ```
 
 ```java
-CategoricalScore score = CategoricalScore.of(
-    "GOOD", Set.of("EXCELLENT", "GOOD", "FAIR", "POOR"));
+CategoricalScore score = new CategoricalScore(
+    "GOOD", List.of("EXCELLENT", "GOOD", "FAIR", "POOR"));
 ```
 
 ### Scores Utility
@@ -300,7 +304,9 @@ CategoricalScore score = CategoricalScore.of(
 Convert between score types for heterogeneous aggregation:
 
 ```java
-double normalized = Scores.toNormalized(anyScore);
+// Numerical and Boolean scores normalize directly
+// Categorical scores require a mapping from category names to numeric values
+double normalized = Scores.toNormalized(anyScore, categoryMap);
 ```
 
 ---

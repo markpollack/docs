@@ -7,7 +7,7 @@ description: "Add evaluation to your agent pipeline"
 
 Agent Judge is an evaluation framework for AI agent output.
 It provides deterministic rules, command execution checks, file comparison, RAG evaluation, and LLM-powered assessment that compose into juries with configurable voting strategies.
-Think of judges as like unit tests for your agent: executable checks that decide whether an agent output satisfies a goal. You wouldn't ship application code without tests or assertions, and agents need the same discipline.
+Think of judges as being like unit tests for your agent: executable checks that decide whether an agent output satisfies a goal. You wouldn't ship application code without tests or assertions, and agents need the same discipline.
 
 The core module has **zero external dependencies**.
 Framework bridge modules let you evaluate output from Spring AI, LangChain4j, Koog, and CLI-delegated agents (via AgentClient) — the same judges and juries work across all of them.
@@ -225,7 +225,7 @@ See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for det
     Step-by-step guide from single judge to multi-judge jury
   </Card>
   <Card title="Built-in Judges" icon="gavel" href="/docs/agent-judge/built-in-judges">
-    Complete catalog of every judge across all modules
+    Catalog of built-in judges across all modules
   </Card>
   <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
     SimpleJury, CascadedJury, voting strategies, and composition

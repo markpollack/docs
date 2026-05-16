@@ -1,0 +1,288 @@
+---
+title: "ACP Java SDK"
+sidebarTitle: "Overview"
+description: "A Java SDK for the Agent Client Protocol — build both clients and agents that work with Zed, JetBrains, VS Code, and any ACP-compliant editor."
+---
+
+A pure Java implementation of the [Agent Client Protocol (ACP)](https://agentclientprotocol.com/) specification. Build clients that connect to ACP agents, or build agents that run inside code editors.
+
+## How ACP Works
+
+ACP uses a subprocess model. A **client** (your application, or an editor like Zed) launches an **agent** as a child process and communicates over stdin/stdout using JSON-RPC messages. The protocol has three phases:
+
+1. **Initialize** — client and agent exchange protocol versions and capabilities
+2. **Session** — client creates a session with a working directory context
+3. **Prompt** — client sends messages, agent streams back responses
+
+export const ProtocolAnimation = () => {
+  const containerRef = React.useRef(null);
+  const [status, setStatus] = React.useState("loading");
+
+  React.useEffect(() => {
+    let tweens = [];
+
+    function start() {
+      fetch("/acp-java-sdk/diagrams/acp-protocol.svg")
+        .then(res => res.text())
+        .then(svgText => {
+          if (!containerRef.current) return;
+
+          containerRef.current.innerHTML = svgText;
+          const svg = containerRef.current.querySelector("svg");
+          if (!svg) { setStatus("error"); return; }
+
+          svg.style.width = "100%";
+          svg.style.height = "auto";
+
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            setStatus("ready");
+            return;
+          }
+
+          const paths = svg.querySelectorAll(".messageLine0, .messageLine1");
+          const colors = ["#00e5ff", "#69f0ae", "#00e5ff", "#69f0ae", "#00e5ff", "#ffab40", "#00e5ff", "#69f0ae", "#ff4081"];
+
+          if (typeof gsap !== "undefined" && paths.length > 0) {
+            const tl = gsap.timeline({ repeat: -1, repeatDelay: 3 });
+
+            paths.forEach((path, index) => {
+              const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              dot.setAttribute("r", "6");
+              dot.setAttribute("fill", colors[index % colors.length]);
+              dot.style.filter = "drop-shadow(0 0 4px " + colors[index % colors.length] + ")";
+              dot.style.opacity = "0";
+              svg.appendChild(dot);
+
+              const length = path.getTotalLength();
+              const pos = { t: 0 };
+              const offset = index * 0.5;
+
+              tl.set(dot, { opacity: 1 }, offset);
+              tl.fromTo(pos, { t: 0 }, {
+                t: 1,
+                duration: 1.0,
+                ease: "power1.inOut",
+                onUpdate: function() {
+                  var point = path.getPointAtLength(pos.t * length);
+                  dot.setAttribute("cx", point.x);
+                  dot.setAttribute("cy", point.y);
+                }
+              }, offset);
+              tl.to(dot, { opacity: 0, duration: 0.3 }, offset + 1.0);
+            });
+
+            tweens.push(tl);
+          }
+          setStatus("ready");
+        })
+        .catch(() => setStatus("error"));
+    }
+
+    if (typeof gsap !== "undefined") {
+      start();
+    } else {
+      window.addEventListener("gsap-ready", start, { once: true });
+      setTimeout(start, 2000);
+    }
+
+    return () => tweens.forEach(t => t.kill());
+  }, []);
+
+  return (
+    <div style={{background: "#161b22", borderRadius: "8px", padding: "1.5rem", border: "1px solid #30363d", margin: "1rem 0"}}>
+      {status === "loading" && <div style={{color: "#8b949e", textAlign: "center", padding: "2rem"}}>Loading diagram...</div>}
+      {status === "error" && <div style={{color: "#ff6b6b", textAlign: "center", padding: "2rem"}}>Failed to load diagram</div>}
+      <div ref={containerRef} />
+      {status === "ready" && (
+        <div style={{display: "flex", gap: "1.5rem", flexWrap: "wrap", marginTop: "0.75rem", fontSize: "0.8rem", color: "#8b949e"}}>
+          <span><span style={{color: "#00e5ff"}}>&#9679;</span> request</span>
+          <span><span style={{color: "#69f0ae"}}>&#9679;</span> response</span>
+          <span><span style={{color: "#ffab40"}}>&#9679;</span> streaming update</span>
+          <span><span style={{color: "#ff4081"}}>&#9679;</span> agent → client request</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+<ProtocolAnimation />
+
+This is the same mechanism that Zed, JetBrains, and VS Code use to talk to AI agents. The SDK lets you build either side of that conversation.
+
+## Overview
+
+The ACP Java SDK provides:
+
+- **Client SDK** — connect to and interact with any ACP-compliant agent
+- **Agent SDK** — build ACP-compliant agents that work in Zed, JetBrains, and VS Code
+- **Test utilities** — in-memory transports for fast, deterministic testing
+
+## Quick Start
+
+### Try it now
+
+The fastest way to see ACP in action is to clone the tutorial and run a module. The client example talks to [Gemini CLI](https://github.com/google-gemini/gemini-cli) (requires `GEMINI_API_KEY`). The agent example runs locally with no API key.
+
+```bash
+git clone https://github.com/markpollack/acp-java-tutorial.git
+cd acp-java-tutorial
+
+# Client: talk to Gemini as an ACP agent
+export GEMINI_API_KEY=your-key-here
+./mvnw exec:java -pl module-01-first-contact
+
+# Agent: build and run your own (no API key needed)
+./mvnw package -pl module-12-echo-agent -q
+./mvnw exec:java -pl module-12-echo-agent
+```
+
+### Client — Connect to an Agent
+
+This example launches [Gemini CLI](https://github.com/google-gemini/gemini-cli) as an ACP agent subprocess and sends it a prompt. Any CLI tool that speaks ACP over stdin/stdout works here — Gemini CLI is one such tool.
+
+`AgentParameters` builds the command line (`gemini --experimental-acp`). `StdioAcpClientTransport` spawns the process and handles the JSON-RPC framing. The `sessionUpdateConsumer` receives the agent's response text as it streams in — without it, you'd get the stop reason but no visible output.
+
+```java
+import com.agentclientprotocol.sdk.client.*;
+import com.agentclientprotocol.sdk.client.transport.*;
+import com.agentclientprotocol.sdk.spec.AcpSchema.*;
+import java.util.List;
+
+// Launch Gemini CLI as an ACP agent subprocess
+var params = AgentParameters.builder("gemini").arg("--experimental-acp").build();
+var transport = new StdioAcpClientTransport(params);
+
+AcpSyncClient client = AcpClient.sync(transport)
+    .sessionUpdateConsumer(notification -> {
+        // Print the agent's response as it streams in
+        if (notification.update() instanceof AgentMessageChunk msg) {
+            System.out.print(((TextContent) msg.content()).text());
+        }
+    })
+    .build();
+
+client.initialize();
+var session = client.newSession(new NewSessionRequest(".", List.of()));
+
+var response = client.prompt(new PromptRequest(
+    session.sessionId(),
+    List.of(new TextContent("What is 2+2? Reply with just the number."))
+));
+
+System.out.println("\nStop reason: " + response.stopReason());
+client.close();
+// Output: 4
+// Stop reason: END_TURN
+```
+
+<Tip>
+Run this yourself: [Module 01: First Contact](https://github.com/markpollack/acp-java-tutorial/tree/main/module-01-first-contact) — full source with error handling and setup.
+</Tip>
+
+### Agent — Build Your Own
+
+This is the other side of the conversation. When you build an agent, **editors and clients launch your code** as a subprocess and send it JSON-RPC messages over stdin. Your agent handles three request types: initialize, new session, and prompt.
+
+The stdio transport reads from stdin and writes to stdout. `run()` blocks until the client disconnects. The module includes a demo client that launches this agent as a subprocess and exercises it — you'll see `Echo: Hello!` printed when you run it.
+
+```java
+import com.agentclientprotocol.sdk.annotation.*;
+import com.agentclientprotocol.sdk.agent.SyncPromptContext;
+import com.agentclientprotocol.sdk.agent.support.AcpAgentSupport;
+import com.agentclientprotocol.sdk.spec.AcpSchema.*;
+
+@AcpAgent
+class EchoAgent {
+
+    @Initialize
+    InitializeResponse init() {
+        return InitializeResponse.ok();
+    }
+
+    @NewSession
+    NewSessionResponse newSession() {
+        return new NewSessionResponse(UUID.randomUUID().toString(), null, null);
+    }
+
+    @Prompt
+    PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
+        ctx.sendMessage("Echo: " + req.text());
+        return PromptResponse.endTurn();
+    }
+}
+
+// Reads JSON-RPC from stdin, writes to stdout — editors connect here
+AcpAgentSupport.create(new EchoAgent())
+    .transport(new StdioAcpAgentTransport())
+    .run();
+```
+
+<Tip>
+Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-java-tutorial/tree/main/module-12-echo-agent) — includes a demo client that launches the agent and sends test prompts. No API key required.
+</Tip>
+
+### Adding the SDK to your project
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-core</artifactId>
+    <version>0.11.0</version>
+</dependency>
+```
+
+For annotation-based agents (as shown above), add `acp-agent-support` instead — it includes `acp-core` transitively:
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-agent-support</artifactId>
+    <version>0.11.0</version>
+</dependency>
+```
+
+## Three Agent API Styles
+
+| Style | Entry Point | Best For |
+|-------|-------------|----------|
+| **Annotation-based** | `@AcpAgent`, `@Prompt` | Least boilerplate, declarative style |
+| **Sync** | `AcpAgent.sync()` | Blocking handlers, plain return values |
+| **Async** | `AcpAgent.async()` | Reactive applications, Project Reactor `Mono` |
+
+All three styles produce identical protocol behavior. Choose based on programming preference.
+
+## Documentation
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/acp-java-sdk/reference/java">
+    Client API, Agent API (all three styles), protocol types, transports, errors
+  </Card>
+  <Card title="Tutorial" icon="graduation-cap" href="/acp-java-sdk/tutorial">
+    30-module progressive tutorial from client basics to IDE integration
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [GitHub Repository](https://github.com/agentclientprotocol/java-sdk) — Source code
+- [ACP Java Tutorial](https://github.com/markpollack/acp-java-tutorial) — 30 hands-on modules
+
+### ACP Ecosystem
+
+- [Agent Client Protocol](https://agentclientprotocol.com/) — Official specification
+- [ACP Specification](https://agentclientprotocol.com/protocol/overview) — Protocol details (initialization, sessions, prompt turns)
+- [Agents Directory](https://agentclientprotocol.com/overview/agents) — ACP-compliant agents
+- [Clients Directory](https://agentclientprotocol.com/overview/clients) — Editors and clients that support ACP
+
+### Other ACP SDKs
+
+- [Kotlin SDK](https://github.com/agentclientprotocol/kotlin-sdk)
+- [Python SDK](https://github.com/agentclientprotocol/python-sdk)
+- [TypeScript SDK](https://github.com/agentclientprotocol/typescript-sdk)
+- [Rust SDK](https://github.com/agentclientprotocol/rust-sdk)
+
+### Editor Documentation
+
+- [Zed — External Agents](https://zed.dev/docs/ai/external-agents)
+- [JetBrains — ACP Support](https://www.jetbrains.com/help/ai-assistant/acp.html)
+- [VS Code — ACP Extension](https://github.com/formulahendry/vscode-acp)

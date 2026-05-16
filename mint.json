@@ -147,7 +147,47 @@
       "group": "Supporting Projects",
       "pages": [
         "projects/claude-agent-sdk",
-        "projects/acp-java-sdk"
+        {
+          "group": "ACP Java SDK",
+          "pages": [
+            "projects/acp-java-sdk",
+            "docs/acp-java-sdk/index",
+            "docs/acp-java-sdk/autoconfig",
+            {
+              "group": "Tutorial",
+              "pages": [
+                "docs/acp-java-sdk/tutorial/index",
+                "docs/acp-java-sdk/tutorial/01-first-contact",
+                "docs/acp-java-sdk/tutorial/02-protocol-basics",
+                "docs/acp-java-sdk/tutorial/03-sessions",
+                "docs/acp-java-sdk/tutorial/04-prompts",
+                "docs/acp-java-sdk/tutorial/05-streaming-updates",
+                "docs/acp-java-sdk/tutorial/06-update-types",
+                "docs/acp-java-sdk/tutorial/07-agent-requests",
+                "docs/acp-java-sdk/tutorial/08-permissions",
+                "docs/acp-java-sdk/tutorial/09-session-resume",
+                "docs/acp-java-sdk/tutorial/10-cancellation",
+                "docs/acp-java-sdk/tutorial/11-error-handling",
+                "docs/acp-java-sdk/tutorial/12-echo-agent",
+                "docs/acp-java-sdk/tutorial/13-agent-handlers",
+                "docs/acp-java-sdk/tutorial/14-sending-updates",
+                "docs/acp-java-sdk/tutorial/15-agent-requests",
+                "docs/acp-java-sdk/tutorial/16-in-memory-testing",
+                "docs/acp-java-sdk/tutorial/17-capability-negotiation",
+                "docs/acp-java-sdk/tutorial/18-terminal-operations",
+                "docs/acp-java-sdk/tutorial/19-mcp-servers",
+                "docs/acp-java-sdk/tutorial/21-async-client",
+                "docs/acp-java-sdk/tutorial/22-async-agent",
+                "docs/acp-java-sdk/tutorial/23-spring-boot-agent",
+                "docs/acp-java-sdk/tutorial/24-spring-boot-client",
+                "docs/acp-java-sdk/tutorial/28-zed-integration",
+                "docs/acp-java-sdk/tutorial/29-jetbrains-integration",
+                "docs/acp-java-sdk/tutorial/30-vscode-integration"
+              ]
+            },
+            "docs/acp-java-sdk/reference/java"
+          ]
+        }
       ]
     },
     {

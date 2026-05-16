@@ -127,9 +127,7 @@
         "projects/agent-hooks",
         "projects/agent-memory",
         "projects/agent-journal",
-        "projects/agent-sandbox",
-        "projects/agent-tools",
-        "projects/agent-skills"
+        "projects/agent-sandbox"
       ]
     },
     {
@@ -149,8 +147,7 @@
       "group": "Supporting Projects",
       "pages": [
         "projects/claude-agent-sdk",
-        "projects/acp-java-sdk",
-        "projects/spring-ai-a2a"
+        "projects/acp-java-sdk"
       ]
     },
     {

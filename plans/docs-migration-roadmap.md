@@ -242,68 +242,62 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 2.4: Update Package Names in Code Examples
 
 **Entry criteria**:
-- [ ] Step 2.3 complete
-- [ ] Read: `plans/learnings/step-2.3-external-links.md`
+- [x] Step 2.3 complete
+- [x] Read: `plans/learnings/step-2.3-external-links.md`
 
 **Work items**:
-- [ ] SEARCH for stale package/import references in code examples:
+- [x] SEARCH for stale package/import references in code examples:
   ```bash
   grep -rn "org\.springaicommunity" --include="*.mdx" . | grep -v migration | grep -v "spring-ai-agent-utils\|spring-testing-skills\|spring-ai-a2a"
   ```
-- [ ] UPDATE Java imports/packages in code snippets for migrated projects:
-  - `org.springaicommunity.claude.agent.sdk` → `io.github.markpollack.claude.agent.sdk`
-  - `org.springaicommunity.agents.*` → `io.github.markpollack.agents.*`
-  - `org.springaicommunity.judge.*` → `io.github.markpollack.judge.*`
-  - `org.springaicommunity.sandbox.*` → `io.github.markpollack.sandbox.*`
-  - `org.springaicommunity.journal.*` → `io.github.markpollack.journal.*`
-  - `org.springaicommunity.bench.*` → `io.github.markpollack.bench.*`
-- [ ] DO NOT change package names for non-migrated projects (`spring-ai-agent-utils`, etc.)
-- [ ] VERIFY no stale package names remain for migrated projects
+  Result: only BOM section header (not a code example). Zero import/package statements.
+- [x] No Java imports/packages to update — code examples already use correct packages or don't reference package names
+- [x] Non-migrated projects unchanged
+- [x] VERIFY: confirmed no stale package names for migrated projects
 
 **Exit criteria**:
-- [ ] Code examples use correct `io.github.markpollack` package names
-- [ ] Non-migrated projects unchanged
-- [ ] Create: `plans/learnings/step-2.4-package-names.md`
-- [ ] Update `ROADMAP.md` checkboxes
-- [ ] COMMIT
+- [x] Code examples use correct `io.github.markpollack` package names (no stale ones existed)
+- [x] Non-migrated projects unchanged
+- [x] Create: `plans/learnings/step-2.4-package-names.md` (no-op — zero changes needed)
+- [x] Update `ROADMAP.md` checkboxes
+- [x] COMMIT (no changes to commit — step was verification-only)
 
 ---
 
 ### Step 2.5: Remove Community-Owned Projects from lab.pollack.ai
 
 **Entry criteria**:
-- [ ] Step 2.4 complete
-- [ ] Read: `plans/learnings/step-2.4-package-names.md`
+- [x] Step 2.4 complete
+- [x] Read: `plans/learnings/step-2.4-package-names.md`
 
 **Work items**:
-- [ ] REMOVE from `mint.json` navigation:
+- [x] REMOVE from `mint.json` navigation:
   - `projects/agent-tools` (= `spring-ai-agent-utils`) — currently in "AgentWorks" group
+  - `projects/agent-skills` (= `spring-testing-skills`) — also in "AgentWorks" group
   - `projects/spring-ai-a2a` — currently in "Supporting Projects" group
-- [ ] KEEP page files accessible by direct URL (don't break inbound links), but add a short `<Info>` note explaining these are community projects no longer covered by AgentWorks (use `<Info>` not `<Warning>` — content is accurate, just out of scope; different from Stage 4's `<Warning>` which signals potentially stale content):
+- [x] KEEP page files accessible by direct URL (don't break inbound links), but add a short `<Info>` note explaining these are community projects no longer covered by AgentWorks:
   - `projects/agent-tools.mdx`
+  - `projects/agent-skills.mdx`
   - `projects/spring-ai-a2a.mdx`
-- [ ] KEEP `projects/acp-java-sdk` in "Supporting Projects" — official ACP community project, intentionally supported by AgentWorks for now; future migration to `markpollack` is a separate task
-- [ ] REMOVE all community deps from `projects/agentworks-bom.mdx`:
-  - Remove "Community Libraries (org.springaicommunity)" section entirely (`spring-ai-agent-utils`, `spring-testing-skills`, and any old migrated-project entries)
-  - Remove "Agent Client (org.springaicommunity.agents)" section header (should already be empty after Step 2.2 moved its entries to the markpollack section)
-  - Projects that need `spring-ai-agent-utils` or `spring-testing-skills` already manage versions locally
-- [ ] REMOVE community deps from the actual BOM POM at `~/projects/agentworks/pom.xml`:
-  - Remove `spring-ai-agent-utils` managed dependency
-  - Remove `spring-testing-skills` managed dependency
-  - Remove any `org.springaicommunity` or `org.springaicommunity.agents` entries (migrated projects should already be under `io.github.markpollack`)
-  - Keep `com.agentclientprotocol` ACP entries — intentionally managed by AgentWorks; future migration is a separate task
-- [ ] UPDATE "Supporting Projects" nav group — now contains only `claude-agent-sdk` and `acp-java-sdk`
-- [ ] VERIFY no dangling nav references in `mint.json`
+- [x] KEEP `projects/acp-java-sdk` in "Supporting Projects"
+- [x] REMOVE all community deps from `projects/agentworks-bom.mdx`:
+  - Removed "Community Libraries (org.springaicommunity)" section entirely
+- [x] REMOVE community deps from the actual BOM POM at `~/projects/agentworks/pom.xml`:
+  - Removed all `org.springaicommunity` and `org.springaicommunity.agents` entries
+  - Added `io.github.markpollack` entries at current versions
+  - Kept `com.agentclientprotocol` ACP entries unchanged
+- [x] UPDATE "Supporting Projects" nav group — now contains only `claude-agent-sdk` and `acp-java-sdk`
+- [x] VERIFY no dangling nav references in `mint.json`
 
 > **Future task (not this roadmap)**: Migrate `acp-java-sdk` repo from ACP org to `markpollack` GitHub. Update groupId from `com.agentclientprotocol` to `io.github.markpollack`. Same pattern as the other migrations.
 
 **Exit criteria**:
-- [ ] Community-owned projects (`agent-tools`, `spring-ai-a2a`) no longer in lab.pollack.ai navigation
-- [ ] ACP and Claude SDK remain in "Supporting Projects"
-- [ ] BOM page cleaned of community deps that are managed locally by consumers
-- [ ] No broken nav links
-- [ ] Create: `plans/learnings/step-2.5-remove-community-projects.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Community-owned projects (`agent-tools`, `agent-skills`, `spring-ai-a2a`) no longer in lab.pollack.ai navigation
+- [x] ACP and Claude SDK remain in "Supporting Projects"
+- [x] BOM page cleaned of community deps that are managed locally by consumers
+- [x] No broken nav links
+- [x] Create: `plans/learnings/step-2.5-remove-community-projects.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

@@ -1,7 +1,7 @@
 # Learnings: Documentation Migration
 
 > **Last compacted**: 2026-05-16
-> **Covers through**: Stage 3 (lab.pollack.ai complete)
+> **Covers through**: Stage 4 (both sites complete)
 
 This is the **Tier 1 compacted summary**. For details on specific steps, see the per-step files (Tier 2).
 
@@ -35,6 +35,9 @@ This is the **Tier 1 compacted summary**. For details on specific steps, see the
 - agent-client had groupId `org.springaicommunity.agents` (not plain `org.springaicommunity`) — easy to miss in grep filters.
 - Claude SDK publishable artifact is `claude-code-sdk` (not `claude-agent-sdk` or `claude-agent-sdk-java`).
 - BOM POM changes are in a separate repo (`~/projects/agentworks/`) — must commit separately.
+- Community site Claude SDK uses `.md` extension (not `.mdx`) — referenced as `claude-agent-sdk/index` in nav (no extension).
+- `agent-journal` has no page on the community site — nothing to banner or move there.
+- Community site nav uses nested `"group"` objects inside `"Projects"` parent — need `jq` path like `.navigation[] | select(.group=="Projects") | .pages[] | select(.group?=="Agentic")`.
 
 ---
 
@@ -50,6 +53,8 @@ This is the **Tier 1 compacted summary**. For details on specific steps, see the
 | `step-2.3-external-links.md` | 2.3 | External docs link changes |
 | `step-2.5-remove-community-projects.md` | 2.5 | Nav removal, BOM POM cleanup |
 | `step-3.1-migration-notes.md` | 3.1 | Per-page callout additions |
+| `step-4.1-community-banners.md` | 4.1 | Community site banners |
+| `step-4.2-community-nav.md` | 4.2 | Community site nav reorganization |
 
 ---
 
@@ -58,4 +63,4 @@ This is the **Tier 1 compacted summary**. For details on specific steps, see the
 | Timestamp | Change | Trigger |
 |-----------|--------|---------|
 | 2026-05-16T12:30-04:00 | Initial draft | — |
-| 2026-05-16 | Compacted through Stage 3 | Stage 3 verification complete |
+| 2026-05-16 | Compacted through Stage 4 | Full migration complete |

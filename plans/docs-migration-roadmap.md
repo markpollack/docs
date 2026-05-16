@@ -75,11 +75,11 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 1.0: Inventory and Context Load
 
 **Entry criteria**:
-- [ ] Read this roadmap fully
-- [ ] Read: `~/projects/docs/mint.json` (navigation structure)
+- [x] Read this roadmap fully
+- [x] Read: `~/projects/docs/mint.json` (navigation structure)
 
 **Work items**:
-- [ ] RUN inventory commands to confirm current state:
+- [x] RUN inventory commands to confirm current state:
   ```bash
   # GitHub URLs
   grep -rn "github.com/spring-ai-community" --include="*.mdx" .
@@ -97,19 +97,19 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
   # Badges, shields, Maven Central search links
   grep -rn "central.sonatype.com.*springaicommunity" --include="*.mdx" .
   ```
-- [ ] CLASSIFY each hit:
+- [x] CLASSIFY each hit:
   - Migrated project reference → needs update
   - Non-migrated project reference → leave alone
   - Historical/migration context → allowed
-- [ ] VERIFY release gates: confirm all 6 Maven-published projects are on Maven Central
-- [ ] RECORD Maven Central artifact URLs in `plans/learnings/step-1.0-inventory.md` (makes "confirmed" auditable)
-- [ ] DOCUMENT any additional references found beyond this roadmap's mapping table
+- [x] VERIFY release gates: confirm all 6 Maven-published projects are on Maven Central
+- [x] RECORD Maven Central artifact URLs in `plans/learnings/step-1.0-inventory.md` (makes "confirmed" auditable)
+- [x] DOCUMENT any additional references found beyond this roadmap's mapping table
 
 **Exit criteria**:
-- [ ] Inventory complete with classified hit list
-- [ ] All release gates confirmed
-- [ ] Create: `plans/learnings/step-1.0-inventory.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Inventory complete with classified hit list
+- [x] All release gates confirmed
+- [x] Create: `plans/learnings/step-1.0-inventory.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

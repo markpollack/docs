@@ -89,11 +89,11 @@ All 6 Maven-published artifacts confirmed live on Maven Central:
 
 1. **BOM page is significantly stale**: Shows agent-client at 0.12.2 (current: 0.18.0), agent-bench at 0.2.1 (current: 0.3.0), agent-judge at 0.9.1 (current: 0.10.0), agent-sandbox at 0.9.1 (current: 0.9.2), claude-code-sdk at 1.0.0 (current: 1.1.0), journal-core at 1.0.0 (current: 1.1.0). All under wrong groupIds.
 
-2. **BOM page lists `agent-advisor-judge`**: This module no longer exists in agent-client 0.18.0 (removed per pre-execution context). Must be removed.
+2. **~~BOM page lists `agent-advisor-judge`~~**: RESOLVED — removed from BOM docs page (module no longer exists in agent-client 0.18.0).
 
-3. **BOM page lists `agent-launcher` and `agent-qwen-code`**: Need to verify these still exist in agent-client 0.18.0. They may have been removed or renamed.
+3. **~~BOM page lists `agent-launcher` and `agent-qwen-code`~~**: RESOLVED — both confirmed present in agent-client 0.18.0 source. Also found new modules: `agent-swe`, `agent-client-spring-boot-autoconfigure`, `agent-tck`.
 
-4. **`projects/index.mdx:123`**: Describes "Supporting Projects" with link to springaicommunity.mintlify.app — needs review in Step 2.3 since some of those projects migrated.
+4. **~~`projects/index.mdx:123`~~**: RESOLVED — rewrote "SDKs & Protocols" description to remove stale spring-ai-community attribution and link.
 
 5. **Navigation note**: `projects/agent-tools` (= spring-ai-agent-utils) is in "AgentWorks" group currently. Per roadmap Step 2.5, it should be removed from nav.
 

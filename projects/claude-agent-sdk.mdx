@@ -3,6 +3,14 @@ title: "Claude Agent SDK (Java)"
 description: "Java SDK for Claude Code CLI integration — three-API architecture, sessions, MCP, multi-agent orchestration"
 ---
 
+<Info>
+This project has moved from the `spring-ai-community` GitHub organization to
+`markpollack`. New releases are published under the Maven groupId
+`io.github.markpollack`, and Java packages now use the `io.github.markpollack`
+namespace. If you previously used `org.springaicommunity`, update your
+dependency coordinates and imports to the current values shown below.
+</Info>
+
 Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies. Full Spring Boot auto-configuration.
 
 This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-workflow) — each step runs a full multi-turn Claude session internally.

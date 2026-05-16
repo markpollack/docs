@@ -3,6 +3,12 @@ title: "Agent Judge"
 description: "Framework-neutral evaluation layer for AI agent output across Spring AI, LangChain4j, Koog, and CLI agents"
 ---
 
+<Info>
+This project now publishes new releases under the Maven groupId
+`io.github.markpollack`. If you previously used `org.springaicommunity`,
+update your dependency coordinates to the current values shown below.
+</Info>
+
 Judges are like unit tests for your agent: executable checks that decide whether an agent output satisfies a goal. You wouldn't ship application code without tests or assertions; agents need the same discipline.
 
 Agent Judge provides the evaluation framework: deterministic rules, command execution, file comparison, RAG evaluation, and LLM-powered assessment. Judges compose into juries with configurable voting strategies, so cheap deterministic checks can run before expensive LLM judges.

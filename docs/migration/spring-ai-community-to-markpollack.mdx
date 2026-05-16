@@ -3,7 +3,27 @@ title: "Migration: spring-ai-community to markpollack"
 description: "Coordinate and repository changes for projects that moved from the spring-ai-community GitHub organization"
 ---
 
-Several projects have moved from the `spring-ai-community` GitHub organization to Mark Pollack's personal GitHub namespace as part of a repository and release-coordinate cleanup. Projects that remain under `spring-ai-community` continue to use their existing repositories and coordinates.
+## Why these projects moved
+
+Several agent-engineering projects have moved from the `spring-ai-community`
+GitHub organization to `markpollack`.
+
+These projects began alongside Spring AI work and were originally hosted in the
+Spring AI Community organization while their scope was still emerging. Over time,
+their purpose became clearer: they are general-purpose Java libraries for working
+with agents, evaluation, benchmarking, sandboxing, and agent execution. They do
+not depend on Spring AI, and they are not Spring AI extensions.
+
+For that reason, keeping them under `spring-ai-community` created the wrong
+expectation. Users could reasonably assume these projects were part of the
+Spring AI ecosystem or required Spring AI to use. Moving them to `markpollack`
+makes the boundary clearer: Spring AI Community remains focused on Spring AI
+community projects, while these libraries now live under the namespace where I
+maintain and release them directly.
+
+This is a repository and release-coordinate cleanup, not a deprecation of the
+Spring AI Community organization. Projects that remain under
+`spring-ai-community` continue to use their existing repositories and coordinates.
 
 ## What moved
 

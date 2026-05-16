@@ -3,6 +3,14 @@ title: "Agent Sandbox"
 description: "Isolated command execution — Local, Docker, and E2B cloud backends behind a unified API"
 ---
 
+<Info>
+This project has moved from the `spring-ai-community` GitHub organization to
+`markpollack`. New releases are published under the Maven groupId
+`io.github.markpollack`, and Java packages now use the `io.github.markpollack`
+namespace. If you previously used `org.springaicommunity`, update your
+dependency coordinates and imports to the current values shown below.
+</Info>
+
 A unified API for isolated command execution across multiple backends. Whether you need local process isolation, Docker container security, or cloud-based E2B microVMs, the same `Sandbox` interface works everywhere. Backends are interchangeable — code written for `LocalSandbox` works identically with `DockerSandbox` or `E2BSandbox`.
 
 ## Backends

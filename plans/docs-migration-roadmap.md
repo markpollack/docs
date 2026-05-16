@@ -307,22 +307,22 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 3.0: Stage 3 Entry
 
 **Entry criteria**:
-- [ ] Stage 2 complete
-- [ ] Read all Stage 2 learnings files
+- [x] Stage 2 complete
+- [x] Read all Stage 2 learnings files
 
 **Work items**:
-- [ ] REVIEW for any remaining issues from Stage 2
+- [x] REVIEW for any remaining issues from Stage 2
 
 **Exit criteria**:
-- [ ] Ready for migration notes
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Ready for migration notes
+- [x] Update `ROADMAP.md` checkboxes
 
 ---
 
 ### Step 3.1: Add Per-Page Migration Callouts
 
 **Entry criteria**:
-- [ ] Step 3.0 complete
+- [x] Step 3.0 complete
 
 **Work items**:
 - [ ] ADD migration note to pages for repos that moved from spring-ai-community GitHub:
@@ -361,14 +361,14 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
   </Info>
   ```
 
-- [ ] VERIFY `claude-agent-sdk-java-tutorial` references already point to new GitHub URL (fixed in Step 2.1); no Maven callout needed
+- [x] VERIFY `claude-agent-sdk-java-tutorial` references already point to new GitHub URL (fixed in Step 2.1); no Maven callout needed
 
 **Exit criteria**:
-- [ ] All 6 Maven-published project pages have appropriate migration notes
-- [ ] Tutorial references point to new GitHub URL
-- [ ] Notes are factual, non-alarming, and use correct variant copy per project
-- [ ] Create: `plans/learnings/step-3.1-migration-notes.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] All 6 Maven-published project pages have appropriate migration notes
+- [x] Tutorial references point to new GitHub URL
+- [x] Notes are factual, non-alarming, and use correct variant copy per project
+- [x] Create: `plans/learnings/step-3.1-migration-notes.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

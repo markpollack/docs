@@ -1,0 +1,130 @@
+---
+title: "Migration: spring-ai-community to markpollack"
+description: "Coordinate and repository changes for projects that moved from the spring-ai-community GitHub organization"
+---
+
+Several projects have moved from the `spring-ai-community` GitHub organization to Mark Pollack's personal GitHub namespace as part of a repository and release-coordinate cleanup. Projects that remain under `spring-ai-community` continue to use their existing repositories and coordinates.
+
+## What moved
+
+| Project | Old Repository | New Repository |
+|---|---|---|
+| claude-agent-sdk-java | `spring-ai-community/claude-agent-sdk-java` | `markpollack/claude-agent-sdk-java` |
+| agent-client | `spring-ai-community/agent-client` | `markpollack/agent-client` |
+| agent-sandbox | `spring-ai-community/agent-sandbox` | `markpollack/agent-sandbox` |
+| agent-journal | `spring-ai-community/agent-journal` | `markpollack/agent-journal` |
+| agent-bench | `spring-ai-community/agent-bench` | `markpollack/agent-bench` |
+| agent-judge | `markpollack/agent-judge` (already) | `markpollack/agent-judge` |
+| claude-agent-sdk-java-tutorial | `spring-ai-community/claude-agent-sdk-java-tutorial` | `markpollack/claude-agent-sdk-java-tutorial` |
+
+## Maven coordinate changes
+
+All migrated projects now publish under the `io.github.markpollack` groupId.
+
+| Project | Old GroupId | New GroupId | Current Version |
+|---|---|---|---|
+| claude-agent-sdk-java | `org.springaicommunity` | `io.github.markpollack` | 1.1.0 |
+| agent-client | `org.springaicommunity.agents` | `io.github.markpollack` | 0.18.0 |
+| agent-sandbox | `org.springaicommunity` | `io.github.markpollack` | 0.9.2 |
+| agent-journal | `org.springaicommunity` | `io.github.markpollack` | 1.1.0 |
+| agent-bench | `org.springaicommunity` | `io.github.markpollack` | 0.3.0 |
+| agent-judge | `org.springaicommunity` | `io.github.markpollack` | 0.10.0 |
+
+## What to change in your build
+
+<Steps>
+<Step title="Update groupId and version">
+
+**Before:**
+
+```xml
+<dependency>
+    <groupId>org.springaicommunity</groupId>
+    <artifactId>agent-judge-core</artifactId>
+    <version>0.9.1</version>
+</dependency>
+```
+
+**After:**
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-core</artifactId>
+    <version>0.10.0</version>
+</dependency>
+```
+
+</Step>
+<Step title="For agent-client specifically (different old groupId)">
+
+**Before:**
+
+```xml
+<dependency>
+    <groupId>org.springaicommunity.agents</groupId>
+    <artifactId>agent-client-core</artifactId>
+    <version>0.12.2</version>
+</dependency>
+```
+
+**After:**
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-client-core</artifactId>
+    <version>0.18.0</version>
+</dependency>
+```
+
+</Step>
+<Step title="Or use the AgentWorks BOM">
+
+Import the BOM to avoid specifying versions for each artifact:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.github.markpollack</groupId>
+            <artifactId>agentworks-bom</artifactId>
+            <version>1.0.10</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+</Step>
+</Steps>
+
+## Package name changes
+
+Java packages follow the new groupId. Update your import statements:
+
+| Project | Old Package Root | New Package Root |
+|---|---|---|
+| claude-agent-sdk-java | `org.springaicommunity.claude.*` | `io.github.markpollack.claude.*` |
+| agent-client | `org.springaicommunity.agents.*` | `io.github.markpollack.agents.*` |
+| agent-sandbox | `org.springaicommunity.sandbox.*` | `io.github.markpollack.sandbox.*` |
+| agent-journal | `org.springaicommunity.journal.*` | `io.github.markpollack.journal.*` |
+| agent-bench | `org.springaicommunity.bench.*` | `io.github.markpollack.bench.*` |
+| agent-judge | `org.springaicommunity.judge.*` | `io.github.markpollack.judge.*` |
+
+## What did NOT move
+
+These projects remain under `spring-ai-community` with their existing coordinates:
+
+| Project | Repository | GroupId |
+|---|---|---|
+| spring-ai-a2a | `spring-ai-community/spring-ai-a2a` | `org.springaicommunity` |
+| spring-ai-agent-utils | `spring-ai-community/spring-ai-agent-utils` | `org.springaicommunity` |
+| spring-testing-skills | `spring-ai-community/spring-testing-skills` | `org.springaicommunity` |
+
+These projects continue to use their existing repositories and Maven coordinates. No action is needed if you depend on them.
+
+<Note>
+**ACP Java SDK** (`acp-java-sdk`) belongs to the official [Agent Client Protocol](https://github.com/agentclientprotocol) community organization, not `spring-ai-community`. It publishes under the `com.agentclientprotocol` groupId and is not part of this migration.
+</Note>

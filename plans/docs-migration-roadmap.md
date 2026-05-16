@@ -110,18 +110,18 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 - [x] All release gates confirmed
 - [x] Create: `plans/learnings/step-1.0-inventory.md`
 - [x] Update `ROADMAP.md` checkboxes
-- [ ] COMMIT
+- [x] COMMIT
 
 ---
 
 ### Step 1.1: Create Central Migration Page
 
 **Entry criteria**:
-- [ ] Step 1.0 complete
-- [ ] Read: `plans/learnings/step-1.0-inventory.md`
+- [x] Step 1.0 complete
+- [x] Read: `plans/learnings/step-1.0-inventory.md`
 
 **Work items**:
-- [ ] CREATE `docs/migration/spring-ai-community-to-markpollack.mdx` with:
+- [x] CREATE `docs/migration/spring-ai-community-to-markpollack.mdx` with:
   - Which repositories moved and why (factual: "repository and release-coordinate cleanup")
   - Old vs new Maven coordinates table (from mapping above)
   - Which Spring AI Community repositories did NOT move (list the three `org.springaicommunity` projects with their correct coordinates)
@@ -130,14 +130,14 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
   - Package name changes (old imports → new imports)
   - Tone: factual, respectful — not a deprecation of spring-ai-community:
     > Several projects have moved from the `spring-ai-community` GitHub organization to Mark Pollack's personal GitHub namespace as part of a repository and release-coordinate cleanup. Projects that remain under `spring-ai-community` continue to use their existing repositories and coordinates.
-- [ ] ADD the migration page to `mint.json` navigation
+- [x] ADD the migration page to `mint.json` navigation
 - [ ] VERIFY the page renders locally if Mintlify dev server is available
 
 **Exit criteria**:
-- [ ] Migration page created with complete coordinate and package mapping
-- [ ] Page accessible from site navigation
-- [ ] Create: `plans/learnings/step-1.1-migration-page.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Migration page created with complete coordinate and package mapping
+- [x] Page accessible from site navigation
+- [x] Create: `plans/learnings/step-1.1-migration-page.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

@@ -154,6 +154,12 @@
       ]
     },
     {
+      "group": "Migration",
+      "pages": [
+        "docs/migration/spring-ai-community-to-markpollack"
+      ]
+    },
+    {
       "group": "Experiments",
       "pages": [
         "experiments/index",

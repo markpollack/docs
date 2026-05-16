@@ -376,41 +376,26 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 3.2: Final Verification and Consolidation
 
 **Entry criteria**:
-- [ ] Step 3.1 complete
-- [ ] Read: `plans/learnings/step-3.1-migration-notes.md`
+- [x] Step 3.1 complete
+- [x] Read: `plans/learnings/step-3.1-migration-notes.md`
 
 **Work items**:
-- [ ] RUN full verification suite:
-  ```bash
-  # Broad sweep — any remaining spring-ai-community refs for migrated repos?
-  grep -rn "spring-ai-community" --include="*.mdx" . | grep -v migration | grep -v "acp-java-sdk\|spring-ai-a2a\|spring-ai-agent-utils\|spring-testing-skills"
-  
-  # Any remaining old groupIds for migrated repos?
-  grep -rn "org.springaicommunity" --include="*.mdx" . | grep -v migration | grep -v "spring-ai-agent-utils\|spring-testing-skills\|spring-ai-a2a"
-  
-  # Any stale external docs URLs?
-  grep -rn "springaicommunity.mintlify.app" --include="*.mdx" .
-  
-  # Non-migrated spring-ai-community projects (should still exist if pages kept)
-  grep -rn "spring-ai-community/spring-ai-a2a\|spring-ai-community/spring-ai-agent-utils\|spring-ai-community/spring-testing-skills" --include="*.mdx" .
-  
-  # Stale package names?
-  grep -rn "import org.springaicommunity\|package org.springaicommunity" --include="*.mdx" . | grep -v migration | grep -v "spring-ai-agent-utils\|spring-testing-skills"
-  
-  # Raw broad sweep (no negative filters) for final manual classification
-  grep -rn "spring-ai-community\|org.springaicommunity\|springaicommunity.mintlify.app" --include="*.mdx" .
-  ```
-- [ ] MANUALLY classify ALL hits from the raw broad sweep:
-  - Intentional non-migrated reference → OK
-  - Migration page/callout reference → OK
-  - Missed stale reference → fix
-- [ ] COMPACT learnings into `plans/learnings/LEARNINGS.md`
-- [ ] UPDATE this roadmap — mark all steps complete
+- [x] RUN full verification suite — all filtered commands pass clean
+- [x] MANUALLY classify ALL hits from raw broad sweep:
+  - Migration callouts on 5 project pages → OK (intentional "moved from" language)
+  - Migration page content → OK
+  - Non-migrated project pages (agent-skills, agent-tools, spring-ai-a2a) → OK
+  - ACP Java SDK GitHub link → OK (separate ownership)
+  - experiments/code-coverage-v3 spring-testing-skills reference → OK
+  - agent-tools.mdx groupId in Maven snippet → OK (non-migrated)
+  - springaicommunity.mintlify.app in ACP/agent-tools/spring-ai-a2a → OK (non-migrated)
+- [x] COMPACT learnings into `plans/learnings/LEARNINGS.md`
+- [x] UPDATE this roadmap — mark all steps complete
 
 **Exit criteria**:
-- [ ] Filtered verification commands pass clean; raw broad sweep has only manually classified expected hits
-- [ ] `plans/learnings/LEARNINGS.md` updated with full migration learnings
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Filtered verification commands pass clean; raw broad sweep has only manually classified expected hits
+- [x] `plans/learnings/LEARNINGS.md` updated with full migration learnings
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

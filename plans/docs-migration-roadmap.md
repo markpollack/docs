@@ -218,23 +218,23 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 2.3: Update External Docs Links
 
 **Entry criteria**:
-- [ ] Step 2.2 complete
-- [ ] Read: `plans/learnings/step-2.2-maven-coordinates.md`
+- [x] Step 2.2 complete
+- [x] Read: `plans/learnings/step-2.2-maven-coordinates.md`
 
 **Work items**:
-- [ ] UPDATE `projects/claude-agent-sdk.mdx`: all `springaicommunity.mintlify.app` links → `lab.pollack.ai` equivalents (or internal paths if content is on this site)
-- [ ] UPDATE `projects/agent-client.mdx`: `springaicommunity.mintlify.app` links → `lab.pollack.ai`
-- [ ] UPDATE `projects/agent-sandbox.mdx`: `springaicommunity.mintlify.app` link → `lab.pollack.ai`
-- [ ] VERIFY:
+- [x] UPDATE `projects/claude-agent-sdk.mdx`: all `springaicommunity.mintlify.app` links → GitHub tutorial repo paths
+- [x] UPDATE `projects/agent-client.mdx`: `springaicommunity.mintlify.app` links → replaced with GitHub source card
+- [x] UPDATE `projects/agent-sandbox.mdx`: `springaicommunity.mintlify.app` link → replaced with GitHub source card
+- [x] VERIFY:
   ```bash
   grep -rn "springaicommunity.mintlify.app" --include="*.mdx" .
   ```
-  Expected: zero hits.
+  Zero hits for migrated projects. Remaining hits are non-migrated (ACP, A2A, agent-tools).
 
 **Exit criteria**:
-- [ ] Zero `springaicommunity.mintlify.app` references
-- [ ] Create: `plans/learnings/step-2.3-external-links.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Zero `springaicommunity.mintlify.app` references for migrated projects
+- [x] Create: `plans/learnings/step-2.3-external-links.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

@@ -188,29 +188,29 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 2.2: Update Maven Coordinates and Versions
 
 **Entry criteria**:
-- [ ] Step 2.1 complete
-- [ ] Read: `plans/learnings/step-2.1-github-urls.md`
+- [x] Step 2.1 complete
+- [x] Read: `plans/learnings/step-2.1-github-urls.md`
 
 **Work items**:
-- [ ] UPDATE `projects/agent-client.mdx`: version 0.16.0 → 0.18.0, groupId → `io.github.markpollack`, Maven Central search URL
-- [ ] UPDATE `projects/agentworks-bom.mdx`:
+- [x] UPDATE `projects/agent-client.mdx`: version 0.16.0 → 0.18.0, groupId → `io.github.markpollack`, Maven Central search URL
+- [x] UPDATE `projects/agentworks-bom.mdx`:
   - Move agent-judge, agent-sandbox, agent-bench, agent-journal, `claude-code-sdk` (confirmed artifactId — the publishable module inside the `claude-agent-sdk-java` repo), and agent-client entries from "Community Libraries" and "Agent Client" sections to the "Agent Engineering (io.github.markpollack)" section (create if it doesn't already exist). Note: if `agent-journal` is not currently in the BOM docs page, add it — it is a released `io.github.markpollack` artifact (1.1.0)
   - Update versions to current releases
   - Remove `agent-advisor-judge` (no longer exists in agent-client)
   - After moving migrated entries out, any remaining `org.springaicommunity` entries (`spring-ai-agent-utils`, `spring-testing-skills`) stay temporarily; Step 2.5 removes them and the now-redundant community section header
-- [ ] UPDATE any other pages with stale Maven coordinates found in Step 1.0 inventory
-- [ ] VERIFY:
+- [x] UPDATE any other pages with stale Maven coordinates found in Step 1.0 inventory
+- [x] VERIFY:
   ```bash
   grep -rn "org.springaicommunity" --include="*.mdx" . | grep -v migration | grep -v "spring-ai-agent-utils\|spring-testing-skills\|spring-ai-a2a"
   ```
   Expected: zero hits (only non-migrated projects should remain).
 
 **Exit criteria**:
-- [ ] All migrated projects show `io.github.markpollack` with correct versions
-- [ ] BOM page accurately reflects current architecture
-- [ ] Non-migrated projects unchanged
-- [ ] Create: `plans/learnings/step-2.2-maven-coordinates.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] All migrated projects show `io.github.markpollack` with correct versions
+- [x] BOM page accurately reflects current architecture
+- [x] Non-migrated projects unchanged
+- [x] Create: `plans/learnings/step-2.2-maven-coordinates.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

@@ -138,7 +138,7 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 - [x] Page accessible from site navigation
 - [x] Create: `plans/learnings/step-1.1-migration-page.md`
 - [x] Update `ROADMAP.md` checkboxes
-- [ ] COMMIT
+- [x] COMMIT
 
 ---
 
@@ -147,40 +147,40 @@ Update the lab.pollack.ai docs site (`~/projects/docs/`) and the spring-ai-commu
 ### Step 2.0: Stage 2 Entry
 
 **Entry criteria**:
-- [ ] Stage 1 complete
-- [ ] Read: `plans/learnings/step-1.1-migration-page.md`
+- [x] Stage 1 complete
+- [x] Read: `plans/learnings/step-1.1-migration-page.md`
 
 **Work items**:
-- [ ] REVIEW Stage 1 learnings for any scope changes
+- [x] REVIEW Stage 1 learnings for any scope changes
 
 **Exit criteria**:
-- [ ] Ready to proceed with sweep
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Ready to proceed with sweep
+- [x] Update `ROADMAP.md` checkboxes
 
 ---
 
 ### Step 2.1: Update GitHub URLs for Migrated Projects
 
 **Entry criteria**:
-- [ ] Step 2.0 complete
+- [x] Step 2.0 complete
 
 **Work items**:
-- [ ] UPDATE `projects/agent-client.mdx`: GitHub URL → `markpollack/agent-client`
-- [ ] UPDATE `projects/agent-sandbox.mdx`: GitHub URL → `markpollack/agent-sandbox`
-- [ ] UPDATE `projects/agent-bench.mdx`: GitHub URL + clone URL → `markpollack/agent-bench`
-- [ ] UPDATE `projects/claude-agent-sdk.mdx`: source URL → `markpollack/claude-agent-sdk-java`, tutorial URL → `markpollack/claude-agent-sdk-java-tutorial`
-- [ ] UPDATE `docs/agent-bench/getting-started.mdx`: clone URL → `markpollack/agent-bench`
-- [ ] VERIFY:
+- [x] UPDATE `projects/agent-client.mdx`: GitHub URL → `markpollack/agent-client`
+- [x] UPDATE `projects/agent-sandbox.mdx`: GitHub URL → `markpollack/agent-sandbox`
+- [x] UPDATE `projects/agent-bench.mdx`: GitHub URL + clone URL → `markpollack/agent-bench`
+- [x] UPDATE `projects/claude-agent-sdk.mdx`: source URL → `markpollack/claude-agent-sdk-java`, tutorial URL → `markpollack/claude-agent-sdk-java-tutorial`
+- [x] UPDATE `docs/agent-bench/getting-started.mdx`: clone URL → `markpollack/agent-bench`
+- [x] VERIFY:
   ```bash
   grep -rn "github.com/spring-ai-community" --include="*.mdx" . | grep -v "acp-java-sdk\|spring-ai-a2a\|spring-ai-agent-utils\|spring-testing-skills" | grep -v migration
   ```
   Expected: zero hits.
 
 **Exit criteria**:
-- [ ] Zero old GitHub URLs for migrated repos (except migration page)
-- [ ] Non-migrated repos unchanged
-- [ ] Create: `plans/learnings/step-2.1-github-urls.md`
-- [ ] Update `ROADMAP.md` checkboxes
+- [x] Zero old GitHub URLs for migrated repos (except migration page)
+- [x] Non-migrated repos unchanged
+- [x] Create: `plans/learnings/step-2.1-github-urls.md`
+- [x] Update `ROADMAP.md` checkboxes
 - [ ] COMMIT
 
 ---

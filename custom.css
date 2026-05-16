@@ -122,6 +122,20 @@ footer {
   letter-spacing: 0.1em;
 }
 
+/* --- Primary tab: rename "Documentation" to "Projects" ---
+   primaryTab config is broken in Mintlify, so we remove it
+   and use CSS to relabel the default tab */
+.nav-tabs-item:first-child {
+  font-size: 0 !important;
+  line-height: 0;
+}
+
+.nav-tabs-item:first-child::after {
+  content: "Projects";
+  font-size: 0.875rem;
+  line-height: normal;
+}
+
 /* --- Scrollbar: subtle, matches deep space bg --- */
 .dark ::-webkit-scrollbar {
   width: 6px;

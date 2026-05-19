@@ -1,6 +1,6 @@
 ---
 title: "Agent Journal"
-description: "Behavioral trace capture for agent research and observability"
+description: "Structured event logging, behavioral trace extraction, and human feedback for agent research"
 ---
 
 <Info>
@@ -11,32 +11,196 @@ namespace. If you previously used `org.springaicommunity`, update your
 dependency coordinates and imports to the current values shown below.
 </Info>
 
-<Warning>
-**Early Stage** — Agent Journal is in active design. The trace capture patterns described here are currently implemented ad-hoc in the experiment repos and being extracted into a standalone library.
-</Warning>
-
 ## Overview
 
-Agent Journal captures the behavioral traces that make agent research possible. Every tool call, state transition, and decision point is logged in a structured format that feeds directly into Markov chain analysis and behavioral fingerprinting.
+Agent Journal captures the structured behavioral traces that make agent research possible. Every LLM call, tool invocation, state transition, and decision point is logged as a typed event in an append-only journal. The `EvalSubject` extraction layer converts heterogeneous event sources into a uniform stream of behavioral units ready for evaluation by [Agent Judge](/projects/agent-judge). A human feedback API records reviewer judgments with typed scores for judge calibration and golden dataset creation.
+
+## Architecture
+
+<CardGroup cols={3}>
+  <Card title="Event System" icon="timeline">
+    Sealed event hierarchy: LLM calls, tool calls, state changes, git events, metrics, custom events
+  </Card>
+  <Card title="EvalSubject Extraction" icon="crosshairs">
+    Source-neutral behavioral units for evaluation — 9 subject kinds from journal events or SDK captures
+  </Card>
+  <Card title="Human Feedback" icon="thumbs-up">
+    Typed feedback events with binary, numerical, and categorical scores for judge calibration
+  </Card>
+</CardGroup>
+
+## Modules
+
+| Module | Description | Dependencies |
+|--------|-------------|--------------|
+| `journal-core` | Events, storage, EvalSubject, Feedback | Zero external deps |
+| `claude-code-capture` | Claude Code SDK → journal bridge, `PhaseCaptureSources` | claude-code-sdk |
+
+## Installation
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>journal-core</artifactId>
+    <version>1.1.0</version>
+</dependency>
+```
+
+For Claude Code SDK integration:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>claude-code-capture</artifactId>
+    <version>1.1.0</version>
+</dependency>
+```
+
+## EvalSubject
+
+`EvalSubject` is the source-neutral unit of recorded agent behavior that can be judged. Each subject carries an ID, kind, source reference, and metadata extracted from the original event.
+
+### EvalSubjectKind
+
+Nine kinds classify the type of behavior:
+
+| Kind | Source Event |
+|------|-------------|
+| `LLM_CALL` | LLM invocation with tokens, cost, duration |
+| `TOOL_CALL` | Individual tool invocation |
+| `WORKFLOW_STEP` | High-level workflow phase |
+| `ROUTER_DECISION` | Routing or dispatch decision |
+| `RETRIEVAL_RESULT` | RAG or search retrieval |
+| `FINAL_OUTPUT` | Terminal agent output |
+| `FEEDBACK` | Human feedback event |
+| `STATE_CHANGE` | State transition |
+| `CUSTOM` | Application-defined behavior |
+
+### EvalSubjectSource
+
+Functional interface that adapts a specific data source into a stream of `EvalSubject` records:
+
+```java
+@FunctionalInterface
+public interface EvalSubjectSource {
+    Stream<EvalSubject> subjects();
+}
+```
+
+### EvalSubjectSources
+
+Factory for creating sources from journal data:
+
+```java
+// From stored journal events
+EvalSubjectSource source = EvalSubjectSources.fromJournal(
+    storage, experimentId, runId);
+
+// From a pre-loaded event list
+EvalSubjectSource source = EvalSubjectSources.fromEvents(events, runId);
+```
+
+The `claude-code-capture` module provides `PhaseCaptureSources.fromPhaseCaptures(captures)` for extracting subjects from Claude Code SDK `PhaseCapture` records — each phase becomes an `LLM_CALL` subject and individual tool uses become separate `TOOL_CALL` subjects.
+
+### EvalSubjectQuery
+
+Fluent selection and grouping over subjects:
+
+```java
+EvalSubjectSet toolCalls = EvalSubjectQuery.from(source)
+    .kind(EvalSubjectKind.TOOL_CALL)
+    .where(s -> s.metadata().containsKey("success"))
+    .toSet();
+
+Map<EvalSubjectKind, EvalSubjectSet> byKind =
+    EvalSubjectQuery.from(source).groupBy(EvalSubject::kind);
+```
+
+## Human Feedback
+
+Record human reviewer judgments for judge agreement analysis and golden dataset creation.
+
+### FeedbackTarget
+
+Identifies what the feedback applies to:
+
+```java
+FeedbackTarget.item("ITEM-001")                         // item-level
+FeedbackTarget.subject("ITEM-001", "subj-42", "TOOL_CALL")  // subject-level
+FeedbackTarget.run()                                     // run-level
+```
+
+### FeedbackEvent
+
+Records a single piece of human feedback. Implements `JournalEvent` and is stored in the journal's `feedback.jsonl` sidecar:
+
+```java
+FeedbackEvent.thumbsUp(target, "reviewer-name")
+FeedbackEvent.thumbsDown(target, "reviewer-name")
+FeedbackEvent.rated(target, 0.8, 1.0, "reviewer-name")
+FeedbackEvent.labeled(target, List.of("correct", "efficient"), "reviewer-name")
+```
+
+### FeedbackScore
+
+Typed score with three kinds:
+
+| Factory Method | ScoreKind | Description |
+|---------------|-----------|-------------|
+| `binary(true)` | `BINARY` | Thumbs up / thumbs down |
+| `numerical(0.8, 1.0)` | `NUMERICAL` | Value with max, `normalized()` returns `OptionalDouble` |
+| `categorical("correct")` | `CATEGORICAL` | Discrete category label |
+
+### FeedbackService
+
+Records and queries feedback, exports reviewed items for golden dataset creation:
+
+```java
+FeedbackService feedback = new DefaultFeedbackService(storage);
+
+// Record
+feedback.recordFeedback(experimentId, runId, event);
+
+// Query
+List<FeedbackEvent> events = feedback.getFeedback(experimentId, runId);
+List<FeedbackEvent> itemEvents = feedback.getFeedbackForItem(experimentId, itemId);
+
+// Export for golden dataset creation
+List<ReviewedItem> reviewed = feedback.exportReviewedItems(experimentId);
+```
+
+`ReviewedItem` is a projection record containing `itemId`, `runId`, `feedback`, and `itemMetadata` — suitable for building labeled datasets from human judgments.
 
 ## What It Captures
 
-- **Tool-call sequences** — Ordered trace of every tool invocation
-- **State transitions** — Movement between the 9-state taxonomy (ORIENT, READ, EDIT, BUILD, TEST, etc.)
-- **Timing data** — Duration per state, time-per-intent analysis
-- **Decision metadata** — What the agent considered vs. what it chose
+Events are stored as an append-only `events.jsonl` log per run:
+
+```
+.tuvium/experiments/{experimentId}/runs/{runId}/
+├── events.jsonl      # immutable execution log
+└── feedback.jsonl    # append-only human feedback
+```
+
+The sealed `JournalEvent` hierarchy includes:
+- **LLMCallEvent** — tokens, cost, duration, provider, model
+- **ToolCallEvent** — tool name, arguments, result, duration
+- **StateChangeEvent** — from/to states in the 9-state taxonomy
+- **MetricEvent** — counters, timers, gauges with dimensional tags
+- **GitEvent** — commit, diff, branch operations
+- **CustomEvent** — application-defined events
+- **FeedbackEvent** — human reviewer feedback
 
 ## Why It Matters
 
 Without structured traces, agent behavior is a black box. Agent Journal transforms agent runs into analyzable data — enabling [Markov fingerprinting](/methodology/markov-fingerprinting), loop detection, and cross-variant behavioral comparison.
 
-## Quick Links
-
-<Card title="Methodology" icon="diagram-project" href="/methodology/markov-fingerprinting">
-  How traces become Markov chains — the analysis pipeline
-</Card>
-
 ## Feeds Into
 
 - [Code Coverage v1](/experiments/code-coverage-v1) — First Markov analysis from captured traces
 - [Code Coverage v2](/experiments/code-coverage-v2) — Refined 9-state taxonomy
+
+## Source
+
+<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-journal">
+  Source code (BSL 1.1) — two modules, 401 tests
+</Card>

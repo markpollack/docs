@@ -24,7 +24,7 @@ An experiment that evaluates an AI agent against a dataset of coding tasks, scor
   <Card title="Jury" icon="scale-balanced">
     One or more judges that score the agent's output against the reference
   </Card>
-  <Card title="ExperimentRunner" icon="play">
+  <Card title="AgentExperiment" icon="play">
     Orchestrates: load items → invoke agent → evaluate → persist results
   </Card>
 </CardGroup>
@@ -177,10 +177,10 @@ ExperimentConfig config = ExperimentConfig.builder()
     .outputDir(Path.of("results"))
     .build();
 
-ExperimentRunner runner = new ExperimentRunner(
+AgentExperiment experiment = new AgentExperiment(
     datasetManager, jury, resultStore, config);
 
-ExperimentResult result = runner.run(new MyAgent());
+ExperimentResult result = experiment.run(new MyAgent());
 
 System.out.printf("Pass rate: %.0f%% (%d/%d)%n",
     result.passRate() * 100,

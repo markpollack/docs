@@ -29,6 +29,8 @@ Agent runtimes are vertical stacks — Spring AI, LangChain4j, Koog, and CLI-del
 
 The core module (`agent-judge-core`) has **zero external dependencies** and contains the evaluation abstractions plus basic deterministic judges. Four additional judge-family modules add command execution, file comparison, LLM evaluation, and RAG assessment. Four framework bridge modules connect to Spring AI, LangChain4j, Koog, and AgentClient.
 
+The `agent-judge-ai-core` module provides framework-neutral AI-backed judge infrastructure. `ModelBackedJudge` composes a prompt template, model backend, and response classifier into a judge — no subclassing needed. `JudgeModel` implementations in `agent-judge-llm` (`SpringAiJudgeModel`) and `agent-judge-agent-client` (`AgentClientJudgeModel`) connect to specific AI backends.
+
 ## Quick Start
 
 Every runtime is adapted into a `JudgmentContext`, then evaluated by judges and juries:
@@ -56,12 +58,15 @@ Verdict verdict = jury.vote(context);
 
 ## Core Abstractions
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Judge" icon="gavel">
     Functional interface — takes `JudgmentContext`, returns `Judgment` with score, status, reasoning, and granular checks
   </Card>
   <Card title="Jury" icon="users">
     Multi-judge aggregation with voting strategies — majority, consensus, weighted average, median
+  </Card>
+  <Card title="ModelBackedJudge" icon="microchip-ai">
+    Composable AI-backed judge: prompt template, model backend, and classifier composed into a judge
   </Card>
 </CardGroup>
 
@@ -132,7 +137,7 @@ Agent Judge is source-available under BSL 1.1. Internal enterprise use is welcom
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-judge">
-    9 modules — 5 judge families + 4 framework bridges
+    10 modules — 5 judge families + AI core + 4 framework bridges
   </Card>
   <Card title="Design Philosophy" icon="lightbulb" href="/docs/agent-judge/design-philosophy">
     Why zero deps, functional interface, sealed scores, cascaded cost

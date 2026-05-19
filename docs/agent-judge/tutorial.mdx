@@ -230,6 +230,12 @@ It costs tokens — but combined with free deterministic judges, you get both sp
   Use them for criteria that can't be checked structurally.
 </Warning>
 
+<Note>
+`CorrectnessJudge` extends `LLMJudge`, which uses Spring AI directly.
+For a framework-neutral alternative, `ModelBackedJudge` from `agent-judge-ai-core` composes a prompt template, model backend, and classifier without subclassing.
+See [Writing Custom Judges — ModelBackedJudge](/docs/agent-judge/custom-judge#step-4-build-an-ai-judge-with-modelbackedjudge) for details.
+</Note>
+
 ## What You Built
 
 You started with a single file-existence check and built up to a weighted jury with four judges spanning three cost tiers:

@@ -6,7 +6,7 @@ sidebarTitle: "Custom Judges"
 
 ## What You'll Build
 
-A progression of custom judges: a lambda check, a reusable deterministic judge, an LLM judge, and a RAG-specific judge.
+A progression of custom judges: a lambda check, a reusable deterministic judge, a composed AI judge, an LLM judge with full control, and a RAG-specific judge.
 You'll wire them into a jury alongside built-in judges.
 
 This tutorial builds on [Build an Evaluation Pipeline](/docs/agent-judge/tutorial).
@@ -149,9 +149,75 @@ if (wrapped instanceof JudgeWithMetadata jwm) {
 | `Judges.named(lambda)` | Yes | No | Named lambdas in juries |
 | `DeterministicJudge` subclass | Yes | Yes | Reusable, production judges |
 
-## Step 4: Write a Custom LLM Judge
+## Step 4: Build an AI Judge with ModelBackedJudge
 
-For criteria that can't be checked structurally, extend `LLMJudge`.
+For semantic criteria that can't be checked from files or commands, you need an AI-backed judge.
+`ModelBackedJudge` composes three parts — a prompt template, a model backend, and a response classifier — into a judge without subclassing.
+
+```java
+import io.github.markpollack.judge.ai.ModelBackedJudge;
+import io.github.markpollack.judge.ai.JudgePromptTemplate;
+import io.github.markpollack.judge.ai.JudgmentClassifiers;
+import io.github.markpollack.judge.ai.JudgeModel;
+
+JudgePromptTemplate template = JudgePromptTemplate.fromString(
+    "relevance-check",
+    """
+    You are evaluating whether an AI agent accomplished its goal.
+
+    Goal: {{goal}}
+    Agent output: {{output}}
+
+    Did the agent accomplish the goal? Answer exactly PASS or FAIL.
+    """);
+
+JudgeModel model = springAiJudgeModel;  // or agentClientJudgeModel
+
+ModelBackedJudge judge = ModelBackedJudge.builder()
+    .name("goal-completion")
+    .description("Evaluates whether the agent accomplished its goal")
+    .promptTemplate(template)
+    .judgmentClassifier(JudgmentClassifiers.passFail("PASS", "FAIL"))
+    .model(model)
+    .build();
+
+Judgment result = judge.judge(context);
+```
+
+The three components are independently swappable:
+
+| Component | Role | Examples |
+|-----------|------|---------|
+| `JudgePromptTemplate` | Renders `{{variable}}` placeholders from `JudgmentContext` | `fromString(id, text)`, `fromClasspath(path)` |
+| `JudgeModel` | Invokes the AI backend | `SpringAiJudgeModel` (agent-judge-llm), `AgentClientJudgeModel` (agent-judge-agent-client) |
+| `JudgmentClassifier` | Maps the model's text response to a `Judgment` | `JudgmentClassifiers.passFail(...)`, custom lambda |
+
+Available template variables: `{{goal}}`, `{{output}}`, `{{workspace}}`, `{{status}}`, `{{metadata.*}}`.
+
+<Note>
+`ModelBackedJudge` lives in the `agent-judge-ai-core` module, which has zero external dependencies.
+The actual AI backend arrives through a `JudgeModel` implementation from a bridge module (`agent-judge-llm` or `agent-judge-agent-client`).
+</Note>
+
+You can also load templates from the classpath for reuse across judges:
+
+```java
+JudgePromptTemplate template = JudgePromptTemplate.fromClasspath(
+    "judges/goal-completion.txt");
+```
+
+**When to use ModelBackedJudge vs. LLMJudge**:
+
+| Approach | Best for | Trade-off |
+|----------|----------|-----------|
+| `ModelBackedJudge` | Most AI judges — composable, testable, framework-neutral | Classifier must handle parsing |
+| `LLMJudge` subclass | Custom parsing logic that doesn't fit a classifier pattern | Requires subclassing, coupled to Spring AI |
+
+Use `ModelBackedJudge` as the default. Reach for `LLMJudge` when you need full control over prompt construction or response parsing.
+
+## Step 5: Write a Custom LLM Judge
+
+For full control over prompt construction and response parsing, extend `LLMJudge`.
 It uses the template method pattern — you implement two methods:
 
 1. `buildPrompt()` — construct the evaluation prompt from the context
@@ -241,7 +307,7 @@ Judgment result = qualityJudge.judge(context);
 Prefer deterministic judges when the criterion can be checked from files, commands, or structured metadata. Use LLM judges when the criterion is semantic and cannot be expressed reliably as code.
 </Note>
 
-## Step 5: Wire Custom Judges into a Jury
+## Step 6: Wire Custom Judges into a Jury
 
 Combine your custom judges with built-in ones:
 
@@ -286,7 +352,7 @@ verdict.individualByName().forEach((name, judgment) ->
 The `WeightedAverageStrategy` normalizes all scores to [0, 1] and computes a weighted average.
 Build success (weight 2.0) matters more than file existence (weight 1.0), and quality (weight 1.5) falls in between.
 
-## Step 6: Write a Custom RAG Judge
+## Step 7: Write a Custom RAG Judge
 
 RAG judges follow the same `LLMJudge` pattern but use the `RagContext` helper to extract the (question, context, answer) triple from metadata.
 Here's a custom judge that evaluates answer completeness — did the answer address all parts of the question?
@@ -386,14 +452,15 @@ JudgmentContext context = JudgmentContext.builder()
 
 ## What You Built
 
-| Judge | Base class | Score | What it checks |
-|-------|-----------|-------|---------------|
+| Judge | Approach | Score | What it checks |
+|-------|----------|-------|---------------|
 | `timestampCheck` | Lambda | Boolean | Agent log exists |
 | `AnnotationJudge` | `DeterministicJudge` | Boolean | File contains `@RestController` |
+| Goal completion | `ModelBackedJudge` | Boolean | Agent accomplished its goal |
 | `CodeQualityJudge` | `LLMJudge` | Numerical (0-10) | Code quality assessment |
 | `CompletenessJudge` | `LLMJudge` (RAG) | Boolean | Answer addresses all parts of the question |
 
-The progression: **lambda** (quick checks) -> **DeterministicJudge** (production checks with metadata and sub-assertions) -> **LLMJudge** (semantic evaluation that can't be checked structurally) -> **RAG judge** (LLMJudge with the `RagContext` metadata convention).
+The progression: **lambda** (quick checks) -> **DeterministicJudge** (production checks with metadata and sub-assertions) -> **ModelBackedJudge** (composed AI judge, no subclassing) -> **LLMJudge** (full control over prompt and parsing) -> **RAG judge** (LLMJudge with the `RagContext` metadata convention).
 
 ## What's Next
 

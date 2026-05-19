@@ -76,6 +76,29 @@ InvocationResult.error(errorMessage, metadata);
 | `totalCostUsd` | `double` | Estimated cost |
 | `durationMs` | `long` | Wall-clock execution time |
 
+## ExecutionDetail
+
+Marker interface that decouples shared experiment infrastructure (ComparisonEngine, ResultStore, VerdictExtractor) from domain-specific per-item execution details.
+
+```java
+public interface ExecutionDetail {
+    // Marker — shared infrastructure stores but never interprets
+}
+```
+
+| Implementation | Used By | Contains |
+|----------------|---------|----------|
+| `InvocationResult` | `AgentExperiment` | Agent invocation output, tokens, cost, phases |
+| `JudgeExecutionDetail` | `JudgeExperiment` | Candidate judgment, expected label, scorer result |
+
+`ItemResult.executionDetail()` returns `@Nullable ExecutionDetail`. Consumers use `instanceof` pattern matching to access domain-specific fields:
+
+```java
+if (item.executionDetail() instanceof InvocationResult inv) {
+    System.out.println("Cost: $" + inv.totalCostUsd());
+}
+```
+
 ## Dataset Format
 
 ### dataset.json
@@ -166,18 +189,186 @@ Optional<ExperimentResult> mostRecent(String experimentName);
 | `failCount()` | `int` | Items that failed |
 | `passRate()` | `double` | Pass count / total (0.0–1.0) |
 
+---
+
+## Re-Evaluation
+
+Re-evaluate stored experiment results with a different jury without re-invoking the system under test.
+
+### ReEvaluationContextFactory
+
+Functional interface that reconstructs a `JudgmentContext` from a stored `ItemResult`:
+
+```java
+@FunctionalInterface
+public interface ReEvaluationContextFactory {
+    Optional<JudgmentContext> create(ItemResult item);
+}
+```
+
+Returns `Optional.empty()` when re-evaluation is not possible (failed item, missing execution detail, workspace not preserved).
+
+### AgentReEvaluationContextFactory
+
+Default implementation for agent experiment results. Pattern-matches on `InvocationResult` to reconstruct the context:
+
+```java
+ReEvaluationContextFactory factory =
+    AgentReEvaluationContextFactory.defaults();
+```
+
+Maps `TerminalStatus` to `ExecutionStatus` (`COMPLETED` → `SUCCESS`, `TIMEOUT` → `TIMEOUT`, `ERROR` → `FAILED`). Preserves original `costUsd` and `totalTokens`.
+
+### ReEvaluator
+
+Orchestrates post-hoc re-scoring of stored experiment results:
+
+```java
+ReEvaluator reEvaluator = ReEvaluator.builder()
+    .contextFactory(AgentReEvaluationContextFactory.defaults())
+    .resultStore(store)
+    .build();
+
+ExperimentResult reScored = reEvaluator.reEvaluate(originalResult, newJury);
+```
+
+| Method | Description |
+|--------|-------------|
+| `reEvaluate(ExperimentResult, Jury)` | Re-score a loaded result with a new jury |
+| `reEvaluate(String experimentId, Jury)` | Load by ID, then re-score |
+| `agentDefaults(ResultStore)` | Convenience factory with `AgentReEvaluationContextFactory` |
+
+Re-evaluated results carry metadata: `reEvaluated=true`, `systemReinvoked=false`, `originalCostUsd`, `reEvaluationJury`, `originalTimestamp`. Skipped items carry `reEvaluationSkipped=true` with a reason.
+
+---
+
+## Judge Experiment
+
+Run a judge as the system under test against a labeled dataset to measure agreement rate.
+
+### JudgeScorer
+
+Functional interface that scores a candidate judge's `Judgment` against the expected label:
+
+```java
+@FunctionalInterface
+public interface JudgeScorer {
+    JudgeScorerResult score(JudgeScoringInput input);
+}
+```
+
+### JudgeScoringInput
+
+```java
+public record JudgeScoringInput(
+    DatasetItem item,        // dataset item (for item-level context)
+    Judgment actual,         // candidate judge's judgment
+    String expectedLabel     // expected label from dataset
+)
+```
+
+### JudgeScorerResult
+
+```java
+public record JudgeScorerResult(
+    boolean match,           // judge agreed with expected label
+    double score,            // normalized agreement score [0, 1]
+    String reasoning         // explanation of match/mismatch
+)
+```
+
+### JudgeScorers
+
+Built-in scoring implementations:
+
+| Factory Method | Scoring Rule |
+|---------------|--------------|
+| `exactVerdictMatch()` | PASS/FAIL must exactly match expected `"PASS"`/`"FAIL"` label |
+| `exactCategoryMatch()` | `CategoricalScore` value must match expected label (case-insensitive) |
+| `numericalTolerance(double)` | `NumericalScore` within tolerance of expected numeric value |
+
+### JudgeExecutionDetail
+
+Domain evidence preserved for each item:
+
+```java
+public record JudgeExecutionDetail(
+    Judgment candidateJudgment,
+    String expectedLabel,
+    JudgeScorerResult scorerResult
+) implements ExecutionDetail
+```
+
+### JudgeExperiment
+
+Builder-based experiment runner where the system under test is a `Judge`:
+
+```java
+JudgeExperimentResult result = JudgeExperiment.builder()
+    .name("correctness-judge-calibration")
+    .candidate(myCorrectnessJudge)
+    .items(labeledItems)
+    .input(item -> buildContextFromItem(item))
+    .expected(item -> item.metadata().get("expectedVerdict"))
+    .scorer(JudgeScorers.exactVerdictMatch())
+    .resultStore(store)
+    .build()
+    .run();
+```
+
+| Builder Method | Required | Description |
+|---------------|----------|-------------|
+| `name(String)` | Yes | Experiment name |
+| `candidate(Judge)` | Yes | Judge to evaluate |
+| `items(List<DatasetItem>)` | Yes | Labeled dataset items |
+| `input(Function<DatasetItem, JudgmentContext>)` | Yes | Builds context from item |
+| `expected(Function<DatasetItem, String>)` | Yes | Extracts expected label from item |
+| `scorer(JudgeScorer)` | Yes | Scoring strategy |
+| `resultStore(ResultStore)` | Yes | Persistence |
+| `datasetVersion(String)` | No | Defaults to `"1.0.0"` |
+
+Takes `List<DatasetItem>` directly — judge datasets do not require filesystem loading.
+
+### JudgeExperimentResult
+
+```java
+public record JudgeExperimentResult(
+    ExperimentResult experimentResult,
+    double agreementRate,
+    List<JudgeDisagreement> disagreements
+)
+```
+
+| Method | Description |
+|--------|-------------|
+| `agreementRate()` | Fraction of items where judge agreed with expected label |
+| `disagreements()` | Items where judge disagreed |
+| `from(ExperimentResult)` | Create from an `ExperimentResult` containing `JudgeExecutionDetail` items |
+| `asExperimentResult()` | Unwrap for `ComparisonEngine` and `ResultStore` compatibility |
+
+### JudgeDisagreement
+
+```java
+public record JudgeDisagreement(
+    String itemId,
+    JudgeExecutionDetail detail
+)
+```
+
+---
+
 ## Modules
 
 ```xml
 <!-- Core: runner, dataset, jury, stores, diagnostics -->
 <dependency>
-    <groupId>ai.tuvium</groupId>
+    <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
 </dependency>
 
 <!-- Claude SDK integration (ClaudeSdkInvoker, SemanticDiffJudge) -->
 <dependency>
-    <groupId>ai.tuvium</groupId>
+    <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-claude</artifactId>
 </dependency>
 ```

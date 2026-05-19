@@ -11,11 +11,11 @@ The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dep
 
 ## Architecture
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Dataset" icon="database">
     Git-managed fixture datasets with items, before/reference snapshots, and version tracking
   </Card>
-  <Card title="ExperimentRunner" icon="play">
+  <Card title="AgentExperiment" icon="play">
     Orchestrates the full loop: load items, invoke agent, judge, aggregate, persist
   </Card>
   <Card title="Comparison Engine" icon="code-compare">
@@ -23,6 +23,12 @@ The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dep
   </Card>
   <Card title="Sessions & Sweeps" icon="layer-group">
     Group variant results into sessions, group sessions into sweeps for multi-run analysis
+  </Card>
+  <Card title="ReEvaluator" icon="rotate">
+    Post-hoc re-scoring of stored results without re-invoking agents
+  </Card>
+  <Card title="JudgeExperiment" icon="gavel">
+    Run a judge as the system under test against labeled datasets
   </Card>
 </CardGroup>
 
@@ -72,8 +78,8 @@ ExperimentConfig config = ExperimentConfig.builder()
 DatasetManager dm = new FileSystemDatasetManager();
 ResultStore store = new FileSystemResultStore(resultsDir);
 
-ExperimentRunner runner = new ExperimentRunner(dm, jury, store, config);
-ExperimentResult result = runner.run(invoker);
+AgentExperiment experiment = new AgentExperiment(dm, jury, store, config);
+ExperimentResult result = experiment.run(invoker);
 // result.passRate(), result.totalCostUsd(), result.items()
 ```
 
@@ -94,5 +100,5 @@ Used by every experiment in the lab:
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-experiment">
-  Source code (BSL 1.1) — two modules, 477 tests
+  Source code (BSL 1.1) — two modules, 509 tests
 </Card>

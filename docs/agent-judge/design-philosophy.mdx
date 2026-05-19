@@ -31,15 +31,16 @@ The module layering adds dependencies only when needed:
 
 ```
 agent-judge-core              (zero deps)
+agent-judge-ai-core           (zero deps)
     ↓
 agent-judge-exec              (+ agent-sandbox)
 agent-judge-file              (+ JavaParser, Maven Model)
-agent-judge-llm               (+ Spring AI ChatClient)
+agent-judge-llm               (+ Spring AI ChatClient, SpringAiJudgeModel)
 agent-judge-rag               (+ agent-judge-llm)
 agent-judge-spring-ai         (+ Spring AI Model, provided)
 agent-judge-langchain4j       (+ LangChain4j, provided)
 agent-judge-koog              (+ Koog Agents, provided)
-agent-judge-agent-client      (+ AgentClient, provided)
+agent-judge-agent-client      (+ AgentClient, AgentClientJudgeModel, provided)
 ```
 
 If all you need is file checks and boolean logic, you pay for nothing you don't use.
@@ -145,6 +146,38 @@ Each framework bridge module follows the same pattern:
 The bridge code is typically 30-100 lines. It maps framework-specific response metadata (token usage, finish reason, model name) into `JudgmentContext.metadata()` where judges can optionally inspect it.
 
 This keeps the core zero-dependency, keeps bridges thin, and means new framework support is a single module addition — not a core change.
+
+## Composition Over Inheritance for AI Judges
+
+The original `LLMJudge` uses the template method pattern — you subclass it, override `buildPrompt()` and `parseResponse()`, and the base class handles the LLM call via Spring AI's `ChatClient`. This works, but it tangles three concerns into one class hierarchy:
+
+1. **Prompt rendering** — how context becomes a prompt string
+2. **Model invocation** — which AI backend to call
+3. **Response classification** — how to turn the model's text into a `Judgment`
+
+Subclassing couples you to Spring AI and makes it hard to swap one concern without touching the others. Testing requires a real `ChatClient.Builder` or mocking Spring AI internals.
+
+The `agent-judge-ai-core` module separates these into composable parts:
+
+```
+JudgePromptTemplate  →  JudgeModel  →  JudgmentClassifier  →  Judgment
+   (render)             (invoke)         (classify)
+```
+
+`ModelBackedJudge` wires the three parts together via a builder. Each part is independently testable and replaceable:
+
+- **`JudgePromptTemplate`** loads templates from classpath, file, or string. Renders `{{variable}}` placeholders from `JudgmentContext`. Validates required variables at build time.
+- **`JudgeModel`** is a `@FunctionalInterface` — any `(JudgeModelRequest → JudgeModelResponse)` lambda works. `SpringAiJudgeModel` (in `agent-judge-llm`) delegates to Spring AI's `ChatClient`. `AgentClientJudgeModel` (in `agent-judge-agent-client`) invokes a CLI agent that can use tools and inspect files — enabling agentic judges.
+- **`JudgmentClassifier`** maps text to a `Judgment`. `LabelJudgmentClassifier.passFail()` handles the common binary case. Custom classifiers handle structured or multi-label responses.
+
+Like `agent-judge-core`, the `agent-judge-ai-core` module has zero external dependencies. The actual AI backend arrives through a `JudgeModel` implementation from a bridge module. This preserves the zero-dep principle while giving AI judges first-class infrastructure.
+
+**When to use which:**
+
+| Approach | Use when |
+|----------|----------|
+| `ModelBackedJudge` | Default for AI judges. Composable, testable, framework-neutral. |
+| `LLMJudge` subclass | You need Spring AI-specific features, complex prompt logic, or custom response parsing that doesn't fit a `JudgmentClassifier`. |
 
 ## Best-of-Breed Evaluation Patterns
 

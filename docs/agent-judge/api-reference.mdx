@@ -16,6 +16,7 @@ description: "All public types, interfaces, and records in Agent Judge"
 | `io.github.markpollack.judge.langchain4j` | LangChain4j bridge |
 | `io.github.markpollack.judge.koog` | Koog bridge |
 | `io.github.markpollack.judge.agentclient` | AgentClient bridge |
+| `io.github.markpollack.judge.ai` | AI-backed judge infrastructure |
 | `io.github.markpollack.judge.rag` | RAG judges and `RagContext` |
 
 ---
@@ -332,6 +333,134 @@ Static methods for creating and composing judges:
 
 ---
 
+## AI-Core Types
+
+Framework-neutral infrastructure for AI-backed judges. Located in the `agent-judge-ai-core` module (zero external dependencies).
+
+### ModelBackedJudge
+
+Composed AI-backed judge built via builder pattern. Pipeline: render prompt → invoke model → classify response → produce `Judgment`. No subclassing needed.
+
+```java
+ModelBackedJudge judge = ModelBackedJudge.builder()
+    .model(judgeModel)
+    .template(promptTemplate)
+    .classifier(LabelJudgmentClassifier.passFail())
+    .build();
+
+Judgment judgment = judge.judge(context);
+```
+
+| Builder Method | Required | Description |
+|---------------|----------|-------------|
+| `model(JudgeModel)` | Yes | AI backend to invoke |
+| `template(JudgePromptTemplate)` | Yes | Prompt template with `{{variable}}` placeholders |
+| `classifier(JudgmentClassifier)` | Yes | Maps model response to `Judgment` |
+
+### JudgeModel
+
+Functional interface for AI model invocation. Framework-specific implementations live in bridge modules.
+
+```java
+@FunctionalInterface
+public interface JudgeModel {
+    JudgeModelResponse call(JudgeModelRequest request);
+}
+```
+
+| Implementation | Module | Backend |
+|---------------|--------|---------|
+| `SpringAiJudgeModel` | `agent-judge-llm` | Spring AI `ChatClient` |
+| `AgentClientJudgeModel` | `agent-judge-agent-client` | CLI agent via AgentClient |
+
+### JudgePromptTemplate
+
+Loads, validates, and renders prompt templates with `{{variable}}` placeholders extracted from `JudgmentContext`.
+
+```java
+JudgePromptTemplate template = JudgePromptTemplate.builder()
+    .source(TextSource.classpath("/prompts/correctness.txt"))
+    .renderer(new SimpleJudgeTemplateRenderer())
+    .missingVariablePolicy(MissingVariablePolicy.STRICT)
+    .build();
+```
+
+| Builder Method | Default | Description |
+|---------------|---------|-------------|
+| `source(TextSource)` | Required | Template text source (classpath, file, or string) |
+| `renderer(JudgeTemplateRenderer)` | `SimpleJudgeTemplateRenderer` | Pluggable template engine |
+| `missingVariablePolicy(MissingVariablePolicy)` | `STRICT` | `STRICT`, `EMPTY_STRING`, or `LEAVE_PLACEHOLDER` |
+
+Available variables from `JudgmentContext`: `{{goal}}`, `{{output}}`, `{{workspace}}`, `{{status}}`, `{{metadata.*}}`.
+
+### JudgeTemplateRenderer
+
+Pluggable template engine interface:
+
+```java
+public interface JudgeTemplateRenderer {
+    String render(String template, Map<String, String> variables);
+}
+```
+
+Default implementation `SimpleJudgeTemplateRenderer` performs `{{variable}}` substitution.
+
+### JudgmentClassifier
+
+Functional interface that maps a model response to a `Judgment`:
+
+```java
+@FunctionalInterface
+public interface JudgmentClassifier {
+    Judgment classify(JudgeModelResponse response);
+}
+```
+
+### LabelJudgmentClassifier
+
+Exact normalized label matching with builder pattern:
+
+```java
+// Built-in: maps "PASS"/"FAIL" labels to Judgment
+JudgmentClassifier classifier = LabelJudgmentClassifier.passFail();
+
+// Custom labels via builder
+JudgmentClassifier classifier = LabelJudgmentClassifier.builder()
+    .passLabel("CORRECT")
+    .failLabel("INCORRECT")
+    .build();
+```
+
+### Supporting Records
+
+```java
+// Model request — messages with options and metadata
+public record JudgeModelRequest(
+    List<JudgeMessage> messages,
+    Map<String, Object> options,
+    Map<String, Object> metadata
+)
+// Factory: JudgeModelRequest.user(prompt)
+
+// Model response — text, model identity, usage, metadata
+public record JudgeModelResponse(
+    String text,
+    String model,
+    Usage usage,
+    Map<String, Object> metadata
+)
+
+// Message with role
+public record JudgeMessage(JudgeMessageRole role, String content)
+public enum JudgeMessageRole { SYSTEM, USER, ASSISTANT }
+
+// Token usage
+public record Usage(int inputTokens, int outputTokens, int totalTokens,
+                    double estimatedCostUsd)
+```
+
+---
+
 ## Jury System
 
 ### Jury Interface
@@ -623,9 +752,10 @@ See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for usa
 | Module | Artifact | Key Dependencies |
 |--------|----------|-----------------|
 | Core | `io.github.markpollack:agent-judge-core` | None (zero deps) |
+| AI Core | `io.github.markpollack:agent-judge-ai-core` | None (zero deps) |
 | Exec | `io.github.markpollack:agent-judge-exec` | agent-sandbox |
 | File | `io.github.markpollack:agent-judge-file` | JavaParser, Maven Model |
-| LLM | `io.github.markpollack:agent-judge-llm` | Spring AI ChatClient |
+| LLM | `io.github.markpollack:agent-judge-llm` | Spring AI ChatClient, `SpringAiJudgeModel` |
 | RAG | `io.github.markpollack:agent-judge-rag` | agent-judge-llm |
 
 **Framework bridges:**
@@ -635,7 +765,7 @@ See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for usa
 | Spring AI | `io.github.markpollack:agent-judge-spring-ai` | Spring AI Model |
 | LangChain4j | `io.github.markpollack:agent-judge-langchain4j` | LangChain4j |
 | Koog | `io.github.markpollack:agent-judge-koog` | Koog Agents |
-| AgentClient | `io.github.markpollack:agent-judge-agent-client` | AgentClient |
+| AgentClient | `io.github.markpollack:agent-judge-agent-client` | AgentClient, `AgentClientJudgeModel` |
 
 Add modules with explicit versions:
 

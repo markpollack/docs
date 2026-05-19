@@ -294,6 +294,11 @@ System.out.println(verdict.aggregated().status());
 
 Bridge evaluators either adapt an existing framework response or wrap a framework call/supplier that produces one. The judges and jury don't change — swap `KoogEvaluator` for `SpringAiEvaluator`, `LangChain4jEvaluator`, or `AgentClientEvaluator`.
 
+## Runnable Code
+
+Every step in this tutorial has a corresponding runnable module in the [agent-judge-tutorial](https://github.com/markpollack/agent-judge-tutorial) repository.
+Clone it and run any module with `./mvnw exec:java -pl module-NN-name`.
+
 ## What's Next
 
 <CardGroup cols={2}>

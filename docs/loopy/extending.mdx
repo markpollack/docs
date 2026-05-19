@@ -5,9 +5,12 @@ description: "Custom skills, subagents, tool profiles, listeners, and the progra
 
 Loopy has five extension points, from zero-code Markdown files to full Java SPIs.
 
-<CardGroup cols={3}>
+<CardGroup cols={4}>
   <Card title="Skills" icon="book">
     Domain knowledge the agent reads on demand
+  </Card>
+  <Card title="Slash Commands" icon="terminal">
+    Markdown-defined commands from files
   </Card>
   <Card title="Subagents" icon="users">
     Specialist agents for delegation
@@ -78,6 +81,50 @@ my-skills.jar
 ```
 
 Add the JAR to `pom.xml` and Loopy discovers it on the classpath. Skills follow the [agentskills.io](https://agentskills.io) spec — they work in 40+ agentic CLIs, not just Loopy.
+
+---
+
+## Slash Commands
+
+Slash commands let you define reusable prompts as Markdown files, following Claude Code's `~/.claude/commands/` convention. Type `/command-name` in the chat and the agent executes the expanded prompt.
+
+### Create a slash command
+
+Create a `.md` file in your project or home directory:
+
+```
+.claude/commands/review.md
+```
+
+```markdown
+---
+name: review
+description: "Code review the current diff"
+---
+
+Review the staged changes (`git diff --cached`). For each file:
+
+1. Check for bugs, security issues, and performance problems
+2. Verify test coverage for new code paths
+3. Flag any style violations
+
+Summarize findings as a table. $ARGUMENTS
+```
+
+### How it works
+
+1. **YAML front matter** — `name` and `description` fields. If no front matter, the filename becomes the name.
+2. **`$ARGUMENTS` substitution** — replaced with whatever the user types after the command. `/review focus on error handling` substitutes "focus on error handling".
+3. **Agent delegation** — the expanded prompt is sent to the agent as if the user typed it.
+
+### Where commands are discovered
+
+| Location | Path |
+|----------|------|
+| Project | `.claude/commands/*.md` |
+| Global | `~/.claude/commands/*.md` |
+
+Markdown commands override built-in Java commands with the same name.
 
 ---
 

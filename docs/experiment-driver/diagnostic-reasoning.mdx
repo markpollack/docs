@@ -1,0 +1,244 @@
+---
+title: "Diagnostic Reasoning"
+description: "Classify failure gaps, generate remediation actions, and feed the improvement flywheel"
+---
+
+## What Diagnostic Reasoning Does
+
+After an experiment runs and the jury produces verdicts, the diagnostic system answers: **why did items fail, and what should change?**
+
+It works in three stages:
+
+1. **Gap classification** — map each failing verdict to a category (agent error, plan gap, missing knowledge, etc.)
+2. **Deterministic reasoning** — apply rule-based logic to produce actionable fixes
+3. **LLM fallback** — for checks the rules can't resolve, an LLM analyzes execution traces and proposes new artifacts
+
+```
+ExperimentResult (jury verdicts)
+        │
+        ▼
+  DiagnosticAnalyzer
+   └─ GapClassifier: verdict → DiagnosticCheck (with GapCategory)
+        │
+        ▼
+  DiagnosticReport (per-item checks, gap distribution)
+        │
+        ▼
+  DiagnosticReasoner
+   ├─ DeterministicReasoner → RemediationAction[]
+   └─ LlmDiagnosticReasoner → RemediationAction[] + RemediationProposal[]
+        │
+        ▼
+  RemediationReport (actions, proposals, unresolved checks)
+```
+
+## Gap Categories
+
+Every failing verdict check is classified into a gap category that identifies **where in the system** the problem lives:
+
+| Category | Meaning | Fix target |
+|----------|---------|------------|
+| `AGENT_EXECUTION_GAP` | Plan was correct, agent didn't follow it | Agent prompting |
+| `PLAN_GENERATION_GAP` | Plan didn't cover this pattern | Planner or planning model |
+| `KB_GAP` | Knowledge base doesn't cover this pattern | Add KB entry |
+| `TOOL_GAP` | No deterministic tool handles this | Build new tool |
+| `ANALYSIS_GAP` | Static analysis missed a signal | Improve analysis tools |
+| `CRITERIA_GAP` | VERIFY criteria were redundant/ambiguous/missing | Criteria generation |
+| `EVALUATION_GAP` | Jury itself is wrong (false positive/negative) | Judge calibration |
+| `STOCHASTICITY_GAP` | Same config produces different outcomes across runs | Requires N≥3 runs |
+
+## DiagnosticAnalyzer
+
+Entry point for analysis. Takes an `ExperimentResult` and produces a `DiagnosticReport`:
+
+```java
+DiagnosticAnalyzer analyzer = new DiagnosticAnalyzer(gapClassifier);
+DiagnosticReport report = analyzer.analyze(experimentResult);
+
+report.distribution().dominant();  // e.g., AGENT_EXECUTION_GAP
+report.items();                    // per-item ItemDiagnostic list
+report.recommendations();         // human-readable suggestions
+```
+
+### GapClassifier
+
+Assigns gap categories to verdict checks. The default `HeuristicGapClassifier` uses 22 judge-specific classification rules to map failures to categories based on the judge name, check content, and available analysis data.
+
+```java
+GapClassifier classifier = new HeuristicGapClassifier();
+List<DiagnosticCheck> checks = classifier.classify(verdict, analysisEnvelope, executionPlan);
+```
+
+### DiagnosticReport
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `experimentId` | `String` | Experiment run ID |
+| `items` | `List<ItemDiagnostic>` | Per-item classified checks with dominant gap |
+| `distribution` | `GapDistribution` | Aggregate counts and fractions by category |
+| `recommendations` | `List<String>` | Human-readable improvement suggestions |
+
+`GapDistribution.dominant()` returns the most frequent gap category — the highest-leverage fix target.
+
+## DiagnosticReasoner
+
+Transforms a `DiagnosticReport` into actionable remediation:
+
+```java
+public interface DiagnosticReasoner {
+    RemediationReport reason(DiagnosticReport report, ReasoningContext context);
+}
+```
+
+### ReasoningContext
+
+Provides the full data menu for reasoning — analysis output, execution plan, trajectory exhaust, and file pointers:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `analysis` | `AnalysisEnvelope` | Static analysis data (from pipeline) |
+| `plan` | `ExecutionPlan` | Execution roadmap (from pipeline) |
+| `availableTools` | `Set<String>` | Tools available to the agent |
+| `phases` | `List<PhaseCapture>` | Agent thinking, tool calls, and results |
+
+Helper methods: `unusedTools()`, `errorToolResults()`, `toolUsesByName(String)`.
+
+### DeterministicReasoner
+
+Rule-based reasoning with two rule categories:
+
+**Verdict rules** (fire on failing judge checks):
+- Pattern-match on gap category and structured analysis data
+- Target specific components: planner-prompt, pom-upgrader, agent-prompt, dependency-analysis
+
+**Trajectory rules** (fire on execution context regardless of judge outcomes):
+- Detect efficiency gaps where the agent recovered but deterministic tools could have prevented the problem
+- Examples: unused tools, implicit JDK dependencies, repeated build errors, format violations
+
+```java
+DeterministicReasoner reasoner = new DeterministicReasoner();
+RemediationReport report = reasoner.reason(diagnosticReport, context);
+
+report.remediations();      // actionable fixes
+report.unresolvedChecks();  // checks the rules couldn't resolve
+```
+
+### LlmDiagnosticReasoner
+
+Handles checks that deterministic rules can't resolve. Analyzes execution traces (thinking, tool calls, results) and produces:
+- **RemediationActions** — fixes with `LLM_INFERRED` confidence
+- **RemediationProposals** — new deterministic artifacts (rules, KB entries, tool specs) for the flywheel
+
+```java
+public interface LlmDiagnosticReasoner {
+    LlmReasoningResult reasonUnresolved(
+        List<DiagnosticCheck> unresolvedChecks, ReasoningContext context);
+}
+```
+
+### CompositeDiagnosticReasoner
+
+Chains deterministic and LLM reasoning:
+
+```java
+CompositeDiagnosticReasoner reasoner = new CompositeDiagnosticReasoner(
+    new DeterministicReasoner(), llmReasoner);
+
+RemediationReport report = reasoner.reason(diagnosticReport, context);
+```
+
+1. Deterministic layer runs first (fast, proof-based)
+2. If unresolved checks remain and an LLM fallback is available, forward them to the LLM
+3. Merge results into a single `RemediationReport`
+
+If deterministic reasoning resolves all checks, the LLM is never called.
+
+## RemediationReport
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `experimentId` | `String` | Experiment run ID |
+| `remediations` | `List<RemediationAction>` | Actionable fixes, highest-impact first |
+| `proposals` | `List<RemediationProposal>` | New artifacts proposed by LLM |
+| `unresolvedChecks` | `List<DiagnosticCheck>` | Checks neither layer could resolve |
+
+### RemediationAction
+
+Each action targets a specific component and carries a confidence level:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `target` | `String` | Component to fix (e.g., "pom-upgrader", "agent-prompt") |
+| `actionType` | `ActionType` | `ADD_RULE`, `ENHANCE_TOOL`, `IMPROVE_PROMPT`, `ADD_KB_ENTRY`, `ENHANCE_ANALYSIS`, `CALIBRATE_JUDGE`, `MANUAL_INVESTIGATION` |
+| `summary` | `String` | One-line description |
+| `detail` | `String` | Full explanation |
+| `confidence` | `Confidence` | `DETERMINISTIC`, `HEURISTIC`, or `LLM_INFERRED` |
+
+### RemediationProposal
+
+LLM-discovered patterns that can become new deterministic infrastructure:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `proposalType` | `ProposalType` | `NEW_REASONER_RULE`, `KB_ENTRY_DRAFT`, `TOOL_ENHANCEMENT`, `PROMPT_PATCH`, `NEW_TOOL_SPEC`, `JUDGE_CALIBRATION` |
+| `target` | `String` | Component the proposal targets |
+| `proposalMarkdown` | `String` | Full specification for review |
+| `confidence` | `Confidence` | Always `LLM_INFERRED` |
+
+## The Flywheel
+
+RemediationProposals are the flywheel mechanism. When the LLM discovers a novel failure pattern:
+
+1. It creates a `RemediationProposal` (e.g., a new deterministic reasoner rule)
+2. A human reviews and applies the proposal
+3. The new rule is added to `DeterministicReasoner`
+4. On the next run, that pattern is resolved deterministically — faster, cheaper, and with higher confidence
+
+Over time, the LLM fallback is invoked less as more patterns move into deterministic rules.
+
+## Cross-Run Aggregation
+
+`DiagnosticAggregator` analyzes multiple `DiagnosticReport` instances from repeated runs to detect stochasticity:
+
+```java
+DiagnosticAggregator aggregator = new DiagnosticAggregator();
+AggregatedDiagnostic agg = aggregator.aggregate(List.of(report1, report2, report3));
+
+agg.stochasticItems();    // items with different dominant gaps across runs
+agg.stableItems();        // items that fail consistently for the same reason
+agg.stabilityFraction();  // fraction of items that are stable
+```
+
+An item classified as `AGENT_EXECUTION_GAP` in one run and `PLAN_GENERATION_GAP` in another is flagged as stochastic. Stochastic items need N≥3 runs before you can draw reliable conclusions. Stable items are immediately actionable.
+
+## Efficiency Evaluation
+
+`EfficiencyEvaluator` scores execution efficiency across four metrics:
+
+| Metric | Weight | What it measures |
+|--------|--------|-----------------|
+| `buildErrors` | 0.35 | How many build errors occurred before success |
+| `toolUtilization` | 0.25 | Fraction of available tools actually used |
+| `cost` | 0.20 | LLM cost relative to a configurable ceiling |
+| `recoveryCycles` | 0.20 | How many error-recovery loops the agent needed |
+
+```java
+EfficiencyConfig config = new EfficiencyConfig(5.0, defaultWeights, 8);
+EfficiencyReport report = evaluator.evaluate(result, context, config);
+
+report.compositeScore();  // weighted average [0, 1] where 1.0 = perfect
+report.checks();          // per-metric breakdown
+```
+
+Metrics gracefully degrade — if data for a metric is missing, the metric is omitted rather than failing.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Pipeline" icon="diagram-project" href="/docs/experiment-driver/pipeline">
+    Analyze, plan, and execute — the three pipeline phases
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/experiment-driver/jury-system">
+    Three-tier evaluation: deterministic, structural, semantic
+  </Card>
+</CardGroup>

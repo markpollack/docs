@@ -121,6 +121,9 @@
                   "projects/agent-experiment",
                   "docs/experiment-driver/getting-started",
                   "docs/experiment-driver/creating-experiments",
+                  "docs/experiment-driver/sessions-and-sweeps",
+                  "docs/experiment-driver/pipeline",
+                  "docs/experiment-driver/diagnostic-reasoning",
                   "docs/experiment-driver/jury-system",
                   "docs/experiment-driver/api-reference"
                 ]

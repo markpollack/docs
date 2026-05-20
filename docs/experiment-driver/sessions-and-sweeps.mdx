@@ -1,0 +1,191 @@
+---
+title: "Sessions and Sweeps"
+description: "Group variant results into sessions and coordinate multi-session sweeps"
+---
+
+## Why Sessions and Sweeps
+
+A single experiment run produces one `ExperimentResult`. When you run multiple variants — a baseline, a prompt tweak, a knowledge-base variant — you need a way to group those results and track which variants have completed. That's what sessions and sweeps provide.
+
+| Concept | What it groups | Question it answers |
+|---------|----------------|---------------------|
+| **RunSession** | Variant results from one multi-variant run | "What happened in this run?" |
+| **Sweep** | Sessions across multiple runs | "Have all expected variants been covered?" |
+
+## Hierarchy
+
+```
+Experiment (name)
+  ├── RunSession ("full-suite-2026-03-03")
+  │     ├── VariantEntry ("control")
+  │     ├── VariantEntry ("variant-a")
+  │     └── metadata
+  │
+  └── Sweep ("stage5-full")
+        ├── Expected variants: [control, variant-a, variant-b]
+        ├── Resolutions: which session resolved each variant
+        └── Session history (append-only audit trail)
+```
+
+Sessions group variant results from a single run. Sweeps coordinate across sessions, tracking which of the expected variants have been resolved and by which session.
+
+## Running with Sessions
+
+To use sessions, create an `ActiveSession` and pass it to `AgentExperiment.run()`:
+
+```java
+ActiveSession active = new ActiveSession(
+    "full-suite-2026-03-03",   // session name
+    "rename-field-v1",         // experiment name
+    "variant-a");              // variant being executed
+
+ExperimentResult result = experiment.run(agentInvoker, active);
+```
+
+When an `ActiveSession` is provided:
+- Traces and workspaces are written under the session directory
+- The result is saved to both `ResultStore` (as before) and `SessionStore`
+- Without an `ActiveSession`, the experiment behaves exactly as before — full backward compatibility
+
+## SessionStore
+
+`SessionStore` persists and retrieves sessions:
+
+```java
+// Create a session
+RunSession session = sessionStore.createSession(
+    "full-suite-2026-03-03", "rename-field-v1", Map.of("git", "abc123"));
+
+// Save a variant result
+sessionStore.saveVariantToSession(
+    "full-suite-2026-03-03", "rename-field-v1", "variant-a", result);
+
+// Finalize
+sessionStore.finalizeSession(
+    "full-suite-2026-03-03", "rename-field-v1", RunSessionStatus.COMPLETED);
+
+// Query
+Optional<RunSession> latest = sessionStore.mostRecentSession("rename-field-v1");
+List<RunSession> all = sessionStore.listSessions("rename-field-v1");
+```
+
+| Implementation | Use case |
+|---------------|----------|
+| `FileSystemSessionStore` | Production — persists to disk with atomic writes |
+| `InMemorySessionStore` | Testing — HashMap-backed |
+
+### Filesystem layout
+
+```
+results/
+└── rename-field-v1/
+    └── sessions/
+        └── full-suite-2026-03-03/
+            ├── session.json
+            ├── control.json
+            └── variant-a.json
+```
+
+## RunSession
+
+An immutable record representing a completed or in-progress session:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sessionName` | `String` | Human-readable name (e.g., "full-suite-2026-03-03") |
+| `experimentName` | `String` | Experiment this session belongs to |
+| `status` | `RunSessionStatus` | `RUNNING`, `COMPLETED`, or `FAILED` |
+| `variants` | `List<VariantEntry>` | Per-variant results |
+| `metadata` | `Map<String, String>` | Arbitrary key-value pairs |
+| `createdAt` | `Instant` | Session creation timestamp |
+| `completedAt` | `Instant` | Null while running |
+
+### VariantEntry
+
+Each variant within a session carries summary metrics:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `variantName` | `String` | Variant identifier |
+| `experimentId` | `String` | Unique experiment run ID |
+| `resultFile` | `String` | Result file relative to session |
+| `passRate` | `double` | Fraction passed (0.0–1.0) |
+| `itemCount` | `int` | Total dataset items evaluated |
+| `costUsd` | `double` | Total LLM cost |
+| `durationMs` | `long` | Wall-clock duration |
+
+## Sweeps
+
+A sweep declares which variants must run and tracks progress across sessions. This is useful when variants run at different times — overnight jobs, CI retries, or manual re-runs of failed variants.
+
+```java
+// Create a sweep with expected variants
+Sweep sweep = sweepStore.createSweep(
+    "stage5-full", "rename-field-v1",
+    List.of("control", "variant-a", "variant-b"),
+    Map.of("stage", "5"));
+
+// Add sessions as they complete
+sweepStore.addSession("stage5-full", "rename-field-v1",
+    "run-monday", "abc123");
+
+sweepStore.addSession("stage5-full", "rename-field-v1",
+    "run-tuesday", "abc123");
+
+// Check progress
+Sweep updated = sweepStore.loadSweep("rename-field-v1", "stage5-full").get();
+updated.missingVariants();     // variants not yet resolved
+updated.isComplete();          // true if all expected variants resolved
+updated.hasVersionMismatch();  // true if resolved variants used different git commits
+```
+
+### Resolution model
+
+When you add a session to a sweep:
+1. The sweep loads the session's variants via `SessionStore`
+2. Each variant that matches an expected variant is marked as resolved
+3. **Last-write-wins**: adding a newer session overwrites earlier resolutions for the same variant
+4. Session variants not in the expected list are silently ignored
+5. The session name is appended to `sessionHistory` (append-only audit trail)
+
+### SweepStatus
+
+| Status | Meaning |
+|--------|---------|
+| `RUNNING` | Created, no variants resolved yet |
+| `PARTIAL` | At least one variant resolved, but not all |
+| `COMPLETED` | All expected variants resolved |
+| `FAILED` | Finalized as failed |
+
+### SweepStore
+
+```java
+// Remove a session (clears its resolutions, keeps audit trail)
+sweepStore.removeSession("stage5-full", "rename-field-v1", "run-monday");
+
+// Finalize
+sweepStore.finalizeSweep("stage5-full", "rename-field-v1", SweepStatus.COMPLETED);
+
+// Query
+List<Sweep> all = sweepStore.listSweeps("rename-field-v1");
+```
+
+| Implementation | Use case |
+|---------------|----------|
+| `FileSystemSweepStore` | Production — persists to disk, depends on `SessionStore` |
+| `InMemorySweepStore` | Testing — HashMap-backed |
+
+## Version Mismatch Detection
+
+`Sweep.hasVersionMismatch()` returns `true` if resolved variants were run against different git commits. This catches a subtle problem: when you re-run a failed variant after a code change, the sweep now contains results from two different code versions. The mismatch flag lets you detect this and decide whether to accept the mixed results or re-run the full sweep.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Creating Experiments" icon="flask" href="/docs/experiment-driver/creating-experiments">
+    Dataset design, variant ladders, and filtering
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/experiment-driver/api-reference">
+    ExperimentConfig, AgentInvoker, InvocationContext, ResultStore
+  </Card>
+</CardGroup>

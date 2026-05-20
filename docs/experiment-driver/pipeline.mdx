@@ -1,0 +1,188 @@
+---
+title: "Pipeline"
+description: "Three-phase orchestration: analyze a project, generate a plan, then execute with enriched context"
+---
+
+## What the Pipeline Does
+
+`PipelineAgentInvoker` wraps any `AgentInvoker` with two optional upstream phases — project analysis and plan generation — before delegating to the actual agent. Each phase enriches the execution context so the agent starts with a better understanding of the project.
+
+```
+Phase 1: Analyze          Phase 2: Plan            Phase 3: Execute
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│  ProjectAnalyzer │───▶│   PlanGenerator  │───▶│  AgentInvoker    │
+│  (deterministic) │    │  (may use LLM)   │    │  (delegate)      │
+└──────────────────┘    └──────────────────┘    └──────────────────┘
+     optional                optional               required
+```
+
+All phases are optional except execution. If analysis or planning fails, the pipeline logs a warning and continues — the agent runs with whatever context is available.
+
+## PipelineConfig
+
+```java
+PipelineConfig config = PipelineConfig.builder()
+    .enableAnalysis(true)                              // Toggle analysis phase
+    .enablePlanning(true)                              // Toggle planning phase
+    .knowledgeDir(Path.of("kb"))                       // KB root for planning
+    .toolPaths(Map.of("pom-upgrader", toolJar))        // Available tools
+    .targetBootVersion("3.4.1")                        // Migration target
+    .targetJavaVersion("21")                           // Java target
+    .planningModel("sonnet")                           // Model for planning
+    .planningTimeout(Duration.ofMinutes(5))             // Planning timeout
+    .build();
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `enableAnalysis` | No | `true` | Run the analysis phase |
+| `enablePlanning` | No | `true` | Run the planning phase |
+| `knowledgeDir` | No | — | KB root for plan generation |
+| `toolPaths` | No | — | Map of tool name to JAR path |
+| `targetBootVersion` | No | — | Target Spring Boot version |
+| `targetJavaVersion` | No | — | Target Java version |
+| `planningModel` | No | — | Model for plan generation |
+| `planningTimeout` | No | 5 min | Timeout for planning phase |
+
+## Phase 1: Project Analysis
+
+`ProjectAnalyzer` performs deterministic, read-only analysis of the workspace. No AI calls, no side effects.
+
+```java
+public interface ProjectAnalyzer {
+    AnalysisEnvelope analyze(Path workspace, AnalysisConfig config);
+}
+```
+
+### PomAnalyzer
+
+The default implementation scans Maven POM files and Java source:
+
+| What it extracts | Source |
+|------------------|--------|
+| Project identity | POM `<name>` or `<artifactId>` |
+| Spring Boot version | Parent POM or dependency management |
+| Java version | `java.version` or `maven.compiler.source` property |
+| Dependencies | Direct `<dependencies>` (groupId:artifactId → version) |
+| Modules | `<modules>` for multi-module projects |
+| Import patterns | `javax.*` imports grouped by namespace |
+| Annotations | Tracked Spring/JPA annotations with file locations |
+| Config files | `application.properties`, `application.yml` in resources |
+
+```java
+AnalysisConfig config = AnalysisConfig.pomOnly("3.4.1", "21");
+AnalysisEnvelope envelope = new PomAnalyzer().analyze(workspace, config);
+
+envelope.projectName();     // "my-service"
+envelope.bootVersion();     // "2.7.18"
+envelope.importPatterns();  // {javax.persistence → [Entity.java, Repository.java]}
+envelope.annotations();     // [AnnotationUsage(Entity, Entity.java, MyEntity), ...]
+```
+
+### AnalysisEnvelope
+
+The analysis output is an immutable record:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectName` | `String` | Project name |
+| `buildTool` | `String` | Build tool identifier (e.g., "maven") |
+| `bootVersion` | `String` | Current Spring Boot version |
+| `javaVersion` | `String` | Current Java version |
+| `dependencies` | `Map<String, String>` | groupId:artifactId → version |
+| `importPatterns` | `Map<String, List<String>>` | Namespace → files using it |
+| `annotations` | `List<AnnotationUsage>` | Annotation, file, class name |
+| `configFiles` | `List<String>` | Config files found in resources |
+| `modules` | `List<String>` | Module names for multi-module projects |
+| `metadata` | `Map<String, String>` | Includes `analysisDurationMs` |
+
+### AnalysisStrategy
+
+| Strategy | Implementation | Description |
+|----------|----------------|-------------|
+| `POM_ONLY` | `PomAnalyzer` | POM parsing + Java file scanning (current) |
+| `FULL` | — | Reserved for SCIP + ASM bytecode analysis (not yet implemented) |
+
+## Phase 2: Plan Generation
+
+`PlanGenerator` takes the analysis envelope and produces an execution roadmap. This phase may invoke an LLM.
+
+```java
+public interface PlanGenerator {
+    ExecutionPlan generate(AnalysisEnvelope analysis, PlanConfig config);
+}
+```
+
+### ClaudePlanGenerator
+
+The default implementation runs a two-phase Claude conversation:
+
+1. **Explore** — Claude reads the knowledge store and summarizes applicable patterns
+2. **Plan** — Claude generates a Forge-style roadmap with explicit tool commands, using the analysis envelope and explore output
+
+The generator extracts tool recommendations from the roadmap and tracks which KB files were accessed during planning.
+
+### ExecutionPlan
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `roadmapMarkdown` | `String` | Forge-style checklist (stages, RUN/VERIFY directives) |
+| `toolRecommendations` | `List<String>` | Tool names extracted from roadmap |
+| `kbFilesRead` | `List<String>` | KB files accessed during planning |
+| `inputTokens` | `int` | Planning input tokens |
+| `outputTokens` | `int` | Planning output tokens |
+| `thinkingTokens` | `int` | Planning thinking tokens |
+| `costUsd` | `double` | Planning cost |
+| `durationMs` | `long` | Planning wall-clock duration |
+| `planningSessionId` | `String` | Claude session ID (nullable) |
+
+## Phase 3: Context Enrichment and Execution
+
+Before calling the delegate invoker, the pipeline enriches the prompt with analysis and planning output:
+
+- **Execution Roadmap** — the full roadmap markdown, prepended to the prompt
+- **Available Tools** — `java -jar` commands for each tool in `toolPaths`
+- **Analysis Summary** — formatted project details (Boot version, Java version, key dependencies)
+
+The delegate `AgentInvoker` receives this enriched `InvocationContext` and runs normally. The pipeline merges planning-phase metrics (tokens, cost, duration) into the final `InvocationResult`.
+
+## Wiring a Pipeline
+
+```java
+ProjectAnalyzer analyzer = new PomAnalyzer();
+PlanGenerator planner = new ClaudePlanGenerator(claudeClient);
+
+PipelineConfig config = PipelineConfig.builder()
+    .knowledgeDir(Path.of("kb"))
+    .toolPaths(Map.of("pom-upgrader", Path.of("tools/pom-upgrader.jar")))
+    .targetBootVersion("3.4.1")
+    .planningModel("sonnet")
+    .build();
+
+AgentInvoker pipeline = new PipelineAgentInvoker(
+    analyzer, planner, config, delegateInvoker);
+
+// Use like any AgentInvoker
+ExperimentResult result = experiment.run(pipeline);
+```
+
+Because `PipelineAgentInvoker` implements `AgentInvoker`, it plugs directly into `AgentExperiment` — existing experiment code works unchanged.
+
+## Graceful Degradation
+
+| Failure | Behavior |
+|---------|----------|
+| Analysis throws `AnalysisException` | Logged as warning, planning and execution continue without analysis |
+| Planning throws `PlanGenerationException` | Logged as warning, execution continues with original context |
+| Execution fails | Propagated — this is the only phase whose failures are surfaced |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Diagnostic Reasoning" icon="stethoscope" href="/docs/experiment-driver/diagnostic-reasoning">
+    Diagnose why experiments fail and generate remediation actions
+  </Card>
+  <Card title="Sessions and Sweeps" icon="layer-group" href="/docs/experiment-driver/sessions-and-sweeps">
+    Group variant results and track sweep progress
+  </Card>
+</CardGroup>

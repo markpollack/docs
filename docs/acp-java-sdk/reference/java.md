@@ -68,10 +68,27 @@ WebSocket server transport for agents:
 </dependency>
 ```
 
+#### Snapshot (0.12.0-SNAPSHOT)
+
+For the latest features including `session/list`, `session/close`, and `session/resume`, use the snapshot. Add the snapshot repository first:
+
+```xml
+<repositories>
+    <repository>
+        <id>central-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <snapshots><enabled>true</enabled></snapshots>
+        <releases><enabled>false</enabled></releases>
+    </repository>
+</repositories>
+```
+
+Then use version `0.12.0-SNAPSHOT` in your dependencies.
+
 ### Gradle
 
 ```groovy
-// build.gradle
+// build.gradle — stable
 implementation 'com.agentclientprotocol:acp-core:0.11.0'
 
 // Optional modules
@@ -81,13 +98,23 @@ testImplementation 'com.agentclientprotocol:acp-test:0.11.0'
 ```
 
 ```kotlin
-// build.gradle.kts
+// build.gradle.kts — stable
 implementation("com.agentclientprotocol:acp-core:0.11.0")
 
 // Optional modules
 implementation("com.agentclientprotocol:acp-agent-support:0.11.0")
 implementation("com.agentclientprotocol:acp-websocket-jetty:0.11.0")
 testImplementation("com.agentclientprotocol:acp-test:0.11.0")
+```
+
+For snapshots, add the repository and use `0.12.0-SNAPSHOT`:
+
+```kotlin
+// build.gradle.kts — snapshot
+repositories {
+    maven("https://central.sonatype.com/repository/maven-snapshots/")
+}
+implementation("com.agentclientprotocol:acp-core:0.12.0-SNAPSHOT")
 ```
 
 ---
@@ -131,7 +158,10 @@ All three produce identical protocol behavior and support the same capabilities.
 | `initialize()` | `InitializeResponse` | Protocol handshake with defaults |
 | `initialize(request)` | `InitializeResponse` | Handshake with custom capabilities |
 | `newSession(request)` | `NewSessionResponse` | Create a new session |
-| `loadSession(request)` | `LoadSessionResponse` | Resume an existing session |
+| `loadSession(request)` | `LoadSessionResponse` | Resume an existing session (replays history) |
+| `listSessions(request)` | `ListSessionsResponse` | List sessions, optional cwd filter *(0.12.0)* |
+| `resumeSession(request)` | `ResumeSessionResponse` | Reconnect to session without history replay *(0.12.0)* |
+| `closeSession(request)` | `CloseSessionResponse` | Close session and free resources *(0.12.0)* |
 | `prompt(request)` | `PromptResponse` | Send prompt, block until response |
 | `cancel(notification)` | `void` | Cancel current prompt (fire-and-forget) |
 | `getAgentCapabilities()` | `NegotiatedCapabilities` | Capabilities reported by agent |
@@ -212,7 +242,10 @@ The `acp-agent-support` module provides a declarative programming model using an
 |------------|-----------------|-------------|
 | `@Initialize` | `initialize` | Protocol initialization and capability negotiation |
 | `@NewSession` | `session/new` | Creates a new agent session |
-| `@LoadSession` | `session/load` | Loads an existing session by ID |
+| `@LoadSession` | `session/load` | Loads an existing session by ID (replays history) |
+| `@ListSessions` | `session/list` | Lists sessions with optional cwd filter *(0.12.0)* |
+| `@ResumeSession` | `session/resume` | Reconnects to session without history replay *(0.12.0)* |
+| `@CloseSession` | `session/close` | Closes session and frees resources *(0.12.0)* |
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
 | `@SetSessionModel` | `session/set_model` | Changes the AI model |
@@ -376,6 +409,9 @@ Blocking handlers with plain return values. No annotations.
 | `initializeHandler(handler)` | Handle `initialize` requests |
 | `newSessionHandler(handler)` | Handle `session/new` requests |
 | `loadSessionHandler(handler)` | Handle `session/load` requests |
+| `listSessionsHandler(handler)` | Handle `session/list` requests *(0.12.0)* |
+| `resumeSessionHandler(handler)` | Handle `session/resume` requests *(0.12.0)* |
+| `closeSessionHandler(handler)` | Handle `session/close` requests *(0.12.0)* |
 | `promptHandler(handler)` | Handle `session/prompt` requests |
 | `cancelHandler(handler)` | Handle `session/cancel` notifications |
 
@@ -520,12 +556,25 @@ All protocol types are defined in `AcpSchema` as Java records.
 | `InitializeRequest` | `protocolVersion`, `clientCapabilities` |
 | `InitializeResponse` | `protocolVersion`, `agentCapabilities`, `sessionIds` |
 | `NewSessionRequest` | `cwd`, `mcpServers` |
-| `NewSessionResponse` | `sessionId`, `restoredSessionState`, `contextDocuments` |
+| `NewSessionResponse` | `sessionId`, `modes`, `models` |
 | `LoadSessionRequest` | `sessionId`, `cwd`, `mcpServers` |
-| `LoadSessionResponse` | `restoredSessionState`, `contextDocuments` |
-| `PromptRequest` | `sessionId`, `prompt` (list of `Content`) |
+| `LoadSessionResponse` | `modes`, `models` |
+| `ListSessionsRequest` | `cwd` (optional filter), `cursor` (pagination) *(0.12.0)* |
+| `ListSessionsResponse` | `sessions` (list of `SessionInfo`), `nextCursor` *(0.12.0)* |
+| `ResumeSessionRequest` | `sessionId`, `cwd`, `mcpServers` *(0.12.0)* |
+| `ResumeSessionResponse` | `modes`, `models` *(0.12.0)* |
+| `CloseSessionRequest` | `sessionId` *(0.12.0)* |
+| `CloseSessionResponse` | *(empty)* *(0.12.0)* |
+| `PromptRequest` | `sessionId`, `prompt` (list of `ContentBlock`) |
 | `PromptResponse` | `stopReason` |
 | `CancelNotification` | `sessionId` |
+
+### Session Types *(0.12.0)*
+
+| Type | Fields | Description |
+| :--- | :----- | :---------- |
+| `SessionInfo` | `sessionId`, `cwd`, `title`, `updatedAt` | Session metadata returned by `session/list` |
+| `SessionCapabilities` | `list`, `close`, `resume` | Nested capability flags on `AgentCapabilities` |
 
 ### Content Types
 
@@ -600,6 +649,24 @@ Or use `require` methods that throw `AcpCapabilityException` if unsupported:
 ```java
 caps.requireWriteTextFile();
 context.writeFile("output.txt", "content");
+```
+
+### Session Capabilities *(0.12.0)*
+
+Agents advertise session management support via `SessionCapabilities`:
+
+```java
+// Check before calling session management methods
+NegotiatedCapabilities caps = client.getAgentCapabilities();
+if (caps.supportsListSessions()) {
+    var sessions = client.listSessions(new ListSessionsRequest(null));
+}
+if (caps.supportsResumeSession()) {
+    client.resumeSession(new ResumeSessionRequest(sessionId, cwd, List.of()));
+}
+if (caps.supportsCloseSession()) {
+    client.closeSession(new CloseSessionRequest(sessionId));
+}
 ```
 
 ---

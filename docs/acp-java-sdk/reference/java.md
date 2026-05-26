@@ -10,22 +10,7 @@ Complete API reference for the ACP Java SDK, covering client, agent (all three s
 
 ## Installation
 
-Snapshot builds are published to Maven Central Snapshots. Add the snapshot repository to your build.
-
-### Maven
-
-Add the snapshot repository, then the dependency:
-
-```xml
-<repositories>
-    <repository>
-        <id>central-snapshots</id>
-        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-        <snapshots><enabled>true</enabled></snapshots>
-        <releases><enabled>false</enabled></releases>
-    </repository>
-</repositories>
-```
+### Maven (0.12.0 — stable)
 
 Core SDK (client + sync/async agent APIs):
 
@@ -33,7 +18,7 @@ Core SDK (client + sync/async agent APIs):
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.11.0</version>
+    <version>0.12.0</version>
 </dependency>
 ```
 
@@ -43,7 +28,7 @@ Annotation-based agent support (includes `acp-core` transitively):
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.11.0</version>
+    <version>0.12.0</version>
 </dependency>
 ```
 
@@ -53,7 +38,7 @@ Test utilities:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.11.0</version>
+    <version>0.12.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -64,13 +49,35 @@ WebSocket server transport for agents:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-websocket-jetty</artifactId>
-    <version>0.11.0</version>
+    <version>0.12.0</version>
 </dependency>
 ```
 
-#### Snapshot (0.12.0-SNAPSHOT)
+### Gradle
 
-For the latest features including `session/list`, `session/close`, and `session/resume`, use the snapshot. Add the snapshot repository first:
+```groovy
+// build.gradle
+implementation 'com.agentclientprotocol:acp-core:0.12.0'
+
+// Optional modules
+implementation 'com.agentclientprotocol:acp-agent-support:0.12.0'
+implementation 'com.agentclientprotocol:acp-websocket-jetty:0.12.0'
+testImplementation 'com.agentclientprotocol:acp-test:0.12.0'
+```
+
+```kotlin
+// build.gradle.kts
+implementation("com.agentclientprotocol:acp-core:0.12.0")
+
+// Optional modules
+implementation("com.agentclientprotocol:acp-agent-support:0.12.0")
+implementation("com.agentclientprotocol:acp-websocket-jetty:0.12.0")
+testImplementation("com.agentclientprotocol:acp-test:0.12.0")
+```
+
+### Snapshot (0.13.0-SNAPSHOT)
+
+For unreleased features, add the snapshot repository and use the snapshot version:
 
 ```xml
 <repositories>
@@ -83,39 +90,7 @@ For the latest features including `session/list`, `session/close`, and `session/
 </repositories>
 ```
 
-Then use version `0.12.0-SNAPSHOT` in your dependencies.
-
-### Gradle
-
-```groovy
-// build.gradle — stable
-implementation 'com.agentclientprotocol:acp-core:0.11.0'
-
-// Optional modules
-implementation 'com.agentclientprotocol:acp-agent-support:0.11.0'
-implementation 'com.agentclientprotocol:acp-websocket-jetty:0.11.0'
-testImplementation 'com.agentclientprotocol:acp-test:0.11.0'
-```
-
-```kotlin
-// build.gradle.kts — stable
-implementation("com.agentclientprotocol:acp-core:0.11.0")
-
-// Optional modules
-implementation("com.agentclientprotocol:acp-agent-support:0.11.0")
-implementation("com.agentclientprotocol:acp-websocket-jetty:0.11.0")
-testImplementation("com.agentclientprotocol:acp-test:0.11.0")
-```
-
-For snapshots, add the repository and use `0.12.0-SNAPSHOT`:
-
-```kotlin
-// build.gradle.kts — snapshot
-repositories {
-    maven("https://central.sonatype.com/repository/maven-snapshots/")
-}
-implementation("com.agentclientprotocol:acp-core:0.12.0-SNAPSHOT")
-```
+Then use `0.13.0-SNAPSHOT` in place of `0.12.0` in your dependencies.
 
 ---
 

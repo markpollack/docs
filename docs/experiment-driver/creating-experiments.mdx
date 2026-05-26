@@ -29,6 +29,66 @@ The most informative experiments use a **progressive variant ladder** — each v
 
 Each step isolates one variable. If variant 4 outperforms variant 3 with identical knowledge content, the structure is what matters — not just the knowledge.
 
+## Improvement Flywheel
+
+Variant ladders can be pre-planned, but the most effective experiments use **empirically motivated variants** — each exists because the previous variant's analysis revealed a specific gap. This follows the [Improvement Flywheel](https://github.com/markpollack/agento-forge/blob/main/concepts/improvement-flywheel.md) methodology:
+
+```
+1. RUN        — Execute a variant and capture journals
+2. MEASURE    — Compute scores, traces, behavioral metrics
+3. DIAGNOSE   — Convert signals into hypotheses about causes
+4. INTERVENE  — Change prompt, KB, tool, workflow, or rubric
+5. VERIFY     — Re-run and compare deltas / check for regressions
+```
+
+### Iteration metadata
+
+Each variant records what motivated it using `IterationMetadata`:
+
+```java
+public record IterationMetadata(@Nullable String finding, String hypothesis) {}
+```
+
+In the [agent-experiment-template](https://github.com/markpollack/agent-experiment-template), this is configured in `experiment-config.yaml`:
+
+```yaml
+variants:
+  - name: control
+    promptFile: v0-naive.txt
+    iteration:
+      finding: null
+      hypothesis: "Establish baseline agent behavior"
+
+  - name: variant-a
+    promptFile: v1-hardened.txt
+    iteration:
+      finding: "v0 BUILD→FIX loop amplification 3.2"
+      hypothesis: "Structured execution steps reduce fix loops"
+```
+
+This creates an audit trail: for every variant you can trace back to the observation that motivated it and verify whether the hypothesis held.
+
+### Intervention levers
+
+The type of loss determines which lever to pull:
+
+| Lever | When to use |
+|-------|-------------|
+| **Prompt** | Diffuse waste, no dominant failure pattern |
+| **Knowledge / skills** | Friction loops around a specific knowledge gap |
+| **Execution structure** | Loops around states that could be deterministic |
+| **Model** | Agent fundamentally cannot perform the task |
+| **Rubric / evaluation** | Judge variance, scores don't correlate with quality |
+
+### Comparison reporting
+
+`GrowthStoryReporter` (in the template) generates a markdown comparison report across variants. It:
+- Shows per-judge score deltas, improvements, and regressions for each variant pair
+- Flags regressions with explicit warnings when any `ScoreComparison.regressions() > 0`
+- Includes iteration motivation (finding + hypothesis) before each variant's scores when `IterationMetadata` is present
+
+The report is written to `analysis/comparison-report.md` and provides the MEASURE output that feeds the next DIAGNOSE step.
+
 ## Dataset Design
 
 ### Item structure

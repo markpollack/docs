@@ -232,6 +232,41 @@ report.checks();          // per-metric breakdown
 
 Metrics gracefully degrade — if data for a metric is missing, the metric is omitted rather than failing.
 
+## Behavioral Diagnostics (Markov Analysis)
+
+Gap classification and remediation operate on **judge verdicts** — the outcome layer. A complementary diagnostic lens operates on **tool-call sequences** — the behavioral layer. The [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) includes Markov chain analysis scripts that reveal *how* the agent behaves, not just *what* it produces.
+
+### Loop amplification
+
+The Markov analysis computes **loop amplification** — how many times the agent revisits a state before moving forward. High amplification indicates friction or failure loops:
+
+| Signal | Diagnosis | Intervention |
+|--------|-----------|-------------|
+| Amplification > 2.0 on BUILD→FIX | Agent in a fix loop — build fails, fix fails, rebuild fails | Knowledge (add fix patterns) or execution structure (pre-validate) |
+| Amplification > 2.0 on SEARCH states | Agent searching for something it can't find | Knowledge (add the target information) |
+| Amplification > 2.0 on EXPLORE | Agent reading many files without progress | Prompt (clarify task decomposition) or pre-analysis script |
+
+### Loop types
+
+Not all loops are problems. Classify before intervening:
+
+| Loop type | Pattern | Action |
+|-----------|---------|--------|
+| **Productive** | WRITE → VERIFY → FIX → VERIFY | Leave it alone |
+| **Friction** | SEARCH → READ → SEARCH → READ | Add knowledge or routing |
+| **Failure** | BUILD → FIX → BUILD → FIX (same error) | Change strategy, not retry count |
+| **Diagnostic** | BUILD → ERROR → READ_LOG → FIX | Leave it alone |
+| **Degenerate** | EXPLORE → EXPLORE → EXPLORE | Agent is stuck — intervene |
+
+### Interpretation output
+
+The template's `make_markov_analysis.py` writes `analysis/markov-interpretation.md` with:
+- Per-variant loop amplification summary with threshold-based classification
+- Recommended intervention lever for each high-amplification state
+- Suggested next variant with a hypothesis template
+
+This connects the behavioral DIAGNOSE step to the flywheel's INTERVENE step — the interpretation tells you *which lever to pull* based on measured state-transition patterns. See the [Improvement Flywheel](https://github.com/markpollack/agento-forge/blob/main/concepts/improvement-flywheel.md) for the full methodology.
+
 ## Related
 
 <CardGroup cols={2}>

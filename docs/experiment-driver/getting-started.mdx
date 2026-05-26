@@ -3,6 +3,26 @@ title: "Getting Started with Agent Experiment"
 description: "Run your first AI agent evaluation: dataset, agent, jury, and variant comparison"
 ---
 
+## Quick Start with the Template
+
+The fastest way to start is the [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) — a pre-wired project with variant config, analysis scripts, and the improvement flywheel methodology built in:
+
+```bash
+# Clone the template
+git clone https://github.com/markpollack/agent-experiment-template my-experiment
+cd my-experiment
+
+# Run the baseline variant
+./mvnw compile exec:java -Dexec.args="--variant control"
+
+# Run all variants and compare
+./mvnw compile exec:java -Dexec.args="--run-all-variants"
+```
+
+The template includes `ExperimentApp` (CLI with `--variant`, `--item`, `--run-all-variants`), a pluggable `AgentInvoker`, cascaded jury, Markov analysis scripts, and `GrowthStoryReporter` for variant comparison. Customize three things: the agent invoker, domain judges, and knowledge files.
+
+If you want to wire the experiment loop yourself from scratch, follow the steps below.
+
 ## What You'll Build
 
 An experiment that evaluates an AI agent against a dataset of coding tasks, scores the results with a jury of judges, and compares variants to test whether adding knowledge improves quality.

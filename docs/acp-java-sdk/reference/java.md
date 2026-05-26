@@ -162,6 +162,8 @@ All three produce identical protocol behavior and support the same capabilities.
 | `listSessions(request)` | `ListSessionsResponse` | List sessions, optional cwd filter *(0.12.0)* |
 | `resumeSession(request)` | `ResumeSessionResponse` | Reconnect to session without history replay *(0.12.0)* |
 | `closeSession(request)` | `CloseSessionResponse` | Close session and free resources *(0.12.0)* |
+| `forkSession(request)` | `ForkSessionResponse` | Fork a session into a new branch *(0.12.0, unstable)* |
+| `setSessionConfigOption(request)` | `SetSessionConfigOptionResponse` | Set a session config value *(0.12.0, unstable)* |
 | `prompt(request)` | `PromptResponse` | Send prompt, block until response |
 | `cancel(notification)` | `void` | Cancel current prompt (fire-and-forget) |
 | `getAgentCapabilities()` | `NegotiatedCapabilities` | Capabilities reported by agent |
@@ -186,6 +188,10 @@ AcpSyncClient client = AcpClient.sync(transport)
     .requestPermissionHandler(req -> {
         // Agent requests permission
         return new RequestPermissionResponse(req.options().getFirst().id());
+    })
+    .createElicitationHandler(req -> {
+        // Agent requests structured user input (unstable)
+        return CreateElicitationResponse.accept(Map.of("choice", "option-a"));
     })
     .build();
 ```
@@ -246,6 +252,8 @@ The `acp-agent-support` module provides a declarative programming model using an
 | `@ListSessions` | `session/list` | Lists sessions with optional cwd filter *(0.12.0)* |
 | `@ResumeSession` | `session/resume` | Reconnects to session without history replay *(0.12.0)* |
 | `@CloseSession` | `session/close` | Closes session and frees resources *(0.12.0)* |
+| `@ForkSession` | `session/fork` | Forks a session into a new branch *(0.12.0, unstable)* |
+| `@SetSessionConfigOption` | `session/set_config_option` | Sets a session config value *(0.12.0, unstable)* |
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
 | `@SetSessionModel` | `session/set_model` | Changes the AI model |
@@ -412,6 +420,8 @@ Blocking handlers with plain return values. No annotations.
 | `listSessionsHandler(handler)` | Handle `session/list` requests *(0.12.0)* |
 | `resumeSessionHandler(handler)` | Handle `session/resume` requests *(0.12.0)* |
 | `closeSessionHandler(handler)` | Handle `session/close` requests *(0.12.0)* |
+| `forkSessionHandler(handler)` | Handle `session/fork` requests *(0.12.0, unstable)* |
+| `setSessionConfigOptionHandler(handler)` | Handle `session/set_config_option` requests *(0.12.0, unstable)* |
 | `promptHandler(handler)` | Handle `session/prompt` requests |
 | `cancelHandler(handler)` | Handle `session/cancel` notifications |
 
@@ -565,6 +575,13 @@ All protocol types are defined in `AcpSchema` as Java records.
 | `ResumeSessionResponse` | `modes`, `models` *(0.12.0)* |
 | `CloseSessionRequest` | `sessionId` *(0.12.0)* |
 | `CloseSessionResponse` | *(empty)* *(0.12.0)* |
+| `ForkSessionRequest` | `sessionId`, `cwd`, `mcpServers` *(0.12.0, unstable)* |
+| `ForkSessionResponse` | `sessionId`, `modes`, `models`, `configOptions` *(0.12.0, unstable)* |
+| `SetSessionConfigOptionRequest` | `sessionId`, `configId`, `value`, `type` *(0.12.0, unstable)* |
+| `SetSessionConfigOptionResponse` | `configOptions` (full config state) *(0.12.0, unstable)* |
+| `CreateElicitationRequest` | `sessionId`, `message`, `mode`, `requestedSchema` *(0.12.0, unstable)* |
+| `CreateElicitationResponse` | `action` (accept/decline/cancel), `content` *(0.12.0, unstable)* |
+| `CompleteElicitationNotification` | `elicitationId` *(0.12.0, unstable)* |
 | `PromptRequest` | `sessionId`, `prompt` (list of `ContentBlock`) |
 | `PromptResponse` | `stopReason` |
 | `CancelNotification` | `sessionId` |
@@ -574,7 +591,27 @@ All protocol types are defined in `AcpSchema` as Java records.
 | Type | Fields | Description |
 | :--- | :----- | :---------- |
 | `SessionInfo` | `sessionId`, `cwd`, `title`, `updatedAt` | Session metadata returned by `session/list` |
-| `SessionCapabilities` | `list`, `close`, `resume` | Nested capability flags on `AgentCapabilities` |
+| `SessionCapabilities` | `list`, `close`, `resume`, `fork` | Nested capability flags on `AgentCapabilities` |
+
+### Config Option Types *(0.12.0, unstable)*
+
+| Type | Description |
+| :--- | :---------- |
+| `SessionConfigOption` | Polymorphic: `SessionConfigSelect` or `SessionConfigBoolean` |
+| `SessionConfigSelect` | Select-type config with `currentValue` and `options` list |
+| `SessionConfigBoolean` | Boolean toggle with `currentValue` |
+| `SessionConfigSelectOption` | A named value within a select config (`value`, `name`) |
+| `ConfigOptionUpdate` | SessionUpdate variant for agent-pushed config changes |
+
+### Elicitation Types *(0.12.0, unstable)*
+
+| Type | Description |
+| :--- | :---------- |
+| `ElicitationSchema` | JSON Schema describing form fields (`properties`, `required`) |
+| `ElicitationPropertySchema` | Polymorphic: `StringPropertySchema`, `NumberPropertySchema`, `IntegerPropertySchema`, `BooleanPropertySchema`, `MultiSelectPropertySchema` |
+| `EnumOption` | Named value for select/multi-select (`const`, `title`) |
+| `ElicitationCapabilities` | Client capability for form and/or URL elicitation |
+| `ElicitationAction` | Enum: `ACCEPT`, `DECLINE`, `CANCEL` |
 
 ### Content Types
 
@@ -595,6 +632,7 @@ All protocol types are defined in `AcpSchema` as Java records.
 | `AvailableCommandsUpdate` | Advertised slash commands |
 | `CurrentModeUpdate` | Agent mode change |
 | `UsageUpdate` | Context window and cost usage (unstable) |
+| `ConfigOptionUpdate` | Session config option changes (unstable) |
 
 ### Stop Reasons
 
@@ -656,18 +694,40 @@ context.writeFile("output.txt", "content");
 Agents advertise session management support via `SessionCapabilities`:
 
 ```java
-// Check before calling session management methods
 NegotiatedCapabilities caps = client.getAgentCapabilities();
 if (caps.supportsListSessions()) {
-    var sessions = client.listSessions(new ListSessionsRequest(null));
+    client.listSessions(new ListSessionsRequest(null));
 }
-if (caps.supportsResumeSession()) {
-    client.resumeSession(new ResumeSessionRequest(sessionId, cwd, List.of()));
-}
-if (caps.supportsCloseSession()) {
-    client.closeSession(new CloseSessionRequest(sessionId));
+if (caps.supportsForkSession()) {
+    client.forkSession(new ForkSessionRequest(sessionId, cwd, List.of()));
 }
 ```
+
+### Elicitation Capabilities *(0.12.0, unstable)*
+
+Clients advertise elicitation support during initialization:
+
+```java
+// Client: advertise form-mode elicitation support
+var caps = new ClientCapabilities(
+    new FileSystemCapability(), false,
+    new ElicitationCapabilities(), null);
+client.initialize(new InitializeRequest(1, caps));
+```
+
+```java
+// Agent: check before sending elicitation
+if (context.getClientCapabilities().supportsElicitation()) {
+    var response = context.createElicitation(
+        CreateElicitationRequest.form(sessionId, "Pick one:", schema));
+}
+```
+
+### `@UnstableAcpApi`
+
+APIs marked `@UnstableAcpApi` correspond to protocol elements in `schema.unstable.json`. They are public and functional but may change in any minor release. When the protocol element stabilizes, the annotation is removed (compatible change). See [Versioning](#versioning) for the full policy.
+
+IntelliJ users can configure the *Unstable API Usage* inspection (*Settings > Inspections > JVM languages*) to flag usages.
 
 ---
 

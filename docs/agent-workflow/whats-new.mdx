@@ -1,0 +1,76 @@
+---
+title: "What's New"
+description: "Release highlights for Agent Workflow"
+sidebarTitle: "What's New"
+---
+
+## 0.7.0
+
+**Managed Agents as a step runtime.** The new `ManagedAgentStep` delegates workflow steps to [Anthropic's Managed Agents API](https://docs.anthropic.com/en/api/overview). The workflow graph stays in charge — but specific steps can run in Anthropic's cloud sandbox with full tool access (bash, file I/O, web search).
+
+This proves the core thesis: **workflow is portable, execution substrate is pluggable.** The same workflow definition can run steps locally, via Temporal, or in Anthropic's hosted infrastructure — swap a single step, zero changes to the graph.
+
+### ManagedAgentStep
+
+Reference a pre-created agent and environment:
+
+```java
+ManagedAgentStep step = ManagedAgentStep.of(agentId, environmentId)
+    .name("remediation-agent")
+    .timeout(Duration.ofMinutes(10));
+
+String result = step.execute(ctx, "Fix the failing test in AuthService.java");
+```
+
+Or provision a new agent inline with the default toolset:
+
+```java
+ManagedAgentStep step = ManagedAgentStep.create(
+    "claude-sonnet-4-6",
+    "You are a code remediation agent. Fix failing tests.",
+    environmentId);
+```
+
+Use it in a workflow like any other step:
+
+```java
+var workflow = WorkflowGraph.builder()
+    .step("analyze", analyzeStep)
+    .step("remediate", ManagedAgentStep.of(agentId, envId).name("fix"))
+    .step("validate", validateStep)
+    .build();
+```
+
+**Design choices:**
+- Uses the official [`com.anthropic:anthropic-java`](https://github.com/anthropics/anthropic-sdk-java) SDK directly — no wrapper layer
+- Follows the `A2AStep` immutable pattern: factory methods, copier methods for `name()` / `timeout()`, `SessionRunner` functional interface for testability
+- One session per `execute()` call — agents are reused, sessions are ephemeral
+- Stream-first SSE pattern: opens the event stream before sending the user message, collects `agentMessage` text blocks, breaks on `sessionStatusIdle` or `sessionStatusTerminated`
+
+**Dependency** (optional — only needed if you use `ManagedAgentStep`):
+
+```xml
+<dependency>
+    <groupId>com.anthropic</groupId>
+    <artifactId>anthropic-java</artifactId>
+    <version>2.34.0</version>
+</dependency>
+```
+
+### Step runtime landscape
+
+With 0.7.0, Agent Workflow supports five step runtimes:
+
+| Step | Runtime | Use case |
+|------|---------|----------|
+| `Steps.of(fn)` | Local JVM | Deterministic logic, API calls |
+| `ChatClientStep` | Spring AI | Single LLM call, structured output |
+| `ClaudeStep` | Claude CLI | Full agentic loop with tools |
+| `A2AStep` | A2A protocol | Remote agent delegation |
+| **`ManagedAgentStep`** | **Anthropic cloud** | **Hosted agent with sandbox** |
+
+---
+
+## 0.6.0
+
+Initial public release on Maven Central. See [Getting Started](/docs/agent-workflow/getting-started) and the [Tutorial](/docs/agent-workflow/tutorial).

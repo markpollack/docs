@@ -29,6 +29,7 @@ Workflow.define("pr-review")
 - **Deterministic** — a Java function (GitHub API call, string formatting, file parsing)
 - **Single LLM call** — `ChatClientStep` wraps a [Spring AI](https://spring.io/projects/spring-ai) `ChatClient` call
 - **Agentic CLI tools** — `ClaudeStep` uses the [Claude Agent SDK](/projects/claude-agent-sdk) for full multi-turn agent sessions with deep tracing. `AgentClientStep` wraps other agentic CLI tools — Google Gemini, OpenAI Codex, Amazon Q — via [Agent Client](/projects/agent-client), giving you a unified interface
+- **Hosted agents** — `ManagedAgentStep` delegates to [Anthropic Managed Agents](https://docs.anthropic.com/en/api/overview), running steps in Anthropic's cloud sandbox with full tool access. `A2AStep` delegates via the A2A protocol to any remote agent
 
 A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
 
@@ -92,7 +93,7 @@ This isn't obvious until you measure it. In our [code coverage experiments](/exp
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-workflow">
-    Source code (0.6.0 on Maven Central)
+    Source code (0.7.0 on Maven Central)
   </Card>
   <Card title="Tutorial Code" icon="graduation-cap" href="https://github.com/markpollack/workflow-dsl-examples">
     13 runnable examples — validated with real LLM calls

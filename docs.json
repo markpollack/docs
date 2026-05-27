@@ -2,7 +2,13 @@
   "$schema": "https://mintlify.com/schema.json",
   "theme": "mint",
   "name": "Pollack AI Lab",
-  "ignore": ["DESIGN.md", "README.md", "CLAUDE.md", "plans/**", ".agent/**"],
+  "ignore": [
+    "DESIGN.md",
+    "README.md",
+    "CLAUDE.md",
+    "plans/**",
+    ".agent/**"
+  ],
   "logo": {
     "dark": "/logo/lab-dark.svg",
     "light": "/logo/lab-light.svg"
@@ -75,6 +81,7 @@
                 "group": "Agent Workflow",
                 "pages": [
                   "projects/agent-workflow",
+                  "docs/agent-workflow/whats-new",
                   "docs/agent-workflow/agent-loop",
                   "docs/agent-workflow/getting-started",
                   {

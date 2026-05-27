@@ -40,35 +40,34 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 - **Steering** (planned) — runtime hooks that intercept before/after steps to enforce constraints, redirect behavior, or inject guidance. Deterministic or LLM-powered. Integrates with [Spring AI](https://spring.io/projects/spring-ai) advisors and the [Claude Agent SDK](/projects/claude-agent-sdk) hook system
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
+## Start Here
+
+<CardGroup cols={2}>
+  <Card title="Tutorial: Build a Workflow" icon="graduation-cap" href="/docs/agent-workflow/tutorial">
+    From a single step to a supervised agent pipeline — 8 progressive examples
+  </Card>
+  <Card title="Tutorial Code" icon="github" href="https://github.com/markpollack/workflow-dsl-examples">
+    Clone and run all 13 examples with real LLM calls
+  </Card>
+</CardGroup>
+
 ## Documentation
 
 <CardGroup cols={2}>
-  <Card title="AgentLoop" icon="robot" href="/docs/agent-workflow/agent-loop">
-    Ready-to-use SWE agent — tools, memory, run/chat API
-  </Card>
   <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
     Steps, context, portable runtimes, first workflow
-  </Card>
-  <Card title="Tutorial: Build a Workflow" icon="graduation-cap" href="/docs/agent-workflow/tutorial">
-    From a single step to a supervised agent pipeline
-  </Card>
-  <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
-    4 patterns for getting data into steps
   </Card>
   <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
     10+ composable patterns with code
   </Card>
-  <Card title="Examples" icon="flask" href="/docs/agent-workflow/examples">
-    8 tests validated against GPT-4.1
-  </Card>
-  <Card title="Spring Batch Mapping" icon="layer-group" href="/docs/agent-workflow/spring-batch-mapping">
-    Batch concepts → Agent Workflow
+  <Card title="Annotation Model" icon="at" href="/docs/agent-workflow/annotation-model">
+    @Agent, AgentHandler, exception handling, registry
   </Card>
   <Card title="Durability" icon="shield-halved" href="/docs/agent-workflow/durability">
     Crash recovery, checkpointing, Temporal integration
   </Card>
-  <Card title="Annotation Model" icon="at" href="/docs/agent-workflow/annotation-model">
-    @Agent, AgentHandler, exception handling, registry
+  <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
+    4 patterns for getting data into steps
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
     Step, AgentContext, Gate, WorkflowGraph, StepRunner

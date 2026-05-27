@@ -71,7 +71,7 @@ String result = (String) Workflow.<String, Object>define("novel-creator")
 
 Three LLM calls in sequence: write a story, rewrite for audience, rewrite for style. The `Workflow.define()` + `.run()` pattern compiles the graph and executes it in one call.
 
-[View source: SequentialIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/SequentialIT.java)
+[View source: SequentialIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/SequentialIT.java)
 
 ---
 
@@ -106,7 +106,7 @@ String result = (String) Workflow.<String, Object>define("category-router")
 
 The `.strip().toLowerCase()` on the classify output matters — LLMs sometimes return trailing whitespace or mixed case. The `branch()` predicate is a plain Java `Predicate<Object>`, so you can test any condition.
 
-[View source: BranchIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/BranchIT.java)
+[View source: BranchIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/BranchIT.java)
 
 ---
 
@@ -144,7 +144,7 @@ String result = (String) Workflow.<String, Object>define("error-recovery")
 
 The `.onError()` clause is type-specific — you can attach different recovery steps for different exception types. The workflow graph wires the recovery path at compile time, not at catch time.
 
-[View source: OnErrorIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/OnErrorIT.java)
+[View source: OnErrorIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/OnErrorIT.java)
 
 ---
 
@@ -186,7 +186,7 @@ Object result = Workflow.<String, Object>define("humor-loop")
 
 The loop alternates between `editor` (generate) and `scorer` (evaluate) until the score reaches the threshold. GPT-4.1 returns clean decimal numbers with the "Reply with ONLY a decimal number" prompt — the regex fallback is there for other models.
 
-[View source: LoopIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/LoopIT.java)
+[View source: LoopIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/LoopIT.java)
 
 ---
 
@@ -218,7 +218,7 @@ List<Object> results = (List<Object>) Workflow.<String, Object>define("evening-p
 
 Both LLM calls execute concurrently. You can pass any number of steps to `.parallel()` — they all receive the same input and their outputs are collected in order.
 
-[View source: ParallelIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/ParallelIT.java)
+[View source: ParallelIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/ParallelIT.java)
 
 ---
 
@@ -248,7 +248,7 @@ String result = (String) Workflow.<String, Object>define("decision-router")
 
 The DSL generates a routing prompt from the option names. The LLM returns a clean single-word label and the corresponding step executes. Use `decision()` when the routing logic is semantic (the LLM needs to understand the input to choose) rather than structural (a simple predicate suffices).
 
-[View source: DecisionIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/DecisionIT.java)
+[View source: DecisionIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/DecisionIT.java)
 
 ---
 
@@ -296,7 +296,7 @@ String result = (String) Workflow.<String, Object>define("gated-pipeline")
 
 Gates are the integration point for [Agent Judge](/projects/agent-judge) — replace the lambda gate with a `JudgeGate` backed by a jury for multi-judge evaluation with voting strategies.
 
-[View source: GateIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/GateIT.java)
+[View source: GateIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/GateIT.java)
 
 ---
 
@@ -324,7 +324,7 @@ Object result = Workflow.<String, Object>supervisor("text-improver", chat)
 
 The supervisor generates a routing prompt from agent names. Each iteration, the LLM picks the most appropriate agent for the current state. The `.until()` predicate reads from context — `ITERATION_COUNT` is automatically maintained, but you can use any context key.
 
-[View source: SupervisorIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/SupervisorIT.java)
+[View source: SupervisorIT.java](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/SupervisorIT.java)
 
 ---
 
@@ -345,7 +345,7 @@ Or run a single example:
 ./mvnw verify -Dtest=BranchIT
 ```
 
-The repository also includes examples for [context propagation](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/ContextWritesIT.java), [step parameterization](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/ParameterizationIT.java), [type checking](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/TypeCheckingIT.java), [annotation model](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/AnnotationModelIT.java), and [crash recovery](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/ours/CrashRecoveryIT.java) (no API key needed).
+The repository also includes examples for [context propagation](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/ContextWritesIT.java), [step parameterization](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/ParameterizationIT.java), [type checking](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/TypeCheckingIT.java), [annotation model](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/AnnotationModelIT.java), and [crash recovery](https://github.com/markpollack/workflow-dsl-examples/blob/main/src/test/java/io/github/markpollack/workflow/examples/dsl/CrashRecoveryIT.java) (no API key needed).
 
 ## What's Next
 

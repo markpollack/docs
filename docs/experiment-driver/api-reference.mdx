@@ -37,6 +37,49 @@ public interface AgentInvoker {
 - Thread-safe: callable from multiple threads
 - NOT responsible for: timeout enforcement, workspace setup, result tracking
 
+### Template Invokers
+
+The [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) provides a hierarchy of ready-made invokers. Choose based on your orchestration needs:
+
+| Class | Extends | Use When |
+|-------|---------|----------|
+| `TemplateAgentInvoker` | `AbstractTemplateAgentInvoker` | Single-phase agent via `AgentClient` (rename to `{Domain}AgentInvoker`) |
+| `TwoPhaseTemplateAgentInvoker` | `AbstractTemplateAgentInvoker` | Two-phase explore + act via `ClaudeSyncClient` |
+| `WorkflowAgentInvoker` | `AbstractTemplateAgentInvoker` | Single-step workflow — simplest workflow entry point |
+| `WorkflowInvoker<S>` | `AgentInvoker` (direct) | Multi-step typed workflow with cost tracking |
+
+**`AbstractTemplateAgentInvoker`** provides:
+- Pre/post invoke hooks (`preInvoke`, `postInvoke`)
+- Knowledge file injection into workspaces
+- Phase capture collection
+
+**`WorkflowAgentInvoker`** wraps a single `ClaudeStep` in a `Workflow` with journal integration wired automatically — step events are recorded as `WorkflowStepEvent` entries via `WorkflowJournal`. The experiment name is pulled from `context.metadata("experimentId")`.
+
+**`WorkflowInvoker<S>`** is the base for multi-step workflows with typed state. Journal and cost tracking are built in. Subclasses implement three methods:
+
+```java
+public class MyWorkflow extends WorkflowInvoker<MyState> {
+
+    @Override
+    protected String workflowName() { return "my-experiment"; }
+
+    @Override
+    protected Workflow<Object, MyState> buildWorkflow(
+            InvocationContext ctx, WorkflowExecutor executor) {
+        return Workflow.<Object, MyState>define(workflowName())
+                .withExecutor(executor)   // journal-backed
+                .step(analyzeStep)
+                .step(fixStep)
+                .build();
+    }
+
+    @Override
+    protected MyState buildInitialState(InvocationContext ctx) {
+        return new MyState(ctx.workspacePath());
+    }
+}
+```
+
 ## InvocationContext
 
 What the runner passes to your agent:

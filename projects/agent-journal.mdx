@@ -35,6 +35,7 @@ Agent Journal captures the structured behavioral traces that make agent research
 |--------|-------------|--------------|
 | `journal-core` | Events, storage, EvalSubject, Feedback | Zero external deps |
 | `claude-code-capture` | Claude Code SDK → journal bridge, `PhaseCaptureSources` | claude-code-sdk |
+| `workflow-journal` | Workflow step → journal bridge, `WorkflowJournal` | journal-core, workflow-flows |
 
 ## Installation
 
@@ -52,6 +53,16 @@ For Claude Code SDK integration:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
+
+For agent-workflow step tracing:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-journal</artifactId>
     <version>1.2.0</version>
 </dependency>
 ```
@@ -170,6 +181,26 @@ List<ReviewedItem> reviewed = feedback.exportReviewedItems(experimentId);
 ```
 
 `ReviewedItem` is a projection record containing `itemId`, `runId`, `feedback`, and `itemMetadata` — suitable for building labeled datasets from human judgments.
+
+## Workflow Integration
+
+The `workflow-journal` module bridges `agent-workflow` step execution to the journal. Each workflow step completion is recorded as a `WorkflowStepEvent` containing step name, duration, tokens, and cost.
+
+```java
+WorkflowJournal.registerEventType();  // register once
+
+try (Run run = Journal.run("my-experiment").start()) {
+    WorkflowExecutor executor = new WorkflowExecutor(
+        new LocalStepRunner(), WorkflowJournal.forRun(run));
+
+    Workflow.<String, String>define("my-workflow")
+        .withExecutor(executor)
+        .step(claudeStep)
+        .run(input);
+}
+```
+
+The experiment template's `WorkflowAgentInvoker` and `WorkflowInvoker<S>` wire this automatically — no manual setup needed in consumer projects.
 
 ## What It Captures
 

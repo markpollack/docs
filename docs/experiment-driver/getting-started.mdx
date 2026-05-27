@@ -107,7 +107,46 @@ The `before/` directory is the starting state. The `reference/` directory is the
 
 ## Step 2: Implement an AgentInvoker
 
-`AgentInvoker` is a single-method interface:
+### Using the template invokers (recommended)
+
+The template ships with ready-made invokers that handle journal integration, knowledge injection, and cost tracking. Pick the one that matches your orchestration:
+
+**Single-step workflow** — the simplest starting point. Wraps a `ClaudeStep` in a `Workflow` with automatic journal recording:
+
+```java
+// WorkflowAgentInvoker works out of the box — journal wired, knowledge injected.
+// Rename to {Domain}AgentInvoker and override hooks as needed.
+```
+
+**Multi-step workflow** — for pipelines with typed state flowing between steps:
+
+```java
+public class MyWorkflow extends WorkflowInvoker<MyState> {
+
+    @Override protected String workflowName() { return "my-experiment"; }
+
+    @Override
+    protected Workflow<Object, MyState> buildWorkflow(
+            InvocationContext ctx, WorkflowExecutor executor) {
+        return Workflow.<Object, MyState>define(workflowName())
+                .withExecutor(executor)   // journal + cost tracking pre-wired
+                .step(analyzeStep)
+                .step(fixStep)
+                .build();
+    }
+
+    @Override
+    protected MyState buildInitialState(InvocationContext ctx) {
+        return new MyState(ctx.workspacePath());
+    }
+}
+```
+
+See the [API Reference](/docs/experiment-driver/api-reference#template-invokers) for the full invoker hierarchy.
+
+### From scratch
+
+If you need full control, `AgentInvoker` is a single-method interface:
 
 ```java
 public class MyAgent implements AgentInvoker {

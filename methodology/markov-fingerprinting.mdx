@@ -55,9 +55,55 @@ uv pip install -e ~/tuvium/projects/markov-agent-analysis/[all]
 
 Key function: `build_absorbing_chain_from_traces()` — transforms raw tool-call logs into absorbing Markov chains.
 
+## Role in the Growth Cycle
+
+Markov analysis is the primary diagnostic lens in the **DIAGNOSE** step of the [Improvement Flywheel](/methodology/improvement-flywheel). It converts raw tool-call traces into actionable signals about where the agent gets stuck and why.
+
+### Loop Amplification Signals
+
+| Signal | Diagnosis | Lever |
+|--------|-----------|-------|
+| Amplification > 2.0 on BUILD→FIX→BUILD | Agent is in a fix loop — build fails, fix attempt fails, rebuild fails | Knowledge (Lever 2) or deterministic tool (Lever 3) |
+| Amplification > 2.0 on SEARCH states | Agent is searching for something it can't find | Add the target information to `knowledge/` (Lever 2) |
+| Amplification > 2.0 on EXPLORE | Agent is reading many files without making progress | Clarify task decomposition in prompt (Lever 1) or pre-analysis script (Lever 3) |
+
+### Transition Gap Signals
+
+| Signal | Diagnosis | Lever |
+|--------|-----------|-------|
+| VERIFY never reached | Agent produces output but doesn't confirm correctness | Add stopping condition to prompt (Lever 1) |
+| READ_KB never reached | Agent ignores knowledge files | Reference knowledge files in prompt, improve routing table (Lever 1) |
+| WRITE reached late (after many EXPLORE/SEARCH cycles) | Agent spends too long understanding before acting | Templates, scaffolding, explicit first steps (Lever 3) |
+
+### Failure Pattern Signals
+
+| Signal | Diagnosis | Lever |
+|--------|-----------|-------|
+| Error state reachable from multiple paths | Structural/tooling issue | Fix the tooling, not the agent (Lever 3) |
+| Single dominant failure path (BUILD → ERROR 80%) | Invalid strategy | Change strategy, not retry count (Lever 1 or 2) |
+| Agent stops after N fix attempts | Capability ceiling | Add fix pattern to knowledge (Lever 2) or restructure task (Lever 3) |
+
+### Loop Type Classification
+
+Not all loops are problems. Classify before intervening:
+
+| Loop Type | Pattern | Action |
+|-----------|---------|--------|
+| **Productive** | WRITE → VERIFY → FIX → VERIFY | Leave it alone |
+| **Friction** | SEARCH → READ → SEARCH → READ | Add knowledge or routing |
+| **Failure** | BUILD → FIX → BUILD → FIX (same error) | Change strategy |
+| **Diagnostic** | BUILD → ERROR → READ_LOG → FIX | Leave it alone |
+| **Degenerate** | EXPLORE → EXPLORE → EXPLORE | Intervene — agent is stuck |
+
 ## Related
 
 <CardGroup cols={2}>
+  <Card title="Improvement Flywheel" icon="arrows-rotate" href="/methodology/improvement-flywheel">
+    The feedback loop that this analysis drives
+  </Card>
+  <Card title="Forge Methodology" icon="hammer" href="/methodology/forge">
+    Define → Forge → Run → Grow pipeline
+  </Card>
   <Card title="Blog: I Read My Agent's Diary" icon="newspaper" href="https://blog.pollack.ai/i-read-my-agents-diary/">
     Narrative walkthrough of the Markov analysis
   </Card>

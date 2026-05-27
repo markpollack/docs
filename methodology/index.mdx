@@ -50,30 +50,40 @@ The lab uses a consistent methodology across all experiments. This page is the o
   >
     Markov chain modeling of agent tool-call traces
   </Card>
+  <Card
+    title="Improvement Flywheel"
+    icon="arrows-rotate"
+    href="/methodology/improvement-flywheel"
+  >
+    Loss-driven iteration — from measured gaps to targeted interventions
+  </Card>
 </CardGroup>
 
 ## Experiment Protocol
 
-Every experiment follows this structure:
+Every experiment follows the [Improvement Flywheel](/methodology/improvement-flywheel) cycle:
 
 <Steps>
   <Step title="Define hypothesis">
     What are we testing? One variable, controlled comparison.
   </Step>
-  <Step title="Design variants">
-    Progressive ladder from baseline to full treatment. Each variant adds exactly one thing.
+  <Step title="Discover state taxonomy">
+    Run control variant 3–5 times. Inspect tool-call clusters and define domain-specific behavioral states for [Markov analysis](/methodology/markov-fingerprinting).
   </Step>
-  <Step title="Deterministic preprocessing">
-    Parse inputs before the LLM sees them. Route to knowledge bases. Zero LLM cost for this stage.
+  <Step title="Run control baseline">
+    Each variant runs N=3+ times for statistical confidence. Full traces captured. Deterministic preprocessing routes to knowledge bases at zero LLM cost.
   </Step>
-  <Step title="Run N times">
-    Each variant runs N=3+ times for statistical confidence. Full traces captured.
+  <Step title="Measure with four-tier jury">
+    [T0 → T1 → T2 → T3](/methodology/four-tier-jury) cascade. Cheap filters first. Capture per-criterion scores, not just aggregates.
   </Step>
-  <Step title="Evaluate with four-tier jury">
-    T0 (deterministic) → T1 (command) → T2 (golden test) → T3 (LLM). Cheap filters first.
+  <Step title="Diagnose with behavioral analysis">
+    Build [Markov chains](/methodology/markov-fingerprinting) from tool-call sequences. Identify dominant loss dimension. Classify loops before intervening.
   </Step>
-  <Step title="Analyze behavioral traces">
-    Build Markov chains from tool-call sequences. Compare transition probabilities across variants.
+  <Step title="Intervene — create next variant">
+    Apply a [targeted lever](/methodology/improvement-flywheel#intervention-levers): prompt, knowledge, execution structure, model, or rubric. Each variant is motivated by the previous variant's measurement.
+  </Step>
+  <Step title="Verify and iterate">
+    Re-run and compare deltas. Check for regressions across all dimensions. Return to step 3 until loss plateaus.
   </Step>
   <Step title="Publish">
     Experiment page here in the lab, narrative on blog.pollack.ai, raw data on GitHub.
@@ -87,5 +97,7 @@ Every experiment follows this structure:
 | **T3 Score** | Overall quality (LLM jury assessment) | Agent Judge |
 | **Expected Steps** | Efficiency (Markov fundamental matrix) | Agent Journal |
 | **P(success)** | Reliability (absorbing chain probability) | Markov Analysis |
-| **Thrash Score** | Stability (loop amplification in BUILD→TEST→EDIT) | Markov Analysis |
+| **Thrash Score** | Behavioral loss (loop amplification in BUILD→TEST→EDIT) | Markov Analysis |
+| **Loop Amplification** | Per-state revisit rate — friction vs productive loops | Markov Analysis |
+| **Regression Count** | Dimensions that worsened after an intervention | Jury Comparison |
 | **Cost** | Practical efficiency ($ per experiment run) | Token tracking |

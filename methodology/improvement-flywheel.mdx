@@ -1,0 +1,236 @@
+---
+title: "Improvement Flywheel"
+description: "Loss-driven iteration — from measured behavioral gaps to targeted interventions"
+---
+
+## The Core Insight
+
+Every iteration should identify a measurable gap between desired agent behavior and observed agent behavior. That gap is the **loss signal**. The flywheel turns the loss signal into a diagnosis, then into a targeted intervention, then into a verification run.
+
+This is gradient-inspired, not gradient-computed. Agent systems are not differentiable, but their journals, scores, state transitions, and failure paths provide directional evidence about where the next intervention should be applied.
+
+## The Cycle
+
+```
+1. RUN        — Execute variants and capture journals
+2. MEASURE    — Compute scores, traces, behavioral metrics
+3. DIAGNOSE   — Convert signals into hypotheses about causes
+4. INTERVENE  — Change prompt, KB, tool, workflow, rubric, or template
+5. VERIFY     — Re-run and compare deltas/regressions
+```
+
+Each iteration estimates where the system is failing, chooses the most promising improvement direction, applies an intervention, and measures whether the system moved in the intended direction. Variants are **empirically motivated, not pre-planned** — each variant exists because the previous variant's analysis revealed a specific gap.
+
+## Phase 0: State Taxonomy Discovery
+
+For projects that use [Markov analysis](/methodology/markov-fingerprinting), the flywheel begins with state taxonomy discovery. You need a **state taxonomy** — the named states that the classifier maps tool calls to. This taxonomy is domain-specific and must be discovered empirically.
+
+<Steps>
+  <Step title="Run control variant 3–5 times">
+    Generate enough tool-call data to see the agent's natural behavior patterns.
+  </Step>
+  <Step title="Run discovery mode">
+    See raw tool name + target frequencies without a predefined taxonomy.
+  </Step>
+  <Step title="Inspect clusters">
+    Look for related tool calls that represent a coherent activity.
+  </Step>
+  <Step title="Define state taxonomy">
+    Name the clusters. Each state should represent a distinct *kind of work*: exploring, building, fixing, verifying, searching, reading knowledge. Aim for 5–12 states.
+  </Step>
+  <Step title="Define cluster groups">
+    Group states into higher-level categories: productive work (WRITE, BUILD, VERIFY), friction (FIX, SEARCH), knowledge access (READ_KB, READ_SKILL).
+  </Step>
+</Steps>
+
+**What makes a good taxonomy:** States are verbs, not nouns — they describe what the agent is *doing*, not what it's *looking at*. Each state should have diagnostic value: its frequency change tells you something about agent quality.
+
+## Loss Signal Taxonomy
+
+The loss signal is multi-dimensional. Not every dimension matters for every iteration, but the full surface is:
+
+| Loss Dimension | What It Measures | Example Signal |
+|----------------|-----------------|----------------|
+| **Outcome** | Task failure or low judge score | 3 of 10 benchmark cases fail |
+| **Behavioral** | Unnecessary exploration or loops | BUILD→FIX loop amplification 3.2 |
+| **Knowledge** | Repeated search or oracle calls | Repeated fallback inspection (e.g., Maven cache decompilation) |
+| **Tooling** | Errors reachable from multiple paths | Same exception from 4 different states |
+| **Evaluation** | Judge variance or malformed output | Non-JSON judge response 2/7 runs |
+| **Stability** | Large run-to-run variance | Quality scores range 0.28–0.72 |
+| **Regression** | One metric improves, another worsens | Batch score +0.4 but scheduling score −0.3 |
+
+The MEASURE step quantifies these signals. The DIAGNOSE step identifies which dimension dominates. The INTERVENE step targets that dimension specifically.
+
+## Diagnostic Lenses
+
+Multiple analytical tools illuminate the loss signal. No single lens is the methodology — they are instruments in the measurement apparatus.
+
+| Lens | What It Reveals | Best For |
+|------|----------------|----------|
+| **[Markov analysis](/methodology/markov-fingerprinting)** | State transition patterns, loop amplification, transition gaps | Behavioral loss — where the agent gets stuck |
+| **[Judge scores](/methodology/four-tier-jury)** | Per-criterion quality assessment | Outcome loss — what the agent produces |
+| **Reasoning/intent traces** | Intent-to-action policy, planning distribution | Knowledge loss — what the agent is searching for |
+| **Oracle call log** | KB gaps the agent couldn't resolve alone | Knowledge loss — what's missing from the KB |
+| **Cost/token accounting** | Where the budget goes | Behavioral loss — which states burn tokens |
+| **Run-to-run comparison** | Variance across identical inputs | Stability loss — what's nondeterministic |
+
+## Loop Types
+
+Not all loops are problems. The DIAGNOSE step must classify the type of loop before choosing an intervention.
+
+| Loop Type | Pattern | Meaning | Action |
+|-----------|---------|---------|--------|
+| **Productive** | WRITE → VERIFY → FIX → VERIFY | Expected refinement cycle | Leave it alone |
+| **Friction** | SEARCH → READ → SEARCH → READ | Agent lacks context or structure | Add knowledge or routing |
+| **Failure** | BUILD → FIX → BUILD → FIX (same error) | Agent repeats an invalid strategy | Change strategy, not retry count |
+| **Diagnostic** | BUILD → ERROR → READ_LOG → FIX | Agent is gathering useful failure information | Leave it alone |
+| **Degenerate** | EXPLORE → EXPLORE → EXPLORE | No new information is being gained | The agent is stuck — intervene |
+
+<Note>
+Optimizing loop amplification to zero is an anti-pattern. Some loops are productive. The goal is to eliminate *friction*, *failure*, and *degenerate* loops while preserving *productive* and *diagnostic* ones.
+</Note>
+
+## Intervention Levers
+
+The type of loss determines which lever to pull.
+
+### Lever 1: Prompt
+
+Clarify task decomposition, add stopping conditions, add execution ordering. The `simple` → `hardened` jump in code-coverage experiments produced the single largest quality gain (+0.07) with no external knowledge — just structure and an explicit stopping condition.
+
+*Pull when:* diffuse waste, no dominant failure pattern, agent doesn't know when it's done.
+
+### Lever 2: Knowledge and Skills
+
+Add domain recipes, examples, routing hints. Targeted KB entries eliminate specific search loops without touching the prompt. In one observed experiment, a single knowledge package reduced JAR_INSPECT from 18% to under 2% of all steps.
+
+*Pull when:* friction loops around a specific knowledge gap.
+
+### Lever 3: Execution Structure
+
+Three sub-levers that replace exploratory LLM behavior with deterministic execution:
+
+- **Deterministic tools** — Replace states that don't require reasoning. A build script that returns structured results eliminates the BUILD/FIX reasoning loop.
+- **Templates and scaffolds** — Pre-generate structure or use cached known-good baselines. When the flywheel reveals the agent consistently discovers the same pattern through exploration, codify it.
+- **Steering** — Runtime hooks that intercept tool calls and enforce behavioral constraints.
+
+*Pull when:* loops around states that could be deterministic, agent repeatedly discovers the same answer, or agent makes predictable wrong choices.
+
+### Lever 4: Model
+
+Pick a model that clears the capability floor — below it, nothing else helps. But above that floor, the other levers are cheaper and often more effective.
+
+*Pull when:* the agent fundamentally cannot perform the task, even with perfect knowledge and structure.
+
+### Lever 5: Rubric and Evaluation
+
+Tighten judge criteria, add anchors with concrete examples, add per-criterion scoring. A rubric intervention doesn't change the agent — it changes the measurement, which changes what the next iteration optimizes for.
+
+*Pull when:* evaluation loss dominates (judge variance, malformed output, scores that don't correlate with actual quality).
+
+<Warning>
+**The critical distinction:** Knowledge can't fix a reasoning gap. Steering can't fix a knowledge gap. A better model can't fix either. Diagnose which problem you have before you reach for a lever.
+</Warning>
+
+## The Deterministic-Over-Exploratory Principle
+
+The flywheel's purpose is to **systematically shrink the agent's exploration space**. When the measurement apparatus reveals the agent consistently discovers the same pattern through exploration, that pattern should be codified as a deterministic step.
+
+| Execution Path | Quality Range | Reliability |
+|----------------|---------------|-------------|
+| Cached templates (deterministic) | 0.70 – 0.93 | Stable across runs |
+| Expansion path (LLM with constraints) | 0.28 – 0.72 | Varies by run |
+| Raw Claude Code (pure exploration) | 0.19 – 0.63 | High variance |
+
+Every decision point the LLM doesn't have to make is a source of variance eliminated. LLM steps are reserved for genuinely creative decisions where the search space can't be pre-constrained.
+
+| Finding | Codification |
+|---------|-------------|
+| Agent always discovers the same file structure | Template or scaffold |
+| Agent always applies the same fix pattern | Recipe in `knowledge/` |
+| Agent always needs the same context | Structured context in the prompt |
+| Agent always makes the same tool-call sequence | Deterministic workflow step |
+| Agent's orientation thinking dominates | Pre-analysis script that front-loads context |
+
+## Variant Progression
+
+Variants are empirically motivated. Each exists because the previous variant's analysis revealed a specific gap.
+
+```
+v0: baseline (control)
+    → Run, measure: identify dominant loss dimension
+
+v1: address the dominant loss
+    → Typically prompt improvement (Lever 1) — clearest signal first
+    → Run, measure: did the loss decrease? What's the next loss?
+
+v2: address the next loss
+    → Typically knowledge injection (Lever 2) — domain files for remaining gaps
+    → Run, measure: repeat
+
+v3+: address remaining losses
+    → Structural fixes (Lever 3), rubric tightening (Lever 5)
+    → Each variant is motivated by the previous variant's measurement
+```
+
+Every variant links back to its motivating finding and hypothesis, creating an audit trail: for every variant you can trace back to the observation that motivated it and verify whether the hypothesis held.
+
+## Verification Discipline
+
+The VERIFY step requires tracking what changed between iterations and what improved.
+
+**Per-iteration record:**
+
+```
+Iteration: v0 → v1
+Change: Added structured execution steps to prompt
+Metrics before: batch score 0.519, BUILD→FIX amplification 3.2
+Metrics after:  batch score 0.926, BUILD→FIX amplification 1.1
+Delta: +0.407 outcome score, −2.1 behavioral amplification
+Regression: none detected
+```
+
+**What to track:**
+
+- **Per-criterion scores** — Not just the aggregate. A rising aggregate can hide a regression in a specific criterion.
+- **Loop amplification per state** — The primary behavioral metric. Did the friction loop shrink?
+- **Transition probabilities** — Did the agent's navigation pattern change as expected?
+- **Variant-over-variant delta** — Before/after comparison for the specific change made.
+- **Stability** — Run the same variant multiple times to distinguish signal from variance.
+
+**Regression detection:** Every improvement can introduce regressions. Did the targeted loss decrease? Did any other dimension increase? Is the improvement stable across multiple runs?
+
+## Anti-Patterns
+
+- **Skipping taxonomy discovery** — Jumping to Markov analysis with a generic state taxonomy
+- **Figures without interpretation** — Running analysis and looking at pictures without mapping findings to interventions
+- **Unmotivated variants** — Creating variants without a clear hypothesis from prior measurement
+- **Aggregate-only scoring** — Tracking only the overall batch score instead of per-criterion metrics
+- **Wrong lever** — Throwing knowledge at a reasoning gap, or a bigger model at a knowledge gap
+- **Fixing without verifying** — Making an improvement and moving on without confirming it worked
+- **Over-rotation on a single metric** — Optimizing loop amplification to zero removes productive loops
+- **Ignoring the deterministic principle** — Improving agent exploration instead of converting exploration into deterministic steps
+
+## Evidence
+
+| Project | Iterations | Key Finding |
+|---------|-----------|-------------|
+| [Code Coverage v1→v2→v3](/experiments/code-coverage-v1) | 7 variants, 20 runs | Structure beats knowledge; skills reduce waste but not quality ceiling |
+| bud-eval | 6 iterations | Batch 0.519→0.926 (template fix), scheduling oscillation→stable 0.741 (test fix) |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Forge Methodology" icon="hammer" href="/methodology/forge">
+    The pipeline that produces the artifacts the flywheel improves
+  </Card>
+  <Card title="Markov Fingerprinting" icon="diagram-project" href="/methodology/markov-fingerprinting">
+    Primary diagnostic lens — the DIAGNOSE step
+  </Card>
+  <Card title="Four-Tier Jury" icon="layer-group" href="/methodology/four-tier-jury">
+    Cascaded evaluation — the MEASURE step
+  </Card>
+  <Card title="Experiment Driver" icon="flask" href="/docs/experiment-driver/creating-experiments">
+    IterationMetadata and variant progression in practice
+  </Card>
+</CardGroup>

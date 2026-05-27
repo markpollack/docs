@@ -66,8 +66,44 @@ By filtering at each tier, typically only 30-40% of outputs reach T3. This reduc
 
 The four-tier jury is implemented in [Agent Judge](/projects/agent-judge) and used across all lab experiments.
 
+## Role in the Growth Cycle
+
+The four-tier jury is the **MEASURE** step of the [Improvement Flywheel](/methodology/improvement-flywheel). Each tier maps to specific loss dimensions, and the cascade structure ensures efficient measurement before expensive LLM evaluation.
+
+### Tier-to-Loss Dimension Mapping
+
+| Tier | Loss Dimension | What It Catches |
+|------|---------------|-----------------|
+| **T0** (deterministic) | Outcome loss (binary) | File doesn't exist, won't compile, missing annotations |
+| **T1** (command) | Tooling loss | Tests fail, coverage doesn't improve, style violations |
+| **T2** (golden test) | Behavioral loss (structural match) | Output doesn't match reference structure or conventions |
+| **T3** (LLM) | Outcome loss (semantic) + evaluation loss | Meaningless tests, missing edge cases, judge variance |
+
+### Per-Criterion Tracking
+
+Track individual criterion scores, not just the aggregate. A rising aggregate can hide a regression in a specific criterion — for example, overall batch score improves +0.4 while a single criterion drops −0.3. The [Improvement Flywheel](/methodology/improvement-flywheel) requires per-criterion visibility to detect these hidden regressions.
+
+### Regression Detection
+
+Every improvement can introduce regressions. After each intervention, verify:
+
+1. **Did the targeted loss dimension decrease?** — The intervention worked as intended.
+2. **Did any other dimension increase?** — If so, the diagnosis was incomplete — the fix addressed a symptom, not the root cause.
+3. **Is the improvement stable across multiple runs?** — Distinguish signal from lucky variance.
+
 ## Applied In
 
 - [Code Coverage v1](/experiments/code-coverage-v1) — Full T0-T3 cascade on 9 variants
 - [Code Coverage v2](/experiments/code-coverage-v2) — Refined scoring, T3=0.933 for forge variant
 - [Issue Classification](/experiments/issue-classification) — Adapted for SWE-bench task evaluation
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Improvement Flywheel" icon="arrows-rotate" href="/methodology/improvement-flywheel">
+    The feedback loop that jury evaluation drives
+  </Card>
+  <Card title="Markov Fingerprinting" icon="diagram-project" href="/methodology/markov-fingerprinting">
+    Behavioral analysis — the DIAGNOSE step companion
+  </Card>
+</CardGroup>

@@ -31,10 +31,7 @@ The forge pipeline is **zero-LLM-cost**: all knowledge processing happens throug
     The agent executes with forged artifacts available. Skills are discoverable (not force-fed), pre-analysis has already routed to the right knowledge, and execution constraints shape behavior without prompt engineering.
   </Step>
   <Step title="Grow">
-    Post-execution analysis feeds back into the Define phase:
-    - Which skills were used vs ignored?
-    - Where did the agent thrash? (from [Markov analysis](/methodology/markov-fingerprinting))
-    - What knowledge gaps caused failures? (from [jury evaluation](/methodology/four-tier-jury))
+    The [Improvement Flywheel](/methodology/improvement-flywheel) drives iterative refinement: **RUN → MEASURE → DIAGNOSE → INTERVENE → VERIFY**. Each cycle identifies a measurable loss signal, diagnoses its cause through [behavioral analysis](/methodology/markov-fingerprinting) and [jury evaluation](/methodology/four-tier-jury), applies a targeted intervention, and verifies the improvement without regressions. Findings feed back into the Define phase — new knowledge, tighter prompts, or deterministic replacements for exploratory steps.
   </Step>
 </Steps>
 

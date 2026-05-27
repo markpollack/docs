@@ -49,6 +49,9 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
   <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
     Steps, context, portable runtimes, first workflow
   </Card>
+  <Card title="Tutorial: Build a Workflow" icon="graduation-cap" href="/docs/agent-workflow/tutorial">
+    From a single step to a supervised agent pipeline
+  </Card>
   <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
     4 patterns for getting data into steps
   </Card>
@@ -86,11 +89,16 @@ Six steps are deterministic — git operations, Java formatting, GitHub API call
 
 This isn't obvious until you measure it. In our [code coverage experiments](/experiments/code-coverage-v2), adding a deterministic pre-analysis step cut agent steps by 27%. The agent still explored the codebase — but it read source files instead of decompiling JARs. Same attention budget, better allocation.
 
-## Quick Links
+## Resources
 
-<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-workflow">
-  Source code (0.6.0 on Maven Central)
-</Card>
+<CardGroup cols={2}>
+  <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-workflow">
+    Source code (0.6.0 on Maven Central)
+  </Card>
+  <Card title="Tutorial Code" icon="graduation-cap" href="https://github.com/markpollack/workflow-dsl-examples">
+    13 runnable examples — validated with real LLM calls
+  </Card>
+</CardGroup>
 
 ## Used In
 

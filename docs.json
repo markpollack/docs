@@ -77,9 +77,15 @@
                   "projects/agent-workflow",
                   "docs/agent-workflow/agent-loop",
                   "docs/agent-workflow/getting-started",
+                  {
+                    "group": "Tutorial",
+                    "pages": [
+                      "docs/agent-workflow/tutorial",
+                      "docs/agent-workflow/examples"
+                    ]
+                  },
                   "docs/agent-workflow/annotation-model",
                   "docs/agent-workflow/parameterization",
-                  "docs/agent-workflow/examples",
                   "docs/agent-workflow/choosing-a-pattern",
                   "docs/agent-workflow/wiring",
                   "docs/agent-workflow/api-reference",
@@ -198,6 +204,24 @@
             "group": "Migration",
             "pages": [
               "docs/migration/spring-ai-community-to-markpollack"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Methodology",
+        "groups": [
+          {
+            "group": "Methodology",
+            "pages": [
+              "methodology/index",
+              "methodology/knowledge-directed-execution",
+              "methodology/forge",
+              "methodology/improvement-flywheel",
+              "methodology/knowledge-base-design",
+              "methodology/structured-agent-execution",
+              "methodology/four-tier-jury",
+              "methodology/markov-fingerprinting"
             ]
           }
         ]

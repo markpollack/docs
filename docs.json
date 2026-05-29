@@ -52,6 +52,7 @@
             "group": "Projects",
             "pages": [
               "index",
+              "whats-new",
               "projects/index",
               {
                 "group": "Loopy",
@@ -100,7 +101,36 @@
                   "docs/agent-workflow/durability"
                 ]
               },
-              "projects/agent-client",
+              {
+                "group": "Agent Client",
+                "pages": [
+                  "projects/agent-client",
+                  "docs/agent-client/howto/getting-started",
+                  {
+                    "group": "Tutorial",
+                    "pages": [
+                      "docs/agent-client/tutorial/index",
+                      "docs/agent-client/tutorial/01-first-task",
+                      "docs/agent-client/tutorial/02-multi-provider",
+                      "docs/agent-client/tutorial/03-read-and-transform",
+                      "docs/agent-client/tutorial/04-git-operations"
+                    ]
+                  },
+                  "docs/agent-client/howto/switching-providers",
+                  "docs/agent-client/howto/structured-output",
+                  {
+                    "group": "Reference",
+                    "pages": [
+                      "docs/agent-client/reference/portable-options",
+                      "docs/agent-client/reference/claude-reference",
+                      "docs/agent-client/reference/codex-reference",
+                      "docs/agent-client/reference/gemini-reference",
+                      "docs/agent-client/reference/sessions"
+                    ]
+                  },
+                  "docs/agent-client/explanation/defaults-philosophy"
+                ]
+              },
               {
                 "group": "Agent Judge",
                 "pages": [

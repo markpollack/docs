@@ -1,0 +1,117 @@
+---
+title: "Defaults Philosophy"
+description: "LOOSE vs STRICT mode — how AgentClient manages default permissiveness across providers"
+sidebarTitle: "Defaults Philosophy"
+---
+
+## The Problem
+
+Each agentic CLI has its own safety controls with different defaults. Without coordination, some providers work out of the box while others block on preconditions that users don't expect:
+
+| Provider | Autonomous Flag | Non-Git Directory | Out of Box? |
+|----------|----------------|-------------------|-------------|
+| Claude Code | `yolo=true` | Works | Yes |
+| Codex | `fullAuto=true` | **Blocked** by `skipGitCheck` | **No** |
+| Gemini CLI | `yolo=true` | Works | Yes |
+
+A user switching from Claude to Codex hits a wall on the simplest task — "create a file" — with no obvious fix.
+
+## AgentClientMode
+
+`AgentClientMode` is a portable enum that controls default permissiveness across all providers:
+
+```java
+public enum AgentClientMode {
+    LOOSE,   // Works out of the box in any directory
+    STRICT   // Requires explicit opt-in to risky operations
+}
+```
+
+**Default: `LOOSE`** — optimized for evaluation and development, where friction during onboarding is the primary failure mode.
+
+### What Each Mode Does
+
+<Tabs>
+  <Tab title="LOOSE (default)">
+    Permissive defaults that minimize preconditions:
+
+    | Provider | Effect |
+    |----------|--------|
+    | Codex | `skipGitCheck=true` — works in any directory |
+    | Claude | No change (already permissive) |
+    | Gemini | No change (already permissive) |
+  </Tab>
+  <Tab title="STRICT">
+    Conservative defaults for production environments:
+
+    | Provider | Effect |
+    |----------|--------|
+    | Codex | `skipGitCheck=false` — requires git repository |
+    | Claude | No change currently |
+    | Gemini | No change currently |
+  </Tab>
+</Tabs>
+
+### Configuration
+
+Set the mode via Spring properties:
+
+```yaml
+agent-client:
+  codex:
+    mode: strict  # or loose (default)
+```
+
+## Precedence Rules
+
+Options are resolved in this order (first wins):
+
+1. **Explicit goal options** — passed at call time via `AgentClient.run(goal, options)`
+2. **Builder defaults** — set on `AgentClient.builder().defaultOptions()`
+3. **Spring properties** — provider-specific values in `application.yml`
+4. **Mode-derived defaults** — LOOSE or STRICT baseline
+5. **Hardcoded defaults** — built into each provider's options class
+
+### STRICT Is a Baseline, Not a Lock
+
+Explicit property overrides **always** take precedence over mode-derived defaults:
+
+```yaml
+agent-client:
+  codex:
+    mode: strict
+    skip-git-check: true  # This wins — overrides STRICT's default
+```
+
+In this configuration, Codex gets STRICT defaults for everything **except** the git check, which the user explicitly enabled. This is intentional — if you set a property explicitly, you made a conscious choice.
+
+<Warning>
+If you set `mode: strict` expecting it to enforce all safety controls, audit your explicit property overrides. Any property set directly will pierce the mode.
+</Warning>
+
+### SDK Layer Stays Neutral
+
+The mode system operates at the **agent-models** layer, not the SDK layer. Provider SDKs (`codex-cli-sdk`, `claude-agent-sdk`, `gemini-cli-sdk`) always reflect their CLI's native defaults. Direct SDK consumers are never affected by `AgentClientMode`.
+
+This means:
+- `ExecuteOptions.builder().build()` → `skipGitCheck=false` (Codex CLI native default)
+- `CodexAgentProperties` with `mode=LOOSE` → `isSkipGitCheck()` returns `true` (mode-derived)
+
+## Migration from Pre-0.14.0
+
+Before 0.14.0, Codex defaulted to `skipGitCheck=false`. If you relied on this:
+
+```yaml
+# Restore pre-0.14.0 Codex behavior
+agent-client:
+  codex:
+    mode: strict
+```
+
+Or override the specific property:
+
+```yaml
+agent-client:
+  codex:
+    skip-git-check: false
+```

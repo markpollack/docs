@@ -1,0 +1,83 @@
+---
+title: "Codex Reference"
+description: "Complete configuration reference for the OpenAI Codex agent provider"
+sidebarTitle: "Codex Reference"
+---
+
+## Overview
+
+The Codex agent wraps the [OpenAI Codex CLI](https://github.com/openai/codex) via `CodexAgentApi`. Configure it through Spring properties under `agent-client.codex.*`.
+
+```yaml
+agent-client:
+  codex:
+    model: gpt-5-codex
+    timeout: PT5M
+    full-auto: true
+```
+
+## Configuration Properties
+
+Prefix: `agent-client.codex`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mode` | `AgentClientMode` | — | Controls default permissiveness. Inherits from `agent-client.mode` if not set (default: `LOOSE`). |
+| `model` | `String` | `gpt-5-codex` | Model to use for Codex execution |
+| `timeout` | `Duration` | `5m` | Timeout for agent task execution |
+| `full-auto` | `boolean` | `true` | Enable full-auto mode (workspace-write sandbox + never approval) |
+| `skip-git-check` | `Boolean` | — | Skip git repository check. When not explicitly set, derived from mode (see below). |
+| `executable-path` | `String` | — | Path to the Codex CLI executable (auto-discovered if not set) |
+
+## skipGitCheck and Mode Interaction
+
+The `skip-git-check` property has special behavior — its effective value depends on `AgentClientMode` when not explicitly set:
+
+| `skip-git-check` | `mode` | Effective Value | Behavior |
+|-------------------|--------|-----------------|----------|
+| `true` (explicit) | any | `true` | Works in any directory |
+| `false` (explicit) | any | `false` | Requires git repository |
+| not set | `LOOSE` (default) | `true` | Works in any directory |
+| not set | `STRICT` | `false` | Requires git repository |
+
+<Note>
+**Explicit always wins.** Setting `skip-git-check` directly always overrides the mode-derived value. See [Defaults Philosophy](/docs/agent-client/explanation/defaults-philosophy) for the precedence rationale.
+</Note>
+
+### Why This Matters
+
+Codex is the only provider that blocks execution in non-git directories by default. Without `skipGitCheck=true`, attempting to create a file in a temporary directory fails:
+
+```
+Error: Not a git repository (or any of the parent directories)
+```
+
+The `LOOSE` mode (default) automatically resolves this, so users can start with Codex without hitting this wall.
+
+<Warning>
+**Migration note (pre-0.14.0):** Before the mode system, Codex required `skip-git-check: true` explicitly for non-git directories. With `LOOSE` mode (now the default), this is automatic. To restore the old behavior, set `mode: strict` or `skip-git-check: false`.
+</Warning>
+
+## Full-Auto Mode
+
+When `full-auto=true` (default), Codex runs with:
+- **Workspace-write sandbox** — can write files in the working directory
+- **Never asks for approval** — autonomous execution
+
+```yaml
+agent-client:
+  codex:
+    full-auto: true   # Default — autonomous execution
+```
+
+<Note>
+The Codex CLI `exec` subcommand does **not** support `--ask-for-approval`. Only `--full-auto` and `--sandbox` control execution behavior.
+</Note>
+
+## Authentication
+
+```bash
+export OPENAI_API_KEY=sk-...
+```
+
+The Codex CLI requires an OpenAI API key via the `OPENAI_API_KEY` environment variable.

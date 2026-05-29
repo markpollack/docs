@@ -1,0 +1,116 @@
+---
+title: "Lesson 2: Multi-Provider"
+description: "Run the same task with Claude, Codex, and Gemini — the client code stays the same"
+sidebarTitle: "02 - Multi-Provider"
+---
+
+<Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client-tutorial">
+  This lesson is doc-only — concepts apply to any tutorial module
+</Card>
+
+## What You'll Learn
+
+How to run the exact same goal with three different providers. The model construction changes, but `AgentClient` usage is identical.
+
+## The Pattern
+
+Provider-specific code is isolated to model construction. Everything after `AgentClient.create(model)` is portable:
+
+```java
+// Provider-specific: build the model
+AgentModel model = buildModel(provider);
+
+// Portable: same code regardless of provider
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run("Create hello.txt with 'Hello!'");
+```
+
+## Step 1: Run with Claude
+
+```java
+ClaudeAgentModel model = ClaudeAgentModel.builder()
+    .defaultOptions(ClaudeAgentOptions.builder()
+        .model("claude-sonnet-4-5")
+        .yolo(true)
+        .build())
+    .build();
+
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run(
+    "Create a file named hello.txt with 'Hello from Claude!'"
+);
+```
+
+## Step 2: Run with Codex
+
+Swap the model — the client code is identical:
+
+```java
+CodexAgentModel model = new CodexAgentModel(
+    CodexClient.create(),
+    CodexAgentOptions.builder()
+        .model("gpt-5-codex")
+        .skipGitCheck(true)
+        .build(),
+    null
+);
+
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run(
+    "Create a file named hello.txt with 'Hello from Codex!'"
+);
+```
+
+<Note>
+`skipGitCheck(true)` lets Codex work in any directory. Without it, Codex requires a git repository. See [Codex Reference](/docs/agent-client/reference/codex-reference#skipgitcheck-and-mode-interaction) for details.
+</Note>
+
+## Step 3: Run with Gemini
+
+```java
+GeminiAgentModel model = new GeminiAgentModel(
+    GeminiClient.create(),
+    GeminiAgentOptions.builder()
+        .model("gemini-2.5-flash")
+        .yolo(true)
+        .build(),
+    null
+);
+
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run(
+    "Create a file named hello.txt with 'Hello from Gemini!'"
+);
+```
+
+## What Stayed the Same
+
+Across all three providers, these two lines are identical:
+
+```java
+AgentClient client = AgentClient.create(model);
+AgentClientResponse response = client.run(goal);
+```
+
+The only difference is *which model you construct*. That's the portable API — `AgentClient` doesn't know or care which provider is behind it.
+
+## Provider Differences
+
+While the client API is portable, providers have different capabilities:
+
+| Capability | Claude | Codex | Gemini |
+|-----------|--------|-------|--------|
+| Non-git directory | Works | Works (`skipGitCheck=true`) | Works |
+| Structured output | JSON Schema | Not supported | Not supported |
+| Session resume | Supported | Not supported | Not supported |
+| Permission modes | Multiple | full-auto only | yolo only |
+
+## With Spring Boot
+
+In Spring Boot applications, you don't construct models manually. Use starter dependencies and Maven profiles to switch providers without changing code at all — see the [Switching Providers](/docs/agent-client/howto/switching-providers) how-to guide.
+
+## Next Steps
+
+- [Switching Providers](/docs/agent-client/howto/switching-providers) — The Spring Boot profile pattern for zero-code provider switching
+- [Configuration Reference](/docs/agent-client/reference/portable-options) — All configuration options across providers
+- [Defaults Philosophy](/docs/agent-client/explanation/defaults-philosophy) — Why LOOSE mode exists and how it affects each provider

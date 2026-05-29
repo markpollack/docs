@@ -1,0 +1,125 @@
+---
+title: "Switching Providers"
+description: "How to run the same agent task with Claude, Codex, or Gemini using Maven profiles"
+sidebarTitle: "Switching Providers"
+---
+
+## The Problem
+
+You want to run the same agent task with different providers without changing your Java code.
+
+## Solution: Maven Profiles
+
+Define one Maven profile per provider. Each profile puts a different starter on the classpath. Your Java code uses only the portable `AgentClient` API.
+
+### 1. Define Profiles in pom.xml
+
+```xml
+<profiles>
+    <profile>
+        <id>claude</id>
+        <activation>
+            <activeByDefault>true</activeByDefault>
+        </activation>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.markpollack</groupId>
+                <artifactId>agent-starter-claude</artifactId>
+                <version>${agent-client.version}</version>
+            </dependency>
+        </dependencies>
+    </profile>
+    <profile>
+        <id>codex</id>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.markpollack</groupId>
+                <artifactId>agent-starter-codex</artifactId>
+                <version>${agent-client.version}</version>
+            </dependency>
+        </dependencies>
+    </profile>
+    <profile>
+        <id>gemini</id>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.markpollack</groupId>
+                <artifactId>agent-starter-gemini</artifactId>
+                <version>${agent-client.version}</version>
+            </dependency>
+        </dependencies>
+    </profile>
+</profiles>
+```
+
+### 2. Add Per-Provider Configuration
+
+Create profile-specific YAML files alongside your main `application.yml`:
+
+<Tabs>
+  <Tab title="application-claude.yml">
+    ```yaml
+    agent-client:
+      claude:
+        model: claude-sonnet-4-5
+        yolo: true
+    ```
+  </Tab>
+  <Tab title="application-codex.yml">
+    ```yaml
+    agent-client:
+      codex:
+        model: gpt-5-codex
+        full-auto: true
+    ```
+  </Tab>
+  <Tab title="application-gemini.yml">
+    ```yaml
+    agent-client:
+      gemini:
+        model: gemini-2.5-flash
+        yolo: true
+    ```
+  </Tab>
+</Tabs>
+
+Activate the matching Spring profile in your main `application.yml`:
+
+```yaml
+spring:
+  profiles:
+    active: claude   # Matches the Maven profile
+```
+
+### 3. Run with a Specific Provider
+
+```bash
+# Claude (default profile)
+./mvnw spring-boot:run
+
+# Codex
+./mvnw spring-boot:run -Pcodex -P'!claude' \
+  -Dspring-boot.run.arguments="--spring.profiles.active=codex"
+
+# Gemini
+./mvnw spring-boot:run -Pgemini -P'!claude' \
+  -Dspring-boot.run.arguments="--spring.profiles.active=gemini"
+```
+
+<Note>
+Use `-P'!claude'` to deactivate the default Claude profile when switching to another provider. Only one provider starter should be on the classpath.
+</Note>
+
+## Your Java Code Stays the Same
+
+The key design principle: **your Java code never imports provider-specific classes**. It only uses:
+
+- `AgentClient` / `AgentClient.Builder`
+- `AgentClientResponse`
+- `AgentOptions` (for portable options)
+
+Provider selection happens entirely through Maven profiles and Spring configuration.
+
+## Working Example
+
+See [samples/create-file-multi-provider](https://github.com/markpollack/agent-client/tree/main/samples/create-file-multi-provider) for a complete working example, or the [agent-client-tutorial](https://github.com/spring-ai-community/agent-client-tutorial) for progressive examples.

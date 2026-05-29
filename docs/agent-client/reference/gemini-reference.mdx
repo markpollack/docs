@@ -1,0 +1,78 @@
+---
+title: "Gemini Reference"
+description: "Complete configuration reference for the Google Gemini agent provider"
+sidebarTitle: "Gemini Reference"
+---
+
+## Overview
+
+The Gemini agent wraps the [Gemini CLI](https://github.com/google-gemini/gemini-cli) via `GeminiAgentApi`. Configure it through Spring properties under `agent-client.gemini.*`.
+
+```yaml
+agent-client:
+  gemini:
+    model: gemini-2.5-flash
+    timeout: PT5M
+    yolo: true
+```
+
+## Configuration Properties
+
+Prefix: `agent-client.gemini`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `model` | `String` | `gemini-2.5-flash` | Gemini model to use for agent tasks |
+| `timeout` | `Duration` | `5m` | Timeout for agent task execution |
+| `yolo` | `boolean` | `true` | Bypass all permission checks |
+| `executable-path` | `String` | — | Path to the Gemini CLI executable (auto-discovered if not set) |
+| `temperature` | `Double` | — | Temperature for controlling response randomness (0.0–1.0) |
+| `max-tokens` | `Integer` | — | Maximum number of tokens to generate in the response |
+
+## Yolo Mode
+
+When `yolo=true` (default), Gemini runs autonomously without permission prompts:
+
+```yaml
+agent-client:
+  gemini:
+    yolo: true    # Default — no permission prompts
+```
+
+Set `yolo: false` if you want Gemini to ask for confirmation before executing commands.
+
+## Temperature
+
+Control response randomness with the `temperature` property:
+
+```yaml
+agent-client:
+  gemini:
+    temperature: 0.2    # More deterministic
+```
+
+| Value | Behavior |
+|-------|----------|
+| `0.0` | Most deterministic — consistent outputs |
+| `0.5` | Balanced |
+| `1.0` | Most creative — varied outputs |
+
+<Note>
+Temperature support depends on the Gemini CLI version. Check your CLI version with `gemini --version`.
+</Note>
+
+## Mode System
+
+Gemini works in any directory with default settings — no mode-derived behavior currently exists. The `LOOSE` and `STRICT` modes are a no-op for Gemini today.
+
+Future `STRICT` mode knobs for Gemini will be added when there is a concrete safety control to gate (following the [promotion rubric](/docs/agent-client/reference/portable-options#promotion-rubric)).
+
+## Authentication
+
+```bash
+export GEMINI_API_KEY=...
+# or
+export GOOGLE_API_KEY=...
+```
+
+The Gemini CLI accepts either `GEMINI_API_KEY` or `GOOGLE_API_KEY` environment variables.

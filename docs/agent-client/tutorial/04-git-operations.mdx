@@ -1,0 +1,76 @@
+---
+title: "Lesson 4: Git Operations"
+description: "Find lost git changes and merge them — agents working with version control"
+sidebarTitle: "04 - Git Operations"
+---
+
+<Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client-tutorial/tree/main/03-git-operations">
+  `agent-client-tutorial/03-git-operations`
+</Card>
+
+## What You'll Build
+
+An agent that inspects git history, finds commits on a detached HEAD, and merges them into the main branch. This demonstrates agents working with version control — a common real-world task.
+
+## Step 1: Set Up the Repository
+
+Clone the tutorial and run the setup script that creates a git repo with "lost" changes:
+
+```bash
+git clone https://github.com/spring-ai-community/agent-client-tutorial.git
+cd agent-client-tutorial/03-git-operations
+bash setup.sh
+```
+
+The setup script creates a git repository in `workspace/` with a commit on a detached HEAD — simulating changes that were accidentally "lost" when switching back to master.
+
+## Step 2: Understand the Goal
+
+The prompt describes the problem in natural language, as a developer would:
+
+```java
+String goal = """
+    I just made some changes to my personal site and checked out master,
+    but now I can't find those changes. Please help me find them and
+    merge them into master.""";
+```
+
+The agent needs to:
+1. Inspect the git reflog to find the detached commit
+2. Identify the lost changes
+3. Merge or cherry-pick them into master
+
+## Step 3: Run It
+
+```bash
+./mvnw spring-boot:run
+```
+
+The agent uses tools like `Bash` to run `git reflog`, `git log`, `git merge`, etc.
+
+## Step 4: Verify
+
+```bash
+cd workspace
+git log --oneline -5
+# Should show the recovered changes merged into master
+```
+
+## What's Different from Previous Lessons
+
+- **Stateful environment** — the agent works in an existing git repository, not a clean directory
+- **Multi-step reasoning** — finding lost commits requires inspecting reflog, understanding branch state, and choosing a merge strategy
+- **Tool-heavy task** — the agent runs multiple shell commands, reads their output, and decides next steps
+- **STRICT mode applicable** — this task genuinely requires a git repository, making it a natural fit for `AgentClientMode.STRICT`
+
+## The LOOSE/STRICT Connection
+
+Lessons 1-3 work in any directory — they don't need git. That's why LOOSE mode (the default) is appropriate. This lesson requires a git repository. If you were building a system that only runs git-aware tasks, STRICT mode would prevent accidental execution outside a git repo.
+
+See [Defaults Philosophy](/docs/agent-client/explanation/defaults-philosophy) for more on when to use each mode.
+
+## Next Steps
+
+- [Getting Started](/docs/agent-client/howto/getting-started) — Recap the quick start for all three providers
+- [Switching Providers](/docs/agent-client/howto/switching-providers) — Run any tutorial lesson with a different provider
+- [Claude Reference](/docs/agent-client/reference/claude-reference) — Full configuration options including trace files

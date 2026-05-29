@@ -1,0 +1,79 @@
+---
+title: "Lesson 3: Read and Transform"
+description: "Read files, perform data transformation, and write structured output"
+sidebarTitle: "03 - Read & Transform"
+---
+
+<Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client-tutorial/tree/main/02-read-and-transform">
+  `agent-client-tutorial/02-read-and-transform`
+</Card>
+
+## What You'll Build
+
+A Spring Boot application that asks an agent to read log files, count severity levels (ERROR, WARNING, INFO), and produce a summary CSV. This demonstrates agents working with existing files and producing structured output.
+
+## Step 1: Set Up Sample Data
+
+Clone the tutorial repository and navigate to the lesson:
+
+```bash
+git clone https://github.com/spring-ai-community/agent-client-tutorial.git
+cd agent-client-tutorial/02-read-and-transform
+```
+
+The application creates sample log files automatically if they don't exist. Three service logs (`auth.log`, `api.log`, `worker.log`) with mixed severity levels.
+
+## Step 2: Understand the Goal
+
+The goal is a multi-line prompt that specifies the input, the transformation, and the expected output format:
+
+```java
+String goal = """
+    In the logs/ directory there are multiple .log files from different services.
+    Scan all .log files and count how many lines contain "ERROR", "WARNING", and "INFO".
+
+    Output your results to summary.csv with the following structure:
+    severity,count
+    ERROR,<total ERROR lines>
+    WARNING,<total WARNING lines>
+    INFO,<total INFO lines>
+
+    The output should be a valid CSV file with exactly four lines.""";
+```
+
+Notice the specificity: file format, column names, exact line count. Agents perform better with precise output specifications.
+
+## Step 3: Run It
+
+```bash
+# With Claude (default)
+./mvnw spring-boot:run
+
+# Or with a different provider
+./mvnw spring-boot:run -Dspring.profiles.active=codex
+```
+
+## Step 4: Verify
+
+Check the output CSV:
+
+```bash
+cat summary.csv
+# severity,count
+# ERROR,4
+# WARNING,4
+# INFO,7
+```
+
+## What's Different from Lesson 1
+
+- **Agent reads existing files** — not just creating from scratch
+- **Multi-file input** — the agent scans a directory of logs
+- **Structured output** — the result is a well-defined CSV, not free text
+- **Data transformation** — counting, aggregating, formatting
+
+This pattern — read existing state, transform it, write structured output — is the core of most agent tasks in production.
+
+## Next
+
+[Lesson 4: Git Operations →](/docs/agent-client/tutorial/04-git-operations) — Use an agent to inspect git history and recover lost changes.

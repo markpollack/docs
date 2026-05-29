@@ -1,0 +1,61 @@
+---
+title: "Agent Client Tutorial"
+description: "Learn Agent Client step by step — from your first task to git operations"
+sidebarTitle: "Tutorial Overview"
+---
+
+<Card title="Tutorial Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client-tutorial">
+  Clone the repo and follow along: `git clone https://github.com/spring-ai-community/agent-client-tutorial.git`
+</Card>
+
+## Learning Path
+
+This tutorial takes you from zero to running real agent tasks. Each lesson builds on the previous one, progressing from simple file creation to multi-step git operations.
+
+<Steps>
+  <Step title="First Task">
+    Create a file using an agent — the simplest possible task. Set up a project, configure a provider, and verify the result.
+
+    [Start Lesson 1 →](/docs/agent-client/tutorial/01-first-task)
+  </Step>
+  <Step title="Multi-Provider">
+    Run the same task with Claude, Codex, and Gemini. The client code stays the same — only the model construction changes.
+
+    [Start Lesson 2 →](/docs/agent-client/tutorial/02-multi-provider)
+  </Step>
+  <Step title="Read and Transform">
+    Read log files, count severity levels, and write a structured CSV summary. Agents working with existing files and producing structured output.
+
+    [Start Lesson 3 →](/docs/agent-client/tutorial/03-read-and-transform)
+  </Step>
+  <Step title="Git Operations">
+    Find lost commits on a detached HEAD and merge them into master. Agents working with version control and multi-step reasoning.
+
+    [Start Lesson 4 →](/docs/agent-client/tutorial/04-git-operations)
+  </Step>
+</Steps>
+
+## Prerequisites
+
+- Java 17+
+- Maven 3.9+
+- At least one CLI agent installed:
+  - Claude Code: `npm install -g @anthropic-ai/claude-code`
+  - Codex CLI: `npm install -g @openai/codex`
+  - Gemini CLI: `npm install -g @google/gemini-cli`
+
+## Source Code
+
+All tutorial code is available in the [agent-client-tutorial](https://github.com/spring-ai-community/agent-client-tutorial) repository:
+
+```bash
+git clone https://github.com/spring-ai-community/agent-client-tutorial.git
+cd agent-client-tutorial
+```
+
+| Lesson | Directory | What it demonstrates |
+|--------|-----------|---------------------|
+| 01 | `01-create-file/` | Simplest task — create a file |
+| 02 | (doc-only) | Multi-provider portability |
+| 03 | `02-read-and-transform/` | File reading, data transformation, structured output |
+| 04 | `03-git-operations/` | Git history inspection, merge recovery |

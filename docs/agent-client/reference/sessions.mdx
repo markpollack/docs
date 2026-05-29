@@ -1,0 +1,254 @@
+---
+title: "Agent Sessions"
+description: "Persistent, multi-turn agent conversations with session lifecycle management"
+---
+
+## Overview
+
+Agent Sessions enable **persistent, multi-turn conversations** with CLI agents. Think of them like `HttpSession` — the session maintains state across prompts so you can have iterative dialogues with an agent instead of fire-and-forget single tasks.
+
+Without sessions, each `AgentClient.goal().run()` call starts a fresh conversation. With sessions, you can:
+
+- Send follow-up prompts that build on previous context
+- Resume conversations after transport failures
+- Manage session lifecycle with automatic stale cleanup
+
+<Note>
+**Available since version 0.10.0.** Currently implemented for the **Claude** agent provider. Other providers will follow.
+</Note>
+
+## Core Interfaces
+
+### AgentSession
+
+A single persistent conversation. Created via `AgentSessionRegistry.create()` — never instantiated directly.
+
+```java
+public interface AgentSession extends AutoCloseable {
+    String getSessionId();
+    Path getWorkingDirectory();
+    AgentSessionStatus getStatus();
+
+    AgentResponse prompt(String message);
+    AgentSession resume();
+    AgentSession fork();
+
+    void close();
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `getSessionId()` | Unique session ID, assigned eagerly at creation |
+| `getWorkingDirectory()` | Immutable working directory the session operates in |
+| `getStatus()` | Current lifecycle status (`ACTIVE`, `DEAD`, or `RESUMED`) |
+| `prompt(message)` | Send a follow-up in the same conversation context |
+| `resume()` | Resurrect a `DEAD` session — restores conversation history |
+| `fork()` | Branch the conversation (not yet implemented) |
+| `close()` | Close the session and release resources |
+
+### AgentSessionRegistry
+
+Factory and lifecycle manager for sessions. Analogous to `SessionRepository` in Spring Session.
+
+```java
+public interface AgentSessionRegistry {
+    AgentSession create(Path workingDirectory);
+    Optional<AgentSession> find(String sessionId);
+    void evict(String sessionId);
+    void evictStale(Duration inactiveSince);
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `create(path)` | Start a new session — eagerly connects to CLI and captures session ID |
+| `find(id)` | Look up an existing session |
+| `evict(id)` | Remove and close a session |
+| `evictStale(duration)` | Evict sessions inactive longer than the threshold |
+
+### AgentSessionStatus
+
+```
+ACTIVE   → Session is connected and ready for prompts
+DEAD     → Transport died; call resume() to resurrect
+RESUMED  → Was dead, now active again after resume()
+```
+
+## Usage
+
+### Create a Registry and Session
+
+```java
+import io.github.markpollack.claude.ClaudeAgentSessionRegistry;
+import io.github.markpollack.model.AgentSession;
+import io.github.markpollack.model.AgentResponse;
+
+// Build a registry (configure once, create many sessions)
+ClaudeAgentSessionRegistry registry = ClaudeAgentSessionRegistry.builder()
+    .timeout(Duration.ofMinutes(5))
+    .build();
+
+// Create a session — eagerly establishes CLI connection
+AgentSession session = registry.create(Path.of("/my/project"));
+System.out.println("Session ID: " + session.getSessionId());
+```
+
+### Multi-Turn Conversation
+
+```java
+// First prompt
+AgentResponse r1 = session.prompt("Create a Spring Boot REST controller for /api/users");
+
+// Follow-up — Claude remembers the previous context
+AgentResponse r2 = session.prompt("Add input validation with @Valid");
+
+// Another follow-up
+AgentResponse r3 = session.prompt("Now write tests for the controller");
+
+// Clean up
+session.close();
+registry.evict(session.getSessionId());
+```
+
+Each `prompt()` call continues the same conversation — the agent sees the full history of what it built in earlier turns.
+
+### Resuming a Dead Session
+
+If the CLI process dies (crash, timeout, network issue), the session transitions to `DEAD`. You can resurrect it:
+
+```java
+AgentSession session = registry.create(Path.of("/my/project"));
+String savedId = session.getSessionId();
+
+try {
+    session.prompt("Refactor the service layer");
+} catch (IllegalStateException e) {
+    // Transport died — session is now DEAD
+    if (session.getStatus() == AgentSessionStatus.DEAD) {
+        session.resume();  // Spawns fresh process, restores history
+        // Status is now RESUMED — ready for prompts again
+        session.prompt("Continue the refactoring");
+    }
+}
+```
+
+### Finding an Existing Session
+
+```java
+// Later in the application lifecycle
+Optional<AgentSession> found = registry.find(savedId);
+found.ifPresent(s -> {
+    AgentResponse response = s.prompt("What files did you modify?");
+    System.out.println(response.getGenerations().get(0).getText());
+});
+```
+
+## Session Lifecycle
+
+```
+                    create()
+                       │
+                       ▼
+                   ┌────────┐
+                   │ ACTIVE │◄─────────────┐
+                   └───┬────┘              │
+                       │                   │
+            prompt() works             resume()
+            transport dies                 │
+                       │                   │
+                       ▼                   │
+                   ┌────────┐         ┌────────┐
+                   │  DEAD  │────────►│RESUMED │
+                   └───┬────┘         └────────┘
+                       │
+                    close() /
+                    evict()
+                       │
+                       ▼
+                   [removed]
+```
+
+## Spring Integration
+
+### Bean Configuration
+
+```java
+@Configuration
+@EnableScheduling
+public class AgentSessionConfig {
+
+    @Bean
+    public ClaudeAgentSessionRegistry agentSessionRegistry() {
+        return ClaudeAgentSessionRegistry.builder()
+            .timeout(Duration.ofMinutes(10))
+            .build();
+    }
+}
+```
+
+### Stale Session Cleanup
+
+Use `@Scheduled` to periodically evict inactive sessions and prevent resource leaks:
+
+```java
+@Component
+public class SessionCleanup {
+
+    private final ClaudeAgentSessionRegistry registry;
+
+    public SessionCleanup(ClaudeAgentSessionRegistry registry) {
+        this.registry = registry;
+    }
+
+    @Scheduled(fixedRate = 300_000)  // Every 5 minutes
+    public void cleanupStaleSessions() {
+        registry.evictStale(Duration.ofMinutes(30));
+    }
+}
+```
+
+### Startup Health Probe
+
+Use a disposable session to verify CLI availability at startup:
+
+```java
+@Component
+public class AgentHealthCheck {
+
+    private final ClaudeAgentSessionRegistry registry;
+
+    public AgentHealthCheck(ClaudeAgentSessionRegistry registry) {
+        this.registry = registry;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void verifyCliAvailable() {
+        try {
+            AgentSession probe = registry.create(Path.of("/tmp"));
+            probe.close();
+            registry.evict(probe.getSessionId());
+            // CLI is installed, authenticated, and responsive
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("Claude CLI not available: " + e.getMessage(), e);
+        }
+    }
+}
+```
+
+## Limitations
+
+<Warning>
+`fork()` is **not yet implemented** — calling it throws `UnsupportedOperationException`. This will be added in a future release.
+</Warning>
+
+- **Claude-only**: Sessions are currently only implemented for the Claude agent provider. Other providers will be added as their CLIs support persistent sessions.
+- **In-memory registry**: `ClaudeAgentSessionRegistry` stores sessions in a `ConcurrentHashMap`. Sessions do not survive application restarts — use `resume()` with a persisted session ID if you need cross-restart continuity.
+- **One working directory per session**: A session is anchored to the working directory specified at creation time. It cannot be changed.
+- **No context pruning**: Resumed sessions include the full conversation history. You cannot trim earlier turns to reduce token usage.
+
+## Related
+
+- [Agent Client Overview](/projects/incubating/agent-client) — high-level project documentation
+- [Claude Agent SDK Tutorial: Session Resume](/claude-agent-sdk/tutorial/11-session-resume) — lower-level SDK session resume
+- [Claude Agent SDK Tutorial: Session Fork](/claude-agent-sdk/tutorial/12-session-fork) — lower-level SDK session fork

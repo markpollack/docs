@@ -1,0 +1,53 @@
+---
+title: "What's New"
+description: "Weekly release highlights across all Pollack AI Lab projects"
+sidebarTitle: "What's New"
+---
+
+## Week of May 26, 2026
+
+### Agent Client 0.19.0
+
+**JSONL trace file support.** `ClaudeAgentModel` now writes durable trace files during agent execution — tool calls, thinking blocks, text, and result metrics, flushed per event. Set `traceDir` on the builder or `agent-client.claude.trace-dir` in Spring Boot config. Each invocation writes one uniquely-named JSONL file, and the path is exposed via `providerFields.get("tracePath")`.
+
+- `TraceTarget` record pairs run ID with trace file path
+- Fail-fast on invalid trace directory (before client setup)
+- Full UUID in filenames for collision safety
+- [Claude Reference](/docs/agent-client/reference/claude-reference#trace-files) | [Source](https://github.com/markpollack/agent-client)
+
+### Agent Workflow 0.8.0
+
+**Trace file capture through the workflow journal.** `AgentClientStep` propagates trace paths from the agent model into `StepTransition` and journal events. Every tool call in a multi-step workflow is now traceable back to a specific JSONL file.
+
+- `ExecutionResult(text, tracePath)` — new return type from `AgentClient.executeForResult()`
+- `AgentContext.TRACE_PATH` — well-known context key, cleared per step
+- `JdbcTraceRecorder` — `trace_path` column in `step_transitions` table
+- [What's New](/docs/agent-workflow/whats-new) | [Trace Capture Guide](/docs/agent-workflow/trace-capture) | [Source](https://github.com/markpollack/agent-workflow)
+
+### ACP Java SDK 0.12.0
+
+**7 new protocol methods.** Session lifecycle (list, close, resume) is now stable. Elicitation, fork, and config options land as unstable with the new `@UnstableAcpApi` marker.
+
+- [Details](/projects/acp-java-sdk) | [Source](https://github.com/markpollack/acp-java-sdk)
+
+### AgentWorks BOM 1.2.0
+
+Coordinated version bump: agent-client 0.19.0, agent-workflow 0.8.0, agent-journal 1.2.0, ACP Java SDK 0.12.0, and all other managed artifacts.
+
+- [Version Table](/projects/agentworks-bom) | [Source](https://github.com/markpollack/agentworks)
+
+---
+
+## Week of May 19, 2026
+
+### Agent Workflow 0.7.0
+
+**Managed Agents as a step runtime.** `ManagedAgentStep` delegates workflow steps to Anthropic's Managed Agents API. The workflow graph stays in charge — specific steps run in Anthropic's cloud sandbox.
+
+- [What's New](/docs/agent-workflow/whats-new#070) | [Source](https://github.com/markpollack/agent-workflow)
+
+### Agent Client 0.18.0
+
+**Migration to markpollack org.** Package rename from `org.springaicommunity.agents` to `io.github.markpollack`, BSL license, standalone POM.
+
+- [Migration Guide](/docs/migration/spring-ai-community-to-markpollack) | [Source](https://github.com/markpollack/agent-client)

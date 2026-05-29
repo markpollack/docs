@@ -1,0 +1,102 @@
+---
+title: "Portable Options Reference"
+description: "AgentOptions interface, mode system, and the precedence rules that govern agent behavior across providers"
+sidebarTitle: "Portable Options"
+---
+
+## AgentOptions
+
+`AgentOptions` is the portable interface that all provider-specific options extend. It defines the common surface that works identically across Claude, Codex, and Gemini.
+
+```java
+public interface AgentOptions {
+    String getModel();
+    Duration getTimeout();
+}
+```
+
+Each provider adds its own options beyond this interface — see the provider-specific reference pages for details.
+
+## Configuration Precedence
+
+Agent behavior is determined by a layered precedence system. Higher layers override lower ones:
+
+```
+1. Explicit goal options      (highest — per-request)
+2. Builder configuration      (per-client instance)
+3. Spring properties          (application.yml / env vars)
+4. Mode-derived defaults      (from AgentClientMode)
+5. Hardcoded defaults         (lowest — in code)
+```
+
+<Note>
+**Explicit always wins.** If you set `agent-client.codex.skip-git-check=true` alongside `agent-client.mode=strict`, the explicit property wins. See [Defaults Philosophy](/docs/agent-client/explanation/defaults-philosophy) for the full rationale.
+</Note>
+
+### Example: Precedence in Action
+
+```yaml
+agent-client:
+  mode: strict
+  codex:
+    skip-git-check: true    # Explicit property overrides STRICT
+    model: o3-mini           # Overrides hardcoded default (gpt-5-codex)
+```
+
+Result: Codex runs in STRICT mode **except** `skipGitCheck` is `true` because the explicit property takes precedence.
+
+## Mode System
+
+`AgentClientMode` is a portable enum controlling default permissiveness:
+
+| Mode | Behavior | When to Use |
+|------|----------|-------------|
+| `LOOSE` (default) | Minimize preconditions — works in any directory | Evaluation, development, tutorials |
+| `STRICT` | Conservative — requires explicit opt-in | Production, CI, shared environments |
+
+```yaml
+agent-client:
+  mode: loose    # or strict
+```
+
+See [Defaults Philosophy](/docs/agent-client/explanation/defaults-philosophy) for detailed mode-vs-property interaction examples.
+
+## Promotion Rubric
+
+Provider-specific options graduate to the portable `AgentOptions` interface when **all three** conditions hold:
+
+1. **Two or more providers** have a semantic equivalent
+2. **Absence causes failures** on easy-tier benchmarks (evidence, not speculation)
+3. The option **can be expressed** without leaking provider-specific concepts
+
+Options that don't meet the rubric remain in the provider-specific namespace indefinitely. This is intentional — not every option should be portable.
+
+### Current Portable Options
+
+| Option | Claude | Codex | Gemini | Status |
+|--------|--------|-------|--------|--------|
+| `model` | `claude-sonnet-4-5` | `gpt-5-codex` | `gemini-2.5-flash` | Portable |
+| `timeout` | 5m | 5m | 5m | Portable |
+
+### Provider-Specific (Not Promoted)
+
+| Option | Provider | Why Not Portable |
+|--------|----------|-----------------|
+| `skipGitCheck` | Codex | Only Codex has a git directory gate |
+| `maxThinkingTokens` | Claude | Claude-specific extended thinking |
+| `yolo` | Claude, Gemini | Codex uses `fullAuto` — different semantics |
+| `temperature` | Gemini | Not exposed by Claude/Codex CLIs |
+
+## Provider Reference Pages
+
+<CardGroup cols={3}>
+  <Card title="Claude" icon="terminal" href="/docs/agent-client/reference/claude-reference">
+    18 properties — `agent-client.claude.*`
+  </Card>
+  <Card title="Codex" icon="code" href="/docs/agent-client/reference/codex-reference">
+    6 properties — `agent-client.codex.*`
+  </Card>
+  <Card title="Gemini" icon="sparkles" href="/docs/agent-client/reference/gemini-reference">
+    6 properties — `agent-client.gemini.*`
+  </Card>
+</CardGroup>

@@ -1,0 +1,196 @@
+---
+title: "Getting Started"
+description: "Run your first agent task with Spring AI Agent Client in under 5 minutes"
+sidebarTitle: "Getting Started"
+---
+
+## Prerequisites
+
+- Java 17+
+- Maven 3.9+ (or use the Maven wrapper)
+- A CLI agent installed and authenticated:
+  - **Claude**: `claude auth login` ([install guide](https://docs.anthropic.com/en/docs/claude-code))
+  - **Codex**: `export OPENAI_API_KEY=sk-...` ([install guide](https://github.com/openai/codex))
+  - **Gemini**: `export GEMINI_API_KEY=...` ([install guide](https://github.com/google-gemini/gemini-cli))
+
+## 1. Add the Dependency
+
+Pick your provider. You need the agent model module for your provider:
+
+<Tabs>
+  <Tab title="Claude">
+    ```xml
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-claude</artifactId>
+        <version>0.19.0</version>
+    </dependency>
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```xml
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-codex</artifactId>
+        <version>0.19.0</version>
+    </dependency>
+    ```
+  </Tab>
+  <Tab title="Gemini">
+    ```xml
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-gemini</artifactId>
+        <version>0.19.0</version>
+    </dependency>
+    ```
+  </Tab>
+</Tabs>
+
+## 2. Create an Agent and Run a Task
+
+No Spring Boot required. Build a model, create a client, run a goal:
+
+<Tabs>
+  <Tab title="Claude">
+    ```java
+    import io.github.markpollack.client.AgentClient;
+    import io.github.markpollack.client.AgentClientResponse;
+    import io.github.markpollack.claude.ClaudeAgentModel;
+    import io.github.markpollack.claude.ClaudeAgentOptions;
+
+    public class HelloAgent {
+        public static void main(String[] args) {
+            ClaudeAgentOptions options = ClaudeAgentOptions.builder()
+                .model("claude-sonnet-4-5")
+                .yolo(true)
+                .build();
+
+            ClaudeAgentModel model = ClaudeAgentModel.builder()
+                .defaultOptions(options)
+                .build();
+
+            AgentClient client = AgentClient.create(model);
+            AgentClientResponse response = client.run(
+                "Create a file named hello.txt with 'Hello from Agent Client!'"
+            );
+
+            System.out.println("Success: " + response.isSuccessful());
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```java
+    import io.github.markpollack.client.AgentClient;
+    import io.github.markpollack.client.AgentClientResponse;
+    import io.github.markpollack.codex.CodexAgentModel;
+    import io.github.markpollack.codex.CodexAgentOptions;
+    import io.github.markpollack.codex.CodexClient;
+
+    public class HelloAgent {
+        public static void main(String[] args) {
+            CodexAgentOptions options = CodexAgentOptions.builder()
+                .model("gpt-5-codex")
+                .skipGitCheck(true)
+                .build();
+
+            CodexAgentModel model = new CodexAgentModel(
+                CodexClient.create(), options, null
+            );
+
+            AgentClient client = AgentClient.create(model);
+            AgentClientResponse response = client.run(
+                "Create a file named hello.txt with 'Hello from Agent Client!'"
+            );
+
+            System.out.println("Success: " + response.isSuccessful());
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="Gemini">
+    ```java
+    import io.github.markpollack.client.AgentClient;
+    import io.github.markpollack.client.AgentClientResponse;
+    import io.github.markpollack.gemini.GeminiAgentModel;
+    import io.github.markpollack.gemini.GeminiAgentOptions;
+    import io.github.markpollack.geminisdk.GeminiClient;
+
+    public class HelloAgent {
+        public static void main(String[] args) {
+            GeminiAgentOptions options = GeminiAgentOptions.builder()
+                .model("gemini-2.5-flash")
+                .yolo(true)
+                .build();
+
+            GeminiAgentModel model = new GeminiAgentModel(
+                GeminiClient.create(), options, null
+            );
+
+            AgentClient client = AgentClient.create(model);
+            AgentClientResponse response = client.run(
+                "Create a file named hello.txt with 'Hello from Agent Client!'"
+            );
+
+            System.out.println("Success: " + response.isSuccessful());
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## 3. Run It
+
+```bash
+mvn compile exec:java -Dexec.mainClass="HelloAgent"
+```
+
+The agent will create `hello.txt` in your working directory.
+
+## With Spring Boot
+
+If you're building a Spring Boot application, use the starter dependencies instead. They auto-configure the `AgentApi` and provide an injectable `AgentClient.Builder`:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-starter-claude</artifactId>
+    <version>0.19.0</version>
+</dependency>
+```
+
+```java
+@Component
+public class MyAgentRunner implements CommandLineRunner {
+
+    private final AgentClient.Builder agentClientBuilder;
+
+    public MyAgentRunner(AgentClient.Builder agentClientBuilder) {
+        this.agentClientBuilder = agentClientBuilder;
+    }
+
+    @Override
+    public void run(String... args) {
+        AgentClient client = agentClientBuilder.build();
+        AgentClientResponse response = client.run("Create hello.txt");
+        System.out.println("Success: " + response.isSuccessful());
+    }
+}
+```
+
+Configuration goes in `application.yml`:
+
+```yaml
+agent-client:
+  claude:
+    model: claude-sonnet-4-5
+    yolo: true
+```
+
+## Next Steps
+
+- [Switching Providers](/docs/agent-client/howto/switching-providers) — Run the same task with different providers
+- [Structured Output](/docs/agent-client/howto/structured-output) — Get structured JSON responses from agents
+- [Configuration Reference](/docs/agent-client/reference/portable-options) — All available configuration options
+- [Tutorial: First Task](/docs/agent-client/tutorial/01-first-task) — Step-by-step walkthrough with verification

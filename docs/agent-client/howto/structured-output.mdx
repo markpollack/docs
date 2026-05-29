@@ -1,0 +1,63 @@
+---
+title: "Structured Output"
+description: "How to get structured JSON responses from agent tasks using JSON Schema"
+sidebarTitle: "Structured Output"
+---
+
+## The Problem
+
+You want the agent to return structured data (not free-form text) so your application can parse and act on the result programmatically.
+
+## Solution: JSON Schema
+
+Pass a JSON schema to the agent via Spring properties or the fluent API. The agent constrains its output to match the schema.
+
+### Via Spring Properties
+
+```yaml
+agent-client:
+  claude:
+    json-schema:
+      type: object
+      properties:
+        summary:
+          type: string
+          description: "A brief summary of what was done"
+        files_changed:
+          type: array
+          items:
+            type: string
+          description: "List of files that were created or modified"
+        success:
+          type: boolean
+      required:
+        - summary
+        - success
+```
+
+### Via the Fluent API
+
+```java
+AgentClient agentClient = agentClientBuilder.build();
+
+AgentClientResponse response = agentClient.goal("Analyze the project structure")
+    .workingDirectory(projectDir)
+    .run();
+
+// Parse the structured response
+String result = response.getResult();
+JsonNode json = objectMapper.readTree(result);
+String summary = json.get("summary").asText();
+```
+
+<Warning>
+**Provider support varies.** JSON schema structured output is currently supported by the **Claude** provider. Codex and Gemini may return free-form text even when a schema is configured. Check the provider-specific reference pages for current support.
+</Warning>
+
+## Provider-Specific Details
+
+| Provider | Structured Output | Configuration |
+|----------|-------------------|---------------|
+| Claude | JSON Schema via `json-schema` property | [Claude Reference](/docs/agent-client/reference/claude-reference#structured-output) |
+| Codex | Not currently supported | — |
+| Gemini | Not currently supported | — |

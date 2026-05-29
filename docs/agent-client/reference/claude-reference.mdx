@@ -1,0 +1,168 @@
+---
+title: "Claude Reference"
+description: "Complete configuration reference for the Claude Code agent provider"
+sidebarTitle: "Claude Reference"
+---
+
+## Overview
+
+The Claude agent wraps the [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) via `ClaudeAgentApi`. Configure it through Spring properties under `agent-client.claude.*`.
+
+```yaml
+agent-client:
+  claude:
+    model: claude-sonnet-4-5
+    timeout: PT5M
+    yolo: true
+```
+
+## Configuration Properties
+
+Prefix: `agent-client.claude`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `model` | `String` | `claude-sonnet-4-5` | Claude model to use for agent tasks |
+| `timeout` | `Duration` | `5m` | Timeout for agent task execution |
+| `yolo` | `boolean` | `true` | Bypass all permission checks |
+| `executable-path` | `String` | — | Path to the Claude CLI executable (auto-discovered if not set) |
+| `max-thinking-tokens` | `Integer` | — | Maximum thinking tokens for extended thinking mode |
+| `system-prompt` | `String` | — | System prompt to use for the agent |
+| `allowed-tools` | `List<String>` | `[]` | Tools that are allowed to be used |
+| `disallowed-tools` | `List<String>` | `[]` | Tools that are not allowed to be used |
+| `permission-mode` | `String` | — | Permission mode for tool execution (overrides `yolo` if set) |
+| `json-schema` | `Map<String,Object>` | — | JSON schema for structured output |
+| `max-tokens` | `Integer` | — | Maximum tokens for the response |
+| `max-turns` | `Integer` | — | Maximum number of agentic turns before stopping |
+| `max-budget-usd` | `Double` | — | Maximum budget in USD before stopping |
+| `fallback-model` | `String` | — | Fallback model if the primary model is unavailable |
+| `append-system-prompt` | `String` | — | Additional text appended to the default system prompt |
+
+### Advanced Options
+
+These options provide full parity with the Claude Code Python SDK:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `add-dirs` | `List<String>` | `[]` | Additional directories to include in Claude's context |
+| `settings` | `String` | — | Custom settings file path |
+| `permission-prompt-tool-name` | `String` | — | Permission prompt tool name for interactive permission handling |
+| `extra-args` | `Map<String,String>` | — | Arbitrary extra CLI arguments (keys are flag names without `--`) |
+| `env` | `Map<String,String>` | — | Custom environment variables for the CLI process |
+| `max-buffer-size` | `Integer` | — | Maximum buffer size for JSON parsing in bytes (default 1MB) |
+| `user` | `String` | — | Unix user to run the CLI process as (requires sudo configuration) |
+| `trace-dir` | `String` | — | Directory for JSONL trace files. Each invocation writes one file. |
+
+## Permission Modes
+
+The `permission-mode` property overrides `yolo` when set. Available modes:
+
+| Mode | Description |
+|------|-------------|
+| `bypassPermissions` | Skip all permission checks (equivalent to `yolo=true`) |
+| `default` | Use Claude Code's default permission behavior |
+
+```yaml
+agent-client:
+  claude:
+    permission-mode: bypassPermissions
+    # yolo is ignored when permission-mode is set
+```
+
+## Tool Filtering
+
+Control which tools Claude can use:
+
+```yaml
+agent-client:
+  claude:
+    allowed-tools:
+      - Read
+      - Write
+      - Bash
+    disallowed-tools:
+      - WebSearch
+```
+
+<Warning>
+`allowed-tools` and `disallowed-tools` are mutually exclusive in practice. If both are set, `allowed-tools` takes precedence.
+</Warning>
+
+## Budget Controls
+
+Limit agent execution costs and turns:
+
+```yaml
+agent-client:
+  claude:
+    max-turns: 10           # Stop after 10 agentic turns
+    max-budget-usd: 0.50    # Stop after $0.50 spent
+    max-tokens: 4096        # Limit response tokens
+```
+
+## Structured Output
+
+Request structured JSON output using a JSON schema:
+
+```yaml
+agent-client:
+  claude:
+    json-schema:
+      type: object
+      properties:
+        summary:
+          type: string
+        files_changed:
+          type: array
+          items:
+            type: string
+```
+
+## Trace Files
+
+Enable JSONL trace output to capture tool calls, thinking blocks, and result metrics per invocation:
+
+```yaml
+agent-client:
+  claude:
+    trace-dir: /path/to/traces
+```
+
+Each `call()` writes one file like `agent-run-20260528-143000-123-a1b2c3d4.jsonl` containing Claude-specific events (`tool_use`, `tool_result`, `text`, `thinking`, `result`). The file path is available in the response metadata:
+
+```java
+String tracePath = (String) response.getMetadata().getProviderFields().get("tracePath");
+```
+
+Or via the builder API:
+
+```java
+ClaudeAgentModel model = ClaudeAgentModel.builder()
+    .traceDir(Path.of("traces"))
+    .build();
+```
+
+Trace files are flushed per event during parsing, so you can `tail -f` them during long-running sessions. When used with [Agent Workflow](/docs/agent-workflow/trace-capture), trace paths propagate automatically through the workflow journal.
+
+<Note>
+These are Claude-specific JSONL traces, not provider-neutral journal events. See [Agent Journal](/projects/agent-journal) for the portable event layer.
+</Note>
+
+## Authentication
+
+<Tabs>
+  <Tab title="Session Auth (Recommended)">
+    ```bash
+    claude auth login
+    ```
+    The Claude CLI uses its own session token. No environment variables needed.
+  </Tab>
+  <Tab title="API Key">
+    ```bash
+    export ANTHROPIC_API_KEY=sk-ant-...
+    ```
+    <Warning>
+    Do not mix session auth and API key auth — this can cause authentication conflicts.
+    </Warning>
+  </Tab>
+</Tabs>

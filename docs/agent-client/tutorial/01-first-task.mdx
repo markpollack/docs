@@ -1,0 +1,89 @@
+---
+title: "Lesson 1: Your First Agent Task"
+description: "Create a file using an agent — set up, run, and verify"
+sidebarTitle: "01 - First Task"
+---
+
+<Card title="Source Code" icon="github" href="https://github.com/spring-ai-community/agent-client-tutorial/tree/main/01-create-file">
+  `agent-client-tutorial/01-create-file`
+</Card>
+
+## What You'll Build
+
+A Java program that asks an agent to create a file, then verifies the file was created. No Spring Boot required — just plain Java with the AgentClient API.
+
+## Step 1: Set Up the Project
+
+Create a Maven project with the Claude agent dependency:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-claude</artifactId>
+        <version>0.19.0</version>
+    </dependency>
+</dependencies>
+```
+
+Or clone the tutorial repo:
+
+```bash
+git clone https://github.com/spring-ai-community/agent-client-tutorial.git
+cd agent-client-tutorial/01-create-file
+```
+
+## Step 2: Understand the Code
+
+Three lines do the real work:
+
+```java
+// 1. Build the model — this is the provider-specific part
+ClaudeAgentModel model = ClaudeAgentModel.builder()
+    .defaultOptions(ClaudeAgentOptions.builder()
+        .model("claude-sonnet-4-5")
+        .yolo(true)
+        .build())
+    .build();
+
+// 2. Create the client — this is the portable part
+AgentClient client = AgentClient.create(model);
+
+// 3. Run a goal
+AgentClientResponse response = client.run(
+    "Create a file named hello.txt with the content 'Hello from Agent Client!'"
+);
+```
+
+Notice the separation:
+- **Model construction** is provider-specific (you import `ClaudeAgentModel`)
+- **Client usage** is portable (`AgentClient.create()` and `.run()` work with any model)
+- **The goal** is a plain English string — describe *what*, not *how*
+
+## Step 3: Run It
+
+```bash
+./mvnw compile exec:java -Dexec.mainClass="HelloAgent"
+```
+
+## Step 4: Verify
+
+Check that `hello.txt` was created:
+
+```bash
+cat hello.txt
+# Output: Hello from Agent Client!
+```
+
+## What Just Happened
+
+1. `ClaudeAgentModel` found the Claude CLI on your system
+2. `AgentClient.create(model)` wrapped it in the portable client API
+3. `.run(goal)` sent your English instruction to the Claude CLI
+4. The CLI created the file, and the response told you it succeeded
+
+The agent did the same thing a developer would do — it created a file. The difference is you described *what* to do, not *how*.
+
+## Next
+
+[Lesson 2: Multi-Provider →](/docs/agent-client/tutorial/02-multi-provider) — Run this same task with Codex and Gemini without changing the client code.

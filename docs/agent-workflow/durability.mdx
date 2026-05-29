@@ -166,7 +166,7 @@ TraceRecorder recorder = new JdbcTraceRecorder(jdbcTemplate);
 var executor = new WorkflowExecutor(stepRunner, recorder);
 ```
 
-Each `StepTransition` record includes: `run_id`, `workflow_name`, `from_step`, `to_step`, `timestamp`, `duration_ms`, `tokens_used`, `cost_usd`, `node_type`, `label`.
+Each `StepTransition` record includes: `run_id`, `workflow_name`, `from_step`, `to_step`, `timestamp`, `duration_ms`, `tokens_used`, `cost_usd`, `node_type`, `label`, `trace_path`. The `trace_path` column stores the absolute path to the step's JSONL trace file when using a trace-aware `AgentClientStep` — see [Trace Capture](/docs/agent-workflow/trace-capture).
 
 Query traces for a run:
 

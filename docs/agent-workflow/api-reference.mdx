@@ -378,13 +378,16 @@ Records every step transition:
 
 ```java
 record StepTransition(
+    String workflowRunId, String workflowName,
     String fromStep, String toStep,
-    Duration duration, int tokensUsed,
-    double costUsd, Instant timestamp
+    Instant timestamp, Duration stepDuration,
+    long tokensUsed, double costUsd,
+    NodeType nodeType, String label,
+    String tracePath     // absolute path to JSONL trace file, or null
 ) {}
 ```
 
-`TraceRecorder.noop()` is the default — zero overhead unless opted in. Trace data feeds Markov analysis, run diagnosis, and replay.
+`TraceRecorder.noop()` is the default — zero overhead unless opted in. Trace data feeds Markov analysis, run diagnosis, and replay. When a step produces a trace file (via `AgentClientStep` backed by a trace-aware client), the `tracePath` is included in the transition. See [Trace Capture](/docs/agent-workflow/trace-capture) for the full guide.
 
 ## Module Structure
 
@@ -392,11 +395,10 @@ record StepTransition(
 agent-workflow/
 ├── workflow-api/        # Step, AgentContext, ContextKey, Gate, RunOptions
 ├── workflow-core/       # WorkflowGraph, WorkflowExecutor, StepRunner, TraceRecorder
-├── workflow-flows/      # Workflow DSL, ClaudeStep, ChatClientStep, A2AStep, JudgeGate
+├── workflow-flows/      # Workflow DSL, ClaudeStep, ChatClientStep, AgentClientStep, A2AStep, JudgeGate
 ├── workflow-batch/      # CheckpointingStepRunner, JdbcTraceRecorder, JPA entities
 ├── workflow-temporal/   # TemporalStepRunner, StepActivityImpl
-├── workflow-journal/    # JournalContextPolicy (agent-journal backed)
-├── workflow-mcp/        # McpAgentToolRegistrar
+├── workflow-journal/    # JournalTraceRecorder, WorkflowStepEvent
 ├── workflow-tools/      # BashTool, ReadTool, WriteTool, EditTool, GlobTool, GrepTool
 ├── workflow-agents/     # AgentLoop
 └── workflow-examples/   # Example pipelines

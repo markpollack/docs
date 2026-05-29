@@ -40,8 +40,8 @@ Several flavors depending on what you're calling:
 | Step type | What it wraps | Typical duration |
 |-----------|-------------|-----------------|
 | `ChatClientStep` | Single Spring AI `ChatClient` call | Seconds |
-| `ClaudeStep` | Full Claude CLI agent session (many turns, many tool calls) | Minutes |
-| `AgentClientStep` | External agent runtime (Claude, Gemini, etc.) | Minutes |
+| `ClaudeStep` | Full Claude CLI agent session (quick scripts, no trace capture) | Minutes |
+| `AgentClientStep` | External agent runtime with [trace capture](/docs/agent-workflow/trace-capture) (Claude, Gemini, etc.) | Minutes |
 | `A2AStep` | Remote agent via Agent-to-Agent protocol | Minutes |
 
 A `ClaudeStep` isn't a single API call — it runs a complete agentic loop internally. The workflow sees it as one step:

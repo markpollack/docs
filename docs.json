@@ -96,6 +96,7 @@
                   "docs/agent-workflow/choosing-a-pattern",
                   "docs/agent-workflow/wiring",
                   "docs/agent-workflow/api-reference",
+                  "docs/agent-workflow/trace-capture",
                   "docs/agent-workflow/durability"
                 ]
               },

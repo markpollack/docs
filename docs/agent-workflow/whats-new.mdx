@@ -4,6 +4,57 @@ description: "Release highlights for Agent Workflow"
 sidebarTitle: "What's New"
 ---
 
+## 0.8.0
+
+**Trace file capture through the workflow journal.** `AgentClientStep` now propagates trace file paths from the underlying agent model into the workflow's `StepTransition` and journal events. This closes the gap between "the agent ran" and "here's exactly what the agent did" — every tool call, token count, and thinking block is preserved in a JSONL trace file, and the path to that file is recorded in the workflow journal.
+
+### AgentClientStep trace wiring
+
+When the backing `AgentClient` implementation returns a trace path via `executeForResult()`, `AgentClientStep` writes it to `AgentContext.TRACE_PATH` and the executor propagates it through to `StepTransition.tracePath()`:
+
+```java
+// Trace-aware client bridges agent-client to workflow-flows
+AgentClient traceClient = new AgentClient() {
+    @Override
+    public String execute(String prompt, AgentContext ctx) {
+        return executeForResult(prompt, ctx).text();
+    }
+
+    @Override
+    public ExecutionResult executeForResult(String prompt, AgentContext ctx) {
+        AgentClientResponse response = coreClient.run(prompt);
+        String tracePath = (String) response.getMetadata().get("tracePath");
+        return new ExecutionResult(response.getResult(), tracePath);
+    }
+};
+
+AgentClientStep step = AgentClientStep.of(traceClient, "Fix the bug: {input}");
+```
+
+In a multi-step workflow, each AI step gets its own trace file. Deterministic steps pass through with no trace. Analysis scripts iterate over journal events to find all trace files for a run:
+
+```
+Workflow: remediate
+  step: trivy-scan       → tracePath: null (deterministic)
+  step: claude-fix       → tracePath: /traces/fix-20260528-143000.jsonl
+  step: mvn-test         → tracePath: null (deterministic)
+  step: claude-verify    → tracePath: /traces/verify-20260528-143500.jsonl
+```
+
+### What changed
+
+- `AgentClient.executeForResult()` — new default method returning `ExecutionResult(text, tracePath)`. Backward compatible: lambdas still work, trace path is null.
+- `AgentClientStep` — calls `executeForResult()`, writes `TRACE_PATH` to context via `updateContext()`
+- `StepTransition` and `WorkflowStepEvent` — carry optional `tracePath` field
+- `JdbcTraceRecorder` — new `trace_path` column in `step_transitions` table
+- `AgentContext.TRACE_PATH` — new well-known context key
+- `AgentContext.Builder.without()` — remove a key from context (used internally to clear per-step trace paths)
+- `ClaudeStep` javadoc — now recommends `AgentClientStep` for experiments needing trace capture
+
+See [Trace Capture](/docs/agent-workflow/trace-capture) for the full guide.
+
+---
+
 ## 0.7.0
 
 **Managed Agents as a step runtime.** The new `ManagedAgentStep` delegates workflow steps to [Anthropic's Managed Agents API](https://docs.anthropic.com/en/api/overview). The workflow graph stays in charge — but specific steps can run in Anthropic's cloud sandbox with full tool access (bash, file I/O, web search).
@@ -65,7 +116,8 @@ With 0.7.0, Agent Workflow supports five step runtimes:
 |------|---------|----------|
 | `Steps.of(fn)` | Local JVM | Deterministic logic, API calls |
 | `ChatClientStep` | Spring AI | Single LLM call, structured output |
-| `ClaudeStep` | Claude CLI | Full agentic loop with tools |
+| `ClaudeStep` | Claude CLI | Quick scripts (no trace capture) |
+| `AgentClientStep` | agent-client | Full agent loop with [trace capture](/docs/agent-workflow/trace-capture) |
 | `A2AStep` | A2A protocol | Remote agent delegation |
 | **`ManagedAgentStep`** | **Anthropic cloud** | **Hosted agent with sandbox** |
 

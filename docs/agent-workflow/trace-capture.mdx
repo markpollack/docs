@@ -1,0 +1,190 @@
+---
+title: "Trace Capture"
+description: "Capture per-step JSONL trace files and wire them through the workflow journal"
+sidebarTitle: "Trace Capture"
+---
+
+Workflow tracing records _which steps ran_ via `StepTransition`. Trace capture goes deeper — it records _what happened inside each step_: every tool call, thinking block, token count, and cost. The trace is written to a JSONL file during execution, and the file path flows through the workflow journal so analysis tools can find it.
+
+## When you need trace capture
+
+- **Markov analysis** — fingerprint an agent's behavioral patterns across runs
+- **Cost attribution** — break down per-step token usage and cost
+- **Debugging** — replay exactly what the agent saw, thought, and did
+- **Regression detection** — compare traces across code changes
+
+## Setup
+
+Trace capture requires two things: an agent model that writes trace files, and a workflow client that propagates the path.
+
+### 1. Configure traceDir on ClaudeAgentModel
+
+The `ClaudeAgentModel` from [agent-client](https://central.sonatype.com/artifact/io.github.markpollack/agent-claude) writes a JSONL trace file per `call()` when `traceDir` is set:
+
+```java
+ClaudeAgentModel model = ClaudeAgentModel.builder()
+        .traceDir(Path.of("traces"))
+        .build();
+```
+
+Each call produces a file like `traces/agent-run-20260528-143000-a1b2c3d4.jsonl` containing every message in the session.
+
+### 2. Bridge to a trace-aware AgentClient
+
+The workflow-flows `AgentClient` is a `@FunctionalInterface` that returns text. To carry trace metadata, override `executeForResult()`:
+
+```java
+var coreClient = AgentClient.create(model);
+
+io.github.markpollack.workflow.flows.steps.AgentClient workflowClient =
+    new io.github.markpollack.workflow.flows.steps.AgentClient() {
+
+        @Override
+        public String execute(String prompt, AgentContext ctx) {
+            return executeForResult(prompt, ctx).text();
+        }
+
+        @Override
+        public ExecutionResult executeForResult(String prompt, AgentContext ctx) {
+            AgentClientResponse response = coreClient.run(prompt);
+            String tracePath = (String) response.getMetadata().get("tracePath");
+            return new ExecutionResult(response.getResult(), tracePath);
+        }
+    };
+```
+
+Plain lambdas still work — `executeForResult()` defaults to calling `execute()` with a null trace path.
+
+### 3. Use AgentClientStep in a workflow
+
+```java
+AgentClientStep fixStep = AgentClientStep.of(workflowClient, "Fix: {input}");
+AgentClientStep verifyStep = AgentClientStep.of(workflowClient, "Verify the fix: {input}");
+
+TraceRecorder recorder = TraceRecorder.inMemory();
+WorkflowExecutor executor = new WorkflowExecutor(recorder);
+
+String result = Workflow.<String, String>define("remediate")
+        .withExecutor(executor)
+        .step(fixStep)
+        .then(verifyStep)
+        .run("failing test in AuthService");
+```
+
+Each `AgentClientStep` gets its own trace file. The path flows through to `StepTransition`:
+
+```java
+List<StepTransition> trace = recorder.getTrace(runId);
+for (StepTransition t : trace) {
+    if (t.tracePath() != null) {
+        System.out.println(t.toStep() + " → " + t.tracePath());
+    }
+}
+// AgentClientStep → /abs/path/traces/agent-run-20260528-143000-a1b2c3d4.jsonl
+// AgentClientStep → /abs/path/traces/agent-run-20260528-143500-e5f6g7h8.jsonl
+```
+
+## How it works
+
+The trace path flows through four layers:
+
+```
+AgentClient.executeForResult()        → ExecutionResult(text, tracePath)
+  AgentClientStep.updateContext()     → sets AgentContext.TRACE_PATH
+    WorkflowExecutor.recordTransition() → reads TRACE_PATH, clears it, records StepTransition
+      TraceRecorder                   → stores/persists the transition
+```
+
+The executor clears `TRACE_PATH` from context after each step so deterministic steps don't inherit a stale path.
+
+## Journal integration
+
+When using `workflow-journal`, trace paths appear in `WorkflowStepEvent` and are included in the journal's JSON output:
+
+```java
+Journal.configure(new JsonFileStorage(journalDir));
+WorkflowJournal.registerEventType();
+
+try (Run run = Journal.run("remediate-experiment").start()) {
+    WorkflowExecutor executor = new WorkflowExecutor(
+            new LocalStepRunner(),
+            WorkflowJournal.forRun(run));
+    // ... run workflow
+}
+```
+
+The journal event includes `tracePath` when present:
+
+```json
+{
+  "type": "workflow_step",
+  "stepName": "AgentClientStep",
+  "nodeType": "AGENT",
+  "stepDurationMs": 12000,
+  "tokensUsed": 3200,
+  "costUsd": 0.048,
+  "tracePath": "/abs/path/traces/agent-run-20260528-143000-a1b2c3d4.jsonl"
+}
+```
+
+## JDBC persistence
+
+`JdbcTraceRecorder` stores trace paths in the `trace_path` column of `step_transitions`:
+
+```java
+JdbcTraceRecorder recorder = new JdbcTraceRecorder(dataSource);
+List<StepTransition> trace = recorder.getTrace("run-1");
+
+// Find all trace files for a run
+List<String> traceFiles = trace.stream()
+        .map(StepTransition::tracePath)
+        .filter(Objects::nonNull)
+        .toList();
+```
+
+## ClaudeStep vs AgentClientStep
+
+| | ClaudeStep | AgentClientStep |
+|---|---|---|
+| Execution | CLI subprocess (`claude -p`) | In-process via `ClaudeAgentModel` |
+| Trace capture | Not available (text-only output) | Full JSONL trace files |
+| Token/cost data | Discarded at process boundary | Available in `providerFields` |
+| Use case | Quick scripts, prototyping | Experiments, production workflows |
+
+For any workflow where you need to analyze what the agent did — use `AgentClientStep`.
+
+## Maven coordinates
+
+```xml
+<!-- workflow-flows (always needed) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-flows</artifactId>
+    <version>0.8.0</version>
+</dependency>
+
+<!-- agent-client + Claude model (for trace-aware client) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-client-core</artifactId>
+    <version>0.19.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-claude</artifactId>
+    <version>0.19.0</version>
+</dependency>
+```
+
+Or use the [AgentWorks BOM](/projects/agentworks-bom) (1.1.0+) for managed versions.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Durability" icon="database" href="/docs/agent-workflow/durability">
+    JdbcTraceRecorder, CheckpointingStepRunner
+  </Card>
+  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
+    StepTransition, TraceRecorder, WorkflowExecutor
+  </Card>
+</CardGroup>

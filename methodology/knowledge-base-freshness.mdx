@@ -1,0 +1,94 @@
+---
+title: "Knowledge Base Freshness"
+description: "How knowledge stays true after it's written — cached routing judgments, two-channel freshness, and rituals that consume drift signals"
+---
+
+## The Problem
+
+A knowledge base is written once but consumed indefinitely. Every routing table, index row, count, and date is a *claim about the world* that was true at write time. The world moves: code evolves past the design doc that describes it, files get added without index rows, a count in a header drifts from the count on disk.
+
+[Knowledge Base Design](/methodology/knowledge-base-design) answers "how does an agent find the right file?" This page answers the follow-up that only shows up months later: **why should the agent trust what it finds?**
+
+## The Failure Mode: Cached Routing Judgment
+
+The dangerous rot is not a broken link — link checkers catch those. It is a **cached judgment**: an entry point that encodes a decision — "this is the authoritative design doc," "all files are indexed," "this copy matches the live one" — that was correct when written and is silently wrong now. Every reader reuses the judgment without re-deriving it.
+
+Three instances from one health pass over a federated KB system:
+
+- A federation catalog stayed perfectly fresh through status ingestion — while a per-project entry document it routed to sat unchanged for three months. Readers got a fresh pointer to rotten content.
+- The script that polices index drift had itself drifted from its versioned copy. The checker was unchecked.
+- An agent-based review reported "all files indexed — PASS." A deterministic count minutes later found seven missing entries.
+
+The common thread: each artifact was trusted because of what it was *named* — the catalog, the checker, the index — not because anything verified it.
+
+## Two-Channel Freshness
+
+A federated knowledge system stays fresh through two channels, and they fail differently:
+
+| Channel | Direction | What it keeps fresh | How it fails |
+|---------|-----------|--------------------|--------------|
+| **Status ingestion** (push) | Satellite projects → catalog | The union catalog: what exists, what changed, when | The entry documents it routes to rot beneath a fresh catalog |
+| **Catalog routing** (pull) | Reader → catalog → KB | Nothing — it only consumes | It trusts entries no ritual has checked |
+
+The push channel updates the *map*; nothing in it re-verifies the *territory*. The corollary is an observable rot gradient: knowledge federated through a design document rots fastest, because the status channel keeps the pointer fresh while no ritual touches the document itself.
+
+## Deterministic Floor, Semantic Judgment
+
+Layer the checks the same way a [four-tier jury](/methodology/four-tier-jury) layers evaluation — deterministic first, LLM last:
+
+- **The deterministic floor** — scripts with exit codes. Link resolution, count reconciliation (claimed vs. on disk), copy drift (live vs. versioned `diff`), version-control tracking checks. Cheap, repeatable, and immune to plausible-sounding summaries.
+- **Semantic judgment above it** — an agent pass over content claims: does the summary still match the source? Is the concept glossary complete? Valuable for what scripts can't see — but it can report PASS on things it didn't actually verify.
+
+The rule: **semantic judgment never substitutes for a deterministic check that could exist.** When an agent reports a bulk PASS, spot-check it deterministically. The "all files indexed" failure above was exactly this substitution.
+
+## Rituals Consume Drift Signals
+
+The governing principle:
+
+> Any operationally important "latest truth" channel needs both a source of truth **and a ritual that is required to consume its drift signal.** Logs, warnings, stale dates, and versioned backups only matter if something must read them.
+
+A `last-updated` date in a header is not a freshness mechanism — it is a freshness *signal*, and a signal nothing is required to read is noise. The fix is a ritual: a recurring re-index pass whose checklist includes consuming the signals — running the drift script, reconciling the counts, advancing the dates, and treating any non-clean result as work.
+
+When the ritual finds drift, the sequencing rule is:
+
+1. **Fix the immediate inconsistency first.**
+2. **Then add the smallest deterministic machinery that prevents recurrence.**
+
+Building the checker while the data is still wrong produces a checker calibrated against a broken baseline.
+
+## The Trust Principle
+
+> No entry point is trusted because of its filename. It is trusted because the ritual checks it.
+
+Naming conventions — `index.md`, a root routing table, a federation catalog — create *expectations* of authority, and expectations rot silently. Actual authority comes from being inside some check's blast radius. If a file is operationally important and no deterministic check or ritual step would notice it going stale, its trustworthiness is an accident of how recently someone happened to look.
+
+## Design Rules
+
+1. **Never duplicate state that lives in checked files.** Architecture and overview docs state invariants and flows, then *point* at the files where counts, dates, and lists live. A duplicated count is a second copy waiting to rot.
+
+2. **Every claim a reader might act on is either generated or checked.** If it's neither, delete it or move it somewhere advisory.
+
+3. **Checkers are channels too.** Drift detectors have copies; re-index procedures have versions. Include the checking machinery itself in the check surface — the unchecked checker is the failure mode that hides longest.
+
+4. **Prefer reconciliation over re-assertion.** A check that compares two independent sources (index vs. disk, claimed count vs. computed count, live copy vs. versioned copy) finds drift. A check that re-reads one source merely re-caches its judgment.
+
+## Connection to the Flywheel
+
+This is the [improvement flywheel](/methodology/improvement-flywheel) applied to the knowledge layer itself. The KB is an agent artifact like any other: it has measurable gaps (drift signals), diagnostic lenses (deterministic checks and semantic passes), and targeted interventions (fix, then smallest machinery). A knowledge base that nothing measures degrades exactly the way an agent that nothing judges does — invisibly, and with full confidence.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Knowledge Base Design" icon="folder-tree" href="/methodology/knowledge-base-design">
+    Structure for finding the right file — the write-time half of the problem
+  </Card>
+  <Card title="Four-Tier Jury" icon="layer-group" href="/methodology/four-tier-jury">
+    The same deterministic-first layering, applied to evaluating agent output
+  </Card>
+  <Card title="Improvement Flywheel" icon="arrows-rotate" href="/methodology/improvement-flywheel">
+    Measured gaps → targeted interventions — here applied to knowledge infrastructure
+  </Card>
+  <Card title="Structured Agent Execution" icon="list-check" href="/methodology/structured-agent-execution">
+    Deterministic steps wherever possible, AI only where necessary
+  </Card>
+</CardGroup>

@@ -5,7 +5,21 @@ description: "How we design experiments, evaluate agents, and analyze behavior"
 
 The lab uses a consistent methodology across all experiments. This page is the overview — each component has its own deep-dive.
 
+## The Worldview
+
+An agent is not a one-shot generator. It is a controlled system operating under feedback — observed through journals, scored by judges, and steered by the evidence both produce. That worldview has practical consequences:
+
+- **Everything iterates.** This is not spec-driven development in the waterfall sense. The specs, the judges, and the workflow steps all iterate *together* until the agent performs. No artifact is finished before the loop starts — the loop is how artifacts get finished.
+- **The judge set becomes a benchmark.** Once the judges converge, they stop being development scaffolding and become the measuring stick: every improvement, and every alternative approach, is scored against them.
+- **Determinism is the substrate.** Agents are workflows — deterministic steps wherever possible, AI only where necessary. Every decision the LLM doesn't have to make is a source of variance eliminated.
+- **Behavioral analysis finds the gradient.** Agent systems aren't differentiable, but Markov analysis of journals plus judge scores provide directional evidence — a gradient the iteration descends.
+- **The loop continues into production.** Deployment doesn't stop the journals or retire the judges. The same flywheel that built the agent keeps measuring and improving it.
+
+The open frontier is the next layer up: many such agents, coordinating.
+
 ## Six Pillars
+
+Six pillars — the thesis, the pipeline, knowledge design, execution structure, evaluation, and behavioral analysis — plus the improvement flywheel that ties them into a single loop:
 
 <CardGroup cols={3}>
   <Card

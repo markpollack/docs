@@ -26,6 +26,7 @@ Prefix: `agent-client.claude`
 | `timeout` | `Duration` | `5m` | Timeout for agent task execution |
 | `yolo` | `boolean` | `true` | Bypass all permission checks |
 | `executable-path` | `String` | — | Path to the Claude CLI executable (auto-discovered if not set) |
+| `effort` | `String` | — | Reasoning effort level (`--effort`): `low`, `medium`, `high`, `xhigh`, `max`. Overrides the portable `effort` when both are set |
 | `max-thinking-tokens` | `Integer` | — | Maximum thinking tokens for extended thinking mode |
 | `system-prompt` | `String` | — | System prompt to use for the agent |
 | `allowed-tools` | `List<String>` | `[]` | Tools that are allowed to be used |

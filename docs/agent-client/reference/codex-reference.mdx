@@ -27,6 +27,7 @@ Prefix: `agent-client.codex`
 | `timeout` | `Duration` | `5m` | Timeout for agent task execution |
 | `full-auto` | `boolean` | `true` | Enable full-auto mode (workspace-write sandbox + never approval) |
 | `skip-git-check` | `Boolean` | — | Skip git repository check. When not explicitly set, derived from mode (see below). |
+| `reasoning-effort` | `String` | — | Model reasoning effort (`model_reasoning_effort` config override): `minimal`, `low`, `medium`, `high`, `xhigh`. Overrides the portable `effort` when both are set |
 | `executable-path` | `String` | — | Path to the Codex CLI executable (auto-discovered if not set) |
 
 ## skipGitCheck and Mode Interaction

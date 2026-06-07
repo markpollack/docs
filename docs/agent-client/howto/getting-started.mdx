@@ -23,7 +23,7 @@ Pick your provider. You need the agent model module for your provider:
     <dependency>
         <groupId>io.github.markpollack</groupId>
         <artifactId>agent-claude</artifactId>
-        <version>0.19.0</version>
+        <version>0.20.0</version>
     </dependency>
     ```
   </Tab>
@@ -32,7 +32,7 @@ Pick your provider. You need the agent model module for your provider:
     <dependency>
         <groupId>io.github.markpollack</groupId>
         <artifactId>agent-codex</artifactId>
-        <version>0.19.0</version>
+        <version>0.20.0</version>
     </dependency>
     ```
   </Tab>
@@ -41,7 +41,7 @@ Pick your provider. You need the agent model module for your provider:
     <dependency>
         <groupId>io.github.markpollack</groupId>
         <artifactId>agent-gemini</artifactId>
-        <version>0.19.0</version>
+        <version>0.20.0</version>
     </dependency>
     ```
   </Tab>
@@ -54,10 +54,10 @@ No Spring Boot required. Build a model, create a client, run a goal:
 <Tabs>
   <Tab title="Claude">
     ```java
-    import io.github.markpollack.client.AgentClient;
-    import io.github.markpollack.client.AgentClientResponse;
-    import io.github.markpollack.claude.ClaudeAgentModel;
-    import io.github.markpollack.claude.ClaudeAgentOptions;
+    import io.github.markpollack.agents.client.AgentClient;
+    import io.github.markpollack.agents.client.AgentClientResponse;
+    import io.github.markpollack.agents.claude.ClaudeAgentModel;
+    import io.github.markpollack.agents.claude.ClaudeAgentOptions;
 
     public class HelloAgent {
         public static void main(String[] args) {
@@ -82,11 +82,11 @@ No Spring Boot required. Build a model, create a client, run a goal:
   </Tab>
   <Tab title="Codex">
     ```java
-    import io.github.markpollack.client.AgentClient;
-    import io.github.markpollack.client.AgentClientResponse;
-    import io.github.markpollack.codex.CodexAgentModel;
-    import io.github.markpollack.codex.CodexAgentOptions;
-    import io.github.markpollack.codex.CodexClient;
+    import io.github.markpollack.agents.client.AgentClient;
+    import io.github.markpollack.agents.client.AgentClientResponse;
+    import io.github.markpollack.agents.codex.CodexAgentModel;
+    import io.github.markpollack.agents.codex.CodexAgentOptions;
+    import io.github.markpollack.agents.codexsdk.CodexClient;
 
     public class HelloAgent {
         public static void main(String[] args) {
@@ -111,11 +111,11 @@ No Spring Boot required. Build a model, create a client, run a goal:
   </Tab>
   <Tab title="Gemini">
     ```java
-    import io.github.markpollack.client.AgentClient;
-    import io.github.markpollack.client.AgentClientResponse;
-    import io.github.markpollack.gemini.GeminiAgentModel;
-    import io.github.markpollack.gemini.GeminiAgentOptions;
-    import io.github.markpollack.geminisdk.GeminiClient;
+    import io.github.markpollack.agents.client.AgentClient;
+    import io.github.markpollack.agents.client.AgentClientResponse;
+    import io.github.markpollack.agents.gemini.GeminiAgentModel;
+    import io.github.markpollack.agents.gemini.GeminiAgentOptions;
+    import io.github.markpollack.agents.geminisdk.GeminiClient;
 
     public class HelloAgent {
         public static void main(String[] args) {
@@ -156,7 +156,7 @@ If you're building a Spring Boot application, use the starter dependencies inste
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-starter-claude</artifactId>
-    <version>0.19.0</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 

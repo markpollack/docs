@@ -80,9 +80,9 @@ RESUMED  → Was dead, now active again after resume()
 ### Create a Registry and Session
 
 ```java
-import io.github.markpollack.claude.ClaudeAgentSessionRegistry;
-import io.github.markpollack.model.AgentSession;
-import io.github.markpollack.model.AgentResponse;
+import io.github.markpollack.agents.claude.ClaudeAgentSessionRegistry;
+import io.github.markpollack.agents.model.AgentSession;
+import io.github.markpollack.agents.model.AgentResponse;
 
 // Build a registry (configure once, create many sessions)
 ClaudeAgentSessionRegistry registry = ClaudeAgentSessionRegistry.builder()
@@ -140,7 +140,7 @@ try {
 Optional<AgentSession> found = registry.find(savedId);
 found.ifPresent(s -> {
     AgentResponse response = s.prompt("What files did you modify?");
-    System.out.println(response.getGenerations().get(0).getText());
+    System.out.println(response.getText());
 });
 ```
 

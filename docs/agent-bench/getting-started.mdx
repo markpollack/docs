@@ -124,10 +124,8 @@ The code-coverage benchmark is a real-world task: write JUnit tests for Spring P
 This requires the full judge stack, so use the `agent-bench-agents` module:
 
 ```bash
-# Build spring-ai-agents dependency (needed for LLM judge)
-cd ../spring-ai-agents && ./mvnw clean install -DskipTests && cd ../agent-bench
-
 # Run code-coverage benchmark (45+ minutes)
+# Requires agent-client 0.20.0+ on Maven Central (resolved automatically)
 ./mvnw exec:java -pl agent-bench-agents \
   -Dexec.args="run --benchmark code-coverage --agent agents/my-agent.yaml"
 ```

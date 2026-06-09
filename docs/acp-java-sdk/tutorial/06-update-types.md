@@ -59,7 +59,7 @@ AcpSyncClient client = AcpClient.sync(transport)
 | `Plan` | Agent's planned steps | Show step list with priorities and completion |
 | `AvailableCommandsUpdate` | Slash commands | Populate command palette |
 | `CurrentModeUpdate` | Mode change | Update UI mode indicator |
-| `UsageUpdate` | Token usage and cost | Show context window usage bar (unstable) |
+| `UsageUpdate` | Token usage and cost | Show context window usage bar |
 
 This module extends Module 05 by handling every update type rather than just messages.
 

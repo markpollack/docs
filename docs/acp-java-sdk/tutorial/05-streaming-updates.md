@@ -59,7 +59,7 @@ private static void handleSessionUpdate(SessionUpdate update) {
 | `Plan` | Agent's planned steps with priorities and status |
 | `AvailableCommandsUpdate` | Slash commands the agent supports |
 | `CurrentModeUpdate` | Agent mode change |
-| `UsageUpdate` | Context window and cost usage (unstable) |
+| `UsageUpdate` | Context window and cost usage |
 
 Updates arrive during `client.prompt()`. The prompt call blocks until the agent returns a `PromptResponse`, but updates stream in continuously through the consumer.
 

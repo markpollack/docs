@@ -56,7 +56,7 @@ The prompt handler demonstrates each update type:
     context.sendUpdate(sessionId,
         new CurrentModeUpdate("current_mode_update", "default"));
 
-    // 7. Usage Update — report token usage and cost (unstable)
+    // 7. Usage Update — report token usage and cost
     context.sendUpdate(sessionId,
         new UsageUpdate("usage_update", 53000L, 200000L));
 

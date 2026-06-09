@@ -132,13 +132,19 @@ All three produce identical protocol behavior and support the same capabilities.
 | :----- | :---------- | :---------- |
 | `initialize()` | `InitializeResponse` | Protocol handshake with defaults |
 | `initialize(request)` | `InitializeResponse` | Handshake with custom capabilities |
+| `authenticate(request)` | `AuthenticateResponse` | Authenticate with a method ID |
+| `logout(request)` | `LogoutResponse` | Clear stored credentials *(0.13.0)* |
 | `newSession(request)` | `NewSessionResponse` | Create a new session |
 | `loadSession(request)` | `LoadSessionResponse` | Resume an existing session (replays history) |
 | `listSessions(request)` | `ListSessionsResponse` | List sessions, optional cwd filter *(0.12.0)* |
 | `resumeSession(request)` | `ResumeSessionResponse` | Reconnect to session without history replay *(0.12.0)* |
 | `closeSession(request)` | `CloseSessionResponse` | Close session and free resources *(0.12.0)* |
+| `deleteSession(request)` | `DeleteSessionResponse` | Permanently delete a stored session *(0.13.0)* |
 | `forkSession(request)` | `ForkSessionResponse` | Fork a session into a new branch *(0.12.0, unstable)* |
-| `setSessionConfigOption(request)` | `SetSessionConfigOptionResponse` | Set a session config value *(0.12.0, unstable)* |
+| `setSessionConfigOption(request)` | `SetSessionConfigOptionResponse` | Set a session config value *(0.12.0)* |
+| `listProviders(request)` | `ListProvidersResponse` | List configurable model/backend providers *(0.13.0, unstable)* |
+| `setProvider(request)` | `SetProviderResponse` | Configure a provider (protocol, base URL, headers) *(0.13.0, unstable)* |
+| `disableProvider(request)` | `DisableProviderResponse` | Disable a provider by id *(0.13.0, unstable)* |
 | `prompt(request)` | `PromptResponse` | Send prompt, block until response |
 | `cancel(notification)` | `void` | Cancel current prompt (fire-and-forget) |
 | `getAgentCapabilities()` | `NegotiatedCapabilities` | Capabilities reported by agent |
@@ -222,17 +228,31 @@ The `acp-agent-support` module provides a declarative programming model using an
 | Annotation | JSON-RPC Method | Description |
 |------------|-----------------|-------------|
 | `@Initialize` | `initialize` | Protocol initialization and capability negotiation |
+| `@Logout` | `logout` | Clears stored credentials *(0.13.0)* |
 | `@NewSession` | `session/new` | Creates a new agent session |
 | `@LoadSession` | `session/load` | Loads an existing session by ID (replays history) |
 | `@ListSessions` | `session/list` | Lists sessions with optional cwd filter *(0.12.0)* |
 | `@ResumeSession` | `session/resume` | Reconnects to session without history replay *(0.12.0)* |
 | `@CloseSession` | `session/close` | Closes session and frees resources *(0.12.0)* |
+| `@DeleteSession` | `session/delete` | Permanently deletes a stored session *(0.13.0)* |
 | `@ForkSession` | `session/fork` | Forks a session into a new branch *(0.12.0, unstable)* |
-| `@SetSessionConfigOption` | `session/set_config_option` | Sets a session config value *(0.12.0, unstable)* |
+| `@SetSessionConfigOption` | `session/set_config_option` | Sets a session config value *(0.12.0)* |
+| `@ListProviders` | `providers/list` | Lists configurable providers *(0.13.0, unstable)* |
+| `@SetProvider` | `providers/set` | Configures a provider *(0.13.0, unstable)* |
+| `@DisableProvider` | `providers/disable` | Disables a provider by id *(0.13.0, unstable)* |
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
-| `@SetSessionModel` | `session/set_model` | Changes the AI model |
+| `@SetSessionModel` | `session/set_model` | **Deprecated** — removed from the spec; use `@SetSessionConfigOption` with a `"model"` category option |
 | `@Cancel` | `session/cancel` | Cancellation notification (fire-and-forget) |
+
+> **Deprecated: the session-model API (0.13.0).** `session/set_model` and the related types
+> (`@SetSessionModel`, `SetSessionModelRequest`/`Response`, `SessionModelState`, `ModelInfo`, and the
+> `models` field on session responses) were removed from the ACP spec in June 2026 and are marked
+> `@Deprecated(forRemoval = true)`. They still work for now but will be removed in a future release.
+> Expose model selection through `session/set_config_option` instead: advertise a `select` config
+> option whose `category` is `"model"`, and switch models with `setSessionConfigOption(...)`. This is
+> the same mechanism used for session modes (`category: "mode"`) and reasoning level
+> (`category: "thought_level"`).
 
 #### Parameter Annotations
 
@@ -289,6 +309,11 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
     // Messages and thoughts
     ctx.sendMessage("Working on it...");
     ctx.sendThought("Let me analyze this...");
+
+    // Tag streamed chunks with a message ID (0.13.0) — chunks sharing an id
+    // form one logical message; a new id starts a new message
+    ctx.sendMessage("First part...", "msg-1");
+    ctx.sendThought("Reasoning...", "msg-1");
 
     // File operations (requires client capabilities)
     String content = ctx.readFile("/path/to/file.txt");
@@ -364,7 +389,7 @@ class CodeAssistant {
     PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
         ctx.sendThought("Analyzing the code...");
 
-        if (ctx.getClientCapabilities().readTextFile()) {
+        if (ctx.getClientCapabilities().supportsReadTextFile()) {
             ctx.sendMessage("I can access files if needed.");
         }
 
@@ -390,13 +415,19 @@ Blocking handlers with plain return values. No annotations.
 | Method | Description |
 | :----- | :---------- |
 | `initializeHandler(handler)` | Handle `initialize` requests |
+| `authenticateHandler(handler)` | Handle `authenticate` requests |
+| `logoutHandler(handler)` | Handle `logout` requests *(0.13.0)* |
 | `newSessionHandler(handler)` | Handle `session/new` requests |
 | `loadSessionHandler(handler)` | Handle `session/load` requests |
 | `listSessionsHandler(handler)` | Handle `session/list` requests *(0.12.0)* |
 | `resumeSessionHandler(handler)` | Handle `session/resume` requests *(0.12.0)* |
 | `closeSessionHandler(handler)` | Handle `session/close` requests *(0.12.0)* |
+| `deleteSessionHandler(handler)` | Handle `session/delete` requests *(0.13.0)* |
 | `forkSessionHandler(handler)` | Handle `session/fork` requests *(0.12.0, unstable)* |
-| `setSessionConfigOptionHandler(handler)` | Handle `session/set_config_option` requests *(0.12.0, unstable)* |
+| `setSessionConfigOptionHandler(handler)` | Handle `session/set_config_option` requests *(0.12.0)* |
+| `listProvidersHandler(handler)` | Handle `providers/list` requests *(0.13.0, unstable)* |
+| `setProviderHandler(handler)` | Handle `providers/set` requests *(0.13.0, unstable)* |
+| `disableProviderHandler(handler)` | Handle `providers/disable` requests *(0.13.0, unstable)* |
 | `promptHandler(handler)` | Handle `session/prompt` requests |
 | `cancelHandler(handler)` | Handle `session/cancel` notifications |
 
@@ -500,18 +531,19 @@ Drop to the full API when you need control that convenience methods don't expose
 var caps = new AgentCapabilities(
     true,                                          // loadSession
     new McpCapabilities(true, true),               // HTTP + SSE
-    new PromptCapabilities(true, false, true)       // imageContent, audioContent, embeddedContext
+    new PromptCapabilities(true, false, true)       // audio, embeddedContext, image
 );
 return InitializeResponse.ok(caps);
 
 // Send non-text update types (Plan, ToolCall, AvailableCommandsUpdate, etc.)
 context.sendUpdate(sessionId, new Plan("plan", List.of(
-    new PlanStep("Analyze code", PlanStepStatus.IN_PROGRESS),
-    new PlanStep("Generate tests", PlanStepStatus.PENDING)
+    new PlanEntry("Analyze code", PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
+    new PlanEntry("Generate tests", PlanEntryPriority.MEDIUM, PlanEntryStatus.PENDING)
 )));
 
 context.sendUpdate(sessionId, new ToolCall("tool_call",
-    "search", "code-search", ToolCallStatus.IN_PROGRESS, null));
+    "search-1", "code-search", ToolKind.SEARCH, ToolCallStatus.IN_PROGRESS,
+    null, null, null, null, null));
 
 // Read file with offset and line limit
 var response = context.readTextFile(
@@ -539,21 +571,33 @@ All protocol types are defined in `AcpSchema` as Java records.
 | Type | Fields |
 | :--- | :----- |
 | `InitializeRequest` | `protocolVersion`, `clientCapabilities` |
-| `InitializeResponse` | `protocolVersion`, `agentCapabilities`, `sessionIds` |
-| `NewSessionRequest` | `cwd`, `mcpServers` |
-| `NewSessionResponse` | `sessionId`, `modes`, `models` |
-| `LoadSessionRequest` | `sessionId`, `cwd`, `mcpServers` |
-| `LoadSessionResponse` | `modes`, `models` |
+| `InitializeResponse` | `protocolVersion`, `agentCapabilities`, `authMethods`, `agentInfo` |
+| `AuthenticateRequest` | `methodId` |
+| `AuthenticateResponse` | *(empty)* |
+| `LogoutRequest` | *(empty)* *(0.13.0)* |
+| `LogoutResponse` | *(empty)* *(0.13.0)* |
+| `NewSessionRequest` | `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.13.0)* |
+| `NewSessionResponse` | `sessionId`, `modes`, ~~`models`~~ *(`models` deprecated — see below)* |
+| `LoadSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.13.0)* |
+| `LoadSessionResponse` | `modes`, ~~`models`~~ *(deprecated)* |
 | `ListSessionsRequest` | `cwd` (optional filter), `cursor` (pagination) *(0.12.0)* |
 | `ListSessionsResponse` | `sessions` (list of `SessionInfo`), `nextCursor` *(0.12.0)* |
-| `ResumeSessionRequest` | `sessionId`, `cwd`, `mcpServers` *(0.12.0)* |
-| `ResumeSessionResponse` | `modes`, `models` *(0.12.0)* |
+| `ResumeSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0; `additionalDirectories` 0.13.0)* |
+| `ResumeSessionResponse` | `modes`, ~~`models`~~ *(0.12.0; `models` deprecated)* |
 | `CloseSessionRequest` | `sessionId` *(0.12.0)* |
 | `CloseSessionResponse` | *(empty)* *(0.12.0)* |
-| `ForkSessionRequest` | `sessionId`, `cwd`, `mcpServers` *(0.12.0, unstable)* |
-| `ForkSessionResponse` | `sessionId`, `modes`, `models`, `configOptions` *(0.12.0, unstable)* |
-| `SetSessionConfigOptionRequest` | `sessionId`, `configId`, `value`, `type` *(0.12.0, unstable)* |
-| `SetSessionConfigOptionResponse` | `configOptions` (full config state) *(0.12.0, unstable)* |
+| `DeleteSessionRequest` | `sessionId` *(0.13.0)* |
+| `DeleteSessionResponse` | *(empty)* *(0.13.0)* |
+| `ForkSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0, unstable)* |
+| `ForkSessionResponse` | `sessionId`, `modes`, ~~`models`~~, `configOptions` *(0.12.0, unstable; `models` deprecated)* |
+| `SetSessionConfigOptionRequest` | `sessionId`, `configId`, `value`, `type` *(0.12.0)* |
+| `SetSessionConfigOptionResponse` | `configOptions` (full config state) *(0.12.0)* |
+| `ListProvidersRequest` | *(empty)* *(0.13.0, unstable)* |
+| `ListProvidersResponse` | `providers` (list of `ProviderInfo`) *(0.13.0, unstable)* |
+| `SetProviderRequest` | `id`, `apiType`, `baseUrl`, `headers` *(0.13.0, unstable)* |
+| `SetProviderResponse` | *(empty)* *(0.13.0, unstable)* |
+| `DisableProviderRequest` | `id` *(0.13.0, unstable)* |
+| `DisableProviderResponse` | *(empty)* *(0.13.0, unstable)* |
 | `CreateElicitationRequest` | `sessionId`, `message`, `mode`, `requestedSchema` *(0.12.0, unstable)* |
 | `CreateElicitationResponse` | `action` (accept/decline/cancel), `content` *(0.12.0, unstable)* |
 | `CompleteElicitationNotification` | `elicitationId` *(0.12.0, unstable)* |
@@ -565,18 +609,33 @@ All protocol types are defined in `AcpSchema` as Java records.
 
 | Type | Fields | Description |
 | :--- | :----- | :---------- |
-| `SessionInfo` | `sessionId`, `cwd`, `title`, `updatedAt` | Session metadata returned by `session/list` |
-| `SessionCapabilities` | `list`, `close`, `resume`, `fork` | Nested capability flags on `AgentCapabilities` |
+| `SessionInfo` | `sessionId`, `cwd`, `title`, `updatedAt`, `additionalDirectories` | Session metadata returned by `session/list` *(`additionalDirectories` 0.13.0)* |
+| `SessionCapabilities` | `list`, `close`, `resume`, `delete`, `additionalDirectories`, `fork` | Nested capability flags on `AgentCapabilities` *(`delete`, `additionalDirectories` 0.13.0; `fork` unstable)* |
 
-### Config Option Types *(0.12.0, unstable)*
+### Config Option Types *(0.12.0)*
+
+`session/set_config_option` is stable. The `select` variant is the stable shape; `boolean` is an SDK extension.
 
 | Type | Description |
 | :--- | :---------- |
 | `SessionConfigOption` | Polymorphic: `SessionConfigSelect` or `SessionConfigBoolean` |
-| `SessionConfigSelect` | Select-type config with `currentValue` and `options` list |
-| `SessionConfigBoolean` | Boolean toggle with `currentValue` |
+| `SessionConfigSelect` | Select-type config with `currentValue`, `category`, and `options` list |
+| `SessionConfigBoolean` | Boolean toggle with `currentValue` *(unstable extension)* |
 | `SessionConfigSelectOption` | A named value within a select config (`value`, `name`) |
 | `ConfigOptionUpdate` | SessionUpdate variant for agent-pushed config changes |
+
+### Provider Types *(0.13.0, unstable)*
+
+Model/backend routing configuration. The agent advertises support with a `providers` capability; the
+client manages providers via `listProviders` / `setProvider` / `disableProvider`.
+
+| Type | Description |
+| :--- | :---------- |
+| `ProviderInfo` | A configurable provider: `id`, `supported` (protocol ids), `required`, `current` |
+| `ProviderCurrentConfig` | Current effective routing: `apiType`, `baseUrl` |
+| `ProvidersCapabilities` | Agent capability marker (presence = supported), on `AgentCapabilities` |
+
+`apiType` / `supported` use well-known `LlmProtocol` ids (`anthropic`, `openai`, `azure`, `vertex`, `bedrock`) or a custom string, modeled as `String` in the SDK.
 
 ### Elicitation Types *(0.12.0, unstable)*
 
@@ -599,15 +658,18 @@ All protocol types are defined in `AcpSchema` as Java records.
 
 | Type | Description |
 | :--- | :---------- |
-| `AgentMessageChunk` | Incremental response text |
-| `AgentThoughtChunk` | Agent thinking process |
+| `UserMessageChunk` | Incremental user message text (optional `messageId`) |
+| `AgentMessageChunk` | Incremental response text (optional `messageId` — 0.13.0) |
+| `AgentThoughtChunk` | Agent thinking process (optional `messageId` — 0.13.0) |
 | `ToolCall` | Tool execution start |
 | `ToolCallUpdateNotification` | Tool progress update |
 | `Plan` | Agent's planned steps |
 | `AvailableCommandsUpdate` | Advertised slash commands |
 | `CurrentModeUpdate` | Agent mode change |
-| `UsageUpdate` | Context window and cost usage (unstable) |
-| `ConfigOptionUpdate` | Session config option changes (unstable) |
+| `UsageUpdate` | Context window and cost usage |
+| `ConfigOptionUpdate` | Session config option changes |
+
+Content chunks (`UserMessageChunk`, `AgentMessageChunk`, `AgentThoughtChunk`) carry an optional `messageId`: chunks sharing the same id belong to one logical message, and a change in id starts a new message *(0.13.0)*.
 
 ### Stop Reasons
 
@@ -666,15 +728,22 @@ context.writeFile("output.txt", "content");
 
 ### Session Capabilities *(0.12.0)*
 
-Agents advertise session management support via `SessionCapabilities`:
+Agents advertise session management support via `SessionCapabilities`. The
+`NegotiatedCapabilities` accessors are: `supportsListSessions()`, `supportsCloseSession()`,
+`supportsResumeSession()`, `supportsDeleteSession()` *(0.13.0)*,
+`supportsAdditionalDirectories()` *(0.13.0)*, and `supportsForkSession()` *(unstable)* — each with a
+matching `require*()` that throws `AcpCapabilityException`.
 
 ```java
 NegotiatedCapabilities caps = client.getAgentCapabilities();
 if (caps.supportsListSessions()) {
     client.listSessions(new ListSessionsRequest(null));
 }
-if (caps.supportsForkSession()) {
-    client.forkSession(new ForkSessionRequest(sessionId, cwd, List.of()));
+if (caps.supportsDeleteSession()) {
+    client.deleteSession(new DeleteSessionRequest(sessionId));
+}
+if (caps.supportsAdditionalDirectories()) {
+    client.newSession(new NewSessionRequest(cwd, List.of(), List.of("/extra/dir")));
 }
 ```
 
@@ -739,14 +808,14 @@ For network-based communication.
 ```java
 var transport = new WebSocketAcpClientTransport(
     URI.create("ws://localhost:8080/acp"),
-    McpJsonMapper.getDefault()
+    AcpJsonMapper.createDefault()
 );
 ```
 
 **Agent (requires acp-websocket-jetty):**
 ```java
 var transport = new WebSocketAcpAgentTransport(
-    8080, "/acp", McpJsonMapper.getDefault()
+    8080, "/acp", AcpJsonMapper.createDefault()
 );
 ```
 

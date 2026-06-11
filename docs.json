@@ -27,23 +27,18 @@
       "dark": "#020915"
     }
   },
-  "topbarCtaButton": {
-    "name": "Latest Experiment",
-    "url": "/experiments/code-coverage-v3"
+  "navbar": {
+    "links": [
+      { "label": "pollack.ai", "href": "https://pollack.ai" },
+      { "type": "github", "href": "https://github.com/markpollack" }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Read the Blog",
+      "href": "https://blog.pollack.ai"
+    }
   },
   "navigation": {
-    "anchors": [
-      {
-        "anchor": "Blog",
-        "icon": "newspaper",
-        "href": "https://blog.pollack.ai"
-      },
-      {
-        "anchor": "GitHub",
-        "icon": "github",
-        "href": "https://github.com/markpollack"
-      }
-    ],
     "tabs": [
       {
         "tab": "Projects",

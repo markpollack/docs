@@ -227,7 +227,7 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.12.0</version>
+    <version>0.14.0</version>
 </dependency>
 ```
 
@@ -237,11 +237,11 @@ For annotation-based agents (as shown above), add `acp-agent-support` instead â€
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.12.0</version>
+    <version>0.14.0</version>
 </dependency>
 ```
 
-Version `0.12.0` adds session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.13.0` adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
+Version `0.12.0` added session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.14.0` (superseding the never-released 0.13.0) adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
 
 ## Three Agent API Styles
 

@@ -153,3 +153,24 @@ footer {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(79, 195, 247, 0.4);
 }
+
+/* --- Banner: cyan→gold accent bar driving traffic to the blog ---
+   Renders on every page, all viewports (incl. mobile, where Mintlify
+   hides the navbar CTA button). Selector #banner is Mintlify's stable
+   banner container. */
+#banner {
+  background: linear-gradient(90deg, rgba(79, 195, 247, 0.18), rgba(255, 215, 64, 0.12)) !important;
+  border-bottom: 1px solid rgba(79, 195, 247, 0.35);
+}
+
+#banner a {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+  color: #ffd740 !important;
+  text-decoration: none !important;
+}
+
+#banner a:hover {
+  color: #ffffff !important;
+}

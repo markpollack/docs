@@ -27,6 +27,10 @@
       "dark": "#020915"
     }
   },
+  "banner": {
+    "content": "[📓 Read the latest on the blog →](https://blog.pollack.ai)",
+    "dismissible": false
+  },
   "navbar": {
     "links": [
       { "label": "pollack.ai", "href": "https://pollack.ai" },

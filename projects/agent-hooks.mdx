@@ -5,6 +5,8 @@ description: "Portable hook API for steering agent behavior at the tool-call bou
 
 **[What's New →](/docs/agent-hooks/whats-new)**
 
+**What's new in 0.6.4:** Built on Spring AI 2.0.0 GA and Spring Boot 4.0.7, with an OWASP CVE gate added to the build. The prior 0.6.3 release migrated onto the new Claude SDK and aligned on the Jackson 2.21.2 BOM. The hook-API architecture — core plus the Spring AI, Claude, and Gemini adapters — is unchanged.
+
 Every agent framework implements hooks differently.
 Claude Code has shell-based hooks. Strands has steering callbacks. Spring AI has advisors.
 Your safety policy, logging, and steering logic gets rewritten for each one.

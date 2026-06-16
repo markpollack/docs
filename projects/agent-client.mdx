@@ -17,7 +17,7 @@ Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/c
 
 **Version 0.23.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
 
-**0.21.0 highlights:** Portable reasoning effort (`low`/`medium`/`high`) via `AgentOptions.getEffort()`, with provider-native overrides for Claude (`--effort`, up to `max`) and Codex (`model_reasoning_effort`, up to `xhigh`). Provider Parity TCK made real; Codex added to the CI runtime image; weekly CLI canary. Dependency: `claude-code-sdk` 1.3.0.
+**0.23.0 highlights:** Upgraded to Spring AI 2.0.0 GA on Spring Boot 4.0.7, clearing transitive Boot and Spring AI CVEs. Spring AI 2.0 moves to Jackson 3, so Jackson 2 usage is now declared explicitly. Default Gemini model is now `gemini-3.5-flash`. Still current from 0.21.0: portable reasoning effort (`low`/`medium`/`high`) via `AgentOptions.getEffort()`, with provider-native overrides for Claude (`--effort`, up to `max`) and Codex (`model_reasoning_effort`, up to `xhigh`). Dependency: `claude-code-sdk` 1.4.0.
 
 ## Architecture
 

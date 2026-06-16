@@ -5,6 +5,8 @@ description: "Progressive memory management for Spring AI — from context compa
 
 **[What's New →](/docs/agent-memory/whats-new)**
 
+**Latest — 0.3.0:** upgrades to Spring AI 2.0.0 GA and adds an OWASP dependency-check CVE gate. The Tier-1 compaction core (`CompactionMemoryAdvisor`, `MemoryStore`) shipped in 0.1.0 and is unchanged; 0.2.0 aligned on the Jackson 2.21.2 BOM.
+
 ## Overview
 
 Agent Memory gives AI agents the ability to manage conversational context intelligently. Without memory management, every prior tool result is re-sent every turn — on long tasks, context fills with stale noise, costs climb, and the model loses focus. In production: **18M input tokens** for a single code-coverage task. With compaction: **854K tokens. 21x reduction, same quality.**

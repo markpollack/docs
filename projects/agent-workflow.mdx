@@ -5,6 +5,8 @@ description: "Build agents that work — and measure why they work. Multi-step p
 
 **[What's New →](/docs/agent-workflow/whats-new)**
 
+> **What's new in 0.10.0:** Upgraded to Spring AI 2.0.0 GA, which clears CVE-2026-41712. Builds on 0.9.0 — `AgentCallback.onQuestion` now takes a tool-agnostic Question/Option callback record (no longer leaking a tool-library type), and judge integration moved to the `io.github.markpollack` namespace — plus 0.8.0 trace capture (`AgentClientStep` propagates trace file paths into the workflow journal) and 0.7.0 `ManagedAgentStep` (run steps in Anthropic's hosted sandbox).
+
 ## Overview
 
 Agent Workflow helps you build agents that really work — understand *why* they work, then improve them in a controlled, experimental manner. You compose **steps** into **workflows**, each step doing one thing: call an LLM, run a function, invoke an external agent. Quality gates evaluate output at each stage. Every step transition is traced, feeding [Agent Journal](/projects/agent-journal) for behavioral analysis — so you can answer: *does the agent need better real-time steering? What knowledge is it missing to achieve its goal? Which steps should be deterministic instead of LLM-driven? What new tools should be built?*

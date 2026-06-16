@@ -5,6 +5,8 @@ description: "Structured event logging, behavioral trace extraction, and human f
 
 **[What's New →](/docs/agent-journal/whats-new)**
 
+**What's new in 1.4.0:** TraceWriter v2 adds a configurable `TraceContentMode` (`FULL` / `TRUNCATED` / `LENGTHS`) for capturing full message and tool-call content. This builds on 1.3.0, where TraceWriter began recording tool-call inputs with control-character escaping. Still two modules: `journal-core` and `claude-code-capture`.
+
 <Info>
 This project has moved from the `spring-ai-community` GitHub organization to
 `markpollack`. New releases are published under the Maven groupId

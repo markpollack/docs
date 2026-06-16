@@ -1,0 +1,34 @@
+---
+title: "What's New"
+sidebarTitle: "What's New"
+description: "Release notes for Claude Agent SDK — auto-generated from git history"
+---
+
+## 1.4.0 (2026-06-15)
+
+- Bump MCP SDK 0.15.0 -&gt; 2.0.0 (clears CVE-2026-35568; mcp-core 2.0.0)
+
+## 1.3.0 (2026-06-06)
+
+- Allow manual CI runs via workflow_dispatch
+- Step 2.1-2.2: Retain raw JSON on RegularMessage; wire fixtures for CLI 2.1.162
+
+## 1.2.0 (2026-05-29)
+
+- Fix ClaudeSyncClient hang when spawned after prior session hits max turns
+
+## 1.1.0 (2026-05-15)
+
+- Add javadoc plugin to release profile, fix stale references
+- Fix 2 failing ITs: CLI flag parity and robust streaming NPE
+- Add distributionManagement for snapshot publishing
+- Skip tests on snapshot publish — CI handles test validation
+- Add agent-clis and API key secrets to CI and snapshot workflows
+- Migrate to markpollack org: package rename, BSL license, standalone POM, build-tools workflows
+- Fix README install section: remove stale snapshot repo config
+- Update README: released version 1.0.0
+
+## 1.0.0 (2026-03-05)
+
+- Initial release.
+

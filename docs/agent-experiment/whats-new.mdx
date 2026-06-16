@@ -1,0 +1,50 @@
+---
+title: "What's New"
+sidebarTitle: "What's New"
+description: "Release notes for Agent Experiment — auto-generated from git history"
+---
+
+## 0.5.0 (2026-06-06)
+
+- Jackson 2.21.2, member pins (sdk 1.3.0, capture 1.4.0, judge 0.12.0), release 0.5.0
+- Collect status: 2026-06-03
+- Brief: abstain-aware consensus in judge aggregation
+
+## 0.4.0 (2026-05-29)
+
+- Update dependencies to released versions for 0.4.0 release
+- Relax git dirty check to warn instead of throw for non-critical paths
+- Bump dependencies to next SNAPSHOT versions
+
+## 0.3.0 (2026-05-28)
+
+- Update dependencies to released versions for 0.3.0 release
+- Fix RunLogManager forcing logback on all experiment-core consumers
+- Bump dependencies to next SNAPSHOT versions
+
+## 0.2.0 (2026-05-19)
+
+- Update dependencies to released versions for 0.2.0 release
+- Bump agent-judge dependency from 0.10.0-SNAPSHOT to 0.10.0
+- Step 3.4: Final consolidation — all stages complete
+- Step 3.3: Jackson polymorphic serialization for both ExecutionDetail subtypes
+- Step 3.2: Add JudgeExperiment and JudgeExperimentResult
+- Step 3.1: Add JudgeScorer, supporting types, and JudgeExecutionDetail
+- Step 3.0: Stage 3 entry — verify ExecutionDetail supports JudgeExecutionDetail
+- Step 2.3: Stage 2 consolidation — verify re-eval→compare pipeline
+- Step 2.2: Add ReEvaluator for post-hoc re-scoring without re-invocation
+- Step 2.1: Add ReEvaluationContextFactory and AgentReEvaluationContextFactory
+- Update ROADMAP.md checkboxes for Step 2.0
+- Step 2.0: Stage 2 entry — verify prerequisites, document scope adjustments
+- Migrate dependencies from org.springaicommunity to io.github.markpollack
+- Step 1.3: Stage 1 consolidation — verify boundaries, compact learnings
+- Step 1.2: Rename ExperimentRunner to AgentExperiment
+- Ignore plans scratch files (META-ROADMAP.md, status.md)
+- Step 1.1: Decouple ItemResult from InvocationResult via ExecutionDetail
+- Step 1.0: Design review — map types to shared vs agent-specific boundaries
+- Ignore entire plans/ directory in .gitignore
+
+## 0.1.0 (2026-03-30)
+
+- Initial release.
+

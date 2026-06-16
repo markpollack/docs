@@ -4,6 +4,16 @@ description: "Release highlights for Agent Workflow"
 sidebarTitle: "What's New"
 ---
 
+## 0.10.0 (2026-06-15)
+
+- Spring AI 2.0.0 GA (clears CVE-2026-41712; spring-ai-client-chat 2.0.0)
+
+## 0.9.0 (2026-06-06)
+
+- Jackson 2.21.2 alignment, journal 1.4.0 + judge 0.12.0 pins, release 0.9.0
+- Migrate judge integration to io.github.markpollack namespace
+- Add journal entry for trace path wiring session
+
 ## 0.8.0
 
 **Trace file capture through the workflow journal.** `AgentClientStep` now propagates trace file paths from the underlying agent model into the workflow's `StepTransition` and journal events. This closes the gap between "the agent ran" and "here's exactly what the agent did" — every tool call, token count, and thinking block is preserved in a JSONL trace file, and the path to that file is recorded in the workflow journal.

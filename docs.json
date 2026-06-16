@@ -76,7 +76,10 @@
           {
             "group": "AgentWorks",
             "pages": [
-              "projects/agentworks-bom",
+              {
+                "group": "AgentWorks BOM",
+                "pages": ["projects/agentworks-bom", "docs/agentworks-bom/whats-new"]
+              },
               {
                 "group": "Agent Workflow",
                 "pages": [
@@ -104,6 +107,7 @@
                 "group": "Agent Client",
                 "pages": [
                   "projects/agent-client",
+                  "docs/agent-client/whats-new",
                   "docs/agent-client/howto/getting-started",
                   {
                     "group": "Tutorial",
@@ -134,6 +138,7 @@
                 "group": "Agent Judge",
                 "pages": [
                   "projects/agent-judge",
+                  "docs/agent-judge/whats-new",
                   "docs/agent-judge/getting-started",
                   {
                     "group": "Tutorial",
@@ -152,6 +157,7 @@
                 "group": "Agent Bench",
                 "pages": [
                   "projects/agent-bench",
+                  "docs/agent-bench/whats-new",
                   "docs/agent-bench/getting-started",
                   "docs/agent-bench/agent-config",
                   "docs/agent-bench/jury-system",
@@ -162,6 +168,7 @@
                 "group": "Agent Experiment",
                 "pages": [
                   "projects/agent-experiment",
+                  "docs/agent-experiment/whats-new",
                   "docs/experiment-driver/getting-started",
                   "docs/experiment-driver/creating-experiments",
                   "docs/experiment-driver/sessions-and-sweeps",
@@ -171,10 +178,22 @@
                   "docs/experiment-driver/api-reference"
                 ]
               },
-              "projects/agent-hooks",
-              "projects/agent-memory",
-              "projects/agent-journal",
-              "projects/agent-sandbox"
+              {
+                "group": "Agent Hooks",
+                "pages": ["projects/agent-hooks", "docs/agent-hooks/whats-new"]
+              },
+              {
+                "group": "Agent Memory",
+                "pages": ["projects/agent-memory", "docs/agent-memory/whats-new"]
+              },
+              {
+                "group": "Agent Journal",
+                "pages": ["projects/agent-journal", "docs/agent-journal/whats-new"]
+              },
+              {
+                "group": "Agent Sandbox",
+                "pages": ["projects/agent-sandbox", "docs/agent-sandbox/whats-new"]
+              }
             ]
           },
           {
@@ -193,11 +212,15 @@
           {
             "group": "Supporting Projects",
             "pages": [
-              "projects/claude-agent-sdk",
+              {
+                "group": "Claude Agent SDK",
+                "pages": ["projects/claude-agent-sdk", "docs/claude-agent-sdk/whats-new"]
+              },
               {
                 "group": "ACP Java SDK",
                 "pages": [
                   "projects/acp-java-sdk",
+                  "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/index",
                   "docs/acp-java-sdk/autoconfig",
                   {

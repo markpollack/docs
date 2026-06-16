@@ -1,0 +1,44 @@
+---
+title: "What's New"
+sidebarTitle: "What's New"
+description: "Release notes for Agent Judge — auto-generated from git history"
+---
+
+## 0.13.0 (2026-06-15)
+
+- agent-judge 0.13.0: Spring AI 2.0.0 GA + Spring Boot 4.0.7; add OWASP CVE gate
+
+## 0.12.0 (2026-06-06)
+
+- Dependency/version maintenance release.
+
+## 0.11.0 (2026-05-19)
+
+- Fix ai-core module parent version to match 0.11.0-SNAPSHOT
+- Add agent-judge-ai-core module with framework-neutral AI judge infrastructure
+
+## 0.10.0 (2026-05-16)
+
+- Update snapshot dependencies to stable releases for 0.10.0
+- Rewrite README for 9-module 0.10.0 architecture
+- Add Spring AI ChatResponse evaluation bridge
+- Add AgentClient CLI-agent evaluation bridge
+- Harden RAG judges: regex parsing, Optional context, ABSTAIN on empty
+- Add LENGTH mapping Javadoc caveat in LangChain4j bridge
+- Rename KoogSupport/LangChain4jSupport to KoogEvaluator/LangChain4jEvaluator
+- Add framework evaluation samples
+- Add RAG evaluation judges
+- Add LangChain4j integration module
+- Add Koog integration module
+
+## 0.9.2 (2026-05-14)
+
+- Rename groupId to io.github.markpollack, packages to io.github.markpollack.judge
+- Add SupersetDiffJudge for byte-exact file superset verification
+- Add README with Maven Central coordinates and docs link
+- Fix release workflow: add contents write permission for git tagging
+
+## 0.9.1 (2026-03-25)
+
+- Initial release.
+

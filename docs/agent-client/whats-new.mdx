@@ -1,0 +1,113 @@
+---
+title: "What's New"
+sidebarTitle: "What's New"
+description: "Release notes for Agent Client — auto-generated from git history"
+---
+
+## 0.22.0 (2026-06-14)
+
+- agent-client 0.22.0: Spring AI 2.0.0 GA + Spring Boot 4.0.7; declare Jackson 2 explicitly
+- Upgrade default Gemini model to gemini-3.5-flash
+- Default Gemini model to gemini-3-flash-preview
+- Stop tracking generated .flattened-pom.xml; let parity runs finish
+
+## 0.21.0 (2026-06-07)
+
+- Trust the workspace when Gemini yolo mode is enabled
+- Fix parity workflow JDK: project targets Java 21
+- Fix agents-runtime Maven download: bump to 3.9.16 with archive fallback
+- Make Provider Parity real; add Codex to agents-runtime image; weekly CLI canary
+- Fix CLITransportCommandTest on machines without a Codex CLI
+- Add reasoning effort option: portable plus provider-native
+
+## 0.20.0 (2026-06-06)
+
+- Step 3.1-3.3: Trace content mode, transcript archival, capture IT upgrades
+
+## 0.19.0 (2026-05-28)
+
+- Verify traceDir in journal capture integration test
+- Add traceDir parser-level and uniqueness tests
+- Add trace-dir Spring Boot property and autoconfiguration
+- Add traceDir support to ClaudeAgentModel
+
+## 0.18.0 (2026-05-15)
+
+- Remove judge-dependent modules from AgentClient
+- Update agent-journal deps to 1.1.0-SNAPSHOT
+- Skip tests on snapshot publish — CI handles test validation
+- Add agent-clis and API key secrets to CI and snapshot workflows
+- Migrate to markpollack org: package rename, BSL license, standalone POM, build-tools workflows
+
+## 0.16.0 (2026-04-30)
+
+- Fix autoconfigure parent relativePath, remove plans from tracking
+- Add session journal for 2026-04-29
+- Finalize roadmap with cross-framework stage and handoff notes
+- Add deprecated property migrator and update documentation
+- Rename property prefix from spring.ai.agents to agent-client
+- Introduce AgentApi interface, deprecate AgentModel
+- Extract AgentClientAutoConfiguration into separate module
+- Add cross-framework portability design document
+- Complete Stage 4 consolidation
+- Record LOOSE permission discoveries and add CLI validation to plan
+- Fix Gemini working directory not propagated to CLI process
+- LOOSE mode: bypass Codex sandbox, update model to gpt-5.4-mini
+- Reframe Stage 4 as LOOSE permission discovery via terminal-bench
+- Add property prefix rename to development plan
+- Update README with current docs, providers, and configuration
+
+## 0.15.0 (2026-04-29)
+
+- Remove samples directory — covered by tutorial repo and external projects
+- Fix ClaudeProviderParityIT compilation error
+- Fix sample SNAPSHOT reference blocking release
+- Update project documentation and learnings
+- Add docgen tool and reference documentation infrastructure
+- Consolidate multi-provider sample and tutorial artifacts
+- Consolidate parity TCK and mode system infrastructure
+- Add provider parity CI matrix workflow
+- Wire ProviderParityTCK into Claude, Codex, Gemini IT modules
+- Add ProviderParityTCK with @ProviderCapability annotation
+- feat(codex): add AgentClientMode and default skipGitCheck to true
+
+## 0.14.0 (2026-04-28)
+
+- Expose validate-commits as overridable release input
+- Remove formatPrompt boilerplate wrapping — pass goal verbatim
+- Add portable maxTurns, autoApprove, systemInstructions to AgentOptions
+
+## 0.13.0 (2026-04-17)
+
+- Add portable jsonSchema support to AgentClient request spec
+- Add jsonSchema to portable AgentOptions interface
+
+## 0.12.2 (2026-04-11)
+
+- fix(codex): add sandbox bypass flag and graceful error handling
+
+## 0.12.1 (2026-04-10)
+
+- fix(codex): fix --model flag ordering and working directory propagation
+
+## 0.12.0 (2026-04-10)
+
+- feat(qwen-code): add Qwen Code agent model and starter
+- feat(codex): surface outputSchema in CodexAgentOptions (#27)
+- fix(gemini,codex): fix response parsing and CLI compatibility (#29, #30)
+- Update README docs links to mintlify documentation site
+- feat(agent-claude): add ClaudeAgentSession and ClaudeAgentSessionRegistry
+- feat(agent-model): add AgentSession and AgentSessionRegistry interfaces
+- Update README.md
+
+## 0.11.0 (2026-03-30)
+
+- Rename all project artifactIds: drop spring-ai- prefix
+- Rename spring-ai-agents-core to spring-ai-agent-launcher
+- Clean up dead module references and update README agent list
+- Update README with released 0.10.0 Maven coordinates
+
+## 0.10.0 (2026-03-30)
+
+- Initial release.
+

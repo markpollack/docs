@@ -4,6 +4,70 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of June 8, 2026
+
+### AgentWorks BOM 1.9.0
+
+**Suite-wide security release: Spring AI 2.0 GA convergence, four CVEs cleared.** The BOM moves the suite onto Spring AI 2.0.0 GA and Spring Boot 4.0.7, and adds Jackson 3 and Reactor management so consumers resolve a vulnerability-free, converged dependency set — proven end-to-end against the published artifacts by the `bom-verification` gate.
+
+- Clears Spring Boot CVE-2026-40976 (CRITICAL) and -40973 (HIGH), Spring AI CVE-2026-41712 (HIGH), and Jackson CVE-2026-29062 (HIGH)
+- New managed import `tools.jackson:jackson-bom 3.1.4` — converges Spring AI 2.0's transitive Jackson 3 (its jsonschema-generator pulls `jackson-core 3.0.3`) up to a CVE-clear 3.1.4
+- New managed `reactor-core 3.8.6` — reconciles claude-code-sdk's 3.8.5 with Spring AI 2.0's 3.8.6, a `RequireUpperBoundDeps` break the gate caught
+- Preceded by 1.8.0 (Jun 11), which cleared the long-deferred ACP bump to 0.14.0
+- [Version Table](/projects/agentworks-bom) | [Source](https://github.com/markpollack/agentworks)
+
+### Agent Client 0.22.0
+
+**Spring AI 2.0.0 GA + Spring Boot 4.0.7.** The upgrade behind BOM 1.9.0 — primarily a security and dependency release, with one user-facing behavior change.
+
+- spring-ai 2.0.0-M2 → 2.0.0 GA and spring-boot 4.0.1 → 4.0.7, clearing the transitive Boot / Spring AI CVEs above
+- Spring AI 2.0 GA moved to Jackson 3, so `agent-model`, `agent-claude`, `agent-codex`, and `agent-client-core` now declare their Jackson 2 usage explicitly (governed by `jackson-bom 2.21.2`)
+- Default Gemini model upgraded to `gemini-3.5-flash`; override with `agent-client.gemini.model`
+- [Project](/projects/agent-client) | [Source](https://github.com/markpollack/agent-client)
+
+---
+
+## Week of June 1, 2026
+
+### AgentWorks BOM 1.6.0
+
+**The `bom-verification` quality gate lands, with Jackson 2.21.2 convergence.** The largest coordinated release of the week — nearly every member moved — and the first to publish behind an automated gate that proves consumers get a single, converged dependency set.
+
+- New `bom-verification/` harness: plain, Spring Boot 3.5, and Spring Boot 4 consumer scenarios with a `JacksonConvergenceTest` and the enforcer `RequireUpperBoundDeps` rule; releases now publish only behind a green gate
+- Imports `jackson-bom 2.21.2`, converging every member and shielding consumers from stray third-party Jackson transitives
+- The gate is load-bearing — re-running it against 1.5.0 fails on the exact Jackson divergence 1.6.0 fixes
+- Bookended by 1.5.0 (Jun 4, a managed test stack — Mockito / JUnit / AssertJ / Byte Buddy) and 1.7.0 (Jun 7, agent-client 0.21.0)
+- Coordinated bump: claude-code-sdk 1.3.0, agent-client / agent-starter 0.20.0, agent-workflow 0.9.0, agent-judge 0.12.0, agent-memory 0.2.0, agent-journal 1.4.0, agent-hooks 0.6.3, agent-sandbox 0.9.3, agent-bench 0.4.0, experiment-core 0.5.0
+- [Version Table](/projects/agentworks-bom) | [Source](https://github.com/markpollack/agentworks)
+
+### Agent Client 0.21.0
+
+**Portable reasoning-effort control across providers.** A new provider-agnostic `effort` option (low / medium / high), with provider-native overrides — and the Provider Parity TCK now actually runs (it had been reporting green without ever executing).
+
+- `AgentOptions.getEffort()` — the cross-provider low/medium/high intersection, covered by the TCK
+- Provider-native overrides win when set: Claude `ClaudeAgentOptions.effort` (→ `--effort`), Codex `CodexAgentOptions.reasoningEffort` up to `xhigh`
+- 0.20.0 (Jun 6) shipped first: Claude trace content modes — `traceContentMode(FULL | TRUNCATED | LENGTHS)` — and automatic session-transcript archival, powered by agent-journal's TraceWriter v2
+- [Portable Options](/docs/agent-client/reference/portable-options) | [Source](https://github.com/markpollack/agent-client)
+
+### Claude Agent SDK 1.3.0
+
+**Aligned to Claude CLI 2.1.162, with a lossless `rawJson` escape hatch.** A compatibility-and-hardening release that pins the wire contract and exposes wire fields the typed API doesn't model yet.
+
+- `ParsedMessage.RegularMessage` gains a `rawJson` component carrying the exact stdout line each message was parsed from — backward compatible
+- All six `HookInput` subtypes now ignore unknown properties, fixing a hook hang under CLI 2.1.162's added PostToolUse fields
+- New `WireFixtureTest` pins parsing against real 2.1.162 stream-json fixtures
+- [Project](/projects/claude-agent-sdk) | [Source](https://github.com/markpollack/claude-agent-sdk-java)
+
+### Agent Workflow 0.9.0
+
+**A tool-agnostic `Question` / `Option` callback record.** The `AgentCallback.onQuestion` SPI no longer leaks a tool-library type, and the judge integration completes its move to the `io.github.markpollack` namespace.
+
+- New `workflow.callback.Question` record (with nested `Option`) owned by workflow-api, replacing the leaked `AskUserQuestionTool.Question`; the `spring-ai-agent-utils` dependency drops out of workflow-api
+- Judge integration migrated to `io.github.markpollack.judge` (agent-judge 0.12.0) across `JudgeGate`, `TieredGate`, and the jury loops
+- [Agent Loop](/docs/agent-workflow/agent-loop) | [Source](https://github.com/markpollack/agent-workflow)
+
+---
+
 ## Week of May 26, 2026
 
 ### Agent Client 0.19.0

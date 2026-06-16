@@ -88,7 +88,7 @@ Messages pass through in-memory buffers. No subprocess launching, no stdin/stdou
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.11.0</version>
+    <version>0.14.0</version>
     <scope>test</scope>
 </dependency>
 ```

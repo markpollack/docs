@@ -35,7 +35,6 @@ Agent Journal captures the structured behavioral traces that make agent research
 |--------|-------------|--------------|
 | `journal-core` | Events, storage, EvalSubject, Feedback | Zero external deps |
 | `claude-code-capture` | Claude Code SDK → journal bridge, `PhaseCaptureSources` | claude-code-sdk |
-| `workflow-journal` | Workflow step → journal bridge, `WorkflowJournal` | journal-core, workflow-flows |
 
 ## Installation
 
@@ -43,7 +42,7 @@ Agent Journal captures the structured behavioral traces that make agent research
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.2.0</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 
@@ -53,17 +52,7 @@ For Claude Code SDK integration:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
-    <version>1.2.0</version>
-</dependency>
-```
-
-For agent-workflow step tracing:
-
-```xml
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>workflow-journal</artifactId>
-    <version>1.2.0</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 

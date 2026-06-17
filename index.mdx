@@ -56,33 +56,52 @@ By [Mark Pollack](https://pollack.ai), creator of [Spring AI](https://spring.io/
 
 ---
 
-## What's New
+## Highlights
 
-<div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem'}}>
-  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
-    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Agent Client 0.19.0</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>JSONL trace file support — durable per-invocation traces with tool calls, thinking blocks, and result metrics.</div>
-    <div style={{fontSize: '0.75rem'}}>May 2026 · <a href="/docs/agent-client/reference/claude-reference#trace-files">Details →</a></div>
-  </div>
-  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
-    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>Agent Workflow 0.8.0</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>Trace file capture through the workflow journal. Every AI step's tool calls are now traceable via JSONL files.</div>
-    <div style={{fontSize: '0.75rem'}}>May 2026 · <a href="/docs/agent-workflow/whats-new">Details →</a></div>
-  </div>
-  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
-    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>ACP Java SDK 0.12.0</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>7 new protocol methods: session/list, close, resume (stable) + elicitation, fork, config options (unstable).</div>
-    <div style={{fontSize: '0.75rem'}}>May 2026 · <a href="/projects/acp-java-sdk">Details →</a></div>
-  </div>
-  <div style={{borderLeft: '3px solid #ffd740', paddingLeft: '0.75rem'}}>
-    <div style={{fontWeight: 'bold', fontSize: '0.95rem'}}>AgentWorks BOM 1.2.0</div>
-    <div style={{fontSize: '0.8rem', color: '#666', margin: '0.25rem 0'}}>Coordinated versions: agent-client 0.19.0, agent-workflow 0.8.0, agent-journal 1.2.0, ACP 0.12.0.</div>
-    <div style={{fontSize: '0.75rem'}}>May 2026 · <a href="/projects/agentworks-bom">Details →</a></div>
-  </div>
+What's genuinely new and cool across the lab right now.
+
+<CardGroup cols={2}>
+  <Card title="Run a workflow step in Anthropic's cloud" icon="cloud" href="/projects/agent-workflow">
+    `ManagedAgentStep` hands one step of your workflow to Claude Managed Agents — a full hosted sandbox with bash, files, and web. Same graph; swap a single step between local JVM, Temporal, or Anthropic's cloud.
+  </Card>
+  <Card title="Speak the latest Agent Client Protocol" icon="plug" href="/projects/acp-java-sdk">
+    Tracks ACP 0.14.0 — elicitation (agents ask *you* for structured input), session fork & resume, and provider config — dropping a Java agent straight into Zed, JetBrains, and VS Code.
+  </Card>
+  <Card title="Evaluate any agent, any framework" icon="gavel" href="https://blog.pollack.ai/here-comes-the-judge/">
+    Agent Judge scores output from Spring AI, LangChain4j, Koog, or any CLI agent through one judge / jury layer — LLM and RAG judges (faithfulness, hallucination), plus tooling to evaluate the evaluators. **Read the deep dive →**
+  </Card>
+  <Card title="Provably CVE-clean dependencies" icon="shield-check" href="/projects/agentworks-bom">
+    The AgentWorks BOM ships only behind a 9/9 convergence gate (plain / Boot 3.5 / Boot 4) — every consumer gets one coherent, vulnerability-free dependency set, verified in CI, not by hand.
+  </Card>
+</CardGroup>
+
+<div style={{textAlign: 'right', fontSize: '0.8rem', marginBottom: '0.5rem'}}>
+  <a href="/whats-new">Full release history →</a>
+</div>
+
+---
+
+## Active release train
+
+The whole suite ships as one coordinated train, pinned by the [AgentWorks BOM](/projects/agentworks-bom) — currently **1.11.0**, spanning a dozen libraries all shipped within the last month.
+
+<div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem', margin: '1.25rem 0'}}>
+  <a href="/projects/agentworks-bom" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(255,215,64,0.35)', background: 'rgba(255,215,64,0.08)', fontSize: '0.8rem', textDecoration: 'none', color: '#e8e8e8'}}>agentworks-bom <b style={{fontFamily: 'Geist Mono, monospace', color: '#ffd740'}}>1.11.0</b></a>
+  <a href="/projects/agent-client" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-client <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.23.0</b></a>
+  <a href="/projects/agent-workflow" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-workflow <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.10.0</b></a>
+  <a href="/projects/claude-agent-sdk" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>claude-agent-sdk <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>1.4.0</b></a>
+  <a href="/projects/acp-java-sdk" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>acp-java-sdk <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.14.0</b></a>
+  <a href="/projects/agent-judge" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-judge <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.13.0</b></a>
+  <a href="/projects/agent-memory" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-memory <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.3.0</b></a>
+  <a href="/projects/agent-hooks" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-hooks <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.6.4</b></a>
+  <a href="/projects/agent-journal" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-journal <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>1.4.0</b></a>
+  <a href="/projects/agent-experiment" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-experiment <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.5.0</b></a>
+  <a href="/projects/agent-bench" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-bench <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.4.0</b></a>
+  <a href="/projects/agent-sandbox" style={{padding: '0.3rem 0.75rem', borderRadius: '999px', border: '1px solid rgba(79,195,247,0.25)', background: 'rgba(79,195,247,0.06)', fontSize: '0.8rem', textDecoration: 'none', color: '#cfe8f5'}}>agent-sandbox <b style={{fontFamily: 'Geist Mono, monospace', color: '#4fc3f7'}}>0.9.3</b></a>
 </div>
 
 <div style={{textAlign: 'right', fontSize: '0.8rem', marginBottom: '0.5rem'}}>
-  <a href="/whats-new">All releases →</a>
+  <a href="/projects/agentworks-bom">Full version table →</a>
 </div>
 
 ---

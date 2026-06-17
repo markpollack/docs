@@ -17,7 +17,7 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
         <dependency>
             <groupId>io.github.markpollack</groupId>
             <artifactId>agentworks-bom</artifactId>
-            <version>1.11.0</version>
+            <version>1.12.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -32,8 +32,9 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
 </dependency>
 ```
 
-## What's new in 1.11.0
+## What's new in 1.12.0
 
+- **1.12.0:** repins Agent Journal to **1.5.0** and adds the new **`gemini-cli-capture`** managed member — agent runs from Claude *and* Gemini now capture into one portable trace + cost format.
 - **1.9.0 was the security cut:** converged on Spring AI 2.0.0 GA and cleared four CVEs — Spring Boot CVE-2026-40976 (CRITICAL) and CVE-2026-40973, Spring AI CVE-2026-41712, and Jackson CVE-2026-29062. Added `tools.jackson:jackson-bom` 3.1.4 and `reactor-core` 3.8.6 to converge transitive dependencies, all verified by the `bom-verification` gate.
 - **1.10.0 / 1.11.0:** repinned the source-fixed members to lock in the CVE remediation (claude-code-sdk 1.4.0, workflow 0.10.0, Spring AI BOM 2.0.0 backstop).
 - **1.8.0:** bumped the acp-java family to 0.14.0, clearing the deferred 0.13.0 cut.
@@ -48,8 +49,9 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
 | `agent-hooks-spring` | 0.6.4 | [Agent Hooks](/projects/agent-hooks) |
 | `agent-hooks-claude` | 0.6.4 | [Agent Hooks](/projects/agent-hooks) |
 | `agent-hooks-gemini` | 0.6.4 | [Agent Hooks](/projects/agent-hooks) |
-| `journal-core` | 1.4.0 | [Agent Journal](/projects/agent-journal) |
-| `claude-code-capture` | 1.4.0 | [Agent Journal](/projects/agent-journal) |
+| `journal-core` | 1.5.0 | [Agent Journal](/projects/agent-journal) |
+| `claude-code-capture` | 1.5.0 | [Agent Journal](/projects/agent-journal) |
+| `gemini-cli-capture` | 1.5.0 | [Agent Journal](/projects/agent-journal) |
 | `workflow-api` | 0.10.0 | [Agent Workflow](/projects/agent-workflow) |
 | `workflow-core` | 0.10.0 | [Agent Workflow](/projects/agent-workflow) |
 | `workflow-tools` | 0.10.0 | [Agent Workflow](/projects/agent-workflow) |

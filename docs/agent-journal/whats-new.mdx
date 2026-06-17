@@ -4,6 +4,26 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Journal — auto-generated from git history"
 ---
 
+## 1.5.0 (2026-06-17)
+
+- docs: fix TraceContentMode import path (moved to journal.trace in capture-fidelity R2)
+- R2.10 emission: wire StepCostEvent into analysis.jsonl from capture
+- Stage R2.9: Implement computeJudgeAgreement (judge&lt;-&gt;human calibration)
+- Stage R2.6: Per-step goal/outcome channel (StepOutcomeEvent)
+- Stage R2.10: DerivedEvent hierarchy + StepCostEvent + analysis.jsonl sidecar
+- Stage R2.8: First-class Gemini capture (gemini-cli-capture module)
+- Stage R2.7: Move portable TraceWriter into journal-core
+- Stage R2.5a: Delineate sub-agent spawns (interiors are out-of-stream)
+- Stage R2.4: Emit derived step_cost lines into the trace (epic gate)
+- Stage R2.3b: Per-step cost attribution + JournalStep
+- Stage R2.3a: Stable step identity for events (fixes subjectId fragility)
+- Stage R2.2: Per-turn usage capture (TurnUsage + ModelCost from rawJson)
+- Stage R2.1: Consume rawJson — verbatim raw trace line (rawMode=NONE|FULL)
+- Stage R2.0: Bump claude-code-sdk to 1.4.0 (unblocks rawJson consumption)
+- CI: enforce OWASP CVE gate via reusable security-scan workflow
+- Add OWASP dependency-check CVE gate (-Powasp) + Trivy security-scan script
+- docs: version pins to 1.4.0
+
 ## 1.4.0 (2026-06-06)
 
 - Fix CI: build on Java 21 to match claude-code-sdk artifact class version

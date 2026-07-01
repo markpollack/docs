@@ -4,6 +4,14 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Journal — auto-generated from git history"
 ---
 
+## 1.6.0 (2026-07-01)
+
+- First-class journal-capture primitives (slice 1): `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, production fail-loud `RunRecorder`, `JournalStorage.persistsDerivedEvents()`, per-turn usage in the immutable log
+- A1: `AttributionMethod.EVEN_SPLIT` — coarse fallback when per-turn tokens are unavailable
+- A5: per-file `{"@type":"header","schemaVersion":1}` line on `events.jsonl` and `analysis.jsonl` (loaders skip it)
+- Cost-metering fix: headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn-by-type aggregate (incl. cache) instead of the last-`ResultMessage` snapshot, which under-counted ~2× on long runs — same field, corrected value, no schema change
+- Additive on the frozen §4 capture contract; 482 tests green. Ships in agentworks-bom 1.13.0
+
 ## 1.5.0 (2026-06-17)
 
 - docs: fix TraceContentMode import path (moved to journal.trace in capture-fidelity R2)

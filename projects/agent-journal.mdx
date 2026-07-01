@@ -5,7 +5,7 @@ description: "Structured event logging, behavioral trace extraction, and human f
 
 **[What's New →](/docs/agent-journal/whats-new)**
 
-**What's new in 1.5.0:** First-class **Gemini CLI capture** — the new `gemini-cli-capture` module projects Gemini runs into the *same* portable trace + cost schema as Claude, so one analysis layer reads both runtimes — plus per-step cost attribution. Builds on 1.4.0's TraceWriter v2 content capture (`TraceContentMode` FULL / TRUNCATED / LENGTHS). Now **three modules**: `journal-core`, `claude-code-capture`, and `gemini-cli-capture`.
+**What's new in 1.6.0:** First-class **journal-capture primitives** downstream repos import — `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, a production fail-loud `RunRecorder`, and per-turn usage in the immutable log (slice 1 of the cross-repo capture contract). Plus a **cost-metering correction** — the headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn aggregate (incl. cache), fixing a ~2× under-count on long runs — and a per-file `schemaVersion` header on `events.jsonl` / `analysis.jsonl`. Additive on the frozen capture contract: a 1.5.0 consumer keeps working. (1.5.0 added first-class **Gemini CLI capture** — the `gemini-cli-capture` module, same portable trace + cost schema as Claude. **Three modules**: `journal-core`, `claude-code-capture`, `gemini-cli-capture`.)
 
 <Info>
 This project has moved from the `spring-ai-community` GitHub organization to
@@ -47,7 +47,7 @@ Agent Journal captures the structured behavioral traces that make agent research
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.5.0</version>
+    <version>1.6.0</version>
 </dependency>
 ```
 
@@ -57,7 +57,7 @@ For Claude Code SDK integration:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
-    <version>1.5.0</version>
+    <version>1.6.0</version>
 </dependency>
 ```
 
@@ -67,7 +67,7 @@ For Gemini CLI capture:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>gemini-cli-capture</artifactId>
-    <version>1.5.0</version>
+    <version>1.6.0</version>
 </dependency>
 ```
 
@@ -237,5 +237,5 @@ Without structured traces, agent behavior is a black box. Agent Journal transfor
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-journal">
-  Source code (BSL 1.1) — two modules, 401 tests
+  Source code (BSL 1.1) — three modules, 482 tests
 </Card>

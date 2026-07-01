@@ -4,6 +4,48 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of June 29, 2026
+
+### Agent Journal 1.6.0
+
+**First-class capture primitives + a cost-metering correction.** Slice 1 of the cross-repo journal-capture contract ships the §4 primitives downstream repos import, alongside a fix that roughly halves a long-run cost-accounting error.
+
+- New primitives: `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, a production fail-loud `RunRecorder`, and per-turn usage in the immutable log
+- Cost-metering fix: the headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn-by-type aggregate (incl. cache) instead of the last-`ResultMessage` snapshot, which under-counted ~2× on long runs — same field, corrected value, no schema change
+- A per-file `schemaVersion` header on `events.jsonl` / `analysis.jsonl` (loaders skip it)
+- Additive on the frozen capture contract — a 1.5.0 consumer keeps working; 482 tests green
+- [Project](/projects/agent-journal) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
+
+### AgentWorks BOM 1.13.0
+
+**Repins Agent Journal to 1.6.0.** A focused, journal-only bump behind the usual gate.
+
+- All three journal artifacts (`journal-core`, `claude-code-capture`, `gemini-cli-capture`) → 1.6.0; every other member unchanged
+- Published behind the CI-enforced `bom-verification` gate (plain / Boot 3.5 / Boot 4), re-verified from Central post-publish
+- [Version Table](/projects/agentworks-bom) | [Source](https://github.com/markpollack/agentworks)
+
+---
+
+## Week of June 15, 2026
+
+### Agent Journal 1.5.0
+
+**First-class Gemini CLI capture.** The new `gemini-cli-capture` module projects Gemini runs into the same portable trace + cost schema as Claude, so one analysis layer reads both runtimes — plus per-step cost attribution.
+
+- New `gemini-cli-capture` module — cross-runtime capture into one trace + cost format
+- Per-step cost attribution (`StepCostEvent`, `analysis.jsonl` sidecar); portable `TraceWriter` moved into `journal-core`
+- [Project](/projects/agent-journal) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
+
+### AgentWorks BOM 1.10.0 → 1.12.0
+
+**CVE remediation locked in, then the Gemini capture cut.** Three BOM releases close out the Spring AI 2.0 security work and add the new journal member.
+
+- 1.10.0 / 1.11.0 (Jun 15): repin the source-fixed members to lock in the CVE remediation — claude-code-sdk 1.4.0, workflow 0.10.0, Spring AI BOM 2.0.0 backstop
+- 1.12.0 (Jun 17): repin Agent Journal to 1.5.0 and add `gemini-cli-capture` as a managed member — the first BOM release through the CI-gated `release.yml` (pre-publish gate + post-publish FINAL_PROOF)
+- [Version Table](/projects/agentworks-bom) | [Source](https://github.com/markpollack/agentworks)
+
+---
+
 ## Week of June 8, 2026
 
 ### AgentWorks BOM 1.9.0

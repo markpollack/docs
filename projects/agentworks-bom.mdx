@@ -17,7 +17,7 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
         <dependency>
             <groupId>io.github.markpollack</groupId>
             <artifactId>agentworks-bom</artifactId>
-            <version>1.14.0</version>
+            <version>1.15.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -32,8 +32,9 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
 </dependency>
 ```
 
-## What's new in 1.14.0
+## What's new in 1.15.0
 
+- **1.15.0:** repins the Agent Client family to **0.25.0** — fixes Spring Boot auto-configuration for all providers. The org migration had left the auto-config registration files (`.imports`/`spring.factories`) pointing at the old `org.springaicommunity` package, so the starters failed to auto-configure (`ClassNotFoundException`) at boot. All other members unchanged.
 - **1.14.0:** repins the Agent Client family to **0.24.0** — a compatibility fix so `agent-claude` builds against agent-journal 1.6.0. journal 1.5.0 had relocated `TraceContentMode`, which broke Claude trace-wiring for Spring Boot consumers on 1.12.0/1.13.0 (`NoClassDefFoundError`). All other members unchanged.
 - **1.13.0:** repins Agent Journal to **1.6.0** — first-class journal-capture primitives (slice 1), a cost-metering correction (the headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn aggregate, fixing a ~2× long-run under-count), and a per-file schema-version header on the jsonl logs. Additive on the frozen capture contract; a 1.5.0 consumer keeps working.
 - **1.12.0:** repins Agent Journal to **1.5.0** and adds the new **`gemini-cli-capture`** managed member — agent runs from Claude *and* Gemini now capture into one portable trace + cost format.
@@ -77,18 +78,18 @@ The AgentWorks BOM pins compatible versions of every library in the agent engine
 | `agent-sandbox-core` | 0.9.3 | [Agent Sandbox](/projects/agent-sandbox) |
 | `agent-sandbox-docker` | 0.9.3 | [Agent Sandbox](/projects/agent-sandbox) |
 | `agent-sandbox-e2b` | 0.9.3 | [Agent Sandbox](/projects/agent-sandbox) |
-| `agent-client-core` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-model` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-claude` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-gemini` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-launcher` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-qwen-code` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-claude` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-gemini` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-amp` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-codex` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-amazon-q` | 0.24.0 | [Agent Client](/projects/agent-client) |
-| `agent-starter-qwen-code` | 0.24.0 | [Agent Client](/projects/agent-client) |
+| `agent-client-core` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-model` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-claude` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-gemini` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-launcher` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-qwen-code` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-claude` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-gemini` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-amp` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-codex` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-amazon-q` | 0.25.0 | [Agent Client](/projects/agent-client) |
+| `agent-starter-qwen-code` | 0.25.0 | [Agent Client](/projects/agent-client) |
 
 ### Agent Client Protocol (com.agentclientprotocol)
 

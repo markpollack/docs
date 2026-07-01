@@ -4,6 +4,10 @@ sidebarTitle: "What's New"
 description: "Release notes for AgentWorks BOM — auto-generated from git history"
 ---
 
+## 1.15.0 (2026-07-01)
+
+- Repin agent-client family 0.24.0 → 0.25.0 — fixes Spring Boot auto-configuration for all providers (org migration had left the registration files at the old org.springaicommunity package → ClassNotFoundException at boot); all other members unchanged; gate 9/9
+
 ## 1.14.0 (2026-07-01)
 
 - Repin agent-client family 0.23.0 → 0.24.0 — compatibility fix so agent-claude builds against journal 1.6.0 (journal 1.5.0 relocated TraceContentMode, breaking Claude trace-wiring on BOM 1.12.0/1.13.0); all other members unchanged; gate 9/9

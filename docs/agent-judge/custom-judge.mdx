@@ -53,7 +53,7 @@ Production adapters include `SpringAiJudgeModel` and `AgentClientJudgeModel`.
 
 `LabelJudgmentClassifier` requires an explicit label-to-status policy.
 Assign a normalized score only when the label policy genuinely declares a measurement.
-Unknown labels become reasoned errors rather than guessed outcomes.
+Unknown labels produce a reasoned `ABSTAIN` with the raw judge output in metadata and neither a label nor a score.
 
 ## Keep metadata portable
 

@@ -1,44 +1,66 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Judge — auto-generated from git history"
+description: "Curated Agent Judge release notes"
 ---
 
-## 0.13.0 (2026-06-15)
+## 0.14.0
 
-- agent-judge 0.13.0: Spring AI 2.0.0 GA + Spring Boot 4.0.7; add OWASP CVE gate
+Agent Judge 0.14 replaces the former sealed score hierarchy with a normalized, portable `Judgment` contract.
+This is a breaking pre-1.0 release, so consumers must recompile and follow the [migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md).
 
-## 0.12.0 (2026-06-06)
+### Result model
 
-- Dependency/version maintenance release.
+- Every judgment has a required `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` status.
+- A normalized score and a classification label are independent optional facts.
+- Boolean outcomes do not duplicate status as a stored `1.0` or `0.0`; `effectiveScore()` supplies an intentional numeric view for aggregation.
+- Errors carry reasoned outcomes rather than live exceptions.
 
-## 0.11.0 (2026-05-19)
+### Portable evidence
 
-- Fix ai-core module parent version to match 0.11.0-SNAPSHOT
-- Add agent-judge-ai-core module with framework-neutral AI judge infrastructure
+- Result metadata is validated as portable primitives, arrays, and string-keyed objects, then recursively copied and frozen.
+- Invalid values identify their exact metadata path.
+- Timing is stored as integer `elapsedMillis`, with `Judgment.elapsed()` providing the Java `Duration` view.
+- Model usage records separately reported input, output, reasoning, cache-creation, cache-read, and total token quantities without deriving price.
 
-## 0.10.0 (2026-05-16)
+### Aggregation
 
-- Update snapshot dependencies to stable releases for 0.10.0
-- Rewrite README for 9-module 0.10.0 architecture
-- Add Spring AI ChatResponse evaluation bridge
-- Add AgentClient CLI-agent evaluation bridge
-- Harden RAG judges: regex parsing, Optional context, ABSTAIN on empty
-- Add LENGTH mapping Javadoc caveat in LangChain4j bridge
-- Rename KoogSupport/LangChain4jSupport to KoogEvaluator/LangChain4jEvaluator
-- Add framework evaluation samples
-- Add RAG evaluation judges
-- Add LangChain4j integration module
-- Add Koog integration module
+- Every voting strategy exposes an `ErrorPolicy`, defaulting to `PROPAGATE`.
+- Aggregates contain structured population and error-accounting evidence.
+- Consensus returns `ABSTAIN` when applicable judges disagree, leaving rejection or escalation to a downstream gate or tier.
 
-## 0.9.2 (2026-05-14)
+### API and dependencies
 
-- Rename groupId to io.github.markpollack, packages to io.github.markpollack.judge
-- Add SupersetDiffJudge for byte-exact file superset verification
-- Add README with Maven Central coordinates and docs link
-- Fix release workflow: add contents write permission for git tagging
+- The `io.github.markpollack.judge.score` package and `ReactiveJudge` are removed.
+- The core remains agent-runtime-neutral and declares its real Jackson Databind, SLF4J API, and JSpecify dependencies.
+- JSpecify exposes optional score and label nullness in the Java API, with NullAway enforcing the adopted packages.
 
-## 0.9.1 (2026-03-25)
+### Samples and reference
 
-- Initial release.
+- The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) now owns ten canonical credential-free Maven modules.
+- Executable Koog and LangChain4j modules replace the former README-only bridge samples.
+- Aggregate Javadoc is warning-clean, warnings are release-breaking, and every published module attaches a Javadoc JAR.
+- See the complete [0.14 release notes](https://github.com/markpollack/agent-judge/blob/main/RELEASE_NOTES_0.14.md).
 
+## 0.13.0
+
+- Upgraded to Spring AI 2.0.0 GA and Spring Boot 4.0.7.
+- Added an OWASP dependency-check gate.
+
+## 0.12.0
+
+- Aligned Jackson dependencies for the release line.
+
+## 0.11.0
+
+- Added `agent-judge-ai-core` and framework-neutral model-backed judge composition.
+
+## 0.10.0
+
+- Added Spring AI, LangChain4j, Koog, and AgentClient bridges.
+- Added RAG evaluation judges and the nine-module architecture that preceded `agent-judge-ai-core`.
+
+## 0.9.x
+
+- Moved public coordinates to `io.github.markpollack`.
+- Added superset project comparison and the initial public release.

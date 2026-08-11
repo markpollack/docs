@@ -1,395 +1,95 @@
 ---
 title: "Built-in Judges"
-description: "Catalog of built-in judges across Agent Judge modules"
+description: "Deterministic, execution, file, LLM, and RAG judges in Agent Judge 0.14"
 ---
 
-<Note>
-This page covers judge-family modules only. Framework bridges (`agent-judge-spring-ai`, `agent-judge-langchain4j`, `agent-judge-koog`, `agent-judge-agent-client`) are documented in the [API Reference](/docs/agent-judge/api-reference#framework-bridge-evaluators).
-</Note>
+Every built-in judge returns the normalized `Judgment` model.
+Status is required, while a stored score and label are present only when that judge completed a measurement or classification.
 
-## agent-judge-core
+## Core file-system judges
 
-Zero external dependencies. These judges work in any Java project.
+Artifact: `agent-judge-core`.
 
-### FileExistsJudge
+| Judge | Purpose |
+|---|---|
+| `FileExistsJudge` | Check that a workspace-relative path exists |
+| `FileContentJudge` | Compare file content with exact, contains, or regular-expression matching |
+| `SupersetDiffJudge` | Require output to contain a byte-exact reference project plus any allowed additions |
 
-Verifies that a file exists in the workspace.
+These judges produce Boolean outcomes and therefore normally store no score.
+The executable starting point is [tutorial module 01](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-single-judge).
 
-```java
-Judge judge = new FileExistsJudge("src/main/java/App.java");
-Judgment result = judge.judge(context);
-```
+## Command and coverage judges
 
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `DETERMINISTIC` |
-| Constructor | `new FileExistsJudge(String filePath)` |
+Artifact: `agent-judge-exec`.
 
-The file path is resolved relative to `context.workspace()`.
+| Judge | Purpose |
+|---|---|
+| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status |
+| `CommandJudge` | Execute an arbitrary command through Agent Sandbox and compare the exit code |
+| `ClassVersionJudge` | Validate Java class-file bytecode versions |
+| `CoveragePreservationJudge` | Reject a JaCoCo coverage regression beyond the configured tolerance |
+| `CoverageImprovementJudge` | Measure normalized coverage improvement with an optional floor |
 
-### FileContentJudge
+Build and command judges run real processes in the context workspace.
+Use the project wrapper when present and choose timeouts appropriate to untrusted work.
+[Tutorial module 02](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-02-build-judge) executes the Maven build path.
 
-Verifies that a file's content matches expected criteria.
-Supports three matching modes:
+## Semantic file judges
 
-```java
-// Exact match
-Judge exact = new FileContentJudge("config.json", expectedContent);
+Artifact: `agent-judge-file`.
 
-// Contains substring
-Judge contains = new FileContentJudge("output.log", "BUILD SUCCESS", FileContentJudge.MatchMode.CONTAINS);
+| Judge | Purpose |
+|---|---|
+| `FileComparisonJudge` | Dispatch files to the appropriate semantic comparator |
+| `JavaSemanticJudge` | Compare Java syntax trees rather than formatting |
+| `MavenSemanticJudge` | Compare important Maven model structure |
+| `XmlSemanticJudge` | Compare XML document structure |
+| `TextFileJudge` | Compare whitespace-normalized text |
 
-// Regex pattern
-Judge regex = new FileContentJudge("version.txt", "\\d+\\.\\d+\\.\\d+", FileContentJudge.MatchMode.REGEX);
-```
+These judges expect reference and actual file locations in the evaluation context as documented in the aggregate Javadoc.
 
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `DETERMINISTIC` |
-| Default mode | `MatchMode.EXACT` (when 2-arg constructor used) |
-| Checks | `file_exists`, `file_readable`, `content_match` |
+## LLM judge
 
-Produces three granular checks, so on failure you can distinguish "file not found" from "file found but content wrong."
+Artifact: `agent-judge-llm`.
 
-### SupersetDiffJudge
+| Judge | Purpose |
+|---|---|
+| `CorrectnessJudge` | Ask a Spring AI-backed model whether output satisfies the goal |
+| `LLMJudge` | Base template for specialized Spring AI LLM judges |
 
-Verifies that the workspace files are a superset of the expected files — the agent added content without removing existing files.
+For a framework-neutral composition, use `ModelBackedJudge` from `agent-judge-ai-core` with a `JudgePromptTemplate`, `JudgeModel`, and `JudgmentClassifier`.
+[Tutorial module 08](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-08-model-backed-judge) runs that complete path with no credentials.
 
-```java
-Judge judge = new SupersetDiffJudge();
-```
+## RAG judges
 
-| Property | Value |
-|----------|-------|
-| Score type | `NumericalScore` (proportion of files matched) |
-| Judge type | `DETERMINISTIC` |
-| Constructor | `new SupersetDiffJudge()` or `new SupersetDiffJudge(Set.of(".mvn/", "mvnw"))` |
+Artifact: `agent-judge-rag`.
 
-Reads the reference directory from `context.metadata().get("expectedDir")` (a `Path` or `String`).
-Abstains if the key is missing. Extra files in the workspace are allowed — this is superset semantics, not exact match.
+| Judge | Question answered |
+|---|---|
+| `FaithfulnessJudge` | Is the generated answer supported by the retrieved context? |
+| `ContextualRelevanceJudge` | Is the retrieved context relevant to the question? |
+| `HallucinationJudge` | Does the answer introduce unsupported claims? |
 
----
+`RagContext` defines the `rag.question`, `rag.context`, and `rag.answer` metadata keys and the framework fallback conventions.
+When required evidence is absent, these judges abstain rather than inventing a score.
 
-## agent-judge-exec
+## Framework evaluators
 
-Requires `agent-judge-exec` dependency. Executes real processes in the workspace.
+Evaluators are bridges rather than judges.
+They execute or adapt framework output into `JudgmentContext`, then apply an ordinary `Judge` or `Jury`.
 
-### BuildSuccessJudge
+| Artifact | Evaluator | Evaluated value |
+|---|---|---|
+| `agent-judge-spring-ai` | `SpringAiEvaluator` | Spring AI `ChatResponse` |
+| `agent-judge-langchain4j` | `LangChain4jEvaluator` | LangChain4j `Result<T>` |
+| `agent-judge-koog` | `KoogEvaluator` | Koog `AIAgent` output |
+| `agent-judge-agent-client` | `AgentClientEvaluator` | AgentClient responses and workspaces |
 
-Runs a Maven or Gradle build and checks the exit code.
+The credential-free bridge samples are [Koog module 09](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-09-koog-evaluation) and [LangChain4j module 10](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-10-langchain4j-evaluation).
 
-```java
-// Maven — auto-detects ./mvnw wrapper
-Judge maven = BuildSuccessJudge.maven("clean", "compile");
+## Related
 
-// Gradle — auto-detects ./gradlew wrapper
-Judge gradle = BuildSuccessJudge.gradle("build", "test");
-
-// Custom command string
-Judge custom = new BuildSuccessJudge("make all");
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `DETERMINISTIC` |
-| Default timeout | 10 minutes |
-| Wrapper detection | Checks for `mvnw`/`gradlew` in workspace, falls back to system `mvn`/`gradle` |
-
-### CommandJudge
-
-Executes an arbitrary shell command and verifies the exit code.
-
-```java
-// Default: expect exit code 0, 2 minute timeout
-Judge simple = new CommandJudge("ls README.md");
-
-// Custom exit code and timeout
-Judge custom = new CommandJudge("grep -c TODO src/App.java", 0, Duration.ofSeconds(30));
-
-// With custom sandbox factory (e.g., Docker-based execution)
-Judge sandboxed = new CommandJudge("mvn test", 0, Duration.ofMinutes(5), sandboxFactory);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `DETERMINISTIC` |
-| Default exit code | `0` |
-| Default timeout | 2 minutes |
-| Metadata keys | `command`, `exitCode`, `output`, `duration` |
-
-### ClassVersionJudge
-
-Validates Java class file bytecode version.
-
-```java
-// Java 17 = class version 61
-Judge judge = new ClassVersionJudge(61);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Common versions | Java 8=52, Java 11=55, Java 17=61, Java 21=65 |
-
-### CoveragePreservationJudge
-
-Parses JaCoCo XML report and checks that line coverage hasn't dropped more than a threshold compared to a baseline.
-
-```java
-// Allow up to 5% coverage drop (default threshold)
-Judge judge = new CoveragePreservationJudge();
-
-// Custom threshold
-Judge strict = new CoveragePreservationJudge(2.0);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Input | JaCoCo XML report at `target/site/jacoco/jacoco.xml` |
-| Baseline | `context.metadata().get("baselineCoverage")` — a `Double` (line coverage %) or `CoverageMetrics` |
-| Threshold | Maximum allowed percentage-point drop (default 5.0) |
-
-Abstains if `baselineCoverage` is missing from metadata. Fails if no JaCoCo report is found.
-
-### CoverageImprovementJudge
-
-Measures coverage improvement as a continuous score, normalized to [0, 1].
-
-```java
-// Score normalized against max improvement of 50 percentage points (default)
-Judge judge = new CoverageImprovementJudge();
-
-// Custom normalization ceiling: 20pp improvement = score 1.0
-Judge custom = new CoverageImprovementJudge(20.0);
-
-// With minimum coverage floor: fail if below 60% regardless of improvement
-Judge withFloor = new CoverageImprovementJudge(20.0, 60.0);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `NumericalScore` (0.0 to 1.0) |
-| Input | JaCoCo XML report |
-| Baseline | `context.metadata().get("baselineCoverage")` — same as `CoveragePreservationJudge` |
-| Minimum floor | Optional — fails if current coverage is below the floor, regardless of improvement |
-
----
-
-## agent-judge-file
-
-Requires `agent-judge-file` dependency. Compares agent output files against reference implementations using structural/semantic comparison.
-
-### FileComparisonJudge
-
-Composite judge that dispatches to the appropriate comparator based on file type.
-
-```java
-Judge judge = new FileComparisonJudge();
-```
-
-| File type | Dispatches to |
-|-----------|--------------|
-| `pom.xml` | `MavenSemanticJudge` |
-| `*.xml` | `XmlSemanticJudge` |
-| `*.java` | `JavaSemanticJudge` |
-| Everything else | `TextFileJudge` |
-
-Reads the reference directory from `context.metadata().get("expectedDir")` (a `Path`) and compares each file against the workspace.
-
-### JavaSemanticJudge
-
-AST-based Java file comparison using JavaParser.
-Ignores whitespace, comments, and import ordering — compares structure, not formatting.
-
-```java
-Judge judge = new JavaSemanticJudge();
-```
-
-### MavenSemanticJudge
-
-Semantic comparison of Maven POM files.
-Compares dependency lists, plugin configurations, and properties without requiring identical XML formatting.
-
-```java
-Judge judge = new MavenSemanticJudge();
-```
-
-### XmlSemanticJudge
-
-Structure-aware XML comparison.
-Normalizes whitespace and attribute ordering before comparison.
-
-```java
-Judge judge = new XmlSemanticJudge();
-```
-
-### TextFileJudge
-
-Plain text comparison with whitespace normalization.
-
-```java
-Judge judge = new TextFileJudge();
-```
-
----
-
-## agent-judge-llm
-
-Requires `agent-judge-llm` dependency and Spring AI on the classpath.
-
-### CorrectnessJudge
-
-Uses an LLM to evaluate whether the agent accomplished its goal.
-
-```java
-CorrectnessJudge judge = new CorrectnessJudge(chatClientBuilder);
-Judgment result = judge.judge(context);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `LLM_POWERED` |
-| Input | `context.goal()` + `context.agentOutput()` |
-| Cost | LLM tokens per evaluation |
-
-Sends the goal and agent output to the LLM, asks for a YES/NO determination with reasoning.
-
-### LLMJudge (Abstract Base)
-
-Template method base class for building custom LLM judges.
-Subclass and implement two methods:
-
-```java
-public class QualityJudge extends LLMJudge {
-
-    public QualityJudge(ChatClient.Builder chatClientBuilder) {
-        super("quality", "Rates code quality 0-10", chatClientBuilder);
-    }
-
-    @Override
-    protected String buildPrompt(JudgmentContext context) {
-        return "Rate this code quality 0-10:\n" +
-            context.agentOutput().orElse("");
-    }
-
-    @Override
-    protected Judgment parseResponse(String response, JudgmentContext context) {
-        double score = extractScore(response);
-        return Judgment.builder()
-            .score(new NumericalScore(score, 0, 10))
-            .status(score >= 7 ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
-            .reasoning(response)
-            .build();
-    }
-}
-```
-
-| Method | Purpose |
-|--------|---------|
-| `buildPrompt(JudgmentContext)` | Construct the evaluation prompt |
-| `parseResponse(String, JudgmentContext)` | Parse LLM response into a Judgment |
-
-The base class handles LLM invocation — you focus on prompt design and response parsing.
-
-See [Writing Custom Judges](/docs/agent-judge/custom-judge) for a complete walkthrough.
-
----
-
-## agent-judge-rag
-
-Requires `agent-judge-rag` dependency. LLM-powered judges for evaluating retrieval-augmented generation pipelines.
-
-All RAG judges use the `RagContext` metadata convention:
-
-| Metadata key | Description | Fallback |
-|-------------|-------------|----------|
-| `rag.question` | The user's question | `context.goal()` |
-| `rag.context` | Retrieved context (String or List) | `langchain4j.sources` |
-| `rag.answer` | The generated answer | `context.agentOutput()` |
-
-RAG judges return `ABSTAIN` when required metadata is missing rather than producing misleading verdicts.
-
-### FaithfulnessJudge
-
-Evaluates whether every claim in the answer is grounded in the provided context.
-An answer that is factually correct but not supported by the given context is considered unfaithful.
-
-```java
-Judge judge = new FaithfulnessJudge(chatClientBuilder);
-Judgment result = judge.judge(context);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `LLM_POWERED` |
-| Requires | `rag.context` + `rag.answer` (or fallbacks) |
-| ABSTAIN when | Context or answer is empty, or LLM response unparseable |
-
-### ContextualRelevanceJudge
-
-Evaluates whether the retrieved context is relevant to the question.
-A natural first-tier judge in a `CascadedJury` — if the context is irrelevant, evaluating faithfulness or hallucination is meaningless.
-
-```java
-Judge judge = new ContextualRelevanceJudge(chatClientBuilder);
-Judgment result = judge.judge(context);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `LLM_POWERED` |
-| Requires | `rag.context` (or fallback) |
-| ABSTAIN when | Context is empty, or LLM response unparseable |
-
-### HallucinationJudge
-
-Detects specific claims in the answer that are not supported by the context.
-Unlike `FaithfulnessJudge` which asks "is the answer grounded?", this judge asks "what specifically was made up?" with per-claim analysis.
-
-The most expensive RAG judge — a natural final-tier judge in a `CascadedJury`.
-
-```java
-Judge judge = new HallucinationJudge(chatClientBuilder);
-Judgment result = judge.judge(context);
-```
-
-| Property | Value |
-|----------|-------|
-| Score type | `BooleanScore` |
-| Judge type | `LLM_POWERED` |
-| Requires | `rag.context` + `rag.answer` (or fallbacks) |
-| ABSTAIN when | Context or answer is empty, or LLM response unparseable |
-
-### RAG Jury Example
-
-Compose the three RAG judges into a cascaded jury for cost-efficient evaluation:
-
-```java
-SimpleJury relevanceTier = SimpleJury.builder()
-    .judge(new ContextualRelevanceJudge(chatClientBuilder))
-    .votingStrategy(new MajorityVotingStrategy())
-    .build();
-
-SimpleJury faithfulnessTier = SimpleJury.builder()
-    .judge(new FaithfulnessJudge(chatClientBuilder))
-    .judge(new HallucinationJudge(chatClientBuilder))
-    .votingStrategy(new ConsensusStrategy())
-    .build();
-
-CascadedJury ragJury = CascadedJury.builder()
-    .tier("relevance", relevanceTier, TierPolicy.REJECT_ON_ANY_FAIL)
-    .tier("grounding", faithfulnessTier, TierPolicy.FINAL_TIER)
-    .build();
-
-Verdict verdict = ragJury.vote(context);
-```
-
-If the context isn't relevant, the grounding tier never runs — saving tokens.
+- [Getting started](/docs/agent-judge/getting-started)
+- [Writing custom judges](/docs/agent-judge/custom-judge)
+- [Jury system](/docs/agent-judge/jury-system)

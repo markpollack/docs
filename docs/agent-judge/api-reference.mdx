@@ -1,778 +1,111 @@
 ---
 title: "API Reference"
-description: "All public types, interfaces, and records in Agent Judge"
+description: "Main public contracts and packages in Agent Judge 0.14"
 ---
+
+This page is a map of the 0.14 API.
+The generated aggregate Javadoc remains the detailed signature reference, and the [tutorial source](https://github.com/markpollack/agent-judge-tutorial) supplies compiled usage examples.
 
 ## Packages
 
-| Package | Contains |
-|---------|----------|
-| `io.github.markpollack.judge` | Core judge interfaces and utilities |
-| `io.github.markpollack.judge.context` | `JudgmentContext`, `ExecutionStatus` |
-| `io.github.markpollack.judge.result` | `Judgment`, `JudgmentStatus`, `Check` |
-| `io.github.markpollack.judge.score` | `Score`, `BooleanScore`, `NumericalScore`, `CategoricalScore` |
-| `io.github.markpollack.judge.jury` | `Jury`, `Verdict`, voting strategies |
-| `io.github.markpollack.judge.springai` | Spring AI bridge |
-| `io.github.markpollack.judge.langchain4j` | LangChain4j bridge |
-| `io.github.markpollack.judge.koog` | Koog bridge |
-| `io.github.markpollack.judge.agentclient` | AgentClient bridge |
-| `io.github.markpollack.judge.ai` | AI-backed judge infrastructure |
-| `io.github.markpollack.judge.rag` | RAG judges and `RagContext` |
+| Package | Main contents |
+|---|---|
+| `io.github.markpollack.judge` | `Judge`, `AsyncJudge`, metadata, naming, and composition |
+| `io.github.markpollack.judge.context` | `JudgmentContext` and `ExecutionStatus` |
+| `io.github.markpollack.judge.result` | `Judgment`, `JudgmentStatus`, and `Check` |
+| `io.github.markpollack.judge.fs` | Core file-system judges |
+| `io.github.markpollack.judge.jury` | Juries, verdicts, voting strategies, and policies |
+| `io.github.markpollack.judge.ai` | Model-backed judge composition and classifiers |
+| `io.github.markpollack.judge.ai.model` | Framework-neutral model requests, responses, messages, and usage |
+| `io.github.markpollack.judge.ai.prompt` | Prompt templates, renderers, variables, and text sources |
+| `io.github.markpollack.judge.exec` | Build, command, and class-version judges |
+| `io.github.markpollack.judge.coverage` | JaCoCo coverage judges and parser |
+| `io.github.markpollack.judge.file` | Semantic file judges |
+| `io.github.markpollack.judge.file.comparator` | Java, Maven, and XML comparators |
+| `io.github.markpollack.judge.llm` | Spring AI judging adapter and correctness judge |
+| `io.github.markpollack.judge.rag` | RAG context helpers and judges |
+| `io.github.markpollack.judge.springai` | Spring AI evaluated-side bridge |
+| `io.github.markpollack.judge.langchain4j` | LangChain4j evaluated-side bridge |
+| `io.github.markpollack.judge.koog` | Koog evaluated-side bridge |
+| `io.github.markpollack.judge.agentclient` | AgentClient evaluated-side bridge and judging adapter |
 
----
+## Judge contracts
 
-## Core Types
+`Judge` is a functional interface whose single method maps `JudgmentContext` to `Judgment`.
+`AsyncJudge` supplies the `CompletableFuture` variant.
 
-### Judge
+`JudgeWithMetadata` marks a judge that exposes `JudgeMetadata`.
+`DeterministicJudge` is the reusable base for rule-based implementations, and `NamedJudge` attaches identity to another judge without changing its evaluation.
 
-The fundamental evaluation interface. A functional interface for lambda and method reference support.
+`Judges` contains logical composition and naming helpers.
 
-```java
-@FunctionalInterface
-public interface Judge {
-    Judgment judge(JudgmentContext context);
-}
-```
+## JudgmentContext
 
-Use directly as a lambda, or extend `DeterministicJudge` / `LLMJudge` for metadata support.
+`JudgmentContext` is the immutable in-process input record.
+It carries goal, workspace, execution duration, start time, optional agent output, execution status, optional error, and arbitrary context metadata.
 
-### AsyncJudge
+The context metadata may contain framework-native objects because it does not cross the result boundary.
+Bridge modules use it to expose relevant runtime evidence to ordinary judges.
 
-Asynchronous variant for non-blocking evaluation:
+`ExecutionStatus` values are `SUCCESS`, `FAILED`, `TIMEOUT`, `CANCELLED`, `REFUSED`, and `UNKNOWN`.
 
-```java
-public interface AsyncJudge {
-    CompletableFuture<Judgment> judgeAsync(JudgmentContext context);
-}
-```
+## Judgment
 
-### ReactiveJudge
+`Judgment` is the immutable portable output record.
 
-Reactive variant for Spring WebFlux / Project Reactor:
+| Component | Contract |
+|---|---|
+| `status` | Required `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` |
+| `score` | Optional finite `Double` normalized to `[0.0, 1.0]` |
+| `label` | Optional non-blank classification |
+| `reasoning` | Required text and non-blank for `ABSTAIN` or `ERROR` |
+| `checks` | Immutable granular Boolean checks |
+| `metadata` | Recursively portable and immutable evidence |
 
-```java
-public interface ReactiveJudge {
-    Mono<Judgment> judge(JudgmentContext context);
-}
-```
+Direct factories are `pass(reasoning)`, `fail(reasoning)`, `abstain(reasoning)`, and `error(reasoning)`.
+`verdict(boolean)` starts an enrichable Boolean result without storing a duplicate score.
+`scored(normalizedScore).passingAt(threshold)` builds a measured result whose status follows an explicit threshold.
+The raw-scale overload normalizes a bounded source measurement before the threshold is applied.
 
-### DeterministicJudge
+`effectiveScore()` returns the explicit score when present, derives `1.0` or `0.0` for an unscored `PASS` or `FAIL`, and is empty for `ABSTAIN` or `ERROR`.
+`elapsed()` derives `Duration` from the portable `elapsedMillis` metadata value.
 
-Abstract base class for rule-based judges. Provides `JudgeWithMetadata` support:
+## Check
 
-```java
-public abstract class DeterministicJudge implements JudgeWithMetadata {
-    protected DeterministicJudge(String name, String description)
-    public JudgeMetadata metadata()
-}
-```
+`Check` is a named Boolean sub-assertion with a message.
+Use its passing and failing factories to explain the evidence contributing to an overall result.
 
-`JudgeWithMetadata` extends `Judge`, so `DeterministicJudge` is also a `Judge`.
+## Jury contracts
 
-### NamedJudge
+`Jury.vote(context)` returns a `Verdict` containing aggregate and individual evidence.
+`SimpleJury` runs peer judges, while `CascadedJury` evaluates ordered tiers.
 
-Composition wrapper that attaches metadata to any judge (including lambdas):
+Voting strategies are `MajorityVotingStrategy`, `ConsensusStrategy`, `AverageVotingStrategy`, `WeightedAverageStrategy`, and `MedianVotingStrategy`.
+`TiePolicy`, `ErrorPolicy`, and `TierPolicy` make edge behavior explicit.
 
-```java
-Judge named = Judges.named(myLambda, "check-name", "description");
-Judge typed = Judges.named(myLambda, "check-name", "description", JudgeType.DETERMINISTIC);
-```
+See [Jury System](/docs/agent-judge/jury-system) for their reduction rules.
 
-### JudgeWithMetadata
+## AI composition
 
-Marker interface for judges that expose identity:
+`ModelBackedJudge` combines `JudgePromptTemplate`, `JudgeModel`, and `JudgmentClassifier`.
+`JudgmentClassifiers` supplies common classifiers, and `LabelJudgmentClassifier` maps explicit labels to outcomes and optional declared scores.
 
-```java
-public interface JudgeWithMetadata extends Judge {
-    JudgeMetadata metadata();
-}
-```
+`JudgeModelRequest` and `JudgeModelResponse` are framework-neutral.
+`Usage` records optional provider-reported input, output, reasoning, cache-creation, cache-read, and total token quantities, and projects them to portable metadata.
+It never derives price or assumes that the categories sum to the reported total.
 
-Infrastructure code can use `instanceof JudgeWithMetadata` for discovery:
+## Framework bridges
 
-```java
-if (judge instanceof JudgeWithMetadata jwm) {
-    log.info("Running: {}", jwm.metadata().name());
-}
-```
+| Evaluator | Context builder | Backend type |
+|---|---|---|
+| `SpringAiEvaluator` | `SpringAiJudgmentContextBuilder` | Spring AI `ChatResponse` |
+| `LangChain4jEvaluator` | `LangChain4jJudgmentContextBuilder` | LangChain4j `Result<T>` |
+| `KoogEvaluator` | `KoogJudgmentContextBuilder` | Koog `AIAgent` |
+| `AgentClientEvaluator` | `AgentClientJudgmentContextBuilder` | AgentClient |
 
-### JudgeMetadata
+`SpringAiJudgeModel` and `AgentClientJudgeModel` adapt those backends to the judging-side `JudgeModel` interface.
 
-Identity record:
+## Version and migration
 
-```java
-public record JudgeMetadata(String name, String description, JudgeType type)
-```
-
-### JudgeType
-
-```java
-public enum JudgeType {
-    DETERMINISTIC,
-    LLM_POWERED,
-    HYBRID,
-    AGENT
-}
-```
-
----
-
-## Context
-
-### JudgmentContext
-
-All evaluation inputs in one immutable record:
-
-```java
-public record JudgmentContext(
-    String goal,
-    Path workspace,
-    Duration executionTime,
-    Instant startedAt,
-    Optional<String> agentOutput,
-    ExecutionStatus status,
-    Optional<Throwable> error,
-    Map<String, Object> metadata
-)
-```
-
-**Builder methods:**
-
-| Method | Type | Required |
-|--------|------|----------|
-| `goal(String)` | The agent's task description | Yes |
-| `workspace(Path)` | Directory the agent modified | Yes |
-| `status(ExecutionStatus)` | Agent execution outcome | Yes |
-| `startedAt(Instant)` | When execution began | Yes |
-| `executionTime(Duration)` | How long execution took | Yes |
-| `agentOutput(String)` | Text output from the agent | No |
-| `error(Throwable)` | Exception if execution failed | No |
-| `metadata(String, Object)` | Arbitrary key-value pairs | No |
-| `metadata(Map<String, Object>)` | Bulk metadata | No |
-
-```java
-JudgmentContext context = JudgmentContext.builder()
-    .goal("Add REST endpoint")
-    .workspace(Path.of("/project"))
-    .status(ExecutionStatus.SUCCESS)
-    .startedAt(Instant.now())
-    .executionTime(Duration.ofMinutes(2))
-    .agentOutput("Created HelloController.java")
-    .metadata("expectedDir", Path.of("/reference"))
-    .build();
-```
-
-### ExecutionStatus
-
-```java
-public enum ExecutionStatus {
-    SUCCESS, FAILED, TIMEOUT, CANCELLED, REFUSED, UNKNOWN
-}
-```
-
-| Value | Meaning |
-|-------|---------|
-| `SUCCESS` | Agent completed normally |
-| `FAILED` | Agent threw an exception or returned an error |
-| `TIMEOUT` | Execution exceeded time limit |
-| `CANCELLED` | Execution was cancelled |
-| `REFUSED` | Model declined the request (content filter) |
-| `UNKNOWN` | Status could not be determined |
-
----
-
-## Results
-
-### Judgment
-
-Immutable evaluation result:
-
-```java
-public record Judgment(
-    Score score,
-    JudgmentStatus status,
-    String reasoning,
-    List<Check> checks,
-    Map<String, Object> metadata
-)
-```
-
-**Static factory methods:**
-
-```java
-Judgment.pass("Build succeeded")
-Judgment.fail("File not found")
-Judgment.abstain("Not enough information")
-Judgment.error("Timeout", exception)
-```
-
-**Builder:**
-
-```java
-Judgment.builder()
-    .score(new BooleanScore(true))
-    .status(JudgmentStatus.PASS)
-    .reasoning("All checks passed")
-    .check(Check.pass("compile", "Compilation succeeded"))
-    .check(Check.pass("tests", "All tests passed"))
-    .metadata("duration", Duration.ofSeconds(45))
-    .build();
-```
-
-**Utility methods:**
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `pass()` | `boolean` | `true` if status == PASS |
-| `elapsed()` | `Duration` | Elapsed time from metadata |
-| `error()` | `Throwable` | Error from metadata |
-
-### JudgmentStatus
-
-```java
-public enum JudgmentStatus {
-    PASS, FAIL, ABSTAIN, ERROR
-}
-```
-
-### Check
-
-Granular sub-assertion within a judgment:
-
-```java
-public record Check(String name, boolean passed, String message)
-```
-
-**Factory methods:**
-
-```java
-Check.pass("file_exists")
-Check.pass("file_exists", "File found at expected path")
-Check.fail("content_match", "Expected header not found")
-```
-
----
-
-## Score Types
-
-`Score` is a sealed interface with three permitted implementations:
-
-### BooleanScore
-
-Simple pass/fail:
-
-```java
-public record BooleanScore(boolean value) implements Score
-```
-
-```java
-new BooleanScore(true)   // pass
-new BooleanScore(false)  // fail
-```
-
-### NumericalScore
-
-Continuous scoring with bounds:
-
-```java
-public record NumericalScore(double value, double min, double max) implements Score
-```
-
-```java
-NumericalScore score = new NumericalScore(85.0, 0.0, 100.0);
-double normalized = score.normalized();  // 0.85 (scaled to [0, 1])
-
-// Convenience factories
-NumericalScore zeroToOne = NumericalScore.normalized(0.85);
-NumericalScore zeroToTen = NumericalScore.outOfTen(7.5);
-```
-
-### CategoricalScore
-
-Discrete categories from a fixed set:
-
-```java
-public record CategoricalScore(String value, List<String> allowedValues) implements Score
-```
-
-```java
-CategoricalScore score = new CategoricalScore(
-    "GOOD", List.of("EXCELLENT", "GOOD", "FAIR", "POOR"));
-```
-
-### Scores Utility
-
-Convert between score types for heterogeneous aggregation:
-
-```java
-// Numerical and Boolean scores normalize directly
-// Categorical scores require a mapping from category names to numeric values
-double normalized = Scores.toNormalized(anyScore, categoryMap);
-```
-
----
-
-## Composition
-
-### Judges Utility
-
-Static methods for creating and composing judges:
-
-| Method | Description |
-|--------|-------------|
-| `named(Judge, String)` | Wrap with a name |
-| `named(Judge, String, String)` | Wrap with name and description |
-| `named(Judge, String, String, JudgeType)` | Wrap with full metadata |
-| `alwaysPass(String)` | Test judge that always passes |
-| `alwaysFail(String)` | Test judge that always fails |
-| `tryMetadata(Judge)` | Extract metadata if available (`Optional<JudgeMetadata>`) |
-| `and(Judge, Judge)` | Short-circuit AND |
-| `or(Judge, Judge)` | Short-circuit OR |
-| `allOf(Judge...)` | All must pass (variadic AND) |
-| `anyOf(Judge...)` | Any can pass (variadic OR) |
-
----
-
-## AI-Core Types
-
-Framework-neutral infrastructure for AI-backed judges. Located in the `agent-judge-ai-core` module (zero external dependencies).
-
-### ModelBackedJudge
-
-Composed AI-backed judge built via builder pattern. Pipeline: render prompt → invoke model → classify response → produce `Judgment`. No subclassing needed.
-
-```java
-ModelBackedJudge judge = ModelBackedJudge.builder()
-    .model(judgeModel)
-    .template(promptTemplate)
-    .classifier(LabelJudgmentClassifier.passFail())
-    .build();
-
-Judgment judgment = judge.judge(context);
-```
-
-| Builder Method | Required | Description |
-|---------------|----------|-------------|
-| `model(JudgeModel)` | Yes | AI backend to invoke |
-| `template(JudgePromptTemplate)` | Yes | Prompt template with `{{variable}}` placeholders |
-| `classifier(JudgmentClassifier)` | Yes | Maps model response to `Judgment` |
-
-### JudgeModel
-
-Functional interface for AI model invocation. Framework-specific implementations live in bridge modules.
-
-```java
-@FunctionalInterface
-public interface JudgeModel {
-    JudgeModelResponse call(JudgeModelRequest request);
-}
-```
-
-| Implementation | Module | Backend |
-|---------------|--------|---------|
-| `SpringAiJudgeModel` | `agent-judge-llm` | Spring AI `ChatClient` |
-| `AgentClientJudgeModel` | `agent-judge-agent-client` | CLI agent via AgentClient |
-
-### JudgePromptTemplate
-
-Loads, validates, and renders prompt templates with `{{variable}}` placeholders extracted from `JudgmentContext`.
-
-```java
-JudgePromptTemplate template = JudgePromptTemplate.builder()
-    .source(TextSource.classpath("/prompts/correctness.txt"))
-    .renderer(new SimpleJudgeTemplateRenderer())
-    .missingVariablePolicy(MissingVariablePolicy.STRICT)
-    .build();
-```
-
-| Builder Method | Default | Description |
-|---------------|---------|-------------|
-| `source(TextSource)` | Required | Template text source (classpath, file, or string) |
-| `renderer(JudgeTemplateRenderer)` | `SimpleJudgeTemplateRenderer` | Pluggable template engine |
-| `missingVariablePolicy(MissingVariablePolicy)` | `STRICT` | `STRICT`, `EMPTY_STRING`, or `LEAVE_PLACEHOLDER` |
-
-Available variables from `JudgmentContext`: `{{goal}}`, `{{output}}`, `{{workspace}}`, `{{status}}`, `{{metadata.*}}`.
-
-### JudgeTemplateRenderer
-
-Pluggable template engine interface:
-
-```java
-public interface JudgeTemplateRenderer {
-    String render(String template, Map<String, String> variables);
-}
-```
-
-Default implementation `SimpleJudgeTemplateRenderer` performs `{{variable}}` substitution.
-
-### JudgmentClassifier
-
-Functional interface that maps a model response to a `Judgment`:
-
-```java
-@FunctionalInterface
-public interface JudgmentClassifier {
-    Judgment classify(JudgeModelResponse response);
-}
-```
-
-### LabelJudgmentClassifier
-
-Exact normalized label matching with builder pattern:
-
-```java
-// Built-in: maps "PASS"/"FAIL" labels to Judgment
-JudgmentClassifier classifier = LabelJudgmentClassifier.passFail();
-
-// Custom labels via builder
-JudgmentClassifier classifier = LabelJudgmentClassifier.builder()
-    .passLabel("CORRECT")
-    .failLabel("INCORRECT")
-    .build();
-```
-
-### Supporting Records
-
-```java
-// Model request — messages with options and metadata
-public record JudgeModelRequest(
-    List<JudgeMessage> messages,
-    Map<String, Object> options,
-    Map<String, Object> metadata
-)
-// Factory: JudgeModelRequest.user(prompt)
-
-// Model response — text, model identity, usage, metadata
-public record JudgeModelResponse(
-    String text,
-    String model,
-    Usage usage,
-    Map<String, Object> metadata
-)
-
-// Message with role
-public record JudgeMessage(JudgeMessageRole role, String content)
-public enum JudgeMessageRole { SYSTEM, USER, ASSISTANT }
-
-// Token usage
-public record Usage(int inputTokens, int outputTokens, int totalTokens,
-                    double estimatedCostUsd)
-```
-
----
-
-## Jury System
-
-### Jury Interface
-
-```java
-public interface Jury {
-    Verdict vote(JudgmentContext context);
-}
-```
-
-### SimpleJury
-
-Flat multi-judge aggregation. See [Jury System](/docs/agent-judge/jury-system) for full usage.
-
-**Builder:**
-
-| Method | Description |
-|--------|-------------|
-| `.judge(Judge)` | Add with weight 1.0 |
-| `.judge(Judge, double)` | Add with custom weight |
-| `.votingStrategy(VotingStrategy)` | Required |
-| `.parallel(boolean)` | Default `true` |
-| `.executor(Executor)` | Custom thread pool |
-
-### CascadedJury
-
-Sequential tiered evaluation. See [Jury System](/docs/agent-judge/jury-system#cascadedjury) for full usage.
-
-**Builder:**
-
-| Method | Description |
-|--------|-------------|
-| `.tier(String, Jury, TierPolicy)` | Add a named tier |
-| `.build()` | Validates last tier is `FINAL_TIER` |
-
-### Verdict
-
-```java
-public record Verdict(
-    Judgment aggregated,
-    List<Judgment> individual,
-    Map<String, Judgment> individualByName,
-    Map<String, Double> weights,
-    List<Verdict> subVerdicts
-)
-```
-
-| Field | Description |
-|-------|-------------|
-| `aggregated` | The voting strategy's aggregated result |
-| `individual` | All individual judge results (ordered) |
-| `individualByName` | Results keyed by judge name |
-| `weights` | Weight assigned to each judge |
-| `subVerdicts` | Per-tier verdicts (CascadedJury only) |
-
-### VotingStrategy
-
-```java
-public interface VotingStrategy {
-    Judgment aggregate(List<Judgment> judgments, Map<String, Double> weights);
-    String getName();
-}
-```
-
-**Implementations:**
-
-| Class | Constructor |
-|-------|------------|
-| `MajorityVotingStrategy` | `()` or `(TiePolicy, ErrorPolicy)` |
-| `ConsensusStrategy` | `()` |
-| `AverageVotingStrategy` | `()` |
-| `WeightedAverageStrategy` | `()` |
-| `MedianVotingStrategy` | `()` |
-
-### TierPolicy
-
-```java
-public enum TierPolicy {
-    REJECT_ON_ANY_FAIL,   // Stop on failure
-    ACCEPT_ON_ALL_PASS,   // Stop on full pass
-    FINAL_TIER            // Always produces verdict (required for last tier)
-}
-```
-
-### TiePolicy
-
-```java
-public enum TiePolicy {
-    PASS,     // Optimistic
-    FAIL,     // Pessimistic (default)
-    ABSTAIN   // Neutral
-}
-```
-
-### ErrorPolicy
-
-```java
-public enum ErrorPolicy {
-    TREAT_AS_FAIL,     // Default
-    TREAT_AS_ABSTAIN,
-    IGNORE
-}
-```
-
-### Juries Utility
-
-```java
-// Quick jury from judges
-Jury jury = Juries.fromJudges(strategy, judge1, judge2, judge3);
-
-// Combine two juries into a meta-jury
-Jury meta = Juries.combine(jury1, jury2, strategy);
-
-// Multiple juries
-Jury all = Juries.allOf(strategy, jury1, jury2, jury3);
-```
-
----
-
-## Framework Bridge Evaluators
-
-Each framework bridge provides an `Evaluator` (one-liner convenience) and a `JudgmentContextBuilder` (full control).
-All evaluators follow the same 4-method pattern: Judge/Jury x with/without extra metadata.
-
-| Runtime | Input type | Evaluator | Context builder |
-|---------|-----------|-----------|----------------|
-| Spring AI | `ChatResponse` | `SpringAiEvaluator` | `SpringAiJudgmentContextBuilder` |
-| LangChain4j | `Result<T>` | `LangChain4jEvaluator` | `LangChain4jJudgmentContextBuilder` |
-| Koog | `AIAgent` | `KoogEvaluator` | `KoogJudgmentContextBuilder` |
-| AgentClient | `AgentClientResponse` | `AgentClientEvaluator` | `AgentClientJudgmentContextBuilder` |
-
-<Note>
-Bridge modules declare framework dependencies with provided scope. Your application must already include the corresponding framework/runtime dependency.
-</Note>
-
-### SpringAiEvaluator
-
-Bridges Spring AI `ChatResponse` output to agent-judge evaluation.
-Uses `Supplier<ChatResponse>` because Spring AI ChatClient calls don't take the goal as an argument at call time.
-
-```java
-// One-liner with a judge
-Judgment result = SpringAiEvaluator.evaluate(
-    "Summarize the document",
-    () -> chatClient.prompt().user(prompt).call().chatResponse(),
-    myJudge);
-
-// One-liner with a jury
-Verdict verdict = SpringAiEvaluator.evaluate(
-    "Summarize the document",
-    () -> chatClient.prompt().user(prompt).call().chatResponse(),
-    myJury);
-```
-
-**Metadata extracted** (constants in `SpringAiMetadataKeys`):
-
-| Key | Source |
-|-----|--------|
-| `springai.responseId` | `ChatResponse.getMetadata().getId()` |
-| `springai.model` | `ChatResponse.getMetadata().getModel()` |
-| `springai.finishReason` | Generation finish reason |
-| `springai.usage.promptTokens` | Prompt token count |
-| `springai.usage.completionTokens` | Completion token count |
-| `springai.usage.totalTokens` | Total token count |
-| `springai.hasToolCalls` | Whether tool calls were made |
-| `springai.toolCalls` | Best-effort tool-call requests (not a full execution trace) |
-
-**Finish reason mapping**: `stop` → SUCCESS, `tool_calls` → SUCCESS, `length` → SUCCESS (indicates truncation; judges may choose to abstain), `content_filter` → REFUSED, null → UNKNOWN
-
-### LangChain4jEvaluator
-
-Bridges LangChain4j `Result<T>` to agent-judge evaluation.
-Uses `Function<String, Result<T>>` because LangChain4j AiServices are dynamic proxies — there's no common agent interface.
-
-```java
-Judgment result = LangChain4jEvaluator.evaluate(
-    "Summarize the document",
-    goal -> assistant.chat(goal),
-    myJudge);
-```
-
-**Metadata extracted**:
-
-| Key | Source |
-|-----|--------|
-| `langchain4j.tokenUsage` | `Result.tokenUsage()` |
-| `langchain4j.toolExecutions` | `Result.toolExecutions()` |
-| `langchain4j.sources` | `Result.sources()` (also used as RAG context fallback) |
-| `langchain4j.finishReason` | `Result.finishReason().name()` |
-
-**Finish reason mapping**: `STOP`/`TOOL_EXECUTION` → SUCCESS, `LENGTH` → SUCCESS (indicates truncation; judges may choose to abstain), `CONTENT_FILTER` → REFUSED, `OTHER` → UNKNOWN
-
-### KoogEvaluator
-
-Bridges JetBrains Koog `AIAgent` to agent-judge evaluation.
-Calls `agent.run(input)` directly — Koog's native Java API is synchronous from the caller's perspective.
-
-```java
-Judgment result = KoogEvaluator.evaluate(agent, "Summarize the document", myJudge);
-```
-
-**Metadata extracted**:
-
-| Key | Source |
-|-----|--------|
-| `koog.agentId` | `agent.getId()` |
-
-### AgentClientEvaluator
-
-Bridges CLI-delegated agents (Claude Code, Codex, Gemini CLI, Amazon Q, etc.) via AgentClient.
-Uses `Supplier<AgentClientResponse>` to keep process execution inside AgentClient.
-
-```java
-Judgment result = AgentClientEvaluator.evaluate(
-    "Fix the build", workspace,
-    () -> agentClient.run("Fix the build"),
-    myJudge);
-```
-
-**Metadata extracted** (constants in `AgentClientMetadataKeys`):
-
-| Key | Source |
-|-----|--------|
-| `agentclient.model` | `response.getMetadata().getModel()` |
-| `agentclient.sessionId` | `response.getMetadata().getSessionId()` |
-| `agentclient.finishReason` | `response.getMetadata().getFinishReason()` |
-
-`AgentClientJudgmentContextBuilder` also maps result text to `agentOutput`, success/failure to `ExecutionStatus`, workspace to `JudgmentContext.workspace`, and metadata duration to `executionTime`.
-
-### JudgmentContextBuilder (All Bridges)
-
-For full control, use the `JudgmentContextBuilder` directly:
-
-```java
-// Build context from a pre-existing response
-JudgmentContext ctx = SpringAiJudgmentContextBuilder.from(
-    chatResponse, "goal", startedAt, duration);
-
-// Or execute and capture in one step
-JudgmentContext ctx = SpringAiJudgmentContextBuilder.execute(
-    "goal", () -> chatClient.prompt().user(prompt).call().chatResponse());
-```
-
-Each bridge's builder follows the same two-entry-point pattern: `from()` for pre-existing responses, `execute()` for wrapping the call.
-Both have overloads accepting `Map<String, Object> extraMetadata` for attaching run IDs, experiment tags, etc.
-
----
-
-## RAG Evaluation
-
-### RagContext
-
-Static helper for extracting RAG metadata from a `JudgmentContext`:
-
-```java
-String question = RagContext.question(context);       // rag.question or goal
-Optional<String> ctx = RagContext.context(context);   // rag.context or langchain4j.sources
-Optional<String> answer = RagContext.answer(context); // rag.answer or agentOutput
-```
-
-**Metadata key constants**:
-
-| Constant | Value | Fallback |
-|----------|-------|----------|
-| `RagContext.QUESTION_KEY` | `rag.question` | `context.goal()` |
-| `RagContext.CONTEXT_KEY` | `rag.context` | `langchain4j.sources` |
-| `RagContext.ANSWER_KEY` | `rag.answer` | `context.agentOutput()` |
-
-The `context()` method handles both `String` and `List<?>` values — lists are joined with newlines.
-
-### RAG Judges
-
-All three RAG judges extend `LLMJudge` and return `ABSTAIN` when required metadata is missing:
-
-| Judge | Evaluates | Requires |
-|-------|-----------|----------|
-| `FaithfulnessJudge` | Is the answer grounded in the context? | context + answer |
-| `ContextualRelevanceJudge` | Is the context relevant to the question? | context |
-| `HallucinationJudge` | Does the answer contain unsupported claims? | context + answer |
-
-See [Built-in Judges](/docs/agent-judge/built-in-judges#agent-judge-rag) for usage examples.
-
----
-
-## Module Coordinates
-
-**Judge families:**
-
-| Module | Artifact | Key Dependencies |
-|--------|----------|-----------------|
-| Core | `io.github.markpollack:agent-judge-core` | None (zero deps) |
-| AI Core | `io.github.markpollack:agent-judge-ai-core` | None (zero deps) |
-| Exec | `io.github.markpollack:agent-judge-exec` | agent-sandbox |
-| File | `io.github.markpollack:agent-judge-file` | JavaParser, Maven Model |
-| LLM | `io.github.markpollack:agent-judge-llm` | Spring AI ChatClient, `SpringAiJudgeModel` |
-| RAG | `io.github.markpollack:agent-judge-rag` | agent-judge-llm |
-
-**Framework bridges:**
-
-| Module | Artifact | Key Dependencies (provided) |
-|--------|----------|-----------------------------|
-| Spring AI | `io.github.markpollack:agent-judge-spring-ai` | Spring AI Model |
-| LangChain4j | `io.github.markpollack:agent-judge-langchain4j` | LangChain4j |
-| Koog | `io.github.markpollack:agent-judge-koog` | Koog Agents |
-| AgentClient | `io.github.markpollack:agent-judge-agent-client` | AgentClient, `AgentClientJudgeModel` |
-
-Add modules with explicit versions:
-
-```xml
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>agent-judge-core</artifactId>
-    <version>0.13.0</version>
-</dependency>
-```
+Use all Agent Judge artifacts at version `0.14.0`.
+Consumers migrating from the former score hierarchy should follow the [normalized Judgment migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md).

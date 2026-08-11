@@ -1,474 +1,73 @@
 ---
 title: "Writing Custom Judges"
-description: "Build deterministic, LLM-powered, and RAG judges"
-sidebarTitle: "Custom Judges"
+description: "Implement status-first deterministic and model-backed judges"
 ---
 
-## What You'll Build
-
-A progression of custom judges: a lambda check, a reusable deterministic judge, a composed AI judge, an LLM judge with full control, and a RAG-specific judge.
-You'll wire them into a jury alongside built-in judges.
-
-This tutorial builds on [Build an Evaluation Pipeline](/docs/agent-judge/tutorial).
-You should be comfortable with `JudgmentContext`, `Judgment`, and `SimpleJury` before starting.
-
-## Step 1: Lambda Judge
-
-The simplest custom judge is a lambda — three lines:
-
-```java
-import io.github.markpollack.judge.Judge;
-import io.github.markpollack.judge.result.Judgment;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-Judge timestampCheck = context -> {
-    Path logFile = context.workspace().resolve("agent.log");
-    if (Files.exists(logFile)) {
-        return Judgment.pass("Agent log exists");
-    }
-    return Judgment.fail("No agent log found");
-};
-```
-
-`Judge` is a `@FunctionalInterface` with a single method: `judge(JudgmentContext) -> Judgment`.
-Any lambda or method reference that matches this signature is a judge.
-
-Lambda judges work well for one-off checks.
-For production judges, extend a base class to get metadata and structured checks.
-
-## Step 2: Extend DeterministicJudge
-
-For a judge you'll reuse, extend `DeterministicJudge`.
-It implements `JudgeWithMetadata` so infrastructure code (logging, metrics, verdict reporting) can discover the judge's name and type.
-
-```java
-import io.github.markpollack.judge.DeterministicJudge;
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Check;
-import io.github.markpollack.judge.result.Judgment;
-import io.github.markpollack.judge.result.JudgmentStatus;
-import io.github.markpollack.judge.score.BooleanScore;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-public class AnnotationJudge extends DeterministicJudge {
-
-    private final String annotation;
-    private final String filePath;
-
-    public AnnotationJudge(String filePath, String annotation) {
-        super("annotation-check",
-            String.format("Verifies %s contains @%s", filePath, annotation));
-        this.filePath = filePath;
-        this.annotation = annotation;
-    }
-
-    @Override
-    public Judgment judge(JudgmentContext context) {
-        Path file = context.workspace().resolve(filePath);
-
-        if (!Files.exists(file)) {
-            return Judgment.builder()
-                .score(new BooleanScore(false))
-                .status(JudgmentStatus.FAIL)
-                .reasoning("File not found: " + filePath)
-                .check(Check.fail("file_exists", "File not found"))
-                .build();
-        }
-
-        try {
-            String content = Files.readString(file);
-            boolean found = content.contains("@" + annotation);
-
-            return Judgment.builder()
-                .score(new BooleanScore(found))
-                .status(found ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
-                .reasoning(found
-                    ? "@" + annotation + " found in " + filePath
-                    : "@" + annotation + " missing from " + filePath)
-                .check(Check.pass("file_exists", "File found"))
-                .check(found
-                    ? Check.pass("annotation_present", "@" + annotation + " present")
-                    : Check.fail("annotation_present", "@" + annotation + " not found"))
-                .build();
-        }
-        catch (Exception e) {
-            return Judgment.error("Failed to read file: " + e.getMessage(), e);
-        }
-    }
-}
-```
-
-Key patterns:
-
-- **Constructor** calls `super(name, description)` — this becomes `metadata()` for logging and verdicts
-- **Checks** provide granular sub-assertions — on failure, you can distinguish "file not found" from "file found but annotation missing"
-- **`Judgment.error()`** handles unexpected failures without crashing the jury
+Choose the smallest extension point that expresses your policy.
 
-Usage:
+| Need | Use |
+|---|---|
+| A local rule with no reusable identity | A `Judge` lambda |
+| A named lambda | `Judges.named(...)` |
+| A reusable rule-based class | Extend `DeterministicJudge` |
+| Prompt, model, and classifier composition | `ModelBackedJudge` |
+| A specialized Spring AI template method | Extend `LLMJudge` |
 
-```java
-Judge judge = new AnnotationJudge(
-    "src/main/java/com/example/HelloController.java",
-    "RestController");
+## Return a status-first result
 
-Judgment result = judge.judge(context);
-// metadata().name() -> "annotation-check"
-// metadata().type() -> DETERMINISTIC
-```
+For a Boolean policy, return `Judgment.pass(reasoning)`, `Judgment.fail(reasoning)`, or begin with `Judgment.verdict(boolean)` when you also need checks or metadata.
+Do not store `1.0` or `0.0` merely to repeat the status.
 
-## Step 3: Add Metadata to Lambda Judges
+For a real measurement, begin with `Judgment.scored(normalizedScore)` and finish by declaring the passing threshold.
+For a categorical policy, set an optional label in addition to the required status.
 
-If you prefer lambdas but still want metadata, use `Judges.named()`:
+Use `Judgment.abstain(reasoning)` when the judge is not applicable or lacks required evidence.
+Use `Judgment.error(reasoning)` when evaluation could not complete, and log the originating exception where it was caught.
 
-```java
-import io.github.markpollack.judge.Judges;
-import io.github.markpollack.judge.JudgeType;
-import io.github.markpollack.judge.JudgeWithMetadata;
+## Start with a lambda
 
-Judge wrapped = Judges.named(
-    timestampCheck,
-    "timestamp-check",
-    "Verifies agent log exists",
-    JudgeType.DETERMINISTIC);
+The complete compiled lambda examples live in [tutorial module 06](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-06-lambda-judge/src/main/java/io/github/markpollack/judge/tutorial/module06/LambdaJudgeDemo.java).
+They cover a three-line file rule, a named wrapper, jury participation, and error conversion.
 
-// Now infrastructure can discover the name
-if (wrapped instanceof JudgeWithMetadata jwm) {
-    System.out.println(jwm.metadata().name()); // "timestamp-check"
-}
-```
+A plain lambda has no discoverable identity.
+Wrap it with `Judges.named` when verdicts and logs need a stable name, description, and `JudgeType`.
 
-**When to use what:**
+## Build a reusable deterministic judge
 
-| Approach | Metadata | Checks | Best for |
-|----------|----------|--------|----------|
-| Lambda | No (unless wrapped) | No | One-off, inline checks |
-| `Judges.named(lambda)` | Yes | No | Named lambdas in juries |
-| `DeterministicJudge` subclass | Yes | Yes | Reusable, production judges |
+Extend `DeterministicJudge` when the rule has constructor configuration, helper methods, or granular checks.
+Its constructor supplies `JudgeMetadata`; the subclass implements only `judge(JudgmentContext)`.
 
-## Step 4: Build an AI Judge with ModelBackedJudge
+[PackageStructureJudge.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-07-deterministic-judge/src/main/java/io/github/markpollack/judge/tutorial/module07/PackageStructureJudge.java) is the canonical compiled example.
+It resolves paths from the context workspace, records three `Check` values, derives the overall status with `Judgment.verdict`, and converts file-reading failures to a reasoned `ERROR`.
 
-For semantic criteria that can't be checked from files or commands, you need an AI-backed judge.
-`ModelBackedJudge` composes three parts — a prompt template, a model backend, and a response classifier — into a judge without subclassing.
+## Compose a model-backed judge
 
-```java
-import io.github.markpollack.judge.ai.ModelBackedJudge;
-import io.github.markpollack.judge.ai.JudgePromptTemplate;
-import io.github.markpollack.judge.ai.JudgmentClassifiers;
-import io.github.markpollack.judge.ai.JudgeModel;
+`ModelBackedJudge` keeps three concerns independent.
 
-JudgePromptTemplate template = JudgePromptTemplate.fromString(
-    "relevance-check",
-    """
-    You are evaluating whether an AI agent accomplished its goal.
+1. `JudgePromptTemplate` renders evaluation inputs from a context.
+2. `JudgeModel` invokes a backend.
+3. `JudgmentClassifier` converts the response into a normalized judgment.
 
-    Goal: {{goal}}
-    Agent output: {{output}}
+[ModelBackedJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-08-model-backed-judge/src/main/java/io/github/markpollack/judge/tutorial/module08/ModelBackedJudgeDemo.java) compiles and runs this pipeline with a stub model.
+Production adapters include `SpringAiJudgeModel` and `AgentClientJudgeModel`.
 
-    Did the agent accomplish the goal? Answer exactly PASS or FAIL.
-    """);
-
-JudgeModel model = springAiJudgeModel;  // or agentClientJudgeModel
+`LabelJudgmentClassifier` requires an explicit label-to-status policy.
+Assign a normalized score only when the label policy genuinely declares a measurement.
+Unknown labels become reasoned errors rather than guessed outcomes.
 
-ModelBackedJudge judge = ModelBackedJudge.builder()
-    .name("goal-completion")
-    .description("Evaluates whether the agent accomplished its goal")
-    .promptTemplate(template)
-    .judgmentClassifier(JudgmentClassifiers.passFail("PASS", "FAIL"))
-    .model(model)
-    .build();
-
-Judgment result = judge.judge(context);
-```
-
-The three components are independently swappable:
-
-| Component | Role | Examples |
-|-----------|------|---------|
-| `JudgePromptTemplate` | Renders `{{variable}}` placeholders from `JudgmentContext` | `fromString(id, text)`, `fromClasspath(path)` |
-| `JudgeModel` | Invokes the AI backend | `SpringAiJudgeModel` (agent-judge-llm), `AgentClientJudgeModel` (agent-judge-agent-client) |
-| `JudgmentClassifier` | Maps the model's text response to a `Judgment` | `JudgmentClassifiers.passFail(...)`, custom lambda |
-
-Available template variables: `{{goal}}`, `{{output}}`, `{{workspace}}`, `{{status}}`, `{{metadata.*}}`.
-
-<Note>
-`ModelBackedJudge` lives in the `agent-judge-ai-core` module, which has zero external dependencies.
-The actual AI backend arrives through a `JudgeModel` implementation from a bridge module (`agent-judge-llm` or `agent-judge-agent-client`).
-</Note>
-
-You can also load templates from the classpath for reuse across judges:
-
-```java
-JudgePromptTemplate template = JudgePromptTemplate.fromClasspath(
-    "judges/goal-completion.txt");
-```
-
-**When to use ModelBackedJudge vs. LLMJudge**:
-
-| Approach | Best for | Trade-off |
-|----------|----------|-----------|
-| `ModelBackedJudge` | Most AI judges — composable, testable, framework-neutral | Classifier must handle parsing |
-| `LLMJudge` subclass | Custom parsing logic that doesn't fit a classifier pattern | Requires subclassing, coupled to Spring AI |
-
-Use `ModelBackedJudge` as the default. Reach for `LLMJudge` when you need full control over prompt construction or response parsing.
-
-## Step 5: Write a Custom LLM Judge
-
-For full control over prompt construction and response parsing, extend `LLMJudge`.
-It uses the template method pattern — you implement two methods:
-
-1. `buildPrompt()` — construct the evaluation prompt from the context
-2. `parseResponse()` — parse the LLM's response into a `Judgment`
-
-The base class handles the LLM call.
-
-```java
-import io.github.markpollack.judge.llm.LLMJudge;
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Judgment;
-import io.github.markpollack.judge.result.JudgmentStatus;
-import io.github.markpollack.judge.score.NumericalScore;
-import org.springframework.ai.chat.client.ChatClient;
-
-public class CodeQualityJudge extends LLMJudge {
-
-    public CodeQualityJudge(ChatClient.Builder chatClientBuilder) {
-        super("code-quality", "Rates code quality 0-10", chatClientBuilder);
-    }
-
-    @Override
-    protected String buildPrompt(JudgmentContext context) {
-        return """
-            You are a senior Java developer reviewing code.
-
-            The agent was asked to: %s
-
-            The agent produced the following output:
-            %s
-
-            Rate the code quality on a scale of 0-10. Consider:
-            - Readability and naming conventions
-            - Error handling
-            - Adherence to the stated goal
-            - Use of appropriate patterns
-
-            Respond with exactly one line in this format:
-            SCORE: <number> REASON: <brief explanation>
-            """.formatted(
-                context.goal(),
-                context.agentOutput().orElse("(no output captured)"));
-    }
-
-    @Override
-    protected Judgment parseResponse(String response, JudgmentContext context) {
-        try {
-            String scorePart = response.substring(
-                response.indexOf("SCORE:") + 6,
-                response.indexOf("REASON:")).trim();
-            String reasonPart = response.substring(
-                response.indexOf("REASON:") + 7).trim();
-
-            double score = Double.parseDouble(scorePart);
-
-            return Judgment.builder()
-                .score(new NumericalScore(score, 0, 10))
-                .status(score >= 7.0 ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
-                .reasoning(reasonPart)
-                .metadata("raw_score", score)
-                .build();
-        }
-        catch (Exception e) {
-            return Judgment.error("Failed to parse LLM response: " + response, e);
-        }
-    }
-}
-```
-
-Usage:
-
-```java
-Judge qualityJudge = new CodeQualityJudge(chatClientBuilder);
-Judgment result = qualityJudge.judge(context);
-
-// result.score() -> NumericalScore[value=7.5, min=0.0, max=10.0]
-// result.score().normalized() -> 0.75
-// result.status() -> PASS (score >= 7.0)
-```
-
-<Note>
-  LLM judges require the `agent-judge-llm` module and Spring AI.
-  Always handle parse failures gracefully — `Judgment.error()` prevents one broken response from crashing the jury.
-</Note>
-
-<Note>
-Prefer deterministic judges when the criterion can be checked from files, commands, or structured metadata. Use LLM judges when the criterion is semantic and cannot be expressed reliably as code.
-</Note>
-
-## Step 6: Wire Custom Judges into a Jury
-
-Combine your custom judges with built-in ones:
-
-```java
-import io.github.markpollack.judge.Judges;
-import io.github.markpollack.judge.fs.FileExistsJudge;
-import io.github.markpollack.judge.exec.BuildSuccessJudge;
-import io.github.markpollack.judge.jury.SimpleJury;
-import io.github.markpollack.judge.jury.Verdict;
-import io.github.markpollack.judge.jury.WeightedAverageStrategy;
-
-SimpleJury jury = SimpleJury.builder()
-    // Built-in deterministic
-    .judge(Judges.named(
-        new FileExistsJudge("src/main/java/com/example/HelloController.java"),
-        "file-exists", "Controller created"), 1.0)
-    .judge(Judges.named(
-        BuildSuccessJudge.maven("compile"),
-        "build", "Project compiles"), 2.0)
-
-    // Custom deterministic
-    .judge(new AnnotationJudge(
-        "src/main/java/com/example/HelloController.java",
-        "RestController"), 1.0)
-
-    // Custom LLM
-    .judge(Judges.named(
-        new CodeQualityJudge(chatClientBuilder),
-        "quality", "Code quality assessment"), 1.5)
-
-    .votingStrategy(new WeightedAverageStrategy())
-    .parallel(true)
-    .build();
-
-Verdict verdict = jury.vote(context);
-
-verdict.individualByName().forEach((name, judgment) ->
-    System.out.printf("%-20s %s  %s%n",
-        name, judgment.status(), judgment.reasoning()));
-```
-
-The `WeightedAverageStrategy` normalizes all scores to [0, 1] and computes a weighted average.
-Build success (weight 2.0) matters more than file existence (weight 1.0), and quality (weight 1.5) falls in between.
-
-## Step 7: Write a Custom RAG Judge
-
-RAG judges follow the same `LLMJudge` pattern but use the `RagContext` helper to extract the (question, context, answer) triple from metadata.
-Here's a custom judge that evaluates answer completeness — did the answer address all parts of the question?
-
-```java
-import io.github.markpollack.judge.llm.LLMJudge;
-import io.github.markpollack.judge.rag.RagContext;
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Judgment;
-import io.github.markpollack.judge.result.JudgmentStatus;
-import io.github.markpollack.judge.score.BooleanScore;
-import org.springframework.ai.chat.client.ChatClient;
-
-import java.util.Optional;
-import java.util.regex.Pattern;
-
-public class CompletenessJudge extends LLMJudge {
-
-    private static final Pattern ANSWER_PATTERN =
-        Pattern.compile("(?mi)^\\s*Answer:\\s*(YES|NO)");
-
-    public CompletenessJudge(ChatClient.Builder chatClientBuilder) {
-        super("Completeness", "Evaluates whether the answer addresses all parts of the question",
-              chatClientBuilder);
-    }
-
-    @Override
-    public Judgment judge(JudgmentContext context) {
-        Optional<String> answer = RagContext.answer(context);
-        if (answer.isEmpty()) {
-            return Judgment.abstain("No answer provided");
-        }
-        return super.judge(context);
-    }
-
-    @Override
-    protected String buildPrompt(JudgmentContext context) {
-        return String.format("""
-            Begin your response with the line "Answer: YES" or "Answer: NO".
-
-            Question: %s
-
-            Answer: %s
-
-            Does the answer address all parts of the question completely?
-            Answer YES if complete, NO if any part is missing.
-
-            Format: Answer: [YES or NO]
-            Reasoning: [explanation]
-            """, RagContext.question(context),
-                 RagContext.answer(context).orElse(""));
-    }
-
-    @Override
-    protected Judgment parseResponse(String response, JudgmentContext context) {
-        var matcher = ANSWER_PATTERN.matcher(response);
-        if (!matcher.find()) {
-            return Judgment.abstain("Could not parse LLM response");
-        }
-        boolean pass = "YES".equalsIgnoreCase(matcher.group(1));
-        return Judgment.builder()
-            .score(new BooleanScore(pass))
-            .status(pass ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
-            .reasoning(response)
-            .build();
-    }
-}
-```
-
-The key patterns for RAG judges:
-- Use `RagContext.question()`, `RagContext.context()`, `RagContext.answer()` to extract the triple
-- Return `ABSTAIN` when required inputs are missing — this prevents misleading verdicts
-- Use the `(?mi)^\s*Answer:\s*(YES|NO)` regex pattern for reliable LLM response parsing
-
-Supply RAG metadata when building the context:
-
-```java
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.context.ExecutionStatus;
-import io.github.markpollack.judge.rag.RagContext;
-
-import java.time.Duration;
-import java.time.Instant;
-
-JudgmentContext context = JudgmentContext.builder()
-    .goal("What are the benefits of Spring Boot?")
-    .status(ExecutionStatus.SUCCESS)
-    .startedAt(Instant.now())
-    .executionTime(Duration.ofSeconds(2))
-    .metadata(RagContext.QUESTION_KEY, "What are the benefits of Spring Boot?")
-    .metadata(RagContext.CONTEXT_KEY, "Spring Boot provides auto-configuration...")
-    .metadata(RagContext.ANSWER_KEY, "Spring Boot simplifies configuration.")
-    .build();
-```
-
-`RagContext.question()` falls back to `context.goal()` and `RagContext.answer()` falls back to `context.agentOutput()`, but the explicit metadata keys are the recommended convention. LangChain4j's `sources` are also available as a fallback for `RagContext.context()`.
-
-## What You Built
-
-| Judge | Approach | Score | What it checks |
-|-------|----------|-------|---------------|
-| `timestampCheck` | Lambda | Boolean | Agent log exists |
-| `AnnotationJudge` | `DeterministicJudge` | Boolean | File contains `@RestController` |
-| Goal completion | `ModelBackedJudge` | Boolean | Agent accomplished its goal |
-| `CodeQualityJudge` | `LLMJudge` | Numerical (0-10) | Code quality assessment |
-| `CompletenessJudge` | `LLMJudge` (RAG) | Boolean | Answer addresses all parts of the question |
-
-The progression: **lambda** (quick checks) -> **DeterministicJudge** (production checks with metadata and sub-assertions) -> **ModelBackedJudge** (composed AI judge, no subclassing) -> **LLMJudge** (full control over prompt and parsing) -> **RAG judge** (LLMJudge with the `RagContext` metadata convention).
-
-## What's Next
-
-<CardGroup cols={2}>
-  <Card title="Built-in Judges" icon="list" href="/docs/agent-judge/built-in-judges">
-    Catalog of built-in judges — see what's already available before writing custom judges
-  </Card>
-  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
-    CascadedJury for tiered evaluation, voting strategy configuration
-  </Card>
-</CardGroup>
+## Keep metadata portable
+
+Judgment metadata may contain only portable primitives, arrays, and string-keyed objects.
+Convert SDK objects to stable fields before attaching them.
+Keep live exceptions and framework-native objects in logs or `JudgmentContext`, not in the result.
+
+## Test all outcome paths
+
+A custom judge test should cover at least its passing, failing, abstaining, and error paths when those paths exist.
+Assert the status first, then assert optional score, label, checks, reasoning, and portable metadata that the policy intentionally produces.
+
+## Related
+
+- [Executable tutorial](/docs/agent-judge/tutorial)
+- [Result API](/docs/agent-judge/api-reference#judgment)
+- [Jury system](/docs/agent-judge/jury-system)

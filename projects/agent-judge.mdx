@@ -6,41 +6,50 @@ description: "Framework-neutral evaluation for AI agent output across Spring AI,
 **[What's New in 0.14 →](/docs/agent-judge/whats-new)**
 
 Agent Judge is a Java 21 evaluation library for deciding whether an agent result satisfies its goal.
-It combines deterministic checks, command execution, file comparison, RAG evaluation, LLM-backed assessment, and multi-judge aggregation.
+It turns a definition of done into executable evidence: builds and commands, coverage and class versions, semantic file checks, RAG evaluation, bounded LLM assessment, and independent judges combined through explicit jury policies.
+
+It asks whether the work meets its requirements—not whether it resembles one reference answer.
 
 The central result is status-first.
 Every `Judgment` has a `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` status, while a normalized score and classification label are independent optional facts.
 Result metadata is restricted to portable values so judgments can cross JSON and process boundaries reliably.
 
-## Runtime-neutral evaluation
+## What you can verify
+
+<CardGroup cols={2}>
+  <Card title="Prove the code works" icon="terminal">
+    Run commands and builds, check bytecode versions, and preserve or improve test coverage.
+  </Card>
+  <Card title="Inspect the resulting workspace" icon="folder-open">
+    Check files and compare Java, Maven, XML, and text by structure or meaning rather than bytes alone.
+  </Card>
+  <Card title="Evaluate semantic quality" icon="brain">
+    Apply criteria-based model judges and RAG checks for correctness, faithfulness, relevance, and hallucination.
+  </Card>
+  <Card title="Combine independent evidence" icon="scale-balanced">
+    Use majority, consensus, average, weighted-average, or median policies while retaining every judge's reasoning.
+  </Card>
+  <Card title="Escalate only when needed" icon="layer-group">
+    Put cheap deterministic checks before slower execution or model-backed tiers with `CascadedJury`.
+  </Card>
+  <Card title="Keep uncertainty visible" icon="circle-question">
+    Distinguish `ABSTAIN` and evaluator `ERROR` from a real negative finding instead of collapsing everything into a score.
+  </Card>
+</CardGroup>
+
+## Bring the same evaluation policy to each runtime
 
 Spring AI, LangChain4j, Koog, and AgentClient each have their own execution model.
 Each Agent Judge bridge converts framework output into a `JudgmentContext`, after which the same judges and juries evaluate it.
 
-| Runtime | Bridge module | Entry point |
-|---|---|---|
-| Spring AI | `agent-judge-spring-ai` | `SpringAiEvaluator` |
-| LangChain4j | `agent-judge-langchain4j` | `LangChain4jEvaluator` |
-| Koog | `agent-judge-koog` | `KoogEvaluator` |
-| CLI agents | `agent-judge-agent-client` | `AgentClientEvaluator` |
+Adapters preserve native output, model identity, token usage, timing, and tool evidence in a shared `JudgmentContext`. The judges and jury policy above that boundary do not change when the producing runtime does.
 
-## Ten modules
-
-| Module | Purpose |
+| Runtime | Evaluation entry point |
 |---|---|
-| `agent-judge-core` | Core contracts, result model, file checks, juries, and voting strategies |
-| `agent-judge-ai-core` | Framework-neutral prompt, model, and classifier composition |
-| `agent-judge-exec` | Command, build, class-version, and coverage judges |
-| `agent-judge-file` | Java, Maven, XML, and text semantic comparison |
-| `agent-judge-llm` | Spring AI judging backend and correctness judge |
-| `agent-judge-rag` | Faithfulness, hallucination, and contextual-relevance judges |
-| `agent-judge-spring-ai` | Spring AI evaluated-side bridge |
-| `agent-judge-langchain4j` | LangChain4j evaluated-side bridge |
-| `agent-judge-koog` | Koog evaluated-side bridge |
-| `agent-judge-agent-client` | AgentClient evaluated-side bridge and judging backend |
-
-The core is framework-neutral, not dependency-free.
-It uses Jackson for its portable result boundary, SLF4J for logging, and JSpecify annotations for nullness declarations.
+| Spring AI | `SpringAiEvaluator` |
+| LangChain4j | `LangChain4jEvaluator` |
+| Koog | `KoogEvaluator` |
+| CLI agents through AgentClient | `AgentClientEvaluator` |
 
 ## Install 0.14
 
@@ -54,23 +63,22 @@ It uses Jackson for its portable result boundary, SLF4J for logging, and JSpecif
 
 Add only the family and bridge modules that your application uses.
 
-## Learn with executable samples
+## Learn with executable examples
 
-The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) contains ten Maven modules, from a single deterministic judge through juries and framework bridges.
-Every module runs without credentials, including deterministic Koog and LangChain4j bridge examples.
+The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) progresses from one deterministic acceptance check to composed judges, voting and cascaded juries, custom and model-backed judges, and framework bridges. Every example runs without credentials.
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="rocket" href="/docs/agent-judge/getting-started">
     Add Agent Judge 0.14 and run the first evaluation
   </Card>
   <Card title="Executable Tutorial" icon="graduation-cap" href="/docs/agent-judge/tutorial">
-    Follow the ten compiled tutorial modules
+    Run the evaluation patterns as maintained Java projects
   </Card>
   <Card title="Result and Jury Design" icon="scale-balanced" href="/docs/agent-judge/design-philosophy">
     Understand status-first outcomes and aggregation
   </Card>
-  <Card title="API Reference" icon="book" href="/docs/agent-judge/api-reference">
-    Find the main public types and packages
+  <Card title="Research Foundations" icon="microscope" href="/docs/agent-judge/research-foundations">
+    See why evidence, requirements, cascades, and independent checks shape the design
   </Card>
 </CardGroup>
 

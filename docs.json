@@ -150,7 +150,8 @@
                   "docs/agent-judge/jury-system",
                   "docs/agent-judge/built-in-judges",
                   "docs/agent-judge/api-reference",
-                  "docs/agent-judge/design-philosophy"
+                  "docs/agent-judge/design-philosophy",
+                  "docs/agent-judge/research-foundations"
                 ]
               },
               {

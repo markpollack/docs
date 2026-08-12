@@ -1,0 +1,84 @@
+---
+title: "Research Foundations"
+description: "Why Agent Judge favors explicit requirements, executable evidence, staged evaluation, and independent checks"
+---
+
+Agent Judge evaluates whether work satisfies an explicit definition of done, using executable evidence and independent checks—not whether it resembles one reference answer.
+
+## The motivating failure
+
+The investigation began when exact reference-file comparison rated two independently successful Spring Boot migrations as failures. Both implementations built, but each made valid choices that differed from the reference, including the framework version it targeted.
+
+The comparison answered _“Does this look like the reference?”_ when the useful question was _“Does this satisfy the migration goal?”_
+
+Exact comparison is still appropriate when exact output is part of the specification. For open-ended generation, refactoring, and migration, it should be one possible check rather than the complete definition of correctness.
+
+## Five principles
+
+| Principle | What it means | Agent Judge mechanism |
+|---|---|---|
+| Evidence before opinion | Prefer builds, tests, runtime behavior, bytecode, and coverage when those facts can answer the question directly. | Command, build, class-version, and coverage judges |
+| Judge requirements, not resemblance | Express the invariants the result must satisfy instead of assuming one reference implementation is uniquely correct. | Composable deterministic, file-semantic, execution, RAG, and model-backed judges |
+| Escalate in stages | Run cheap, decisive checks before slower or more subjective evaluation. | `CascadedJury` with explicit tier policies |
+| Compose independent perspectives | Combine checks with different failure modes and make their aggregation policy visible. | `SimpleJury`, `MetaJury`, majority, consensus, average, weighted-average, and median strategies |
+| Preserve uncertainty | Keep disagreement, lack of applicability, and evaluator failure distinct from a negative finding. | `PASS`, `FAIL`, `ABSTAIN`, and `ERROR` outcomes with structured aggregation evidence |
+
+These are design principles, not claims that Agent Judge implements every technique proposed in the literature. Calibrated guarantees of human agreement, dynamic judge-team selection, multi-round debate, and formal program-equivalence proofs remain research or application-level concerns.
+
+## Ground semantic judgment in tools
+
+Research on tool-augmented LLM evaluation found that web search and code execution can improve judge performance in many, though not all, settings. Code-evaluation systems likewise use execution and other tools to supplement model judgment. The practical implication is bounded: a semantic judge can add value, but it should not replace a build, test, or runtime check when one is available.
+
+Agent Judge therefore treats deterministic and execution-based checks as first-class judges. Model-backed judges are intended for criteria-based questions that the available tools cannot settle directly.
+
+## Allow more than one correct implementation
+
+Program-equivalence research shows that structural difference is not evidence of behavioral difference, while current models still struggle with difficult equivalence cases. Migration benchmarks and production migration systems evaluate combinations of compilation, tests, dependency state, structural invariants, and runtime behavior rather than relying on textual similarity alone.
+
+This leads to a requirements-based evaluation model: specify what must remain true, what must change, and the evidence that demonstrates both.
+
+## Use cascades and juries deliberately
+
+Selective-evaluation research motivates starting with lower-cost evaluators and escalating uncertain cases. Ensemble-judge research highlights the value—and limitations—of combining perspectives. Agent Judge exposes those choices as application policy: which judges participate, how their findings aggregate, how errors are handled, and when another tier runs.
+
+A jury is therefore a composition of visible judgments, not merely several models producing one opaque score.
+
+## Protect the definition of done
+
+Migration research also documents why weak success criteria are dangerous. An agent can appear to improve a metric by removing tests, reducing exercised behavior, or satisfying only a superficial similarity check. Coverage preservation, compilation, test execution, and project-specific structural invariants make such shortcuts observable.
+
+Agent Judge supplies mechanisms for these safeguards. The application still owns its definition of done; no generic judge suite can infer all of a project's requirements automatically.
+
+## Source map
+
+### Evaluation architectures
+
+- [Findeis et al., _Can External Validation Tools Improve Annotation Quality for LLM-as-a-Judge?_](https://aclanthology.org/2025.acl-long.779/)
+- [Jung et al., _Trust or Escalate: LLM Judges with Provable Guarantees for Human Agreement_](https://arxiv.org/abs/2407.18370)
+- [Li et al., _LLMs-as-Judges: A Comprehensive Survey on LLM-based Evaluation Methods_](https://arxiv.org/abs/2412.05579)
+- [Wang et al., _CodeVisionary: An Agent-based Framework for Evaluating Large Language Models in Code Generation_](https://arxiv.org/abs/2504.13472)
+- [Zhuo et al., _SE-Jury: LLM-as-Ensemble-Judge for Software Engineering_](https://arxiv.org/abs/2505.20854)
+- [Yu, _When AIs Judge AIs: The Rise of Agent-as-a-Judge Evaluation for LLMs_](https://arxiv.org/abs/2508.02994)
+- [He et al., _LLM-as-a-Judge for Software Engineering: Literature Review, Vision, and the Road Ahead_](https://arxiv.org/abs/2510.24367)
+
+### Equivalence and verification
+
+- [Wei et al., _EquiBench: Benchmarking Code Reasoning Capabilities of Large Language Models via Equivalence Checking_](https://arxiv.org/abs/2502.12466)
+- [Dilhara et al., _Unprecedented Code Change Automation: The Fusion of LLMs and Transformation by Example_](https://doi.org/10.1145/3643755)
+
+### Migration evaluation
+
+- [Ziftci et al., _Migrating Code At Scale With LLMs At Google_](https://arxiv.org/abs/2504.09691)
+- [Liu et al., _MIGRATION-BENCH: Repository-Level Code Migration Benchmark from Java 8_](https://arxiv.org/abs/2505.09569)
+- [May et al., _FreshBrew: A Benchmark for Evaluating AI Agents on Java Code Migration_](https://arxiv.org/abs/2510.04852)
+- [Amin et al., _JMigBench: A Benchmark for Evaluating LLMs on Source Code Migration_](https://arxiv.org/abs/2602.09930)
+- [Cheng et al., _CODEMENV: Benchmarking Large Language Models on Code Migration_](https://arxiv.org/abs/2506.00894)
+
+Results and numerical claims in these sources belong to their respective studies. They are research inputs to Agent Judge's design, not Agent Judge benchmark results.
+
+## Related
+
+- [Design philosophy](/docs/agent-judge/design-philosophy)
+- [Built-in judges](/docs/agent-judge/built-in-judges)
+- [Jury system](/docs/agent-judge/jury-system)
+- [Executable tutorial](/docs/agent-judge/tutorial)

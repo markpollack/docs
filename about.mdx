@@ -5,9 +5,9 @@ description: "What this lab does and why"
 
 We build tools that help you understand what your agents are actually doing — and make them better.
 
-Every tool call an agent makes leaves a trace. We capture those traces, score the output, and analyze the behavior. When something goes wrong, we can see *where* in the pipeline it happened and *why*. Then we fix it — add missing knowledge, separate deterministic steps from LLM steps, build new tools — and measure whether the fix worked.
+Every tool call an agent makes leaves a trace. We capture those traces, verify whether the work meets its goal, and analyze the behavior. When something goes wrong, we can see *where* in the pipeline it happened and *why*. Then we fix it — add missing knowledge, separate deterministic steps from LLM steps, build new tools — and measure whether the fix worked.
 
-The projects here are the infrastructure for that loop: [Agent Workflow](/projects/agent-workflow) composes the pipelines, [Agent Judge](/projects/agent-judge) scores the output, [Agent Journal](/projects/agent-journal) captures the traces, and [Agent Skills](/projects/agent-skills) packages the knowledge. [Loopy](/projects/loopy) is where it all comes together as a product.
+The projects here are the infrastructure for that loop: [Agent Workflow](/projects/agent-workflow) composes the pipelines, [Agent Judge](/projects/agent-judge) verifies results against explicit acceptance criteria, [Agent Journal](/projects/agent-journal) captures the traces, and [Agent Skills](/projects/agent-skills) packages the knowledge. [Loopy](/projects/loopy) is where it all comes together as a product.
 
 ## Who
 

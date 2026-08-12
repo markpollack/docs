@@ -35,12 +35,32 @@ This is a breaking pre-1.0 release, so consumers must recompile and follow the [
 - The core remains agent-runtime-neutral and declares its real Jackson Databind, SLF4J API, and JSpecify dependencies.
 - JSpecify exposes optional score and label nullness in the Java API, with NullAway enforcing the adopted packages.
 
+### Framework baselines
+
+The release candidate is verified against the final stable framework matrix:
+
+| Integration | Version |
+|---|---|
+| Spring AI | `2.0.0` with Spring Boot `4.1.0` and Spring Framework `7.0.8` |
+| LangChain4j | `1.18.1` |
+| Koog | `1.1.1` |
+| Agent Client | `0.25.0` |
+
+Framework bridge dependencies remain `provided` where practical so applications select their runtime.
+
 ### Samples and reference
 
 - The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) now owns ten canonical credential-free Maven modules.
 - Executable Koog and LangChain4j modules replace the former README-only bridge samples.
 - Aggregate Javadoc is warning-clean, warnings are release-breaking, and every published module attaches a Javadoc JAR.
 - See the complete [0.14 release notes](https://github.com/markpollack/agent-judge/blob/main/RELEASE_NOTES_0.14.md).
+
+### Release packaging
+
+- The current source tree uses the project-specific Business Source License terms in the repository's [root `LICENSE`](https://github.com/markpollack/agent-judge/blob/main/LICENSE). Earlier published releases keep the licenses shipped with those releases.
+- Maven Central publication attaches one CycloneDX 1.6 aggregate SBOM to the parent coordinate, covering the ten reactor modules and their included external dependencies.
+- The exact-pinned release workflow runs the full test-bearing verification before deploy and uses the curated `RELEASE_NOTES_0.14.md` body.
+- The GitHub Release is notes and source archives only; the signed Maven artifacts and aggregate SBOM belong on Maven Central, with no separately uploaded GitHub release assets.
 
 ## 0.13.0
 

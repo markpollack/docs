@@ -5,7 +5,10 @@
 Mintlify documentation site for Pollack AI Lab. Published at `lab.pollack.ai`.
 
 **Repo**: `markpollack/docs` (GitHub)
-**Local**: `~/projects/pollack-ai-lab/`
+**Canonical local checkout**: `~/projects/docs/`
+
+`~/projects/pollack-ai-lab/` is a different historical repository. Release cascades and
+`lab.pollack.ai` updates use this checkout only.
 
 ## Deploy
 

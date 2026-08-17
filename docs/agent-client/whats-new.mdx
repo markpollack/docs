@@ -4,6 +4,14 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Client — auto-generated from git history"
 ---
 
+## 0.26.0 (2026-08-17)
+
+- Remove the experimental Vendir context advisor and Git-repository DSL as an intentional breaking change
+- Retire the stale `agents-runtime` container build, Docker integration TCK, and unused Docker dependencies
+- Keep Claude Code, Codex, and Gemini CLI as the actively verified provider set; classify the remaining adapters as experimental
+- Upgrade Jackson 2/3, AssertJ, OWASP Dependency-Check, and Log4j 2.25.5; exact-SHA dependency scans report zero unsuppressed vulnerabilities
+- Pin owned release automation and complete the repository-specific BSL 1.1 license text while preserving the historical Apache record
+
 ## 0.22.0 (2026-06-14)
 
 - agent-client 0.22.0: Spring AI 2.0.0 GA + Spring Boot 4.0.7; declare Jackson 2 explicitly
@@ -110,4 +118,3 @@ description: "Release notes for Agent Client — auto-generated from git history
 ## 0.10.0 (2026-03-30)
 
 - Initial release.
-

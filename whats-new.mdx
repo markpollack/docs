@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Client 0.26.0
+
+**A smaller, supportable Agent Client surface for the current provider generation.**
+
+- Claude Code, Codex, and Gemini CLI remain the actively verified provider set, with all three live parity jobs passing at the reviewed release candidate
+- The abandoned Vendir context advisor and Git-repository DSL are removed as an intentional breaking cleanup
+- The stale agents-runtime container build and Docker TCK are retired; Agent Client is now a Maven-only library distribution
+- Jackson and Log4j security pins, immutable release-workflow references, complete BSL text, and exact-SHA SBOM/security evidence prepare the repository for diligence review
+
+[Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
+
 ### Agent Judge 0.14.0
 
 **Status-first, portable evaluation that preserves what every judge and composite stage actually reported.**

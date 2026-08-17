@@ -1,6 +1,6 @@
 ---
 title: "Agent Client"
-description: "Portable Java API for autonomous CLI agents — Claude Code, Codex, Gemini, Amazon Q, and Amp"
+description: "Portable Java API for autonomous CLI agents — actively verified with Claude Code, Codex, and Gemini CLI"
 ---
 
 **[What's New →](/docs/agent-client/whats-new)**
@@ -15,7 +15,9 @@ Portable Java API for autonomous CLI agents. No Spring Boot required — build a
 
 Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk)) and higher-level orchestration ([Agent Workflow](/projects/agent-workflow)).
 
-**Version 0.25.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
+**Version 0.26.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
+
+**0.26.0:** Breaking diligence cleanup. Removes the abandoned Vendir context advisor and Git-repository DSL, retires the stale `agents-runtime` container build and Docker TCK, upgrades the dependency-security baseline, and pins release automation. Claude Code, Codex, and Gemini CLI are the actively verified provider set; other adapters remain experimental.
 
 **0.25.0:** Fixes Spring Boot auto-configuration for all providers — the org migration had left the auto-config registration files pointing at the old `org.springaicommunity` package, so the starters failed to auto-configure (`ClassNotFoundException`) at boot. No public API changes.
 
@@ -44,7 +46,7 @@ AgentClientResponse response = client.run("Create hello.txt");
 
 ## Providers
 
-Claude Code, Codex (OpenAI), Gemini CLI, Amazon Q, Amp. Provider selection at construction time — everything after `AgentClient.create(model)` is portable.
+Claude Code, Codex, and Gemini CLI are actively verified in CI. Amazon Q, Amp, Qwen Code, and SWE-agent remain experimental adapters rather than current support claims. Provider selection happens at construction time — everything after `AgentClient.create(model)` uses the shared client contract.
 
 ## LOOSE / STRICT Modes
 

@@ -4,6 +4,15 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Journal — auto-generated from git history"
 ---
 
+## 1.7.0 (2026-08-18)
+
+- Standalone consumers now resolve CVE-clear Jackson floors without an external BOM: Jackson 2.21.6 for all three modules and Jackson 3.1.6 on Claude capture's transitive Jackson 3 path. Agent Journal's source and stored formats continue to use Jackson 2; this is not a Jackson 3 migration.
+- Every binary and source JAR now includes `META-INF/LICENSE`, and every Javadoc JAR includes `resources/LICENSE`. The BSL 1.1 terms are unchanged.
+- The parent artifact publishes an aggregate CycloneDX 1.6 JSON SBOM for all three modules under the `cyclonedx` classifier.
+- Capture-module POMs now declare their actual Java 21 runtime requirement; `journal-core` remains Java 17.
+- Snapshot publishing now runs the full test suite, and shared build/release workflows are pinned to an immutable commit.
+- No API, event-schema, or trace-format change: both journal streams remain schema version 1 and portable traces remain schema version 2. All 482 tests pass.
+
 ## 1.6.0 (2026-07-01)
 
 - First-class journal-capture primitives (slice 1): `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, production fail-loud `RunRecorder`, `JournalStorage.persistsDerivedEvents()`, per-turn usage in the immutable log

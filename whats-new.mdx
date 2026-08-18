@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Journal 1.7.0
+
+**CVE-clear standalone resolution, license-complete artifacts, and a published SBOM.**
+
+- Ordinary no-BOM consumers now resolve Jackson 2.21.6 and, for Claude capture's transitive Jackson 3 path, 3.1.6 through direct nearest-wins dependencies
+- Every binary and source JAR now carries META-INF/LICENSE, every Javadoc JAR carries resources/LICENSE, and the BSL 1.1 terms are unchanged
+- The parent artifact now publishes one aggregate CycloneDX 1.6 JSON SBOM covering all three modules and their shipped dependency closure
+- Capture-module POMs now declare their actual Java 21 runtime requirement while journal-core remains Java 17; APIs and stream schemas are unchanged
+
+[Project](/projects/agent-journal) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
+
 ### Agent Client 0.26.0
 
 **A smaller, supportable Agent Client surface for the current provider generation.**

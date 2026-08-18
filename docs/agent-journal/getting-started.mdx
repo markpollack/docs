@@ -1,6 +1,6 @@
 ---
 title: "Getting Started"
-description: "Record and persist a first Agent Journal run with journal-core 1.6.0"
+description: "Record and persist a first Agent Journal run with journal-core 1.7.0"
 ---
 
 This tutorial records one LLM call and one tool call, then persists the run to local JSON and JSONL files.
@@ -16,7 +16,7 @@ This tutorial records one LLM call and one tool call, then persists the run to l
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.6.0</version>
+    <version>1.7.0</version>
 </dependency>
 ```
 
@@ -94,7 +94,7 @@ Each following line is one event and carries an `@type` discriminator.
 
 <Warning>
 Use caller-controlled trusted identifiers for `experimentId`, `runId`, and artifact names.
-Version 1.6.0 does not enforce path containment for those values, so do not pass untrusted path fragments or separators.
+Version 1.7.0 does not enforce path containment for those values, so do not pass untrusted path fragments or separators.
 </Warning>
 
 ## 5. Isolate tests

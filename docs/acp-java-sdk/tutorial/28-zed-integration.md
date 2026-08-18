@@ -103,4 +103,4 @@ No code changes are needed for different editors. The same JAR works in Zed, Jet
 
 ## Next Module
 
-[Module 29: JetBrains Integration](/acp-java-sdk/tutorial/29-jetbrains-integration) — configure the same agent for IntelliJ, PyCharm, and other JetBrains IDEs.
+[Module 29: JetBrains Integration](/docs/acp-java-sdk/tutorial/29-jetbrains-integration) — configure the same agent for IntelliJ, PyCharm, and other JetBrains IDEs.

@@ -83,7 +83,7 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 
 The biggest insight from running real agent experiments: the AI shouldn't do everything. This is the pattern Stripe describes in their [Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents) system, now shipping 1,300 PRs a week: *the model does not run the system — the system runs the model.*
 
-A real [PR merge workflow](/projects/spring-ai-project-mgmt) illustrates the point. The pipeline has 8 steps:
+A real [PR merge workflow](https://github.com/markpollack/agentworks-pr-review) illustrates the point. The pipeline has 8 steps:
 
 ```
 checkoutPR → formatCode → collectContext → compile → squash → rebase → resolveConflicts → review

@@ -92,4 +92,4 @@ Convenience methods handle wrapping in `TextContent` and setting the `type` fiel
 
 ## Next Module
 
-[Module 15: Agent Requests](/acp-java-sdk/tutorial/15-agent-requests) — read files, write files, and request permissions from the client.
+[Module 15: Agent Requests](/docs/acp-java-sdk/tutorial/15-agent-requests) — read files, write files, and request permissions from the client.

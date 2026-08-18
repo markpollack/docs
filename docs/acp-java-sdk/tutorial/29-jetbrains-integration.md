@@ -113,4 +113,4 @@ All JetBrains IDEs with AI Assistant support ACP in version 25.3 RC and later: I
 
 ## Next Module
 
-[Module 30: VS Code Integration](/acp-java-sdk/tutorial/30-vscode-integration) — connect to VS Code using the community extension.
+[Module 30: VS Code Integration](/docs/acp-java-sdk/tutorial/30-vscode-integration) — connect to VS Code using the community extension.

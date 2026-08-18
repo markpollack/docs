@@ -49,4 +49,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 04: Prompts](/acp-java-sdk/tutorial/04-prompts) — prompt requests and response handling in depth.
+[Module 04: Prompts](/docs/acp-java-sdk/tutorial/04-prompts) — prompt requests and response handling in depth.

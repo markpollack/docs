@@ -80,4 +80,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 22: Async Agent](/acp-java-sdk/tutorial/22-async-agent) — build an agent with reactive handlers.
+[Module 22: Async Agent](/docs/acp-java-sdk/tutorial/22-async-agent) — build an agent with reactive handlers.

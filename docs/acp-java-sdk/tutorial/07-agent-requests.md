@@ -57,4 +57,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 08: Permissions](/acp-java-sdk/tutorial/08-permissions) — handle permission requests from agents.
+[Module 08: Permissions](/docs/acp-java-sdk/tutorial/08-permissions) — handle permission requests from agents.

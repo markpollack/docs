@@ -91,4 +91,4 @@ var response = client.prompt(/* good input */);
 
 ## Next Module
 
-[Module 12: Echo Agent](/acp-java-sdk/tutorial/12-echo-agent) — build your first agent.
+[Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) — build your first agent.

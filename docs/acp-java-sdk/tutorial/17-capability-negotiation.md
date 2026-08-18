@@ -85,4 +85,4 @@ Clients advertise file system and terminal support. Agents advertise session res
 
 ## Next Module
 
-[Module 18: Terminal Operations](/acp-java-sdk/tutorial/18-terminal-operations) — execute shell commands through the terminal API.
+[Module 18: Terminal Operations](/docs/acp-java-sdk/tutorial/18-terminal-operations) — execute shell commands through the terminal API.

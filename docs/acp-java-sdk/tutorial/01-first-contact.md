@@ -96,6 +96,6 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 05: Streaming Updates](/acp-java-sdk/tutorial/05-streaming-updates) — receive real-time updates while the agent processes your prompt.
+[Module 05: Streaming Updates](/docs/acp-java-sdk/tutorial/05-streaming-updates) — receive real-time updates while the agent processes your prompt.
 
-Or skip to [Module 12: Echo Agent](/acp-java-sdk/tutorial/12-echo-agent) to build your own agent (no API key required).
+Or skip to [Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) to build your own agent (no API key required).

@@ -105,4 +105,4 @@ Messages pass through in-memory buffers. No subprocess launching, no stdin/stdou
 
 ## Next Module
 
-[Module 17: Capability Negotiation](/acp-java-sdk/tutorial/17-capability-negotiation) — advertise and check capabilities between client and agent.
+[Module 17: Capability Negotiation](/docs/acp-java-sdk/tutorial/17-capability-negotiation) — advertise and check capabilities between client and agent.

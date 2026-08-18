@@ -54,4 +54,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 09: Session Resume](/acp-java-sdk/tutorial/09-session-resume) — load and resume existing sessions.
+[Module 09: Session Resume](/docs/acp-java-sdk/tutorial/09-session-resume) — load and resume existing sessions.

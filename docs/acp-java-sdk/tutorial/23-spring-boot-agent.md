@@ -5,7 +5,7 @@ Build an ACP agent as a Spring Boot application. No manual transport or lifecycl
 ## Prerequisites
 
 - Java 21+ (Spring Boot 4.x requirement)
-- Completed [Module 12: Echo Agent](/acp-java-sdk/tutorial/12-echo-agent)
+- Completed [Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent)
 
 ## What You'll Learn
 
@@ -27,7 +27,7 @@ Add the ACP Spring Boot Starter:
 
 ## The Agent
 
-Compare this with [Module 12's builder-based agent](/acp-java-sdk/tutorial/12-echo-agent). The annotation approach replaces the builder chain with annotated methods on a Spring bean:
+Compare this with [Module 12's builder-based agent](/docs/acp-java-sdk/tutorial/12-echo-agent). The annotation approach replaces the builder chain with annotated methods on a Spring bean:
 
 ```java
 @Component
@@ -137,6 +137,6 @@ The `keep-alive` setting is essential. Without it, the Spring Boot application s
 
 ## Next
 
-[Module 24: Spring Boot Client](/acp-java-sdk/tutorial/24-spring-boot-client) — use the autoconfigured client to connect to agents.
+[Module 24: Spring Boot Client](/docs/acp-java-sdk/tutorial/24-spring-boot-client) — use the autoconfigured client to connect to agents.
 
 [View on GitHub](https://github.com/markpollack/acp-java-tutorial/tree/main/module-23-spring-boot-agent)

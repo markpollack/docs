@@ -76,4 +76,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 07: Agent Requests](/acp-java-sdk/tutorial/07-agent-requests) — handle file read/write requests from agents.
+[Module 07: Agent Requests](/docs/acp-java-sdk/tutorial/07-agent-requests) — handle file read/write requests from agents.

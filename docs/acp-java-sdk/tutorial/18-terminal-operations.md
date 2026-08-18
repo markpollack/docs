@@ -119,4 +119,4 @@ The SDK also provides `context.execute()` as a convenience method that combines 
 
 ## Next Module
 
-[Module 19: MCP Servers](/acp-java-sdk/tutorial/19-mcp-servers) — pass MCP server configurations to agents.
+[Module 19: MCP Servers](/docs/acp-java-sdk/tutorial/19-mcp-servers) — pass MCP server configurations to agents.

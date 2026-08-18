@@ -112,4 +112,4 @@ if (caps.supportsReadTextFile()) {
 
 ## Next Module
 
-[Module 16: In-Memory Testing](/acp-java-sdk/tutorial/16-in-memory-testing) — test agents without subprocess launching.
+[Module 16: In-Memory Testing](/docs/acp-java-sdk/tutorial/16-in-memory-testing) — test agents without subprocess launching.

@@ -5,7 +5,7 @@ Use the autoconfigured ACP client in a Spring Boot application. Connect to agent
 ## Prerequisites
 
 - Java 21+ (Spring Boot 4.x requirement)
-- [Module 23: Spring Boot Agent](/acp-java-sdk/tutorial/23-spring-boot-agent) built and available
+- [Module 23: Spring Boot Agent](/docs/acp-java-sdk/tutorial/23-spring-boot-agent) built and available
 
 ## What You'll Learn
 

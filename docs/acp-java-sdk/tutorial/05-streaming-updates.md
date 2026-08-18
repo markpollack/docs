@@ -76,4 +76,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 12: Echo Agent](/acp-java-sdk/tutorial/12-echo-agent) — build your first ACP agent (no API key required).
+[Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) — build your first ACP agent (no API key required).

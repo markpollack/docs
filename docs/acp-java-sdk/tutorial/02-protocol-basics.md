@@ -49,4 +49,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 03: Sessions](/acp-java-sdk/tutorial/03-sessions) — create and manage conversation sessions.
+[Module 03: Sessions](/docs/acp-java-sdk/tutorial/03-sessions) — create and manage conversation sessions.

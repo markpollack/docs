@@ -77,4 +77,4 @@ Cancellation is cooperative. The agent must check for it — the SDK does not fo
 
 ## Next Module
 
-[Module 11: Error Handling](/acp-java-sdk/tutorial/11-error-handling) — handle protocol errors from agents.
+[Module 11: Error Handling](/docs/acp-java-sdk/tutorial/11-error-handling) — handle protocol errors from agents.

@@ -49,4 +49,4 @@ export GEMINI_API_KEY=your-key-here
 
 ## Next Module
 
-[Module 05: Streaming Updates](/acp-java-sdk/tutorial/05-streaming-updates) — receive real-time updates during prompt processing.
+[Module 05: Streaming Updates](/docs/acp-java-sdk/tutorial/05-streaming-updates) — receive real-time updates during prompt processing.

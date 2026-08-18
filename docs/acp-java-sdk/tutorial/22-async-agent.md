@@ -76,4 +76,4 @@ return context.sendMessage("text")
 
 ## Previous Module
 
-[Module 21: Async Client](/acp-java-sdk/tutorial/21-async-client) — the reactive client API.
+[Module 21: Async Client](/docs/acp-java-sdk/tutorial/21-async-client) — the reactive client API.

@@ -45,4 +45,4 @@ client.prompt(new PromptRequest(session.sessionId(),
 
 ## Next Module
 
-[Module 10: Cancellation](/acp-java-sdk/tutorial/10-cancellation) — cancel an in-progress prompt.
+[Module 10: Cancellation](/docs/acp-java-sdk/tutorial/10-cancellation) — cancel an in-progress prompt.

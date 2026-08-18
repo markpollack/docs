@@ -81,4 +81,4 @@ The `cancelHandler` receives a `CancelNotification`, not a request — it has no
 
 ## Next Module
 
-[Module 14: Sending Updates](/acp-java-sdk/tutorial/14-sending-updates) — send all types of session updates to clients.
+[Module 14: Sending Updates](/docs/acp-java-sdk/tutorial/14-sending-updates) — send all types of session updates to clients.

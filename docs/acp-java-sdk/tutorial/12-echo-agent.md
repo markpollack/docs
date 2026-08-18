@@ -99,4 +99,4 @@ client.prompt(new PromptRequest(
 
 ## Next Module
 
-[Module 13: Agent Handlers](/acp-java-sdk/tutorial/13-agent-handlers) — implement all handler types including load session and cancel.
+[Module 13: Agent Handlers](/docs/acp-java-sdk/tutorial/13-agent-handlers) — implement all handler types including load session and cancel.

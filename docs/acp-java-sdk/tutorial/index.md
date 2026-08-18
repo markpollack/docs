@@ -60,6 +60,6 @@ The tutorial uses Sync for agent examples (most accessible to most developers) a
 
 ## Start Learning
 
-Begin with [Module 01: First Contact](/acp-java-sdk/tutorial/01-first-contact) to connect to your first ACP agent.
+Begin with [Module 01: First Contact](/docs/acp-java-sdk/tutorial/01-first-contact) to connect to your first ACP agent.
 
-Or jump to [Module 12: Echo Agent](/acp-java-sdk/tutorial/12-echo-agent) to build an agent without any API key.
+Or jump to [Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) to build an agent without any API key.

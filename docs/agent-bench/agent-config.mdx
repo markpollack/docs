@@ -1,79 +1,71 @@
 ---
 title: "Agent Configuration"
-description: "How to configure any CLI tool as an Agent Bench agent"
+description: "Configure a local CLI process as an Agent Bench agent"
 ---
 
 ## Agent YAML Format
 
-An agent config is a YAML file with two fields:
+This page describes the agent process contract in the 0.6.0 release.
 
 ```yaml
 command: <shell command to run>
 timeout: <ISO 8601 duration>
 ```
 
-The command runs via `bash -c` in the workspace directory.
-The agent should read `INSTRUCTION.md` and modify the workspace.
+Agent Bench passes the command to `bash -c` with the task workspace as the working directory. The
+command should read `INSTRUCTION.md`, change the workspace, and exit. It runs as a local host
+process with the invoking user's permissions.
+
+<Warning>
+The workspace directory is an organizational boundary, not a security boundary. Agent Bench does
+not provide container execution or isolation. Use your own disposable VM, CI runner, or other
+externally managed isolation for untrusted agents or benchmark definitions. Benchmark `setup` and
+`post` commands have the same host authority as the configured agent command.
+</Warning>
 
 ## Examples
 
-### Claude Code
-
 ```yaml
+# Claude Code
 command: claude --print --dangerously-skip-permissions "Read INSTRUCTION.md and follow the instructions precisely."
 timeout: PT45M
 ```
 
-### Gemini CLI
-
 ```yaml
+# Gemini CLI
 command: gemini -p "Read INSTRUCTION.md and follow the instructions."
 timeout: PT30M
 ```
 
-### Shell Script
-
 ```yaml
+# Local script
 command: ./my-agent.sh
 timeout: PT10M
 ```
 
-Your script receives the workspace as its working directory:
-
 ```bash
 #!/bin/bash
-# my-agent.sh
-INSTRUCTION=$(cat INSTRUCTION.md)
-# ... your agent logic here
-echo "Hello World!" > hello.txt
+instruction=$(cat INSTRUCTION.md)
+# Use the instruction in your agent logic.
+printf '%s\n' 'Hello World!' > hello.txt
 ```
 
-### Python Agent
+## Filesystem Contract
 
-```yaml
-command: python3 /path/to/agent.py
-timeout: PT15M
-```
-
-## The Filesystem Contract
-
-When your agent runs, the workspace contains:
+After `provide`, the workspace contains:
 
 | File | Description |
 |------|-------------|
-| `INSTRUCTION.md` | The task description (always present) |
-| Source files | Workspace template files (if the benchmark provides them) |
+| `INSTRUCTION.md` | Task description |
+| `.bench-context.yaml` | Benchmark, task, version, and timeout context |
+| Source files | Workspace-template files when supplied by the task |
 
-Your agent should:
-1. Read `INSTRUCTION.md` to understand the task
-2. Create or modify files in the current directory
-3. Exit when done (zero or non-zero exit code)
+The external agent may create or modify files in this directory. Agent Judge implementations
+inspect that result during grading.
 
-The benchmark grades the workspace contents after your agent exits.
+## Optional Agent Journal
 
-## Optional: Agent Journal
-
-If your agent writes a `journal.yaml` to the workspace, the benchmark parses it for efficiency metrics:
+If the agent writes `journal.yaml`, Agent Bench records efficiency metrics with the trial:
 
 ```yaml
 schema: bench.journal.v1
@@ -82,25 +74,12 @@ totalInputTokens: 4000
 totalOutputTokens: 2000
 totalCostUsd: 0.12
 durationMs: 15000
-phases:
-  - name: plan
-    turns: 3
-    inputTokens: 1500
-    outputTokens: 800
-    costUsd: 0.05
-    durationMs: 6000
-    toolUses:
-      read: 5
-      write: 2
 ```
 
-Agents that don't produce a journal still get graded --- only efficiency metrics are missing.
+Agents without a journal are still graded; only the journal-derived efficiency fields are absent.
 
-## Optional: Trajectory Reference
+## Optional Trajectory Reference
 
-If your agent writes a `trajectory-ref.txt` file containing a URI or path to trace data,
-the benchmark records it in the trial result for later analysis.
-
-```
-s3://my-bucket/traces/run-123.jsonl
-```
+If the agent writes `trajectory-ref.txt` containing a path or URI, Agent Bench copies the reference
+into the trial result for later analysis. Agent Bench does not upload or manage the referenced
+trace.

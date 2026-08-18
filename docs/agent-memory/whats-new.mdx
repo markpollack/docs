@@ -1,19 +1,48 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Memory — auto-generated from git history"
+description: "Curated release notes for Agent Memory"
 ---
+
+## 0.4.0 (2026-08-18)
+
+**First Business Source License 1.1 release, with supply-chain and disclosure work. No behavioural change to Tier-1 compaction.**
+
+### License
+
+- Current development and 0.4.0 and later are licensed under **Business Source License 1.1**. **0.3.0 and earlier remain Apache License 2.0**, and published tags and artifacts are not retroactively relicensed. The historical Apache text is retained in the repository as `LICENSE-APACHE.txt`.
+- Both license files are staged into every published binary, source, and Javadoc archive.
+
+### Dependency resolution
+
+- Jackson 2 raised to 2.21.6 and Jackson 3 to 3.1.6.
+- Jackson 3 core and databind are now declared **directly** on `memory-core`, so a standalone consumer with no AgentWorks BOM and no Jackson management of its own resolves 3.1.6 by Maven nearest-wins. Parent BOM imports align the build reactor but do not travel with a published module to a downstream consumer — that gap is what this change closes.
+- A repository-owned standalone-consumer resolution gate is committed and runs in CI after the clean build.
+- The unused Spring milestone and snapshot resolution repositories are removed; Spring AI 2.0.0 GA resolves from Maven Central.
+
+### Supply chain
+
+- The parent artifact now publishes one aggregate **CycloneDX 1.6 JSON SBOM** (`classifier=cyclonedx`) covering both modules and their shipped dependency closure.
+- **Hosted OWASP/NVD dependency scanning in GitHub Actions has been removed.** Vulnerability analysis is now a local offline Trivy procedure run against a validated database snapshot. There is no hosted CVE gate in this project's CI.
+- Reusable build workflows are pinned to a build-tools commit SHA, and the external actions this repository references directly are pinned to full-length commit SHAs. The pinned reusable workflows still resolve some actions internally by moving reference, so the complete executed CI path is not yet immutable.
+
+### Documented operating boundary
+
+The filesystem store is **local, plaintext, and single-writer**. There is no locking, no atomic index replacement, and no crash recovery: a second concurrent writer, or a crash during an index write, can corrupt or truncate `_index.json`. Stored memory is injected verbatim into the model prompt, so only trusted content should be written to it. Multi-process or concurrent-writer use requires external coordination. These are disclosed limits, not shipped features.
+
+### Unchanged
+
+`FileSystemMemoryStore`, `ProgressFileMemoryStore`, `MemoryCompactor` and `CompactionMemoryAdvisor` behaviour, the public API, and the on-disk format are unchanged. This release is not a Jackson 3 source migration.
 
 ## 0.3.0 (2026-06-15)
 
-- agent-memory 0.3.0
-- agent-memory 0.3.0: Spring AI 2.0.0 GA; add OWASP CVE gate
+- Upgraded to Spring AI 2.0.0 GA.
+- Added a hosted OWASP dependency-check CVE gate. **This gate was removed again in 0.4.0** in favour of a local offline procedure.
 
 ## 0.2.0 (2026-06-06)
 
-- Prepare 0.2.0-SNAPSHOT
+- Aligned on the Jackson 2.21.2 BOM. No functional change to compaction.
 
 ## 0.1.0 (2026-04-02)
 
-- Initial release.
-
+- Initial release. Tier-1 compaction: `MemoryStore`, `FileSystemMemoryStore`, `MemoryCompactor`, `TokenEstimator`, and the `CompactionMemoryAdvisor` Spring AI `BaseAdvisor`.

@@ -1,21 +1,38 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Bench — auto-generated from git history"
+description: "Release notes for Agent Bench"
 ---
+
+## 0.6.0 (2026-08-18)
+
+- Removes the unused `DockerSandbox` API and the direct Testcontainers/docker-java dependency.
+- Keeps local process execution, the `Sandbox` abstraction, `LocalSandbox`, Agent Judge grading,
+  the agents module, and its real Agent Client-backed LLM judge.
+- Documents that workspaces are not security boundaries and recommends externally managed
+  isolation for untrusted benchmark definitions or agents.
+- Aligns the dependency floors with Jackson 2.21.6, Jackson 3.1.6, Agent Judge 0.14.0,
+  and Agent Client 0.26.0.
+- Publishes `agent-bench-core` and `agent-bench-agents` 0.6.0, plus the aggregate CycloneDX 1.6
+  SBOM.
+
+## 0.5.0 (2026-08-17)
+
+- Added the Spring Boot upgrade benchmark candidate and retained its owner-operated external
+  baseline-aware grader distinction.
+- Published the root aggregate CycloneDX SBOM and aligned Agent Judge and Agent Client dependencies.
+- Released two Maven modules: `agent-bench-core` and `agent-bench-agents`.
 
 ## 0.4.0 (2026-06-06)
 
-- Jackson 2.21.2 alignment, agent-client 0.20.0 pins, release 0.4.0
+- Aligned Jackson 2 and Agent Client dependencies.
 
 ## 0.3.0 (2026-05-19)
 
-- Add missing name/description to agent-bench-core POM for Central validation
-- Update agent-judge and agent-client dependencies to released versions
-- Migrate to markpollack org: package rename, BSL license, standalone POM, build-tools workflows
-- Add documentation site link to README
+- Migrated to the `markpollack` organization, `io.github.markpollack` Maven coordinates, and the
+  Business Source License 1.1 for new development.
+- Added Central metadata and documentation links.
 
 ## 0.2.1 (2026-03-31)
 
 - Initial release.
-

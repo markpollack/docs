@@ -6,8 +6,8 @@ description: "Benchmarking suite for Java-centric AI agents on real-world softwa
 **[What's New →](/docs/agent-bench/whats-new)**
 
 <Info>
-The latest public release is 0.5.0. The repository is developing 0.6.0 under the
-`io.github.markpollack` Maven group and Java package namespace.
+The latest public release is 0.6.0 under the `io.github.markpollack` Maven group and Java package
+namespace.
 </Info>
 
 ## Overview
@@ -19,6 +19,28 @@ materialize deterministic checks and cascaded juries rather than reimplementing 
 
 The filesystem is the contract: any CLI agent that reads `INSTRUCTION.md` and modifies the
 workspace can participate without an SDK integration.
+
+## Maven Artifacts
+
+Use the core module for the agent-neutral CLI and Java API:
+
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-bench-core</artifactId>
+  <version>0.6.0</version>
+</dependency>
+```
+
+Use the agents module when `BenchApp` and the real Agent Client-backed LLM judge are required:
+
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-bench-agents</artifactId>
+  <version>0.6.0</version>
+</dependency>
+```
 
 ## Supported Usage Patterns
 
@@ -58,6 +80,7 @@ other externally managed isolation.
 ```bash
 git clone https://github.com/markpollack/agent-bench.git
 cd agent-bench
+git checkout v0.6.0
 ./mvnw clean verify
 
 ./mvnw -q -pl agent-bench-core exec:java \
@@ -92,5 +115,5 @@ cd agent-bench
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-bench">
-  Source code --- two published modules and 199 tests on the unreleased 0.6.0 candidate
+  Released 0.6.0 source --- two published modules and a 199-test verified build
 </Card>

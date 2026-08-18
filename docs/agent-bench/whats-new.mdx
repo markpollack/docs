@@ -1,20 +1,20 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release and development-line notes for Agent Bench"
+description: "Release notes for Agent Bench"
 ---
 
-## 0.6.0 development line (unreleased)
+## 0.6.0 (2026-08-18)
 
 - Removes the unused `DockerSandbox` API and the direct Testcontainers/docker-java dependency.
 - Keeps local process execution, the `Sandbox` abstraction, `LocalSandbox`, Agent Judge grading,
   the agents module, and its real Agent Client-backed LLM judge.
 - Documents that workspaces are not security boundaries and recommends externally managed
   isolation for untrusted benchmark definitions or agents.
-- Aligns the development dependency floors with Jackson 2.21.6, Jackson 3.1.6, Agent Judge 0.14.0,
+- Aligns the dependency floors with Jackson 2.21.6, Jackson 3.1.6, Agent Judge 0.14.0,
   and Agent Client 0.26.0.
-
-0.6.0 is not yet a public release. The latest public release remains 0.5.0.
+- Publishes `agent-bench-core` and `agent-bench-agents` 0.6.0, plus the aggregate CycloneDX 1.6
+  SBOM.
 
 ## 0.5.0 (2026-08-17)
 

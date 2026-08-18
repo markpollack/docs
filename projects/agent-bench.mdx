@@ -6,102 +6,91 @@ description: "Benchmarking suite for Java-centric AI agents on real-world softwa
 **[What's New →](/docs/agent-bench/whats-new)**
 
 <Info>
-This project has moved from the `spring-ai-community` GitHub organization to
-`markpollack`. New releases are published under the Maven groupId
-`io.github.markpollack`, and Java packages now use the `io.github.markpollack`
-namespace. If you previously used `org.springaicommunity`, update your
-dependency coordinates and imports to the current values shown below.
+The latest public release is 0.5.0. The repository is developing 0.6.0 under the
+`io.github.markpollack` Maven group and Java package namespace.
 </Info>
 
 ## Overview
 
-Agent Bench measures AI coding agents on real enterprise development tasks.
-Bring your agent, point it at a benchmark, and get graded results.
+Agent Bench measures AI coding agents on repeatable software-engineering tasks. Inspired by
+Terminal-Bench, each benchmark separates the task definition, the agent that changes a workspace,
+and the verifier that grades the result. Agent Bench uses [Agent Judge](/projects/agent-judge) to
+materialize deterministic checks and cascaded juries rather than reimplementing grading.
 
-The filesystem is the contract.
-Any CLI tool that reads `INSTRUCTION.md` and modifies the workspace can participate --- no SDK integration required.
+The filesystem is the contract: any CLI agent that reads `INSTRUCTION.md` and modifies the
+workspace can participate without an SDK integration.
 
-## How It Works
+## Supported Usage Patterns
 
-<Steps>
-  <Step title="Configure your agent">
-    Write a 2-line YAML file with your agent's command and timeout.
-  </Step>
-  <Step title="Run a benchmark">
-    `bench run` sets up the workspace, invokes your agent, and grades the result.
-  </Step>
-  <Step title="Review results">
-    JSON results with accuracy, pass@k, per-tier jury scores, cost, and duration.
-  </Step>
-</Steps>
-
-## Architecture
-
-<CardGroup cols={2}>
-  <Card title="Benchmark Catalog" icon="list">
-    YAML-defined benchmarks with tasks, setup scripts, and difficulty levels
+<CardGroup cols={3}>
+  <Card title="End-to-end run" icon="play">
+    `run` prepares a workspace, executes setup and the configured agent, runs post-processing, and
+    grades the result.
   </Card>
-  <Card title="Agent Invocation" icon="robot">
-    Your agent runs as a subprocess in an isolated workspace --- any executable works
+  <Card title="Split workflow" icon="code-branch">
+    `provide` prepares the files, an external agent operates on them, and `grade` evaluates the
+    resulting workspace.
   </Card>
-  <Card title="Jury System" icon="scale-balanced">
-    Cascaded tiers of judges from [Agent Judge](/projects/agent-judge) --- deterministic and LLM-based
-  </Card>
-  <Card title="Result Model" icon="chart-bar">
-    TrialResult per task, BenchmarkResult aggregate, pass@k, resume support
+  <Card title="Java API" icon="java">
+    Use the benchmark catalog, command classes, `JudgeFactory`, Agent Judge types, and result model
+    directly from Java.
   </Card>
 </CardGroup>
 
-## Quick Start
+## Execution and Trust Boundary
 
-```yaml
-# agents/my-agent.yaml
-command: claude --print --dangerously-skip-permissions "Read INSTRUCTION.md and follow the instructions."
-timeout: PT10M
-```
+Benchmark setup scripts, post-processing scripts, and configured agent commands execute as local
+host processes with the permissions of the user who starts Agent Bench. A workspace directory
+organizes inputs and results, but it is not a security boundary. Agent Bench does not provide
+container execution or provision isolation.
+
+Run untrusted benchmark definitions or agents only inside your own disposable VM, CI runner, or
+other externally managed isolation.
+
+## CLI Entry Points
+
+- `agent-bench-core` runs `BenchMain`, the agent-neutral CLI with deterministic Agent Judge checks.
+- `agent-bench-agents` runs `BenchApp`, which retains the core commands and wires the real Agent
+  Client-backed LLM judge for LLM-graded `run` and `resume` operations.
+
+## Quick Start from Source
 
 ```bash
 git clone https://github.com/markpollack/agent-bench.git
 cd agent-bench
-./mvnw clean install -DskipTests
+./mvnw clean verify
 
-# Run hello-world benchmark with your agent
-./mvnw exec:java -pl agent-bench-core \
+./mvnw -q -pl agent-bench-core exec:java \
   -Dexec.args="run --benchmark hello-world --agent agents/my-agent.yaml"
 ```
 
 ## Benchmarks
 
-| Benchmark | Difficulty | What it measures |
-|-----------|-----------|-----------------|
-| **hello-world** | Easy | File creation, basic agent infrastructure |
-| **code-coverage** | Medium | JUnit test generation, coverage uplift on Spring projects |
+| Benchmark | Status | What it measures |
+|-----------|--------|------------------|
+| **hello-world** | Working | File creation and basic agent infrastructure |
+| **code-coverage** | Working judges; full agent run requires provider access | JUnit test generation, coverage uplift, and LLM-scored practice adherence |
+| **spring-boot-upgrade** | Candidate | Spring modernization; the public jury is a build quick-check and the baseline-aware grader is owner-operated externally |
 
 ## Documentation
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="rocket" href="/docs/agent-bench/getting-started">
-    Test your agent in 5 minutes
+    Run end-to-end, split, and Java API workflows
   </Card>
   <Card title="Agent Configuration" icon="gear" href="/docs/agent-bench/agent-config">
-    How to configure any CLI tool as a benchmark agent
+    Configure a CLI tool and understand its host permissions
   </Card>
   <Card title="Jury System" icon="scale-balanced" href="/docs/agent-bench/jury-system">
-    Cascaded tiers, built-in judges, custom judge types
+    Agent Judge tiers, built-in judges, and custom judge types
   </Card>
   <Card title="CLI Reference" icon="terminal" href="/docs/agent-bench/cli-reference">
-    All commands: run, resume, compare, list, grade
+    Core and agents-module commands
   </Card>
 </CardGroup>
-
-## Role in the Lab
-
-- Uses [Agent Judge](/projects/agent-judge) for YAML-configured jury grading
-- Validated against [Code Coverage v2](/experiments/code-coverage-v2) experiment results
-- Agent-agnostic: Claude Code, Gemini, Amazon Q, or any CLI tool
 
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-bench">
-  Source code --- two modules, 211 tests
+  Source code --- two published modules and 199 tests on the unreleased 0.6.0 candidate
 </Card>

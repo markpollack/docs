@@ -53,7 +53,7 @@ Add judges from each tier with weights:
 ```java
 // Tier 1: deterministic
 Judge buildJudge = new BuildSuccessJudge();
-Judge versionJudge = new ClassVersionJudge(61);  // Java 17 = class version 61
+Judge versionJudge = new ClassVersionJudge(65);  // Java 21 = class version 65
 
 // Tier 2: structural
 Judge importJudge = new ImportDiffJudge();
@@ -93,13 +93,9 @@ public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
 
         boolean success = exitCode == 0;
 
-        return Judgment.builder()
-            .score(new BooleanScore(success))
-            .status(success ? JudgmentStatus.PASS : JudgmentStatus.FAIL)
-            .reasoning(success
-                ? "Build succeeded"
-                : "Build failed with exit code " + exitCode)
-            .build();
+        return success
+            ? Judgment.pass("Build succeeded")
+            : Judgment.fail("Build failed with exit code " + exitCode);
     }
 
     @Override
@@ -130,9 +126,14 @@ public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `score` | `Score` | `BooleanScore` or `NumericScore` |
-| `status` | `JudgmentStatus` | `PASS`, `FAIL`, or `ERROR` |
+| `status` | `JudgmentStatus` | Required outcome: `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` |
+| `score` | `Double` (optional) | Explicit normalized score in `[0.0, 1.0]`; use `effectiveScore()` for a numeric view of PASS/FAIL |
+| `label` | `String` (optional) | Independent classification label when the judge assigned one |
 | `reasoning` | `String` | Human-readable explanation |
+
+Agent Judge 0.14 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
+uses `Judgment.pass(...)` or `Judgment.fail(...)`; it does not duplicate the same fact in a score
+object. `ABSTAIN` and `ERROR` contribute no effective score.
 
 ## Diagnostic Feedback
 

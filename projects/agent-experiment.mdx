@@ -1,15 +1,25 @@
 ---
 title: "Agent Experiment"
-description: "End-to-end experiment driver for evaluating AI coding agents against fixture datasets"
+description: "Reproducible Java experiment lifecycle for evaluating AI agents"
 ---
 
 **[What's New →](/docs/agent-experiment/whats-new)**
 
+**Current release: 0.6.0** · Java 21 · three modules · 544 tests
+
 ## Overview
 
-Agent Experiment is the execution backbone of every experiment in this lab. It provides a complete pipeline for running reproducible evaluations: load fixture datasets, invoke agents, judge results with [Agent Judge](/projects/agent-judge) juries, persist structured results, and compare runs across variants.
+Agent Experiment provides a repeatable lifecycle for agent evaluations: load versioned fixture or
+Git-backed datasets, provision isolated workspaces, invoke an agent, judge results with
+[Agent Judge](/projects/agent-judge) juries, persist structured evidence, and compare variants.
 
-The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dependencies, while `experiment-claude` adds Claude Code SDK integration for agent invocation, LLM-based planning, and semantic evaluation.
+`experiment-core` has no direct agent-SDK integration. `experiment-claude` adds Claude Code SDK
+invocation, planning, and semantic evaluation, while `experiment-workflow` adapts typed Agent
+Workflow executions and journaled step costs to the common `AgentInvoker` contract.
+
+The framework records source and dataset revisions, dirty state, configuration, knowledge hashes,
+workspaces, results, costs/tokens, and journals. Exact replay still depends on callers pinning the
+external model, CLI, tools, network services, and other nondeterministic inputs.
 
 ## Architecture
 
@@ -38,8 +48,9 @@ The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dep
 
 | Module | Description | Key Dependencies |
 |--------|-------------|------------------|
-| `experiment-core` | Datasets, runner, comparison, results, storage | agent-judge-core, agent-judge-exec, Jackson |
-| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | claude-code-sdk |
+| `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.14.0, Agent Journal 1.7.0, Jackson |
+| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.4.0 |
+| `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.10.0, Agent Client 0.26.0 |
 
 ## Documentation
 
@@ -64,7 +75,7 @@ The framework is agent-agnostic at its core. `experiment-core` has no AI SDK dep
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0</version>
 </dependency>
 ```
 
@@ -85,6 +96,22 @@ ExperimentResult result = experiment.run(invoker);
 // result.passRate(), result.totalCostUsd(), result.items()
 ```
 
+The [public template](https://github.com/markpollack/agent-experiment-template) provides a complete
+starting point with variant configuration, workflow invokers, default-on journal capture, and a
+credential-free smoke test.
+
+## Release and Compatibility
+
+Version 0.6.0 moves runtime judging to Agent Judge 0.14.0. Stored results use Agent
+Experiment-owned `RecordedJudgment` and `RecordedVerdict` projections. Existing 0.5 / Agent Judge
+0.13 result files load automatically and preserve normalized outcomes, reasoning, checks, labels,
+metadata, and available composite evidence. Re-saving writes the new format; obsolete range bounds,
+categorical allow-lists, and unnamed legacy composite identity cannot be reconstructed losslessly.
+
+Standalone consumers resolve Agent Journal/Capture 1.7.0, Jackson 2.21.6, and Jackson 3.1.6 without
+an AgentWorks BOM. The parent artifact publishes one aggregate CycloneDX 1.6 JSON SBOM, and the
+stable release includes signed binaries, sources, and Javadocs with the project BSL text.
+
 ## Role in the Lab
 
 Agent Experiment is the execution layer that ties the other AgentWorks projects together:
@@ -94,7 +121,7 @@ Agent Experiment is the execution layer that ties the other AgentWorks projects 
 - **[Agent Sandbox](/projects/agent-sandbox)** — Isolated execution environments
 - **[Agent Bench](/projects/agent-bench)** — Benchmark datasets consumed by experiments
 
-Used by every experiment in the lab:
+Public experiments built on this lifecycle include:
 
 - [Code Coverage v1](/experiments/code-coverage-v1)
 - [Code Coverage v2](/experiments/code-coverage-v2)
@@ -102,5 +129,5 @@ Used by every experiment in the lab:
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-experiment">
-  Source code (BSL 1.1) — two modules, 509 tests
+  Source code (BSL 1.1) — three modules, 544 tests
 </Card>

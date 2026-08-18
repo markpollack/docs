@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Experiment 0.6.0
+
+**Workflow-backed experiments, first-class journal evidence, and a consumer-safe release graph.**
+
+- The new experiment-workflow module adapts typed Agent Workflow executions and step cost/token evidence to the AgentInvoker contract
+- AgentExperiment now owns the per-item Agent Journal lifecycle, while stored results use normalized Experiment-owned judgments and automatically read the older 0.5/Judge 0.13 format
+- Standalone consumers resolve Journal/Capture 1.7.0, Jackson 2.21.6, and Jackson 3.1.6 without a BOM; the verified 25-, 26-, and 57-JAR closures have zero findings
+- The Java 21 release passed 544 tests and publishes signed binaries, sources, Javadocs, and one aggregate CycloneDX 1.6 SBOM
+
+[Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Template](https://github.com/markpollack/agent-experiment-template) | [Source](https://github.com/markpollack/agent-experiment)
+
 ### Agent Journal 1.7.0
 
 **CVE-clear standalone resolution, license-complete artifacts, and a published SBOM.**

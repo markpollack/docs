@@ -336,11 +336,15 @@ Domain evidence preserved for each item:
 
 ```java
 public record JudgeExecutionDetail(
-    Judgment candidateJudgment,
+    RecordedJudgment candidateJudgment,
     String expectedLabel,
     JudgeScorerResult scorerResult
 ) implements ExecutionDetail
 ```
+
+Runtime candidates still return Agent Judge 0.14 `Judgment` values. Agent Experiment converts them
+immediately to its normalized `RecordedJudgment` persistence boundary. Existing 0.5 / Agent Judge 0.13
+result files are upgraded on read; saving them writes the normalized 0.6 format.
 
 ### JudgeExperiment
 
@@ -407,11 +411,20 @@ public record JudgeDisagreement(
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
+    <version>0.6.0</version>
 </dependency>
 
 <!-- Claude SDK integration (ClaudeSdkInvoker, SemanticDiffJudge) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-claude</artifactId>
+    <version>0.6.0</version>
+</dependency>
+
+<!-- Agent Workflow integration (typed workflow invokers and journal adaptation) -->
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>experiment-workflow</artifactId>
+    <version>0.6.0</version>
 </dependency>
 ```

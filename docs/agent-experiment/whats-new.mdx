@@ -1,8 +1,25 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Experiment — auto-generated from git history"
+description: "Release notes for Agent Experiment"
 ---
+
+## 0.6.0 (2026-08-18)
+
+- Adds the `experiment-workflow` module for typed Agent Workflow invocation with journaled step
+  cost/token evidence adapted to `AgentInvoker`.
+- Makes Agent Journal capture a first-class per-item lifecycle owned by `AgentExperiment`, using
+  Agent Journal 1.7.0 and preserving variant, item, model, session, tool-use, and derived cost data.
+- Migrates runtime evaluation to Agent Judge 0.14.0 and stores normalized, Agent
+  Experiment-owned judgments and verdicts. Existing 0.5 / Judge 0.13 results load automatically;
+  re-saving writes the normalized format with the documented lossy boundary for obsolete metadata.
+- Updates to Agent Client 0.26.0, Agent Workflow 0.10.0, and Claude Code SDK 1.4.0.
+- Gives standalone consumers Jackson 2.21.6 and Jackson 3.1.6 safety floors without requiring a
+  BOM; public 25-, 26-, and 57-JAR module closures have zero findings against the validated scan
+  snapshot.
+- Publishes signed binary, source, and Javadoc artifacts plus one aggregate CycloneDX 1.6 JSON SBOM.
+- Requires Java 21. The credential-free reactor passed 544 tests; paid live Claude execution was
+  not part of the release gate.
 
 ## 0.5.0 (2026-06-06)
 
@@ -47,4 +64,3 @@ description: "Release notes for Agent Experiment — auto-generated from git his
 ## 0.1.0 (2026-03-30)
 
 - Initial release.
-

@@ -1,0 +1,132 @@
+---
+title: "Capture SDK Sessions"
+description: "Record Claude Code and Gemini CLI results with Agent Journal 1.6.0"
+---
+
+Agent Journal provides two vendor adapters that write compatible core events and portable traces.
+Both capture modules require a Java 21 runtime because their SDK dependencies are published as Java 21 bytecode.
+The Claude adapter consumes the [Claude Agent SDK for Java](/projects/claude-agent-sdk), and the Gemini adapter consumes the `gemini-cli-sdk` published with [Agent Client](/projects/agent-client).
+
+## Claude Code
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>claude-code-capture</artifactId>
+    <version>1.6.0</version>
+</dependency>
+```
+
+`SessionLogParser` converts an `Iterator<ParsedMessage>` from the Claude Code SDK into a `PhaseCapture`.
+The six-argument overload also writes a portable trace and controls modeled and raw content independently:
+
+```java
+import io.github.markpollack.claude.agent.sdk.parsing.ParsedMessage;
+import io.github.markpollack.journal.claude.PhaseCapture;
+import io.github.markpollack.journal.claude.SessionLogParser;
+import io.github.markpollack.journal.trace.TraceContentMode;
+import io.github.markpollack.journal.trace.TraceRawMode;
+import java.nio.file.Path;
+import java.util.Iterator;
+
+PhaseCapture phase = SessionLogParser.parse(
+        response,
+        "implement",
+        promptText,
+        Path.of(".agent-journal/traces/implement.jsonl"),
+        TraceContentMode.TRUNCATED,
+        TraceRawMode.NONE);
+```
+
+Here, `response` is an `Iterator<ParsedMessage>` returned by the SDK and `promptText` is the exact prompt or `null`.
+
+Record the capture into a durable journal with `RunRecorder`:
+
+```java
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.claude.RunRecorder;
+import io.github.markpollack.journal.storage.JsonFileStorage;
+import java.nio.file.Path;
+
+Journal.configure(new JsonFileStorage(Path.of(".agent-journal")));
+
+try (RunRecorder recorder = new RunRecorder(
+        Journal.run("capture-experiment").agent("claude-code").start())) {
+    recorder.recordPhase(phase);
+}
+```
+
+The recorder writes execution events to `events.jsonl` and per-step cost attribution to `analysis.jsonl`.
+It fails at finish when it produced derived events but the configured backend does not persist them durably.
+Call `lenient()` only when losing the derived stream after process exit is intentional.
+
+## Gemini CLI
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>gemini-cli-capture</artifactId>
+    <version>1.6.0</version>
+</dependency>
+```
+
+`GeminiSessionParser` converts the Gemini SDK's synchronous `QueryResult` into a `GeminiPhaseCapture`:
+
+```java
+import io.github.markpollack.agents.geminisdk.types.QueryResult;
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.gemini.GeminiPhaseCapture;
+import io.github.markpollack.journal.gemini.GeminiRunRecorder;
+import io.github.markpollack.journal.gemini.GeminiSessionParser;
+
+GeminiPhaseCapture phase = GeminiSessionParser.parse(
+        result, "query", "summarize the repository");
+
+new GeminiRunRecorder(run).recordPhase(phase);
+```
+
+Here, `result` is a `QueryResult` and `run` is an open Agent Journal `Run`.
+Configure `JsonFileStorage` if the derived `StepCostEvent` must survive process exit.
+
+Gemini's typed SDK exposes result-level text, usage, cost, duration, model, and status, but it does not expose per-tool calls.
+The adapter therefore records one turn-level step and does not invent tool detail.
+It has no `TraceRawMode` because the typed Gemini message does not retain a verbatim wire envelope.
+
+## Portable trace modes
+
+`TraceContentMode` controls content bodies on modeled trace lines:
+
+| Mode | Modeled content behavior |
+|---|---|
+| `FULL` | Writes complete assistant text, thinking text, and tool-result content |
+| `TRUNCATED` | Default; caps each modeled content body at 60,000 characters |
+| `LENGTHS` | Omits those modeled content bodies and records their lengths |
+
+`TraceRawMode` is Claude-only and orthogonal:
+
+| Mode | Raw vendor messages |
+|---|---|
+| `NONE` | Default; no raw vendor-message lines |
+| `FULL` | Writes each available vendor message as an unredacted `raw` line |
+
+<Warning>
+All trace modes require a data-handling decision.
+The capture record and journal events can contain the caller-supplied prompt text.
+Tool inputs are present on portable `tool_use` lines even in `LENGTHS` mode.
+`TRUNCATED` and `FULL` portable traces can include assistant text, file contents, tool results, and command output.
+`TraceRawMode.FULL` adds the complete available vendor message and can include fields omitted from the typed model.
+Treat trace and journal files as sensitive, restrict filesystem access, and keep them out of version control.
+</Warning>
+
+## Two schemas
+
+Do not conflate the two JSONL formats:
+
+- Canonical journal streams use `@type` and currently have schema version 1.
+- Portable capture traces use `type`, `ts`, and `seq` and currently have schema version 2.
+
+Both formats have their own header and evolution contract.

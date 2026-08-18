@@ -189,7 +189,20 @@
               },
               {
                 "group": "Agent Journal",
-                "pages": ["projects/agent-journal", "docs/agent-journal/whats-new"]
+                "pages": [
+                  "projects/agent-journal",
+                  "docs/agent-journal/whats-new",
+                  "docs/agent-journal/getting-started",
+                  "docs/agent-journal/concepts",
+                  {
+                    "group": "Guides",
+                    "pages": [
+                      "docs/agent-journal/capture-sessions",
+                      "docs/agent-journal/analyzing-runs"
+                    ]
+                  },
+                  "docs/agent-journal/api-reference"
+                ]
               },
               {
                 "group": "Agent Sandbox",

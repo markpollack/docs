@@ -1,0 +1,156 @@
+---
+title: "API Reference"
+description: "Agent Journal 1.6.0 core, storage, event, evaluation, and capture APIs"
+---
+
+This page describes the public API shipped in Agent Journal 1.6.0.
+
+## Coordinates
+
+| Artifact | Purpose | Java |
+|---|---|---|
+| `io.github.markpollack:journal-core:1.6.0` | Core domain, storage, evaluation, feedback, and traces | 17+ |
+| `io.github.markpollack:claude-code-capture:1.6.0` | Claude Code capture | 21+ runtime |
+| `io.github.markpollack:gemini-cli-capture:1.6.0` | Gemini CLI capture | 21+ runtime |
+
+## `Journal`
+
+| Method | Result | Notes |
+|---|---|---|
+| `run(String experimentId)` | `RunBuilder` | Primary run factory |
+| `experiment(String experimentId)` | `Experiment` | Gets or creates an experiment |
+| `experiment(String id, Experiment.Builder builder)` | `Experiment` | Builder is ignored if the experiment already exists |
+| `configure(JournalStorage storage)` | `void` | Call before creating runs |
+| `storage()` | `JournalStorage` | Returns the global backend |
+| `registerEventType(String, Class<? extends JournalEvent>)` | `void` | Registers an external subtype on the configured storage |
+| `reset()` | `void` | Resets storage configuration and the experiment cache |
+
+## `RunBuilder`
+
+| Method | Purpose |
+|---|---|
+| `name(String)` | Human-readable run name |
+| `agent(String)` | Agent identifier |
+| `task(String)` | Task identifier |
+| `repository(String)` | Accepts a repository path; 1.6.0 does not persist it or act on it |
+| `config(Config)` | Replace the run configuration |
+| `config(String, Object)` | Add one immutable input value |
+| `tags(Tags)` | Replace tags |
+| `tag(String, String)` | Add one tag |
+| `previousRun(String)` | Link a retry to the prior run ID |
+| `parentRun(String)` | Link a child run to a parent run ID |
+| `start()` | Create a `RUNNING` `Run` |
+
+There is no `config(Map)` overload in 1.6.0.
+The `repository(String)` setter is present, but the 1.6.0 run implementation does not consume the stored builder value.
+
+## `Run`
+
+| Area | Methods |
+|---|---|
+| Identity | `id()`, `name()`, `experiment()`, `agentId()`, `previousRunId()`, `parentRunId()` |
+| Data | `config()`, `summary()`, `tags()`, `status()` |
+| Execution | `logEvent(JournalEvent)`, `logMetric(...)` |
+| Analysis | `logDerivedEvent(DerivedEvent)` |
+| Artifacts | `logArtifact(String, String)`, `logArtifact(String, byte[], Map<String,Object>)` |
+| Instruments | `metrics()`, `calls()` |
+| Lifecycle | `setSummary(...)`, `fail(Throwable)`, `finish(RunStatus)`, `close()` |
+
+## Event factories
+
+`JournalEvent` is extensible.
+Built-in event records include timestamps and expose their Java `type()` value; file serialization uses the registered `@type` name.
+
+| Event | Common factory or builder |
+|---|---|
+| `LLMCallEvent` | `of(model, inputTokens, outputTokens, costUsd)`, `builder()` |
+| `ToolCallEvent` | `success(tool, input, output, durationMs)`, `failure(tool, input, error, durationMs)`, `builder()` |
+| `StateChangeEvent` | `of(from, to, reason)` |
+| `MetricEvent` | `of(name, value, tags)` |
+| `CustomEvent` | `of(name)`, `of(name, attributes)` |
+| `GitPatchEvent` | `of(baseBranch, fileChanges)` |
+| `GitCommitEvent` | `of(sha, message, branch)` |
+| `GitBranchEvent` | `created(branchName, fromRef)`, `checkedOut(branchName)`, `deleted(branchName)` |
+| `GitPullRequestEvent` | `created(...)`, `updated(...)`, `merged(...)`, `closed(...)` |
+
+### Token, cost, and timing values
+
+```java
+TokenUsage simple = TokenUsage.of(1200, 450);
+TokenUsage withThinking = TokenUsage.of(1200, 450, 300);
+
+TokenUsage allFields = new TokenUsage(
+        1200, 450, 300, 200, 800, 0);
+
+CostBreakdown cost = CostBreakdown.of(0.018, 0.00675);
+TimingInfo timing = TimingInfo.of(2500, 2100, 400);
+```
+
+The `TokenUsage` constructor order is input, output, thinking, cache creation, cache read, and tool-use tokens.
+There is no five-argument `TokenUsage.of(...)` overload in 1.6.0.
+
+## `JournalStorage`
+
+| Area | Operations |
+|---|---|
+| Experiments | `saveExperiment`, `loadExperiment`, `listExperiments`, `experimentExists` |
+| Runs | `saveRun`, `loadRun`, `listRuns`, `runExists` |
+| Execution events | `appendEvent`, `loadEvents` |
+| Derived events | `appendDerivedEvent`, `loadDerivedEvents`, `persistsDerivedEvents` |
+| Feedback | `appendFeedback`, `loadFeedback` |
+| Artifacts | `saveArtifact`, `loadArtifact`, `listArtifacts` |
+| External event types | `registerEventSubtype` |
+
+`JsonFileStorage` implements every operation and reports durable derived-event persistence.
+`InMemoryStorage` implements every operation in memory and reports the default non-durable derived-event behavior.
+
+## Evaluation API
+
+`EvalSubjectSources.fromJournal(storage, experimentId, runId)` reads a run and produces subjects.
+`EvalSubjectSources.fromEvents(events, runId)` adapts an existing event list.
+
+`EvalSubjectQuery` supports:
+
+| Method | Purpose |
+|---|---|
+| `from(EvalSubjectSource)` | Start a query |
+| `kind(EvalSubjectKind)` | Filter by kind |
+| `where(Predicate<EvalSubject>)` | Add a predicate |
+| `toSet()` | Materialize an `EvalSubjectSet` |
+| `groupBy(Function)` | Group into subject sets |
+| `countBy(Function)` | Count by classifier |
+| `count()` | Count matches |
+
+## Capture parsers
+
+### Claude Code
+
+```java
+SessionLogParser.parse(response, phaseName, promptText)
+SessionLogParser.parse(response, phaseName, promptText, traceFile)
+SessionLogParser.parse(response, phaseName, promptText, traceFile, contentMode)
+SessionLogParser.parse(response, phaseName, promptText, traceFile, contentMode, rawMode)
+```
+
+`response` is an `Iterator<ParsedMessage>`.
+The default content mode for trace-writing overloads is `TRUNCATED`; the default raw mode is `NONE`.
+
+`RunRecorder` wraps an open `Run`, inherits `recordPhase(PhaseCapture)`, exposes `run()` and `lenient()`, and owns `finish()`/`close()`.
+
+### Gemini CLI
+
+```java
+GeminiSessionParser.parse(result, phaseName, promptText)
+GeminiSessionParser.parse(result, phaseName, promptText, traceFile)
+GeminiSessionParser.parse(result, phaseName, promptText, traceFile, contentMode)
+```
+
+`result` is a Gemini SDK `QueryResult`.
+`GeminiRunRecorder.recordPhase(GeminiPhaseCapture)` records the core and derived projections.
+
+## Storage cautions
+
+- `JsonFileStorage` does not validate path containment for caller-supplied identifiers or artifact names in 1.6.0.
+- Use one writer per run and do not assume multi-process safety.
+- File-backed load methods read the requested JSONL file into memory.
+- Portable traces can contain sensitive content; see [Capture SDK Sessions](/docs/agent-journal/capture-sessions).

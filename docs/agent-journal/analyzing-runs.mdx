@@ -1,0 +1,118 @@
+---
+title: "Analyze Runs with DuckDB"
+description: "Query Agent Journal 1.6.0 event streams with executable DuckDB examples"
+---
+
+`JsonFileStorage` writes one `events.jsonl` file per run.
+DuckDB can read all runs for an experiment directly; no import step or fixed table schema is required.
+
+The examples below assume this path:
+
+```text
+.agent-journal/experiments/{experiment-id}/runs/{run-id}/events.jsonl
+```
+
+Pass `union_by_name = true` because different event types have different fields.
+Quote `"@type"` because the discriminator contains `@`.
+Header rows have `@type = 'header'`, so event filters exclude them.
+
+## Count tool calls
+
+```sql
+SELECT
+    toolName AS tool,
+    COUNT(*) AS calls,
+    ROUND(AVG(durationMs), 0) AS average_ms,
+    COUNT(*) FILTER (WHERE NOT success) AS failures
+FROM read_ndjson_auto(
+    '.agent-journal/experiments/*/runs/*/events.jsonl',
+    union_by_name = true)
+WHERE "@type" = 'tool_call'
+GROUP BY toolName
+ORDER BY calls DESC, tool;
+```
+
+## Summarize LLM usage and cost by run file
+
+Ask DuckDB to add the source filename explicitly:
+
+```sql
+SELECT
+    filename,
+    SUM(tokenUsage.inputTokens) AS input_tokens,
+    SUM(tokenUsage.outputTokens) AS output_tokens,
+    SUM(
+        cost.inputCostUsd
+        + cost.outputCostUsd
+        + cost.thinkingCostUsd
+        - cost.cacheSavingsUsd
+    ) AS total_cost_usd
+FROM read_ndjson_auto(
+    '.agent-journal/experiments/*/runs/*/events.jsonl',
+    union_by_name = true,
+    filename = true)
+WHERE "@type" = 'llm_call'
+GROUP BY filename
+ORDER BY filename;
+```
+
+## Extract ordered tool sequences
+
+```sql
+SELECT
+    regexp_extract(filename, 'runs/([^/]+)/events', 1) AS run_id,
+    ROW_NUMBER() OVER (
+        PARTITION BY filename
+        ORDER BY timestamp
+    ) AS sequence_number,
+    toolName AS tool
+FROM read_ndjson_auto(
+    '.agent-journal/experiments/*/runs/*/events.jsonl',
+    union_by_name = true,
+    filename = true)
+WHERE "@type" = 'tool_call'
+ORDER BY run_id, sequence_number;
+```
+
+## Count adjacent tool transitions
+
+```sql
+WITH tool_sequence AS (
+    SELECT
+        filename,
+        toolName AS tool,
+        ROW_NUMBER() OVER (
+            PARTITION BY filename
+            ORDER BY timestamp
+        ) AS sequence_number
+    FROM read_ndjson_auto(
+        '.agent-journal/experiments/*/runs/*/events.jsonl',
+        union_by_name = true,
+        filename = true)
+    WHERE "@type" = 'tool_call'
+)
+SELECT
+    current_step.tool AS from_tool,
+    next_step.tool AS to_tool,
+    COUNT(*) AS transitions
+FROM tool_sequence current_step
+JOIN tool_sequence next_step
+  ON current_step.filename = next_step.filename
+ AND next_step.sequence_number = current_step.sequence_number + 1
+GROUP BY from_tool, to_tool
+ORDER BY transitions DESC, from_tool, to_tool;
+```
+
+Transition counts describe recorded behavior; they do not establish a quality threshold by themselves.
+Interpret them with task outcomes, run configuration, and enough repeated trials for the comparison you intend to make.
+
+## Analyze derived events separately
+
+Per-step cost attribution and step outcomes live in `analysis.jsonl`, not `events.jsonl`.
+Read that file with the same `read_ndjson_auto(..., union_by_name = true)` pattern.
+Use the run directory or stream header for run identity, and join an analysis `stepId` to the execution event's stable `id` when the event has one.
+
+<Note>
+DuckDB reads the JSONL files directly, but Agent Journal's Java `loadEvents` and `loadDerivedEvents` methods currently load the requested file into memory.
+Use DuckDB or another streaming data tool for large cross-run analysis.
+</Note>

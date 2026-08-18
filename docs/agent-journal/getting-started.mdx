@@ -1,0 +1,129 @@
+---
+title: "Getting Started"
+description: "Record and persist a first Agent Journal run with journal-core 1.6.0"
+---
+
+This tutorial records one LLM call and one tool call, then persists the run to local JSON and JSONL files.
+
+## Requirements
+
+- Java 17 or later for `journal-core`
+- Maven 3.9 or the Maven Wrapper
+
+## 1. Add `journal-core`
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>journal-core</artifactId>
+    <version>1.6.0</version>
+</dependency>
+```
+
+## 2. Configure local storage
+
+Configure storage before creating a run:
+
+```java
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.storage.JsonFileStorage;
+import java.nio.file.Path;
+
+Journal.configure(new JsonFileStorage(Path.of(".agent-journal")));
+```
+
+The default backend is `InMemoryStorage`, so a run is not durable unless you configure storage.
+
+## 3. Record a run
+
+```java
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.event.LLMCallEvent;
+import io.github.markpollack.journal.event.ToolCallEvent;
+import java.util.Map;
+
+try (Run run = Journal.run("first-experiment")
+        .name("attempt-1")
+        .agent("example-agent")
+        .task("summarize-repository")
+        .config("model", "claude-opus-4-5")
+        .tag("environment", "local")
+        .start()) {
+
+    run.logEvent(LLMCallEvent.of("claude-opus-4-5", 1200, 450, 0.02475));
+
+    run.logEvent(ToolCallEvent.success(
+            "Bash",
+            Map.of("command", "git status --short"),
+            Map.of("exitCode", 0, "output", ""),
+            150));
+
+    run.setSummary("success", true);
+    run.logArtifact("result.txt", "Repository is clean.");
+}
+```
+
+`Run` implements `AutoCloseable`.
+Normal closure produces `FINISHED`; call `run.fail(exception)` to record `FAILED` explicitly.
+
+## 4. Inspect the files
+
+The example produces this layout:
+
+```text
+.agent-journal/
+└── experiments/
+    └── first-experiment/
+        ├── experiment.json
+        └── runs/
+            └── {run-id}/
+                ├── run.json
+                ├── events.jsonl
+                └── artifacts/
+                    └── result.txt
+```
+
+The first `events.jsonl` line is a schema header.
+Each following line is one event and carries an `@type` discriminator.
+
+```json
+{"@type":"header","schemaVersion":1,"stream":"events","runId":"..."}
+{"@type":"llm_call","timestamp":"...","provider":null,"model":"claude-opus-4-5","tokenUsage":{"inputTokens":1200,"outputTokens":450,"thinkingTokens":0,"cacheCreationTokens":0,"cacheReadTokens":0,"toolUseTokens":0},"cost":{"inputCostUsd":0.02475,"outputCostUsd":0.0,"thinkingCostUsd":0.0,"cacheSavingsUsd":0.0},"timing":null,"finishReason":null,"responseId":null,"metadata":{}}
+```
+
+<Warning>
+Use caller-controlled trusted identifiers for `experimentId`, `runId`, and artifact names.
+Version 1.6.0 does not enforce path containment for those values, so do not pass untrusted path fragments or separators.
+</Warning>
+
+## 5. Isolate tests
+
+Use the in-memory backend and reset global state around each test:
+
+```java
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.storage.InMemoryStorage;
+
+Journal.reset();
+Journal.configure(new InMemoryStorage());
+
+try {
+    try (var run = Journal.run("test-experiment").start()) {
+        run.setSummary("result", "ok");
+    }
+} finally {
+    Journal.reset();
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Core concepts" icon="book-open" href="/docs/agent-journal/concepts">
+    Learn what is persisted and what is derived.
+  </Card>
+  <Card title="Analyze runs" icon="chart-line" href="/docs/agent-journal/analyzing-runs">
+    Query the generated event files with DuckDB.
+  </Card>
+</CardGroup>

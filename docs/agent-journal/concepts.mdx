@@ -1,0 +1,113 @@
+---
+title: "Core Concepts"
+description: "Experiments, runs, event streams, derived analysis, feedback, and storage boundaries"
+---
+
+Agent Journal models a bounded execution as a `Run` and groups comparable runs in an `Experiment`.
+
+```text
+Experiment
+└── Run
+    ├── Config             immutable inputs
+    ├── events.jsonl       recorded execution facts
+    ├── analysis.jsonl     derived interpretations
+    ├── feedback.jsonl     reviewer feedback
+    ├── Summary            mutable outputs in run.json
+    └── Artifacts          caller-named byte content
+```
+
+## Experiments and runs
+
+An experiment is a stable grouping identifier for repeated trials.
+A run is one execution with a start time, an optional finish time, and a `RUNNING`, `FINISHED`, or `FAILED` status.
+
+Inputs belong in `Config`, which becomes immutable when the run starts.
+Outputs belong in `Summary`, where the latest value for a key wins.
+
+Runs can link to a prior attempt with `previousRun(...)` or to a parent execution with `parentRun(...)`.
+These are identifiers recorded on the run; Agent Journal does not schedule retries or child agents.
+
+## Execution events
+
+`JournalEvent` is an extensible interface, not a closed or sealed hierarchy.
+Agent Journal 1.6.0 registers these built-in JSON subtypes:
+
+| `@type` | Java type | Purpose |
+|---|---|---|
+| `llm_call` | `LLMCallEvent` | Provider, model, token, cost, timing, and response metadata |
+| `tool_call` | `ToolCallEvent` | Tool name, input, output or error, duration, and optional stable ID |
+| `state_change` | `StateChangeEvent` | Named state transition and reason |
+| `metric` | `MetricEvent` | Point-in-time numeric measurement with tags |
+| `custom` | `CustomEvent` | Application-defined attributes |
+| `git_patch` | `GitPatchEvent` | File-level patch summary |
+| `git_commit` | `GitCommitEvent` | Commit identity and metadata |
+| `git_branch` | `GitBranchEvent` | Branch operation |
+| `git_pr` | `GitPullRequestEvent` | Pull request operation |
+| `feedback` | `FeedbackEvent` | Human feedback when serialized as an event |
+
+Register an external event implementation before reading it from file storage:
+
+```java
+Journal.registerEventType("workflow_step", WorkflowStepEvent.class);
+```
+
+The type name and class are supplied by the integration that owns the external event.
+
+## Recorded and derived data
+
+`events.jsonl` is the append-only record of what the application logged during execution.
+`analysis.jsonl` is a separate append-only stream for interpretations computed about that execution.
+
+Agent Journal 1.6.0 provides two derived event types:
+
+- `StepCostEvent` records a cost allocation and preserves the actual run cost separately from the attributed share.
+- `StepOutcomeEvent` records caller-supplied goal distance and outcome metrics for a step.
+
+Both streams begin with an independent schema header when the first event is appended.
+`JsonFileStorage` skips header lines when loading events.
+The canonical stream schema version is independent from the portable trace schema version.
+
+## Metrics and calls
+
+Every run exposes a `MetricRegistry` with counters, timers, and gauges.
+`run.logMetric(...)` also appends a `MetricEvent` to the execution stream.
+
+`CallTracker` records an in-memory hierarchy of named operations and durations within a run.
+It does not create distributed spans, a collector, or a monitoring service.
+
+## Evaluation subjects and feedback
+
+`EvalSubjectSources` converts selected journal events into source-neutral subjects for evaluation.
+The core adapter maps LLM calls, tool calls, state changes, and custom events; metric and git events are skipped.
+The `EvalSubjectKind` enum also reserves kinds used by other adapters, such as workflow steps, router decisions, retrieval results, final outputs, and feedback.
+
+The feedback API stores reviewer judgments in `feedback.jsonl`.
+It supports binary, numerical, and categorical scores and can export reviewed items for labeled datasets.
+
+## Storage behavior
+
+| Behavior | `InMemoryStorage` | `JsonFileStorage` |
+|---|---|---|
+| Survives JVM exit | No | Yes |
+| Execution events | In memory | `events.jsonl` |
+| Derived events | In memory only | `analysis.jsonl` |
+| Feedback | In memory | `feedback.jsonl` |
+| Artifacts | Cloned byte arrays | Files under `artifacts/` |
+| Intended use | Tests and ephemeral work | Local development and research runs |
+
+`JsonFileStorage` appends one JSON object per line without rewriting the existing stream.
+Its load methods currently read the whole requested file into memory before deserializing it.
+
+## Operational and security boundaries
+
+<Warning>
+`JsonFileStorage` is a local filesystem backend, not a database, access-control layer, or multi-tenant security boundary.
+</Warning>
+
+- Treat journal directories as potentially sensitive operational data.
+- Use trusted caller-controlled experiment IDs, run IDs, and artifact names; 1.6.0 does not enforce path containment.
+- Use one writer per run for file-backed storage.
+- Do not infer concurrent-append or multi-process safety from the append-only format; current tests do not establish those guarantees.
+- Large journals can require substantial heap when loaded because file-backed reads use whole-file loading.
+
+For content captured from vendor SDKs, see [Capture SDK Sessions](/docs/agent-journal/capture-sessions).

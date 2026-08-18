@@ -7,14 +7,6 @@ description: "Structured event logging, behavioral trace extraction, and human f
 
 **What's new in 1.6.0:** First-class **journal-capture primitives** downstream repos import — `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, a production fail-loud `RunRecorder`, and per-turn usage in the immutable log (slice 1 of the cross-repo capture contract). Plus a **cost-metering correction** — the headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn aggregate (incl. cache), fixing a ~2× under-count on long runs — and a per-file `schemaVersion` header on `events.jsonl` / `analysis.jsonl`. Additive on the frozen capture contract: a 1.5.0 consumer keeps working. (1.5.0 added first-class **Gemini CLI capture** — the `gemini-cli-capture` module, same portable trace + cost schema as Claude. **Three modules**: `journal-core`, `claude-code-capture`, `gemini-cli-capture`.)
 
-<Info>
-This project has moved from the `spring-ai-community` GitHub organization to
-`markpollack`. New releases are published under the Maven groupId
-`io.github.markpollack`, and Java packages now use the `io.github.markpollack`
-namespace. If you previously used `org.springaicommunity`, update your
-dependency coordinates and imports to the current values shown below.
-</Info>
-
 ## Overview
 
 Agent Journal captures the structured behavioral traces that make agent research possible. Every LLM call, tool invocation, state transition, and decision point is logged as a typed event in an append-only journal. The `EvalSubject` extraction layer converts heterogeneous event sources into a uniform stream of behavioral units ready for evaluation by [Agent Judge](/projects/agent-judge). A human feedback API records reviewer judgments with typed scores for judge calibration and golden dataset creation.
@@ -37,7 +29,7 @@ Agent Journal captures the structured behavioral traces that make agent research
 
 | Module | Description | Dependencies |
 |--------|-------------|--------------|
-| `journal-core` | Events, storage, EvalSubject, Feedback, portable `TraceWriter` | Zero external deps |
+| `journal-core` | Events, storage, EvalSubject, Feedback, portable `TraceWriter` | Jackson 2, SLF4J API |
 | `claude-code-capture` | Claude Code SDK → journal bridge, `PhaseCaptureSources` | claude-code-sdk |
 | `gemini-cli-capture` | Gemini CLI → journal bridge — same trace + cost schema | gemini-cli-sdk |
 
@@ -188,7 +180,7 @@ List<ReviewedItem> reviewed = feedback.exportReviewedItems(experimentId);
 
 ## Workflow Integration
 
-The `workflow-journal` module bridges `agent-workflow` step execution to the journal. Each workflow step completion is recorded as a `WorkflowStepEvent` containing step name, duration, tokens, and cost.
+Agent Workflow's `workflow-journal` module integrates Agent Workflow with Agent Journal; it is not an Agent Journal module. Its `WorkflowJournal` adapter records each workflow step completion as a `WorkflowStepEvent` containing the step name, duration, tokens, and cost.
 
 ```java
 WorkflowJournal.registerEventType();  // register once
@@ -211,8 +203,9 @@ The experiment template's `WorkflowAgentInvoker` and `WorkflowInvoker<S>` wire t
 Events are stored as an append-only `events.jsonl` log per run:
 
 ```
-.tuvium/experiments/{experimentId}/runs/{runId}/
-├── events.jsonl      # immutable execution log
+.agent-journal/experiments/{experimentId}/runs/{runId}/
+├── events.jsonl      # immutable execution events
+├── analysis.jsonl    # regenerable derived events
 └── feedback.jsonl    # append-only human feedback
 ```
 

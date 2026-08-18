@@ -22,7 +22,7 @@ export const ProtocolAnimation = () => {
     let tweens = [];
 
     function start() {
-      fetch("/acp-java-sdk/diagrams/acp-protocol.svg")
+      fetch("/images/acp-protocol.svg")
         .then(res => res.text())
         .then(svgText => {
           if (!containerRef.current) return;

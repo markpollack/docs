@@ -69,25 +69,24 @@ try (Sandbox sandbox = LocalSandbox.builder()
 
 ## Maven
 
-The currently released version is **0.9.3**:
+The currently released version is **0.10.0**:
 
 ```xml
 <dependency>
   <groupId>io.github.markpollack</groupId>
   <artifactId>agent-sandbox-core</artifactId>
-  <version>0.9.3</version>
+  <version>0.10.0</version>
 </dependency>
 ```
 
 Use `agent-sandbox-docker` or `agent-sandbox-e2b` for those backends.
 
 <Info>
-Version 0.10.0 is under development and is not yet published. In 0.10.0,
-`DockerSandbox` requires an explicit caller-selected image: the no-argument constructor
-is removed, and `DockerSandbox.builder().build()` fails before Docker access unless
-`.image(...)` is set. Constructors that already take an image continue to work. The
-caller may use any compatible image and owns its provenance, contents, security, and
-update policy.
+In version 0.10.0, `DockerSandbox` requires an explicit caller-selected image: the
+no-argument constructor is removed, and `DockerSandbox.builder().build()` fails before
+Docker access unless `.image(...)` is set. Constructors that already take an image
+continue to work. The caller may use any compatible image and owns its provenance,
+contents, security, and update policy.
 </Info>
 
 ## Source

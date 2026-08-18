@@ -1,8 +1,30 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Claude Agent SDK — auto-generated from git history"
+description: "Release notes for Claude Agent SDK"
 ---
+
+## 1.5.0 <span style={{fontSize: '0.7em', padding: '2px 8px', borderRadius: '4px', background: '#334155', color: '#cbd5e1', verticalAlign: 'middle'}}>UNRELEASED</span>
+
+Prepared but **not yet published**. 1.4.0 remains the current release on Maven Central.
+
+A security and packaging release; no public API changes.
+
+**Consumer dependency floors.** If you depend on `claude-code-sdk` without importing a
+BOM, 1.4.0 resolves Jackson 2.21.2 and Jackson 3.0.3 — 23 known vulnerabilities, 8 of
+them HIGH. The project's own build was clean, which is why this went unnoticed: POM
+flattening strips `<dependencyManagement>`, so the parent's Jackson BOM imports never
+travelled to consumers. 1.5.0 declares the floors — Jackson 2.21.6 and Jackson 3.1.6 —
+directly on the published module, and the same no-BOM consumer resolves zero findings.
+Upgrading is the fix; nothing makes 1.4.0 safe retroactively.
+
+**Packaging.** The binary, sources and Javadoc archives now embed the Apache 2.0 licence
+text. A CycloneDX 1.6 SBOM is published for the first time. The published POM resolves
+from Maven Central only.
+
+**Hygiene.** A hard-coded developer path shipped in `ClaudeCliDiscovery` since the first
+release; it is gone. Prompt text and the full CLI command line are no longer written to
+INFO logs.
 
 ## 1.4.0 (2026-06-15)
 
@@ -24,7 +46,7 @@ description: "Release notes for Claude Agent SDK — auto-generated from git his
 - Add distributionManagement for snapshot publishing
 - Skip tests on snapshot publish — CI handles test validation
 - Add agent-clis and API key secrets to CI and snapshot workflows
-- Migrate to markpollack org: package rename, BSL license, standalone POM, build-tools workflows
+- Migrate to markpollack org: package rename, standalone POM, build-tools workflows
 - Fix README install section: remove stale snapshot repo config
 - Update README: released version 1.0.0
 

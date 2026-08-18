@@ -13,11 +13,49 @@ namespace. If you previously used `org.springaicommunity`, update your
 dependency coordinates and imports to the current values shown below.
 </Info>
 
-Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies. Full Spring Boot auto-configuration.
+Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies, and no Spring dependency either: the SDK module depends only on zt-exec, Jackson, Reactor, SLF4J and the MCP Java SDK. Spring Boot auto-configuration for Claude lives in [Agent Client](/projects/agent-client), not here.
 
 This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-workflow) — each step runs a full multi-turn Claude session internally.
 
-**What's new in 1.4.0:** Bumps the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568. Builds on 1.3.0, which aligned to Claude CLI 2.1.162 and added a lossless `rawJson` escape hatch on `ParsedMessage.RegularMessage`. See [What's New →](/docs/claude-agent-sdk/whats-new) for the full history.
+**Current release: 1.4.0.** It bumps the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568, and builds on 1.3.0, which aligned to Claude CLI 2.1.162 and added a lossless `rawJson` escape hatch on `ParsedMessage.RegularMessage`. A 1.5.0 security and packaging release is prepared but not yet published. See [What's New →](/docs/claude-agent-sdk/whats-new).
+
+## Using it
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>claude-code-sdk</artifactId>
+    <version>1.4.0</version>
+</dependency>
+```
+
+**Java 21 or later.** Every published artifact is Java 21 bytecode (class-file major 65); there has never been a Java 17 build, and a Java 17 runtime cannot load the SDK.
+
+<Warning>
+If you use 1.4.0 without importing a BOM that manages Jackson, your runtime closure
+resolves Jackson 2.21.2 and Jackson 3.0.3, which carry 23 known vulnerabilities (8 HIGH).
+Either pin Jackson 2.21.6 / 3.1.6 yourself, or wait for 1.5.0, which declares those
+floors on the published module.
+</Warning>
+
+## How it operates
+
+The SDK does not call the Anthropic API. It **spawns the Claude Code CLI as a child
+process** and speaks the stream-JSON control protocol to it over stdin and stdout. That
+shapes what you need to know:
+
+- The `claude` executable must be installed and authenticated on the machine that runs
+  your code. The SDK discovers it on `PATH` and in the usual install locations.
+- `ANTHROPIC_API_KEY` is passed through to the child process when set. Environment
+  inheritance is otherwise a whitelist, not a copy of your whole environment.
+- Every session consumes real model usage and is billed. That includes the integration
+  test suite in the SDK repository, and a client connected without an initial prompt,
+  which sends a default `"Hello"` turn.
+- The child process, and its descendants, are terminated on close.
+
+## Licence
+
+Apache License 2.0 — see [the repository LICENSE](https://github.com/markpollack/claude-agent-sdk-java/blob/main/LICENSE). This SDK is a supporting public project and is not part of the AgentWorks BSL set.
 
 ## Tutorials
 

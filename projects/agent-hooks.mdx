@@ -5,7 +5,7 @@ description: "Portable hook API for steering agent behavior at the tool-call bou
 
 **[What's New →](/docs/agent-hooks/whats-new)**
 
-**What's new in 0.6.4:** Built on Spring AI 2.0.0 GA and Spring Boot 4.0.7, with an OWASP CVE gate added to the build. The prior 0.6.3 release migrated onto the new Claude SDK and aligned on the Jackson 2.21.2 BOM. The hook-API architecture — core plus the Spring AI, Claude, and Gemini adapters — is unchanged.
+**Current release: 0.6.4.** Built on Spring AI 2.0.0 GA and Spring Boot 4.0.7; the prior 0.6.3 release migrated onto the new Claude Agent SDK. The hook-API architecture — core plus the Spring AI, Claude, and Gemini adapters — is unchanged since 0.6.0.
 
 Every agent framework implements hooks differently.
 Claude Code has shell-based hooks. Strands has steering callbacks. Spring AI has advisors.
@@ -68,19 +68,28 @@ registry.onTool("write.*", BeforeToolCall.class, event -> {
 | `Proceed` | Default | Tool executes normally |
 | `Block` | Safety / policy | Short-circuits immediately — later hooks never run |
 | `Modify` | Input transformation | Passes modified input to the next hook in the chain |
-| `Retry` | AfterToolCall only | Re-executes the tool (e.g., after transient failure) |
+| `Retry` | AfterToolCall only | **Advisory.** Returned to the caller; no shipped adapter re-executes the tool |
 
 Multiple hooks execute in priority order (default: 100, lower = earlier).
 AfterToolCall hooks fire in reverse priority order for proper cleanup semantics.
 
+Two behaviors are worth knowing before you rely on them. Dispatch matches an event's **exact
+runtime class**, so a hook registered against a supertype such as `ToolEvent.class` compiles
+but never fires — register against the concrete record. And a hook that *throws* is logged at
+`WARNING` and treated as `Proceed`: `Block` short-circuits, but a failing hook does not fail
+closed.
+
 ## Modules
 
-| Module | What it does | Dependencies |
-|--------|-------------|-------------|
-| `agent-hooks-core` | Pure Java 17 API — events, decisions, registry | Zero (portable) |
-| `agent-hooks-spring` | Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Boot | Spring AI, Spring Boot |
-| `agent-hooks-claude` | Claude Agent SDK adapter — bridges hook providers to Claude CLI hooks via `AgentHookBridge` | Claude Code SDK (provided) |
-| `agent-hooks-gemini` | Gemini CLI adapter — stateless stdin/stdout dispatcher for Gemini's subprocess-per-event model | Jackson (compile) |
+| Module | What it does | Dependencies | Java |
+|--------|-------------|-------------|------|
+| `agent-hooks-core` | Portable API — events, decisions, registry | No framework dependency; `org.jspecify` annotations only | 17 |
+| `agent-hooks-spring` | Spring AI adapter — wraps `ToolCallback` with hook dispatch, auto-configures via Boot | Spring AI, Spring Boot | 17 |
+| `agent-hooks-gemini` | Gemini CLI adapter — stateless stdin/stdout dispatcher for Gemini's subprocess-per-event model | Jackson (compile) | 17 |
+| `agent-hooks-claude` | Claude Agent SDK adapter — bridges hook providers to Claude CLI hooks via `AgentHookBridge` | Claude Agent SDK (provided) | **21** |
+
+`agent-hooks-claude` requires Java 21 because every published `claude-code-sdk` version is
+Java 21 bytecode. The other three modules are unaffected on Java 17.
 
 ## Event Hierarchy
 
@@ -162,6 +171,11 @@ public class SecurityHooks implements AgentHookProvider {
 public class MySecurityHooks extends SecurityHooks {}
 ```
 
+The auto-configured `HookContext` is an **application-wide singleton**: every hooked tool call
+in the application shares one state map and one tool-call history. That suits a single-user CLI
+or desktop app. A multi-user server should define its own request- or session-scoped
+`HookContext` bean, or build one per conversation and call `HookedTools.wrap` at that point.
+
 **Claude Agent SDK** — bridge into the Claude `HookRegistry`:
 
 ```java
@@ -175,7 +189,10 @@ bridge.registerInto(claudeHookRegistry);
 The bridge registers callbacks for all six Claude hook events (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop, PreCompact). It converts Claude SDK types to core events, dispatches through your hooks, and maps decisions back to Claude's `HookOutput`.
 
 Tool call duration is tracked via wall-clock timing across the pre/post hook boundary.
-Each Claude session gets its own `HookContext` for isolated state and history.
+Each Claude session gets its own `HookContext` for isolated state and history. The bridge
+retains those contexts for its own lifetime — fine for one bridge per CLI process; a
+long-lived bridge shared across sessions should call `evictSession(sessionId)` when a session
+finishes.
 
 **Gemini CLI** — stateless subprocess dispatcher reads JSON from stdin:
 
@@ -203,7 +220,9 @@ Note: Gemini BeforeTool can only allow or block — `Modify` is downgraded to al
   </Card>
 </CardGroup>
 
-## Used By
+## Suite integration
 
-- **[Agent Workflow](/projects/agent-workflow)** — hooks apply automatically to any workflow step that invokes tools
-- **[Agent Journal](/projects/agent-journal)** — hook provider that logs tool-call events to a journal Run
+Agent Hooks is managed by the [AgentWorks BOM](/projects/agentworks-bom), but it is standalone
+today: no other published AgentWorks module depends on it. Bridges to
+[Agent Journal](/projects/agent-journal) (a hook provider that logs tool-call events to a
+journal Run) and to workflow steps are intended directions, not shipped code.

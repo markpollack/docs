@@ -1,12 +1,39 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Hooks — auto-generated from git history"
+description: "Release notes for Agent Hooks"
 ---
+
+<Note>
+  **0.7.0 is not released.** It is prepared but unpublished; the coordinates on this site
+  remain 0.6.4. The section below describes what 0.7.0 will contain when it ships.
+</Note>
+
+## 0.7.0 — prepared, not yet released
+
+- **Standalone consumers get safe Jackson versions.** A consumer that resolved
+  `agent-hooks-spring` or `agent-hooks-gemini` without importing a BOM previously selected
+  Jackson versions with known advisories, because the parent's `dependencyManagement` does not
+  travel through the flattened POM published to Maven Central. The floors are now 2.21.6 and
+  3.1.6, with the Jackson 3 floor declared directly on `agent-hooks-spring`.
+- **Published POMs no longer carry repositories.** 0.6.x shipped a `<repositories>` block on
+  every module POM, so consumers inherited two snapshot repositories and a milestone
+  repository. The build resolves from Maven Central alone.
+- **`agent-hooks-claude` is Java 21.** Every published `claude-code-sdk` version is Java 21
+  bytecode, so the module never could be used on Java 17; it had been shipping as Java 17
+  bytecode. `agent-hooks-core`, `-spring`, and `-gemini` remain Java 17.
+- Claude Agent SDK moves to 1.4.0 (still `provided` scope).
+- Every distributed archive now contains the BSL 1.1 license text.
+- A hook that throws, and a steering decision returned from an observation-only event, are now
+  logged; both were documented as logged and were in fact silent.
+- The Gemini dispatcher writes a protocol response for every invocation, so an unchecked hook
+  failure can no longer leave the CLI waiting on empty stdout.
+- Adapter log and exception messages no longer embed tool-input payloads.
+- `AgentHookBridge` gains `evictSession(String)` and `activeSessionCount()`.
 
 ## 0.6.4 (2026-06-15)
 
-- agent-hooks 0.6.4: Spring AI 2.0.0 GA + Spring Boot 4.0.7; add OWASP CVE gate
+- Spring AI 2.0.0 GA and Spring Boot 4.0.7
 
 ## 0.6.3 (2026-06-06)
 

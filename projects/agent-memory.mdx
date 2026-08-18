@@ -5,13 +5,13 @@ description: "Progressive memory management for Spring AI — from context compa
 
 **[What's New →](/docs/agent-memory/whats-new)**
 
-**Latest — 0.3.0:** upgrades to Spring AI 2.0.0 GA and adds an OWASP dependency-check CVE gate. The Tier-1 compaction core (`CompactionMemoryAdvisor`, `MemoryStore`) shipped in 0.1.0 and is unchanged; 0.2.0 aligned on the Jackson 2.21.2 BOM.
+**Latest — 0.4.0:** first Business Source License 1.1 release. Jackson floors raised for standalone consumers, an aggregate CycloneDX SBOM published on the parent artifact, hosted OWASP/NVD scanning removed in favour of a local offline procedure, and the operating boundary documented. Tier-1 compaction behaviour is unchanged from 0.1.0.
 
 ## Overview
 
-Agent Memory gives AI agents the ability to manage conversational context intelligently. Without memory management, every prior tool result is re-sent every turn — on long tasks, context fills with stale noise, costs climb, and the model loses focus. In production: **18M input tokens** for a single code-coverage task. With compaction: **854K tokens. 21x reduction, same quality.**
+Agent Memory gives AI agents a way to manage conversational context. Without memory management, every prior tool result is re-sent every turn — on long tasks, context fills with stale noise, costs climb, and the model loses focus. Agent Memory stores accumulated learnings on the filesystem, injects a token-budgeted subset into each request, and summarizes older entries with a cheaper model once the uncompacted set crosses a threshold.
 
-The library starts with a proven context compaction strategy and progressively adds structured retrieval, reflection, and autonomous memory management — eventually reaching MemGPT-level capabilities. Each tier is independently useful.
+The library starts with context compaction and progressively adds structured retrieval, reflection, and autonomous memory management — eventually reaching MemGPT-level capabilities. Each tier is independently useful. **Tier 1 is what ships today; tiers 2–4 are planned.**
 
 Agent Memory ships as a Spring AI `BaseAdvisor` — plug it into any `ChatClient` pipeline with one line:
 
@@ -31,6 +31,26 @@ ChatClient agent = ChatClient.builder(chatModel)
 
 On each request, the advisor retrieves accumulated learnings (within the token budget) and injects them into the system message. After each response, it appends the assistant's output to the store. When uncompacted entries exceed `budget × ratio`, compaction summarizes them via a cheap model and replaces them with dense summaries.
 
+## Compatibility
+
+| Property | Value |
+|----------|-------|
+| Java | 17 |
+| Spring AI | 2.0.0 GA |
+| Maturity | Pre-1.0 library; Tier-1 compaction shipping |
+| License | **0.4.0 and later: Business Source License 1.1.** 0.3.0 and earlier remain Apache License 2.0. Published tags and artifacts are not retroactively relicensed. |
+
+## Operating boundary
+
+The 0.4.0 filesystem store is **local, plaintext, and single-writer**. Read this before putting it in front of anything shared.
+
+- Memory is written to the local filesystem in clear text. It is not encrypted and is not shared storage.
+- There is no locking, no atomic index replacement, and no crash recovery. A second concurrent writer, or a crash during an index write, can corrupt or truncate `_index.json` — the only source of truth for the index.
+- Stored memory is injected verbatim into the model's system prompt, so only trusted content should be written to it.
+- Multi-process or concurrent-writer use requires external coordination.
+
+Locking, atomic index replacement, and crash recovery are backlog items, not shipped functionality.
+
 ## How Compaction Works
 
 When accumulated context exceeds a token budget, older entries are summarized by a cheap model (e.g., Haiku) and replaced with a compact summary. The agent continues with dense, relevant context instead of an ever-growing prompt.
@@ -42,41 +62,48 @@ Two parameters control it:
 | `memoryTokenBudget` | 8,192 | Max tokens of memory included in each prompt |
 | `compactionRatio` | 0.75 | Fraction of budget that triggers compaction |
 
-## Benchmark Data
+Token estimation is a characters÷4 approximation, not a tokenizer.
 
-Real LLM benchmarks against Anthropic Haiku 4.5 on a 12-story e-commerce platform PRD:
+## Research background
 
-| Metric | Without Compaction | With Compaction |
-|--------|-------------------|-----------------|
-| Stories passed | 9/12 | **11/12** |
-| Total tokens | 56,876 | **40,152** |
-| Total cost | $0.34 | **$0.24** |
+<Warning>
+The measurements below come from [wiggum-memory](https://github.com/markpollack/wiggum-memory), the research project Agent Memory was extracted from. They were produced by that project's `RalphMemoryAdvisor`, **not** by the `CompactionMemoryAdvisor` published here, and this repository ships **no live-model benchmark** of its own. Treat them as the origin story for the design, not as performance claims for the library.
+</Warning>
 
-Token growth without compaction is linear and unbounded (~800 tokens/story, reaching 9,000+ by story 12). With compaction it **plateaus around 4,600 tokens** after the first compaction cycle.
+### One research run on a 12-story PRD
 
-### Budget Sensitivity
+A single research run (n=1) compared unbounded memory against token-budgeted retrieval plus compaction on a 12-story e-commerce PRD, with **Anthropic Haiku 4.5 on both sides** and the compaction step also using Haiku 4.5.
 
-The memory budget is the critical tuning parameter:
+**Measured configuration: `memoryTokenBudget` 4,096, `compactionRatio` 0.5.** The 8,192 / 0.75 defaults shown above were a recommendation for unstructured conversation and were never measured on this suite.
 
-| Budget | Result | Notes |
-|--------|--------|-------|
-| 2,048 | 7/12 stories | Too aggressive — destroys critical details |
-| **4,096** | **11/12 stories** | Sweet spot for structured tasks |
-| 8,192 | Good | Best for unstructured conversations |
+| Metric | Unbounded memory | Budgeted + compaction |
+|--------|-----------------|-----------------------|
+| Stories passed | 9/12 | 11/12 |
+| Total tokens | 56,876 | 40,152 |
+| Estimated cost | $0.34 | $0.24 |
 
-At 2,048 tokens, compaction destroys critical details — table names, endpoint signatures, auth token formats — that later tasks depend on. At 4,096, it preserves what matters and discards what doesn't.
+Caveats that belong with the numbers:
 
-### Production Validation
+- **n=1.** In an earlier run of the same suite at a 2,048 budget, unbounded memory scored **11/12** and the budgeted configuration scored **7/12**. The 9/12 figure above is one draw from a noisy distribution, and the write-up itself attributes the difference to ordinary LLM variability.
+- **Pass/fail is self-reported** by the run's own judge, not an independent evaluation.
+- **Cost is an estimate** derived at a $6/MTok rate, not a billed amount.
+- The same write-up found that a 2,048 budget destroyed critical details (table names, endpoint signatures, auth token formats) and caused a five-story failure streak. Budget selection dominates the result.
 
-In a code-coverage experiment with [Loopy](/projects/loopy):
+Token growth without compaction was linear (~800 tokens/story, reaching 9,000+ by story 12). With compaction it plateaued around 4,600 tokens after the first compaction cycle.
 
-| Configuration | Compaction | Input Tokens | Outcome |
-|---------------|-----------|-------------|---------|
-| No compaction | none | 18,336,594 | Failed |
-| Threshold 0.5 | late | — | Cost cap hit |
-| **Threshold 0.3** | **early** | **854,353** | **Passed** |
+### A related experiment in Loopy — different implementation, different models
 
-Compaction does not change answer quality. It determines whether the run finishes within budget.
+[Loopy](/projects/loopy) is a separate Spring AI agent CLI. Its `AgentLoopAdvisor` applies a related idea — threshold-based triggering with model summarization — but operates on **conversation messages** rather than accumulated learnings. It is a different implementation and is not this library.
+
+A code-coverage experiment there recorded:
+
+| Configuration | Model | Compaction threshold | Input tokens | Cost | Outcome |
+|---------------|-------|---------------------|-------------|------|---------|
+| Loopy | Haiku | none | 18,336,594 | $2.55 | Failed |
+| Loopy | Sonnet | 0.5 | — | $5.06 | Cost cap hit |
+| Loopy | Sonnet | 0.3 | 854,353 | $2.72 | Passed |
+
+**The model differs across the rows**, so this is not a controlled comparison: the failing unbounded run used Haiku and the passing compacted run used Sonnet. No quality measurement was held constant, and the run that logged far fewer input tokens cost slightly *more* in dollars. The honest reading is narrow — in that experiment, compacting earlier was what let the run finish inside its cost cap. It is not evidence that this library reduces token use at equal quality.
 
 ## Roadmap
 
@@ -91,13 +118,15 @@ Compaction does not change answer quality. It determines whether the run finishe
 
 | Module | Description |
 |--------|-------------|
-| `memory-core` | `MemoryStore` interface, `FileSystemMemoryStore`, `MemoryCompactor`, `TokenEstimator` |
+| `memory-core` | `MemoryStore` interface, `FileSystemMemoryStore`, `ProgressFileMemoryStore`, `MemoryEntry`, `MemoryIndex`, `MemoryCompactor`, `TokenEstimator` |
 | `memory-advisor` | `CompactionMemoryAdvisor` — Spring AI `BaseAdvisor` for ChatClient integration |
+
+The on-disk shape — `iterations/`, `patterns/`, `_index.json`, or a single `progress.txt` — is unversioned and carries no forward-compatibility guarantee.
 
 ## Quick Links
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-memory">
-  Source code (0.3.0 on Maven Central)
+  Source code (0.4.0 on Maven Central)
 </Card>
 
 ## Origin

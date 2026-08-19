@@ -6,6 +6,18 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Memory 0.4.0
+
+**First BSL 1.1 release, consumer-safe Jackson resolution, a published SBOM, and an honest operating boundary.**
+
+- 0.4.0 and later are Business Source License 1.1; 0.3.0 and earlier remain Apache 2.0, and published artifacts are not retroactively relicensed
+- Jackson 3 core and databind are declared directly on memory-core so standalone no-BOM consumers resolve 3.1.6 by nearest-wins, with a committed CI resolution gate
+- The parent artifact publishes one aggregate CycloneDX 1.6 SBOM; hosted OWASP/NVD scanning is removed in favour of a local offline Trivy procedure
+- The store is documented as local, plaintext and single-writer, with no locking, atomic index replacement or crash recovery
+- Overstated research figures are removed from the project page; the surviving measurements are labelled as one wiggum-memory research run of a different implementation
+
+[Project](/projects/agent-memory) | [What's New](/docs/agent-memory/whats-new) | [Source](https://github.com/markpollack/agent-memory)
+
 ### Agent Experiment 0.6.0
 
 **Workflow-backed experiments, first-class journal evidence, and a consumer-safe release graph.**

@@ -1,8 +1,38 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Claude Agent SDK — auto-generated from git history"
+description: "Release notes for Claude Agent SDK"
 ---
+
+## 1.5.0 (2026-08-19)
+
+A security, packaging and behaviour-correction release. No public API changed; every
+1.4.0 program compiles against 1.5.0 unmodified.
+
+**Consumer dependency floors.** If you depend on `claude-code-sdk` without importing a
+BOM, 1.4.0 resolves Jackson 2.21.2 and Jackson 3.0.3 — 23 known vulnerabilities, 8 of
+them HIGH. The project's own build was clean, which is why this went unnoticed: POM
+flattening strips `<dependencyManagement>`, so the parent's Jackson BOM imports never
+travelled to consumers. 1.5.0 declares the floors — Jackson 2.21.6 and Jackson 3.1.6 —
+directly on the published module, and the same no-BOM consumer resolves zero findings.
+Upgrading is the fix; nothing makes 1.4.0 safe retroactively.
+
+**`connect()` no longer sends a synthetic `"Hello"`.** Both the sync and the async client
+used to substitute the literal string `"Hello"` when `connect()` was called with no
+initial prompt, and send it as a user message — contradicting the documented contract
+("connects to the Claude CLI without an initial prompt") and billing a model turn the
+caller never requested. `connect()` now starts and initialises the session and writes
+nothing to the CLI, matching the official Python SDK. `connect(String)` is unchanged and
+still sends exactly the prompt you pass; if you relied on the old behaviour, call
+`connect("Hello")` explicitly.
+
+**Packaging.** The binary, sources and Javadoc archives now embed the Apache 2.0 licence
+text. A CycloneDX 1.6 SBOM is published for the first time. The published POM resolves
+from Maven Central only.
+
+**Hygiene.** A hard-coded developer path shipped in `ClaudeCliDiscovery` since the first
+release; it is gone. Prompt text and the full CLI command line are no longer written to
+INFO logs.
 
 ## 1.4.0 (2026-06-15)
 
@@ -24,7 +54,7 @@ description: "Release notes for Claude Agent SDK — auto-generated from git his
 - Add distributionManagement for snapshot publishing
 - Skip tests on snapshot publish — CI handles test validation
 - Add agent-clis and API key secrets to CI and snapshot workflows
-- Migrate to markpollack org: package rename, BSL license, standalone POM, build-tools workflows
+- Migrate to markpollack org: package rename, standalone POM, build-tools workflows
 - Fix README install section: remove stale snapshot repo config
 - Update README: released version 1.0.0
 

@@ -4,6 +4,43 @@ sidebarTitle: "What's New"
 description: "Curated Agent Judge release notes"
 ---
 
+## 0.15.0
+
+Agent Judge 0.15 is a compatibility-preserving dependency-alignment and release-reproducibility
+update. It keeps the 0.14 status-first `Judgment` API, the Java 21 baseline, and all ten published
+modules unchanged.
+
+### Consumer dependency alignment
+
+- Standalone consumers continue to resolve Jackson 2.21.6, with Jackson Annotations on its 2.21
+  release line.
+- `agent-judge-llm` and `agent-judge-rag` now declare Jackson 3.1.6 in their flattened POMs so
+  consumers without the AgentWorks BOM receive the accepted Jackson 3 floor.
+- The provided Agent Client integration baseline advances to 0.26.0. Applications still choose and
+  provide their Agent Client runtime.
+
+### Agent Sandbox Core
+
+`agent-judge-exec` now uses `agent-sandbox-core` 0.10.0. That Core release protects environment
+values in `ExecSpec.toString()` and avoids forwarding the whole parent process environment when
+caller overrides are present.
+
+Agent Judge's own execution paths construct specs with a command and timeout only; they do not set
+environment variables. This release does not add the Sandbox Docker or E2B modules.
+
+### Reproducible release evidence
+
+- Build and snapshot workflows are pinned to the reviewed Build Tools commit, and the Build workflow
+  supports exact-SHA manual verification.
+- Every module publishes binary, source, and generated Javadoc JARs with the project-specific
+  Business Source License terms.
+- Maven Central attaches one aggregate CycloneDX 1.6 SBOM to the parent coordinate. It is supporting
+  inventory for the reactor and included dependency graph; provided-scope inventory is not a claim
+  that every listed component enters an application's runtime closure.
+
+See the complete [0.15 release notes](https://github.com/markpollack/agent-judge/blob/v0.15.0/RELEASE_NOTES_0.15.md)
+and the [GitHub release](https://github.com/markpollack/agent-judge/releases/tag/v0.15.0).
+
 ## 0.14.0
 
 Agent Judge 0.14 replaces the former sealed score hierarchy with a normalized, portable `Judgment` contract.

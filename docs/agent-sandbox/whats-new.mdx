@@ -1,8 +1,38 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for Agent Sandbox — auto-generated from git history"
+description: "Release notes for Agent Sandbox"
 ---
+
+## 0.10.0 (2026-08-18)
+
+- Restore the convenient local Docker backend on current Docker Engine versions with
+  Testcontainers 1.21.4, and add its core-and-Docker TCK run to ordinary CI.
+- Require callers to select the Docker image. The no-argument `DockerSandbox()`
+  constructor is removed, `builder().build()` fails before Docker access unless
+  `.image(...)` is set, and explicit-image constructors continue to work. Agent Sandbox
+  does not ship or maintain a runtime image; the caller owns the selected image's
+  security and update policy.
+- Preserve argument-vector semantics across backends and harden Docker environment and
+  file-list execution against shell injection.
+- Stop copying the complete host environment into `LocalSandbox`, update Jackson and
+  commons-compress, package license texts in distributed archives, and attach a
+  graph-derived CycloneDX 1.6 SBOM to the parent artifact.
+
+Three disclosed upstream findings remain in Apache HttpComponents classes embedded and
+relocated inside the Java Docker transport. The HTTP/2/HPACK finding is not reachable on
+the Docker HTTP/1.1 path examined. The other two require a malicious response from the
+trusted, root-equivalent local Docker daemon; no path from untrusted code inside the
+selected container to those advisory conditions was identified under this trust model.
+Published docker-java/Testcontainers combinations examined do not contain fixed embedded
+versions, and ordinary dependency management cannot override classes already relocated
+inside the zerodep JAR. The findings remain visible and are accepted for the
+trusted-local-daemon use case. Changing the selected container image cannot remove them.
+
+The CycloneDX SBOM is derived from the Maven dependency graph and does not enumerate
+components shaded into dependency JARs. For this release, its scan must be read alongside
+the actual-JAR scan that detects the three transport findings; a zero-finding SBOM scan
+is a coverage limitation, not a clean closure.
 
 ## 0.9.3 (2026-06-06)
 
@@ -17,4 +47,3 @@ description: "Release notes for Agent Sandbox — auto-generated from git histor
 ## 0.9.1 (2026-03-05)
 
 - Initial release.
-

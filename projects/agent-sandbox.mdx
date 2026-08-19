@@ -1,6 +1,6 @@
 ---
 title: "Agent Sandbox"
-description: "Isolated command execution — Local, Docker, and E2B cloud backends behind a unified API"
+description: "Synchronous command execution and workspace files across Local, Docker, and E2B backends"
 ---
 
 **[What's New →](/docs/agent-sandbox/whats-new)**
@@ -13,21 +13,28 @@ namespace. If you previously used `org.springaicommunity`, update your
 dependency coordinates and imports to the current values shown below.
 </Info>
 
-A unified API for isolated command execution across multiple backends. Whether you need local process isolation, Docker container security, or cloud-based E2B microVMs, the same `Sandbox` interface works everywhere. Backends are interchangeable — code written for `LocalSandbox` works identically with `DockerSandbox` or `E2BSandbox`.
+Agent Sandbox provides one synchronous command and workspace-file contract across
+multiple backends. The shared `exec` and file behavior is tested by the
+`AbstractSandboxTCK`. Backend-specific or unsupported capabilities, including
+interactive execution, are not interchangeable.
 
 ## Backends
 
 <CardGroup cols={3}>
   <Card title="LocalSandbox" icon="laptop">
-    Local process execution via zt-exec. Fast, no isolation overhead. Good for development and trusted code.
+    Process and workspace convenience via zt-exec. It provides no security isolation and is for development and trusted commands.
   </Card>
   <Card title="DockerSandbox" icon="docker">
-    Container isolation via Testcontainers. Full filesystem and network isolation. Production-ready.
+    A convenient local Docker backend using Testcontainers and an image you select. It is not a hardened multi-tenant execution service.
   </Card>
   <Card title="E2BSandbox" icon="cloud">
-    Cloud Firecracker microVMs via E2B. Maximum isolation with MCP support and session reconnection.
+    Remote Firecracker microVM execution via E2B. This backend requires an E2B account and API key.
   </Card>
 </CardGroup>
+
+`DockerSandbox` has privileged access to a trusted, root-equivalent local Docker daemon.
+Container isolation alone is not a complete hostile-workload security boundary; add the
+kernel, user, and network controls required by your threat model.
 
 ## Core API
 
@@ -57,18 +64,37 @@ try (Sandbox sandbox = LocalSandbox.builder()
 | Module | Backend | Dependencies |
 |--------|---------|-------------|
 | `agent-sandbox-core` | `LocalSandbox` | zt-exec |
-| `agent-sandbox-docker` | `DockerSandbox` | testcontainers |
+| `agent-sandbox-docker` | `DockerSandbox` | Testcontainers |
 | `agent-sandbox-e2b` | `E2BSandbox` | jackson, awaitility |
-| `agent-sandbox-bom` | Bill of Materials | — |
+
+## Maven
+
+The currently released version is **0.10.0**:
+
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-sandbox-core</artifactId>
+  <version>0.10.0</version>
+</dependency>
+```
+
+Use `agent-sandbox-docker` or `agent-sandbox-e2b` for those backends.
+
+<Info>
+In version 0.10.0, `DockerSandbox` requires an explicit caller-selected image: the
+no-argument constructor is removed, and `DockerSandbox.builder().build()` fails before
+Docker access unless `.image(...)` is set. Constructors that already take an image
+continue to work. The caller may use any compatible image and owns its provenance,
+contents, security, and update policy.
+</Info>
 
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-sandbox">
-  Source code — Core, Docker, E2B modules and BOM
+  Source code — Core, Docker, and E2B modules
 </Card>
 
 ## Used By
 
 - **[Agent Judge](/projects/agent-judge)** — `agent-judge-exec` runs command-based evaluation in sandboxes
-- **[Agent Client](/projects/agent-client)** — isolated execution environments for autonomous agents
-- **[Agent Bench](/projects/agent-bench)** — benchmark execution with configurable isolation level

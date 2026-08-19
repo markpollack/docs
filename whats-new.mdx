@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Hooks 0.7.0
+
+**Consumer-safe runtime closures, honest Java boundaries, and release-complete artifacts.**
+
+- Standalone no-BOM consumers now resolve Jackson 2.21.6 and 3.1.6 through direct nearest-wins floors, including the actual Hooks-plus-supplied-Claude-SDK 1.5.0 shape
+- Published POMs no longer inject snapshot or milestone repositories into downstream builds, and every distributed archive now contains the BSL 1.1 license text
+- The Claude adapter declares its real Java 21 requirement while core, Spring, and Gemini remain Java 17; hook-failure and observation-only steering warnings are now visible
+- The parent publishes one aggregate CycloneDX 1.6 SBOM, release workflows are immutably pinned, and public Central consumer closures have zero findings
+
+[Project](/projects/agent-hooks) | [What's New](/docs/agent-hooks/whats-new) | [Source](https://github.com/markpollack/agent-hooks)
+
 ### Agent Memory 0.4.0
 
 **First BSL 1.1 release, consumer-safe Jackson resolution, a published SBOM, and an honest operating boundary.**

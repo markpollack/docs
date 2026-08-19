@@ -4,12 +4,7 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Hooks"
 ---
 
-<Note>
-  **0.7.0 is not released.** It is prepared but unpublished; the coordinates on this site
-  remain 0.6.4. The section below describes what 0.7.0 will contain when it ships.
-</Note>
-
-## 0.7.0 — prepared, not yet released
+## 0.7.0 (2026-08-19)
 
 - **Standalone consumers get safe Jackson versions.** A consumer that resolved
   `agent-hooks-spring` or `agent-hooks-gemini` without importing a BOM previously selected
@@ -22,8 +17,10 @@ description: "Release notes for Agent Hooks"
 - **`agent-hooks-claude` is Java 21.** Every published `claude-code-sdk` version is Java 21
   bytecode, so the module never could be used on Java 17; it had been shipping as Java 17
   bytecode. `agent-hooks-core`, `-spring`, and `-gemini` remain Java 17.
-- Claude Agent SDK moves to 1.4.0 (still `provided` scope).
+- Claude Agent SDK moves to 1.5.0 (still `provided` scope). An actual no-BOM consumer of
+  Agent Hooks plus that supplied SDK resolves the corrected Jackson 2.21.6 and 3.1.6 floors.
 - Every distributed archive now contains the BSL 1.1 license text.
+- The parent artifact publishes one aggregate CycloneDX 1.6 SBOM; child modules publish none.
 - A hook that throws, and a steering decision returned from an observation-only event, are now
   logged; both were documented as logged and were in fact silent.
 - The Gemini dispatcher writes a protocol response for every invocation, so an unchecked hook
@@ -53,4 +50,3 @@ description: "Release notes for Agent Hooks"
 ## 0.5.0 (2026-04-09)
 
 - Initial release.
-

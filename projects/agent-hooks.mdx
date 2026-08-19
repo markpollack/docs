@@ -5,14 +5,14 @@ description: "Portable hook API for steering agent behavior at the tool-call bou
 
 **[What's New →](/docs/agent-hooks/whats-new)**
 
-**Current release: 0.6.4.** Built on Spring AI 2.0.0 GA and Spring Boot 4.0.7; the prior 0.6.3 release migrated onto the new Claude Agent SDK. The hook-API architecture — core plus the Spring AI, Claude, and Gemini adapters — is unchanged since 0.6.0.
+**Current release: 0.7.0.** Built on Spring AI 2.0.0, Spring Boot 4.0.7, and Claude Agent SDK 1.5.0. This release keeps the core-plus-adapters architecture and public dispatch API while correcting standalone dependency resolution, packaging, diagnostics, and Java compatibility claims.
 
 Every agent framework implements hooks differently.
 Claude Code has shell-based hooks. Strands has steering callbacks. Spring AI has advisors.
 Your safety policy, logging, and steering logic gets rewritten for each one.
 
 Agent Hooks is a portable Java API that lets you write hook logic once and run it on any runtime that has an adapter.
-The core module has zero dependencies — it defines the event model, decision types, and registry.
+The core module has no framework dependency — it defines the event model, decision types, and registry, with `org.jspecify` annotations as its only compile dependency.
 Adapters (Spring AI, Claude Agent SDK, and Gemini CLI) wire the core into their runtime's tool-call lifecycle.
 Your hooks move with you when your agent infrastructure changes.
 
@@ -116,18 +116,18 @@ The event system is open (unsealed) — you can define custom events for your ru
 ## Quick Start
 
 ```xml
-<!-- Core API (zero dependencies) -->
+<!-- Core API (no framework dependency) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-core</artifactId>
-    <version>0.6.4</version>
+    <version>0.7.0</version>
 </dependency>
 
 <!-- Spring AI adapter (auto-configured) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-spring</artifactId>
-    <version>0.6.4</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -136,7 +136,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-claude</artifactId>
-    <version>0.6.4</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -145,7 +145,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-gemini</artifactId>
-    <version>0.6.4</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 

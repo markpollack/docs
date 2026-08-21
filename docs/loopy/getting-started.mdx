@@ -20,27 +20,73 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ## Install
 
+<Note>
+  Each release publishes two jars. The one you run is **`loopy-<version>-exec.jar`** — the
+  self-contained executable image, attached to the GitHub Release. The plain
+  `loopy-<version>.jar` on Maven Central is a library jar for embedding Loopy in Java code
+  and is not runnable with `java -jar`.
+</Note>
+
 <Steps>
-  <Step title="Download the JAR">
+  <Step title="Download the executable jar">
     ```bash
-    curl -LO https://github.com/markpollack/loopy/releases/download/v0.4.0/loopy-0.4.0.jar
+    curl -LO https://github.com/markpollack/loopy/releases/latest/download/loopy-0.5.0-exec.jar
     ```
+  </Step>
+  <Step title="Check the download">
+    ```bash
+    java -jar loopy-0.5.0-exec.jar --version
+    ```
+    `--version` and `--help` work without an API key, so you can confirm the download
+    before setting up a provider.
   </Step>
   <Step title="Run it">
     ```bash
-    java -jar loopy-0.4.0.jar
+    java -jar loopy-0.5.0-exec.jar
     ```
     The TUI launches with a chat interface. Type a message and press Enter.
   </Step>
 </Steps>
 
-Or build from source:
+### Launcher script
+
+The launcher finds the jar, checks for Java, and applies the JVM flags Loopy expects:
+
+```bash
+curl -LO https://github.com/markpollack/loopy/releases/latest/download/loopy-0.5.0-exec.jar
+curl -LO https://raw.githubusercontent.com/markpollack/loopy/main/loopy
+chmod +x loopy
+./loopy
+```
+
+Keep the script beside the jar, or set `LOOPY_JAR` to the jar's path. Windows users want
+`loopy.bat` from the same location.
+
+### JBang
+
+```bash
+jbang loopy@markpollack/loopy
+```
+
+Requires Loopy 0.5.0 or newer.
+
+### Build from source
 
 ```bash
 git clone https://github.com/markpollack/loopy.git
 cd loopy
 ./mvnw package
-java -jar target/loopy-0.4.0.jar
+./loopy
+```
+
+### Embed the library
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>loopy</artifactId>
+    <version>0.5.0</version>
+</dependency>
 ```
 
 ## Your First Session

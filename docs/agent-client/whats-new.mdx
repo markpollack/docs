@@ -4,6 +4,17 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Client — auto-generated from git history"
 ---
 
+## 0.28.0 (unreleased)
+
+- Add a Grok CLI provider: `agent-grok`, `grok-cli-sdk`, and `agent-starter-grok`. Headless runs return a real JSON envelope, so session id, token usage and a genuine per-run USD cost are read rather than scraped, and a caller-supplied session UUID makes resume possible without recovering an id from output
+- Add an Antigravity CLI provider for Google's `agy`: `agent-antigravity`, `antigravity-cli-sdk`, and `agent-starter-antigravity`
+- Drop `--effort` when the Antigravity model slug already encodes it; passing both is a hard error that returns no output, so a portable low-effort request would otherwise produce nothing at all
+- Declare the Antigravity working directory with `--add-dir`: setting the process working directory alone lets the CLI divert writes to a shared scratch directory while reporting success
+- Derive Antigravity run success from whether work was produced and nothing was refused, rather than from its `status` field, which reports ERROR alongside complete and correct responses
+- Detect Antigravity soft denials from both the result envelope and stderr, so a run whose tool calls were refused is not mistaken for one that found nothing to do
+- Add `GROK` and `ANTIGRAVITY` to the provider parity TCK and enrol both in the parity scenarios
+- Keep Claude Code, Codex, and Gemini CLI as the actively verified provider set: both new CLIs authenticate interactively and cache credentials, so neither can be wired into the parity workflow's secret-based job pattern
+
 ## 0.27.0 (2026-08-21)
 
 - Repair published no-BOM consumer graphs with direct Jackson and Log4j declarations that survive flattened child POMs

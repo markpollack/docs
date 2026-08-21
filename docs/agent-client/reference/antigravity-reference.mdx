@@ -1,0 +1,122 @@
+---
+title: "Antigravity Reference"
+description: "Complete configuration reference for the Google Antigravity agent provider"
+sidebarTitle: "Antigravity Reference"
+---
+
+## Overview
+
+The Antigravity agent wraps the [Google Antigravity CLI](https://antigravity.google) via `AntigravityAgentModel`. The binary is `agy`. Configure it through Spring properties under `agent-client.antigravity.*`.
+
+```yaml
+agent-client:
+  antigravity:
+    model: gemini-3.1-pro-high
+    timeout: PT15M
+```
+
+## Configuration Properties
+
+Prefix: `agent-client.antigravity`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mode` | `AgentClientMode` | — | Controls default permissiveness. Inherits from `agent-client.mode` if not set (default: `LOOSE`). |
+| `model` | `String` | `gemini-3.1-pro-high` | Model slug (`--model`). List them with `agy models`. |
+| `effort` | `String` | — | Reasoning effort (`--effort`): `low`, `medium`, `high`. **Ignored when the model slug already encodes it** — see below. |
+| `timeout` | `Duration` | `15m` | Timeout. Also drives `--print-timeout`. |
+| `dangerously-skip-permissions` | `Boolean` | — | `--dangerously-skip-permissions`. When not explicitly set, derived from mode. |
+| `execution-mode` | `ExecutionMode` | — | `--mode`: `accept-edits` or `plan` |
+| `sandbox` | `boolean` | `false` | `--sandbox` — terminal restrictions |
+| `executable-path` | `String` | — | Path to `agy` (auto-discovered if not set) |
+
+## Effort is encoded in the model slug
+
+Antigravity names effort twice: in `--effort` and in slugs like `gemini-3.1-pro-high`. Passing both is a **hard error**:
+
+```
+invalid model selection (--model "gemini-3.1-pro-high" --effort "low"):
+  --model gemini-3.1-pro-high conflicts with --effort=low
+```
+
+The run fails immediately with `"status": "ERROR"` and no output. So when the slug ends in `-low`, `-medium` or `-high`, the provider drops the flag and the slug wins. Portable `getEffort()` therefore behaves here exactly as it does for every other provider, and a caller does not need to know that this one CLI names effort twice.
+
+## dangerouslySkipPermissions and Mode Interaction
+
+| `dangerously-skip-permissions` | `mode` | Effective Value |
+|-------------------------------|--------|-----------------|
+| explicit | any | as set |
+| unset | `STRICT` | `false` |
+| unset | `LOOSE` | `true` |
+
+<Warning>
+Declining to auto-approve does not do what the flag name suggests. Antigravity's headless default is not to stop on an unapprovable tool call — it is to **refuse that call and carry on**. A `STRICT` unattended run is therefore not safer, it is quietly partial. It remains the default only because a caller that has not thought about permissions should not be handed unrestricted execution, and because the provider reports the refusals rather than swallowing them.
+</Warning>
+
+## Detecting a refused run
+
+The provider scans both the envelope's `error` field and stderr for refusal notices, and surfaces the result:
+
+| Field | Notes |
+|-------|-------|
+| `softDenied` | `true` when at least one tool call was refused |
+| `permissionNotices` | The refusal messages, verbatim |
+
+The documentation says these notices go to stderr. agy 1.1.13 puts some of them in the envelope's `error` field with stderr empty, and others on stderr with `status: CANCELED`. Both channels are read.
+
+## The status field is not the verdict
+
+agy returns `"status":"ERROR"` alongside a complete, correct response when an unrelated internal condition trips — for example `search directory /workspace does not exist`. Trusting the status would discard good runs; ignoring it would hide refused ones.
+
+`isSuccessful()` is therefore derived from whether the run produced a response and had nothing refused. The CLI's own answer is recorded verbatim beside it as `status` and `reportedSuccessful`, so a caller that prefers it can have it.
+
+## Portable Option Mapping
+
+| Portable option | Antigravity flag |
+|-----------------|------------------|
+| `getModel()` | `--model` |
+| `getEffort()` | `--effort`, **dropped when the model slug encodes effort** |
+| `getJsonSchema()` | `--json-schema` (serialized inline) |
+| `isAutoApprove()` | `--dangerously-skip-permissions` |
+| `getTimeout()` | process timeout **and** `--print-timeout` |
+| `getWorkingDirectory()` | `--add-dir` **and** the process working directory — see below |
+| `getSystemInstructions()` | prepended to the goal (no system-prompt flag exists) |
+| `getMaxTurns()` | not supported |
+
+<Note>
+`--print-timeout` defaults to five minutes, well short of a real task, so it is always set from the caller's timeout. Left alone, a truncated run would be indistinguishable from the agent finishing early.
+</Note>
+
+## The working directory must be declared, not just set
+
+There is no `--cwd`, but setting the process working directory is **not sufficient**. With no
+active workspace, `agy` diverts every write to a shared scratch directory under
+`~/.gemini/antigravity-cli/` and still reports success. The CLI says so plainly in its own
+output — *"I placed it in your scratch directory … since there wasn't an active workspace"* —
+and artifacts from earlier runs accumulate there, so work leaks between runs.
+
+Reads resolve against the process working directory, which is why a narrow check looks fine
+while writes are going somewhere else entirely.
+
+The provider therefore declares the working directory with `--add-dir` as well as setting the
+process cwd. Both are required.
+
+<Warning>
+This was found by running the provider parity TCK, not by reading the CLI's documentation. A
+run that writes to the wrong place and reports success is the failure mode this provider is
+most exposed to — see also soft denial below.
+</Warning>
+
+## Result Metadata
+
+`getProviderFields()` carries `inputTokens`, `outputTokens`, `thinkingTokens`, `cacheReadTokens`, `totalTokens`, `numTurns`, `status`, `reportedSuccessful`, `error`, `softDenied`, `permissionNotices`, `exitCode` and `structured`. `getSessionId()` carries the conversation id, which `AntigravityClient.resume(conversationId, ...)` accepts via `--conversation`.
+
+## Availability
+
+Since **0.28.0**.
+
+## Installation
+
+Install from [antigravity.google](https://antigravity.google) — the npm distribution is discontinued — and authenticate once interactively. Discovery checks `ANTIGRAVITY_CLI_PATH`, then `which agy`, then `~/.local/bin/agy`.
+
+Support files live under `~/.gemini/antigravity-cli`, shared with the Gemini CLI, so that directory existing proves nothing about `agy` being installed.

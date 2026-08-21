@@ -129,6 +129,8 @@
                       "docs/agent-client/reference/claude-reference",
                       "docs/agent-client/reference/codex-reference",
                       "docs/agent-client/reference/gemini-reference",
+                      "docs/agent-client/reference/grok-reference",
+                      "docs/agent-client/reference/antigravity-reference",
                       "docs/agent-client/reference/sessions"
                     ]
                   },

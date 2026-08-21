@@ -1,0 +1,89 @@
+---
+title: "Grok Reference"
+description: "Complete configuration reference for the xAI Grok agent provider"
+sidebarTitle: "Grok Reference"
+---
+
+## Overview
+
+The Grok agent wraps the [xAI Grok CLI](https://grok.com/cli) via `GrokAgentModel`. Configure it through Spring properties under `agent-client.grok.*`.
+
+```yaml
+agent-client:
+  grok:
+    model: grok-4.6
+    reasoning-effort: high
+    timeout: PT10M
+```
+
+## Configuration Properties
+
+Prefix: `agent-client.grok`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mode` | `AgentClientMode` | — | Controls default permissiveness. Inherits from `agent-client.mode` if not set (default: `LOOSE`). |
+| `model` | `String` | `grok-4.6` | Model to use (`--model`) |
+| `reasoning-effort` | `String` | — | Reasoning effort (`--reasoning-effort`): `low`, `medium`, `high`. The portable `effort` values map here directly. |
+| `timeout` | `Duration` | `5m` | Timeout for agent task execution |
+| `permission-mode` | `PermissionMode` | — | `--permission-mode`. When not explicitly set, derived from mode (see below). |
+| `max-turns` | `Integer` | — | Maximum agent turns (`--max-turns`) |
+| `disable-web-search` | `boolean` | `false` | Disable web search and fetch tools (`--disable-web-search`) |
+| `executable-path` | `String` | — | Path to the Grok CLI executable (auto-discovered if not set) |
+
+## permissionMode and Mode Interaction
+
+| `permission-mode` | `mode` | Effective Value | Behavior |
+|-------------------|--------|-----------------|----------|
+| explicit | any | as set | Always wins |
+| unset | `STRICT` | `default` | The CLI's own default — a tool call needing approval stops the run |
+| unset | `LOOSE` | `bypassPermissions` | Every tool call is approved without prompting |
+
+The portable `isAutoApprove()` maps to `bypassPermissions`, the only mode that grants every tool call without a prompt.
+
+## Portable Option Mapping
+
+| Portable option | Grok flag |
+|-----------------|-----------|
+| `getModel()` | `--model` |
+| `getEffort()` | `--reasoning-effort` (direct passthrough — `low`/`medium`/`high` are all valid) |
+| `getMaxTurns()` | `--max-turns` |
+| `getJsonSchema()` | `--json-schema` (serialized inline; no temp file) |
+| `isAutoApprove()` | `--permission-mode bypassPermissions` |
+| `getTimeout()` | process timeout |
+| `getWorkingDirectory()` | `--cwd` and the process working directory |
+| `getSystemInstructions()` | prepended to the goal — see below |
+
+### System instructions are prepended, not passed as a flag
+
+Grok has `--system-prompt-override`, but it *replaces* the CLI's own system prompt rather than adding to it, which strips the agent's tool instructions. Portable `systemInstructions` mean "also tell it this", so they are prepended to the goal — the same choice every other provider here makes.
+
+## Result Metadata
+
+Grok returns a JSON envelope in headless mode, so nothing is scraped from log text. `AgentResponseMetadata.getProviderFields()` carries:
+
+| Field | Notes |
+|-------|-------|
+| `costUsd` | **A real per-run cost.** Grok is the only CLI in this family that reports one, so callers do not need a price table. |
+| `inputTokens`, `outputTokens`, `thinkingTokens` | From the envelope's `usage` block |
+| `cacheReadTokens`, `cacheCreationTokens`, `totalTokens` | |
+| `numTurns`, `stopReason`, `exitCode`, `successful` | |
+| `structured` | `false` when the output was not the expected envelope; the raw text is preserved as the response |
+
+`getModel()` reports the model that actually ran (from the envelope's `modelUsage` key), which may differ from the requested slug when the CLI expands an alias. `getSessionId()` carries the session UUID.
+
+## Sessions
+
+Grok accepts a caller-supplied session UUID (`--session-id`) for a new conversation and resumes with `--resume <id>`, so the id never has to be recovered from output. `GrokClient.resume(sessionId, prompt, options)` exposes this. Grok does not currently implement `AgentSessionRegistry`.
+
+<Note>
+`grok models` reports "You are not authenticated" even on an authenticated install. The provider's health check therefore uses `grok --version`; using `models` would reject a working CLI.
+</Note>
+
+## Availability
+
+Since **0.28.0**.
+
+## Installation
+
+Install the CLI from [grok.com/cli](https://grok.com/cli) and authenticate once with `grok login`. The provider discovers the executable via `GROK_CLI_PATH`, then `which grok`, then `~/.local/bin/grok` and `~/.grok/bin/grok`.

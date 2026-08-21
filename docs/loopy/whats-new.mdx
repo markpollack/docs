@@ -1,0 +1,28 @@
+---
+title: "What's New"
+sidebarTitle: "What's New"
+description: "Release notes for Loopy"
+---
+
+## 0.5.0 (2026-08-21)
+
+**The distribution is repaired, and the Spring AI stack moves to GA.**
+
+- Publish two artifacts instead of one. `loopy-0.5.0-exec.jar` is the self-contained
+  executable, attached to the GitHub Release; `loopy-0.5.0.jar` on Maven Central is a plain
+  library jar you can compile against. Before this, the published coordinate was a Spring Boot
+  fat jar whose classes sit under `BOOT-INF/classes`, so nothing could depend on it — and no
+  release had ever had a downloadable asset attached, which meant the documented download URL
+  returned 404.
+- Add `loopy` and `loopy.bat` launchers that locate the jar, check for Java, and apply the
+  JVM flags Loopy expects. `jbang loopy@markpollack/loopy` now works for the first time.
+- Move to Spring AI 2.0.0 GA with `spring-ai-agent-utils` 0.10.0 and `workflow-core` 0.10.0,
+  which are a coupled set, plus Spring Boot 4.1.0 and Jackson at the suite floors. Loopy was
+  the last member on a Spring AI milestone, which mattered because the AgentWorks BOM manages
+  Spring AI 2.0.0.
+- Stop requiring a credential to read `--help` or `--version`. Both were previously answered
+  after an API-key prompt; malformed command lines are now reported without one either.
+- Report the real version. `--version` was hardcoded, so every release since 0.2.0 announced
+  itself as `0.1.0-SNAPSHOT`.
+- Fix a startup failure when `BRAVE_API_KEY` is set without a chat model configured, pin
+  `icu4j` to 77.1, and declare the snapshot repository the POM had always been missing.

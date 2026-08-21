@@ -59,7 +59,8 @@
                   "projects/loopy",
                   "docs/loopy/getting-started",
                   "docs/loopy/extending",
-                  "docs/loopy/cli-reference"
+                  "docs/loopy/cli-reference",
+                  "docs/loopy/whats-new"
                 ]
               },
               {

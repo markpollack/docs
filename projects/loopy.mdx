@@ -7,6 +7,10 @@ description: "Loop-driven interactive coding agent CLI for Java developers"
 
 Loopy is where the lab's thesis becomes a product. It's an interactive coding agent CLI built on Spring AI that embodies **knowledge-directed execution** — giving the agent curated knowledge and structured workflows instead of relying on prompt engineering alone.
 
+**Version 0.5.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:loopy) | [Download](https://github.com/markpollack/loopy/releases/latest)
+
+**0.5.0:** The distribution is repaired. Releases now publish an executable `loopy-<version>-exec.jar` as a GitHub Release asset and a plain library jar to Maven Central; previously the coordinate was a Spring Boot fat jar nothing could compile against, and no release had a downloadable asset at all. Spring AI moves to 2.0.0 GA with Spring Boot 4.1.0, and `--help` and `--version` no longer require an API key.
+
 ## Key Features
 
 - **Embedded agent loop** — Built on Agent Workflow for reliable execution

@@ -6,6 +6,18 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### ACP Java SDK 0.15.0
+
+**Notifications arrive in order and survive a graceful close; the published closure and the license are now what they claim to be.**
+
+- Incoming notifications are serialized through a sink drained by `concatMap`, so a handler doing async work no longer observes rapid `session/update` chunks out of order (reported and fixed by @ljiro)
+- `closeGracefully()` waits for queued notifications to drain before tearing the session down, bounded by the session `requestTimeout`; previously the whole backlog could be discarded on close
+- Jackson 2.21.5 and Jetty 12.0.37 clear 17 known advisories (5 high) reaching consumers as compile-scope transitives
+- `LICENSE` is now the verbatim Apache 2.0 — the previous file omitted the Trademarks section and rewrote the copyright grant — and LICENSE plus NOTICE ship under `META-INF` in every artifact
+- Three `*IT` classes that `mvn verify` had never executed now run in CI
+
+[Project](/projects/acp-java-sdk) | [What's New](/docs/acp-java-sdk/whats-new) | [Source](https://github.com/agentclientprotocol/java-sdk)
+
 ### Agent Client 0.27.0
 
 **Agent Client now verifies the dependency graph that published consumers actually receive.**
@@ -16,6 +28,17 @@ sidebarTitle: "What's New"
 - Current source headers and all published archive license payloads now agree with the Mark Pollack BSL distribution while retaining Apache history; immutable 0.26.0 artifacts are disclosed, not described as rebuilt
 
 [Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
+
+### Loopy 0.5.0
+
+**Loopy's distribution is repaired: there is now an executable jar you can actually download and a library jar you can actually depend on.**
+
+- Releases publish `loopy-0.5.0-exec.jar` as a GitHub Release asset and a plain library jar to Maven Central; the coordinate was previously a Spring Boot fat jar nothing could compile against, and no release had a downloadable asset attached
+- `loopy` and `loopy.bat` launchers locate the jar and set the JVM flags Loopy expects, and `jbang loopy@markpollack/loopy` works for the first time
+- Spring AI moves to 2.0.0 GA with agent-utils 0.10.0 and workflow-core 0.10.0, alongside Spring Boot 4.1.0 — Loopy was the last member on a Spring AI milestone
+- `--help` and `--version` no longer require an API key, and `--version` reports the real version instead of the hardcoded `0.1.0-SNAPSHOT` every release since 0.2.0 announced
+
+[Project](/projects/loopy) | [What's New](/docs/loopy/whats-new) | [Source](https://github.com/markpollack/loopy)
 
 ### Agent Hooks 0.7.0
 

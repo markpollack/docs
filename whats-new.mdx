@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Client 0.27.0
+
+**Agent Client now verifies the dependency graph that published consumers actually receive.**
+
+- Direct Jackson and Log4j declarations preserve the accepted security floors after child POM flattening instead of relying on source-reactor parent management
+- A generated CI gate discovers every published runtime module and resolves fresh one-coordinate, no-parent, no-BOM consumer closures before accepting the build
+- The compatible dependency train moves to Claude SDK 1.5.0, Agent Journal and Capture 1.7.0, and Agent Sandbox Core 0.10.0 while retaining Java 21
+- Current source headers and all published archive license payloads now agree with the Mark Pollack BSL distribution while retaining Apache history; immutable 0.26.0 artifacts are disclosed, not described as rebuilt
+
+[Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
+
 ### Agent Hooks 0.7.0
 
 **Consumer-safe runtime closures, honest Java boundaries, and release-complete artifacts.**

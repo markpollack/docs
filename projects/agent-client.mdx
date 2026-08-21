@@ -15,9 +15,11 @@ Portable Java API for autonomous CLI agents. No Spring Boot required — build a
 
 Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk)) and higher-level orchestration ([Agent Workflow](/projects/agent-workflow)).
 
-**Version 0.26.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
+**Version 0.27.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
 
-**0.26.0:** Breaking diligence cleanup. Removes the abandoned Vendir context advisor and Git-repository DSL, retires the stale `agents-runtime` container build and Docker TCK, upgrades the dependency-security baseline, and pins release automation. Claude Code, Codex, and Gemini CLI are the actively verified provider set; other adapters remain experimental.
+**0.27.0:** Published-consumer correction. Direct Jackson and Log4j declarations now survive flattened child POMs, a generated no-parent/no-BOM gate verifies all 23 public runtime modules, and the compatible Claude SDK 1.5.0, Agent Journal/Capture 1.7.0, and Agent Sandbox Core 0.10.0 train is adopted. Current source/archive licensing is aligned with the Mark Pollack BSL distribution and retained Apache history.
+
+**0.26.0:** Breaking diligence cleanup. Removes the abandoned Vendir context advisor and Git-repository DSL, retires the stale `agents-runtime` container build and Docker TCK, and pins release automation. Claude Code, Codex, and Gemini CLI are the actively verified provider set; other adapters remain experimental. Its immutable Maven Central child POMs do not preserve all reviewed dependency floors; use 0.27.0 for the published-consumer correction.
 
 **0.25.0:** Fixes Spring Boot auto-configuration for all providers — the org migration had left the auto-config registration files pointing at the old `org.springaicommunity` package, so the starters failed to auto-configure (`ClassNotFoundException`) at boot. No public API changes.
 

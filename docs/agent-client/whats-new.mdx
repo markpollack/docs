@@ -4,12 +4,21 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Client — auto-generated from git history"
 ---
 
+## 0.27.0 (2026-08-21)
+
+- Repair published no-BOM consumer graphs with direct Jackson and Log4j declarations that survive flattened child POMs
+- Add one generated CI gate that discovers and resolves all 23 published runtime modules as fresh parentless, no-BOM consumers
+- Adopt Claude SDK 1.5.0, Agent Journal and Capture 1.7.0, and Agent Sandbox Core 0.10.0 while retaining the Java 21 contract
+- Produce one root CycloneDX 1.6 JSON SBOM and keep authoritative offline vulnerability analysis on the actual consumer JAR closures
+- Align current owned source headers and binary/source/Javadoc archive payloads with BSL 1.1 while retaining Apache history
+- Preserve immutable 0.26.0 as released; its Maven Central artifacts were not rebuilt or repaired
+
 ## 0.26.0 (2026-08-17)
 
 - Remove the experimental Vendir context advisor and Git-repository DSL as an intentional breaking change
 - Retire the stale `agents-runtime` container build, Docker integration TCK, and unused Docker dependencies
 - Keep Claude Code, Codex, and Gemini CLI as the actively verified provider set; classify the remaining adapters as experimental
-- Upgrade Jackson 2/3, AssertJ, OWASP Dependency-Check, and Log4j 2.25.5; exact-SHA dependency scans report zero unsuppressed vulnerabilities
+- Upgrade source-reactor Jackson and Log4j management; later public-consumer reproduction showed that flattened child POMs did not preserve every reviewed floor, which 0.27.0 corrects
 - Pin owned release automation and complete the repository-specific BSL 1.1 license text while preserving the historical Apache record
 
 ## 0.22.0 (2026-06-14)

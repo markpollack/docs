@@ -21,7 +21,7 @@ Add the ACP Spring Boot Starter:
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.11.0</version>
+    <version>0.11.1</version>
 </dependency>
 ```
 

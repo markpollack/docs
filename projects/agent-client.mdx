@@ -48,7 +48,7 @@ AgentClientResponse response = client.run("Create hello.txt");
 
 ## Providers
 
-Claude Code, Codex, and Gemini CLI are actively verified in CI. Amazon Q, Amp, Qwen Code, and SWE-agent remain experimental adapters rather than current support claims; Grok and Antigravity join that experimental set in 0.28.0. Neither new CLI can authenticate non-interactively, so neither can be wired into the parity workflow, and neither enters the verified set. Provider selection happens at construction time — everything after `AgentClient.create(model)` uses the shared client contract.
+Claude Code, Codex, Gemini CLI, Grok, and Antigravity all pass the provider parity TCK — ten scenarios each, zero skips, against live CLIs. CI re-verifies Claude Code, Codex, and Gemini on every commit; Grok and Antigravity are verified against live CLIs but cannot run in CI, because both authenticate interactively and cache credentials rather than reading an API key. Amazon Q, Amp, Qwen Code, and SWE-agent carry no parity coverage and remain experimental. Provider selection happens at construction time — everything after `AgentClient.create(model)` uses the shared client contract.
 
 ## LOOSE / STRICT Modes
 

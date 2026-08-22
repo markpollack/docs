@@ -4,6 +4,18 @@ sidebarTitle: "What's New"
 description: "Release notes for ACP Java SDK — auto-generated from git history"
 ---
 
+## 0.15.0 (2026-08-21)
+
+Correctness and supply-chain hygiene. No protocol or public API changes — a drop-in upgrade from 0.14.0.
+
+- Fix non-deterministic notification ordering — notifications are serialized through a sink drained by `concatMap`, preserving arrival order (thanks @ljiro)
+- Drain queued notifications on graceful close instead of discarding them; `closeGracefully()` now waits for the drain, bounded by the session `requestTimeout`
+- Distinguish expected from anomalous notification-sink emission failures in logging
+- Security: Jackson 2.21.2 → 2.21.5 and Jetty 12.0.14 → 12.0.37, clearing 17 known advisories (5 high) in the published dependency closure
+- Ship the verbatim Apache License 2.0, and package LICENSE and NOTICE under `META-INF` in every artifact
+- Run the integration tests — three `*IT` classes existed but were never executed by `mvn verify`
+- Pin GitHub Actions to commit SHAs; bound workflow jobs to 30 minutes
+
 ## 0.14.0 (2026-06-11)
 
 - Docs: 0.14.0 release notes in README and CHANGELOG

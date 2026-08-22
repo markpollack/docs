@@ -10,7 +10,7 @@ Complete API reference for the ACP Java SDK, covering client, agent (all three s
 
 ## Installation
 
-### Maven (0.14.0 — stable)
+### Maven (0.15.0 — stable)
 
 Core SDK (client + sync/async agent APIs):
 
@@ -18,7 +18,7 @@ Core SDK (client + sync/async agent APIs):
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.14.0</version>
+    <version>0.15.0</version>
 </dependency>
 ```
 
@@ -28,7 +28,7 @@ Annotation-based agent support (includes `acp-core` transitively):
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.14.0</version>
+    <version>0.15.0</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Test utilities:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.14.0</version>
+    <version>0.15.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -49,7 +49,7 @@ WebSocket server transport for agents:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-websocket-jetty</artifactId>
-    <version>0.14.0</version>
+    <version>0.15.0</version>
 </dependency>
 ```
 
@@ -57,22 +57,22 @@ WebSocket server transport for agents:
 
 ```groovy
 // build.gradle
-implementation 'com.agentclientprotocol:acp-core:0.14.0'
+implementation 'com.agentclientprotocol:acp-core:0.15.0'
 
 // Optional modules
-implementation 'com.agentclientprotocol:acp-agent-support:0.14.0'
-implementation 'com.agentclientprotocol:acp-websocket-jetty:0.14.0'
-testImplementation 'com.agentclientprotocol:acp-test:0.14.0'
+implementation 'com.agentclientprotocol:acp-agent-support:0.15.0'
+implementation 'com.agentclientprotocol:acp-websocket-jetty:0.15.0'
+testImplementation 'com.agentclientprotocol:acp-test:0.15.0'
 ```
 
 ```kotlin
 // build.gradle.kts
-implementation("com.agentclientprotocol:acp-core:0.14.0")
+implementation("com.agentclientprotocol:acp-core:0.15.0")
 
 // Optional modules
-implementation("com.agentclientprotocol:acp-agent-support:0.14.0")
-implementation("com.agentclientprotocol:acp-websocket-jetty:0.14.0")
-testImplementation("com.agentclientprotocol:acp-test:0.14.0")
+implementation("com.agentclientprotocol:acp-agent-support:0.15.0")
+implementation("com.agentclientprotocol:acp-websocket-jetty:0.15.0")
+testImplementation("com.agentclientprotocol:acp-test:0.15.0")
 ```
 
 ### Snapshot (0.15.0-SNAPSHOT)
@@ -90,7 +90,7 @@ For unreleased features, add the snapshot repository and use the snapshot versio
 </repositories>
 ```
 
-Then use `0.15.0-SNAPSHOT` in place of `0.14.0` in your dependencies.
+Then use `0.16.0-SNAPSHOT` in place of `0.15.0` in your dependencies.
 
 ---
 

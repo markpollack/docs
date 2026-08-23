@@ -1,0 +1,84 @@
+Correct the canonical public Agent Journal documentation using the completed DD-004 review.
+
+WORKING DIRECTORY
+
+/home/mark/projects/docs
+
+AUTHORITY AND BOUNDARIES
+
+- Read CLAUDE.md and .agent/documentation-framework.md completely before editing.
+- Treat this checkout as the only canonical source for https://lab.pollack.ai documentation.
+- Preserve all unrelated tracked, untracked, and ignored work. Existing untracked plans/status-*.md
+  files are unrelated and must not be opened, modified, staged, or deleted.
+- Read Agent Journal source/history and DD-004 evidence as needed, but do not edit any Agent Journal
+  repository, worktree, assessment, or evidence namespace.
+- Do not push or deploy. A push to docs main deploys publicly and requires separate authorization.
+- Make a scoped local commit containing only the approved documentation corrections.
+
+AUTHORITATIVE REFERENCES
+
+- /home/mark/tuvium/projects/due-dilligence/assessments/DD-004-agent-journal.md
+- Agent Journal candidate 48413cf7c9860b3da3149ce64823476d66b1cc6e in:
+  /home/mark/worktrees/agentworks-diligence/agent-journal
+- Current public stable version remains 1.6.0. Do not advertise 1.7.0 as released.
+
+REQUIRED CORRECTIONS
+
+1. In projects/agent-journal.mdx, delete the Info block claiming Agent Journal moved from the
+   spring-ai-community organization, old groupId org.springaicommunity, or old package namespace.
+   Agent Journal used markpollack/io.github.markpollack from its first commit and has no such
+   migration history.
+
+2. Remove the same false Agent Journal history from every relevant table in
+   docs/migration/spring-ai-community-to-markpollack.mdx:
+   - repository migration table;
+   - Maven groupId migration table; and
+   - Java package migration table.
+   Preserve accurate entries for other projects. Re-read surrounding prose and adjust it only if
+   needed so it does not imply Agent Journal participated in the migration.
+
+3. In projects/agent-journal.mdx, replace the stale storage layout rooted at
+   .tuvium/experiments/... with the actual public layout:
+
+   .agent-journal/experiments/{experimentId}/runs/{runId}/
+   ├── events.jsonl
+   ├── analysis.jsonl
+   └── feedback.jsonl
+
+   Use concise, accurate descriptions consistent with the candidate code. Remove the internal
+   .tuvium name everywhere it is incorrectly associated with Agent Journal.
+
+4. Correct the module table's claim that journal-core has zero external dependencies. The released
+   module uses Jackson 2 and SLF4J; describe dependencies accurately without turning the page into a
+   dependency inventory.
+
+5. Clarify that workflow-journal and WorkflowJournal belong to Agent Workflow and integrate with
+   Agent Journal; do not present workflow-journal as one of Agent Journal's three published modules.
+
+6. Audit all canonical-doc references to Agent Journal for the same factual errors. Keep the scope
+   bounded to directly demonstrated Agent Journal corrections; do not opportunistically rewrite
+   other project pages or update unrelated versions.
+
+7. Do not copy or deploy the separate repository-local Agent Journal Mintlify tree. Record in the
+   final report whether it contains unique material worth migrating later. Its consolidation or
+   deletion is a separate follow-up, not part of this correction.
+
+VALIDATION
+
+- Confirm projects/agent-journal.mdx and docs/agent-journal/whats-new.mdx remain present in
+  docs.json navigation.
+- Search the edited canonical tree and report every remaining Agent Journal occurrence of
+  spring-ai-community, org.springaicommunity, and .tuvium, with a disposition for each.
+- Validate MDX and internal links using the repository's available local procedure. Do not deploy
+  merely to test.
+- Review the final diff for accidental changes, stale 1.7.0-as-released claims, and modifications to
+  unrelated projects.
+
+FINAL REPORT
+
+Report the exact local commit SHA, files changed, each factual correction, validation results,
+remaining intentionally deferred documentation work, clean/dirty status with unrelated pre-existing
+files distinguished, and the next boundary: explicit authorization to push the scoped docs commit
+and verify the live pages.
+
+--- END OF AGENT JOURNAL DOCUMENTATION HANDOFF ---

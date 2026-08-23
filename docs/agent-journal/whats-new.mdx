@@ -4,6 +4,17 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Journal — auto-generated from git history"
 ---
 
+## 1.8.0 (2026-08-22)
+
+- Three new tool-trajectory capture adapters — `grok-cli-capture`, `codex-cli-capture`, and `antigravity-cli-capture` — turn each CLI's durable JSONL stream into ordered `ToolCallEvent` and `StepCostEvent` records with stable tool-call identities
+- Grok capture parses the ACP-shaped `streaming-json` output, pairing `tool_call` and `tool_call_update` by `toolCallId` and preserving both the reported tool name and the ACP semantic kind. The stream has no durable turn-to-tool cost join, so the real session total from `end.total_cost_usd` is retained and attributed evenly across captured tool steps
+- Codex capture parses durable rollout JSONL and deliberately classifies the nested `payload.input` call rather than the outer `exec` function name that Codex records for most tool invocations, assigning semantic names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`. The classifier is conservative around shell syntax — aliases, shell functions, quoted operators, and work hidden behind an interpreter fall back to `Shell`, with raw input and command retained for later reclassification
+- Antigravity capture pairs active and terminal updates by `step_index`, handles both `DONE` and `ERROR` steps, records parameters, output or error text, duration, and terminal token usage, and derives stable identities from conversation and step positions
+- Codex and Antigravity report no monetary cost in these streams, so cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source
+- Gemini CLI capture remains turn-level and provides no tool trajectory, so Gemini is not part of this release's multi-CLI tool-trajectory claim
+- The Claude Code SDK dependency moves from 1.4.0 to 1.5.0
+- Additive on the existing event and trace contracts. `journal-core` and the three new capture modules target Java 17; the Claude Code and Gemini CLI capture modules still require Java 21 for their vendor SDKs. 488 tests pass across the seven-module reactor
+
 ## 1.7.0 (2026-08-18)
 
 - Standalone consumers now resolve CVE-clear Jackson floors without an external BOM: Jackson 2.21.6 for all three modules and Jackson 3.1.6 on Claude capture's transitive Jackson 3 path. Agent Journal's source and stored formats continue to use Jackson 2; this is not a Jackson 3 migration.

@@ -3,13 +3,14 @@ title: "Agent Journal"
 description: "Structured execution events, portable agent traces, and derived analysis for Java agent research"
 ---
 
-**Current release: 1.7.0** · **[What's New →](/docs/agent-journal/whats-new)**
+**Current release: 1.8.0** · **[What's New →](/docs/agent-journal/whats-new)**
 
 Agent Journal is a Java library for recording agent runs as typed events and analyzing them after execution.
-It stores immutable execution facts separately from derived analysis, and it can project Claude Code and Gemini CLI results into a shared journal model.
-Release 1.7.0 hardens the published distribution: standalone consumers resolve Jackson 2.21.6
-and, where the Claude SDK brings Jackson 3, Jackson 3.1.6; every JAR carries the BSL 1.1 text;
-and the parent artifact publishes an aggregate CycloneDX 1.6 SBOM.
+It stores immutable execution facts separately from derived analysis, and it can project Claude Code, Gemini CLI,
+Grok, Codex, and Antigravity results into a shared journal model.
+Release 1.8.0 adds tool-trajectory capture for Grok, Codex, and Antigravity, each parsed from that CLI's own
+durable JSONL stream into ordered tool and cost events. The three new modules carry no vendor SDK dependency
+and run on Java 17. The change is additive on the existing event and trace contracts.
 
 <CardGroup cols={3}>
   <Card title="Execution journal" icon="timeline">
@@ -40,7 +41,7 @@ The capture modules also depend on their respective Java SDKs, whose published b
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 </dependency>
 ```
 
@@ -62,7 +63,7 @@ The three released artifacts use the `io.github.markpollack` group ID and are av
     Query generated journals with DuckDB.
   </Card>
   <Card title="API reference" icon="brackets-curly" href="/docs/agent-journal/api-reference">
-    Stable 1.7.0 entry points, events, storage operations, and capture options.
+    Stable 1.8.0 entry points, events, storage operations, and capture options.
   </Card>
 </CardGroup>
 

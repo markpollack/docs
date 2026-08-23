@@ -4,6 +4,13 @@ sidebarTitle: "What's New"
 description: "Release notes for AgentWorks BOM — auto-generated from git history"
 ---
 
+## 1.16.0 (2026-08-22)
+
+- Repin agent-client family 0.25.0 → 0.28.0, adding the Grok and Antigravity providers to the managed set
+- Repin Agent Journal 1.6.0 → 1.7.0, Agent Hooks 0.6.4 → 0.7.0, Agent Judge 0.13.0 → 0.15.0, Agent Sandbox 0.9.3 → 0.10.0, Agent Bench 0.4.0 → 0.6.0, Agent Experiment 0.5.0 → 0.6.0, Agent Memory 0.3.0 → 0.4.0, and Claude Agent SDK 1.4.0 → 1.5.0
+- Repin the acp-java family 0.14.0 → 0.15.0
+- Drop `loopy` from the managed set; it ships an executable distribution and is depended on directly
+
 ## 1.15.0 (2026-07-01)
 
 - Repin agent-client family 0.24.0 → 0.25.0 — fixes Spring Boot auto-configuration for all providers (org migration had left the registration files at the old org.springaicommunity package → ClassNotFoundException at boot); all other members unchanged; gate 9/9

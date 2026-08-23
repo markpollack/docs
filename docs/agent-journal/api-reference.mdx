@@ -1,17 +1,20 @@
 ---
 title: "API Reference"
-description: "Agent Journal 1.7.0 core, storage, event, evaluation, and capture APIs"
+description: "Agent Journal 1.8.0 core, storage, event, evaluation, and capture APIs"
 ---
 
-This page describes the public API shipped in Agent Journal 1.7.0.
+This page describes the public API shipped in Agent Journal 1.8.0.
 
 ## Coordinates
 
 | Artifact | Purpose | Java |
 |---|---|---|
-| `io.github.markpollack:journal-core:1.7.0` | Core domain, storage, evaluation, feedback, and traces | 17+ |
-| `io.github.markpollack:claude-code-capture:1.7.0` | Claude Code capture | 21+ runtime |
-| `io.github.markpollack:gemini-cli-capture:1.7.0` | Gemini CLI capture | 21+ runtime |
+| `io.github.markpollack:journal-core:1.8.0` | Core domain, storage, evaluation, feedback, and traces | 17+ |
+| `io.github.markpollack:claude-code-capture:1.8.0` | Claude Code capture | 21+ runtime |
+| `io.github.markpollack:gemini-cli-capture:1.8.0` | Gemini CLI capture | 21+ runtime |
+| `io.github.markpollack:grok-cli-capture:1.8.0` | Grok CLI capture | 17+ |
+| `io.github.markpollack:codex-cli-capture:1.8.0` | Codex CLI capture | 17+ |
+| `io.github.markpollack:antigravity-cli-capture:1.8.0` | Antigravity CLI capture | 17+ |
 
 ## `Journal`
 
@@ -32,7 +35,7 @@ This page describes the public API shipped in Agent Journal 1.7.0.
 | `name(String)` | Human-readable run name |
 | `agent(String)` | Agent identifier |
 | `task(String)` | Task identifier |
-| `repository(String)` | Accepts a repository path; 1.7.0 does not persist it or act on it |
+| `repository(String)` | Accepts a repository path; 1.8.0 does not persist it or act on it |
 | `config(Config)` | Replace the run configuration |
 | `config(String, Object)` | Add one immutable input value |
 | `tags(Tags)` | Replace tags |
@@ -41,8 +44,8 @@ This page describes the public API shipped in Agent Journal 1.7.0.
 | `parentRun(String)` | Link a child run to a parent run ID |
 | `start()` | Create a `RUNNING` `Run` |
 
-There is no `config(Map)` overload in 1.7.0.
-The `repository(String)` setter is present, but the 1.7.0 run implementation does not consume the stored builder value.
+There is no `config(Map)` overload in 1.8.0.
+The `repository(String)` setter is present, but the 1.8.0 run implementation does not consume the stored builder value.
 
 ## `Run`
 
@@ -87,7 +90,7 @@ TimingInfo timing = TimingInfo.of(2500, 2100, 400);
 ```
 
 The `TokenUsage` constructor order is input, output, thinking, cache creation, cache read, and tool-use tokens.
-There is no five-argument `TokenUsage.of(...)` overload in 1.7.0.
+There is no five-argument `TokenUsage.of(...)` overload in 1.8.0.
 
 ## `JournalStorage`
 
@@ -150,7 +153,7 @@ GeminiSessionParser.parse(result, phaseName, promptText, traceFile, contentMode)
 
 ## Storage cautions
 
-- `JsonFileStorage` does not validate path containment for caller-supplied identifiers or artifact names in 1.7.0.
+- `JsonFileStorage` does not validate path containment for caller-supplied identifiers or artifact names in 1.8.0.
 - Use one writer per run and do not assume multi-process safety.
 - File-backed load methods read the requested JSONL file into memory.
 - Portable traces can contain sensitive content; see [Capture SDK Sessions](/docs/agent-journal/capture-sessions).

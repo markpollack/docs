@@ -1,11 +1,15 @@
 ---
 title: "Capture SDK Sessions"
-description: "Record Claude Code and Gemini CLI results with Agent Journal 1.7.0"
+description: "Record Claude Code, Gemini CLI, Grok, Codex, and Antigravity results with Agent Journal 1.8.0"
 ---
 
-Agent Journal provides two vendor adapters that write compatible core events and portable traces.
-Both capture modules require a Java 21 runtime because their SDK dependencies are published as Java 21 bytecode.
-The Claude adapter consumes the [Claude Agent SDK for Java](/projects/claude-agent-sdk), and the Gemini adapter consumes the `gemini-cli-sdk` published with [Agent Client](/projects/agent-client).
+Agent Journal provides five vendor adapters that write compatible core events and portable traces.
+
+The Claude and Gemini adapters parse a typed SDK object: Claude consumes the [Claude Agent SDK for Java](/projects/claude-agent-sdk) and Gemini the `gemini-cli-sdk` published with [Agent Client](/projects/agent-client).
+Both require a Java 21 runtime, because those SDK dependencies are published as Java 21 bytecode.
+
+The Grok, Codex, and Antigravity adapters parse their CLI's durable JSONL directly and carry no vendor SDK dependency, so they run on Java 17 like `journal-core`.
+All three produce an ordered tool trajectory; Gemini does not.
 
 ## Claude Code
 
@@ -15,7 +19,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 </dependency>
 ```
 
@@ -70,7 +74,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>gemini-cli-capture</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 </dependency>
 ```
 
@@ -95,6 +99,109 @@ Configure `JsonFileStorage` if the derived `StepCostEvent` must survive process 
 Gemini's typed SDK exposes result-level text, usage, cost, duration, model, and status, but it does not expose per-tool calls.
 The adapter therefore records one turn-level step and does not invent tool detail.
 It has no `TraceRawMode` because the typed Gemini message does not retain a verbatim wire envelope.
+
+## Grok CLI
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>grok-cli-capture</artifactId>
+    <version>1.8.0</version>
+</dependency>
+```
+
+`GrokSessionParser` reads Grok's ACP-shaped `streaming-json` output from a file or a `BufferedReader`:
+
+```java
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.grok.GrokPhaseCapture;
+import io.github.markpollack.journal.grok.GrokRunRecorder;
+import io.github.markpollack.journal.grok.GrokSessionParser;
+import java.nio.file.Path;
+
+GrokPhaseCapture phase = GrokSessionParser.parse(
+        Path.of("grok-stream.jsonl"), "implement", promptText);
+
+new GrokRunRecorder(run).recordPhase(phase);
+```
+
+The parser pairs `tool_call` and `tool_call_update` records by `toolCallId`, keeping both the tool name Grok reports and its ACP semantic kind.
+Grok's stream carries a real session cost in `end.total_cost_usd` but no durable join from a turn to the tools it ran, so the session total is retained and attributed evenly across the captured tool steps.
+
+## Codex CLI
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>codex-cli-capture</artifactId>
+    <version>1.8.0</version>
+</dependency>
+```
+
+`CodexSessionParser` reads a durable Codex rollout JSONL file:
+
+```java
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.codex.CodexPhaseCapture;
+import io.github.markpollack.journal.codex.CodexRunRecorder;
+import io.github.markpollack.journal.codex.CodexSessionParser;
+import java.nio.file.Path;
+
+CodexPhaseCapture phase = CodexSessionParser.parse(
+        Path.of("rollout.jsonl"), "implement", promptText);
+
+new CodexRunRecorder(run).recordPhase(phase);
+```
+
+Codex records most tool invocations under the outer function name `exec`, which would collapse every step into one undifferentiated name.
+The parser deliberately classifies the nested `payload.input` call instead, extracting `exec_command` arguments without evaluating them and assigning semantic names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`.
+
+<Note>
+The classifier is conservative about shell syntax.
+Aliases, shell functions, quoted operators, and work hidden behind an interpreter fall back to `Shell`.
+The raw input and command are retained on the record, so callers can reclassify them later.
+</Note>
+
+Codex rollout token counts, including cached and reasoning tokens, are preserved.
+
+## Antigravity CLI
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>antigravity-cli-capture</artifactId>
+    <version>1.8.0</version>
+</dependency>
+```
+
+`AntigravitySessionParser` reads Antigravity's streaming JSON:
+
+```java
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.antigravity.AntigravityPhaseCapture;
+import io.github.markpollack.journal.antigravity.AntigravityRunRecorder;
+import io.github.markpollack.journal.antigravity.AntigravitySessionParser;
+import java.nio.file.Path;
+
+AntigravityPhaseCapture phase = AntigravitySessionParser.parse(
+        Path.of("antigravity-stream.jsonl"), "implement", promptText);
+
+new AntigravityRunRecorder(run).recordPhase(phase);
+```
+
+The parser pairs active and terminal updates by `step_index` and handles both `DONE` and `ERROR` steps, recording parameters, output or error text, duration, and terminal token usage.
+Stable identities are derived from the conversation and step positions.
+
+## Cost provenance
+
+Neither Codex nor Antigravity reports monetary cost in these streams.
+Their cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source, so a downstream reader can distinguish "this run cost nothing" from "this CLI never said."
 
 ## Portable trace modes
 

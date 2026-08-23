@@ -6,6 +6,52 @@ sidebarTitle: "What's New"
 
 ## Week of August 16, 2026
 
+### Agent Client 0.29.0
+
+**Grok, Codex, and Antigravity now return a real tool trajectory through the same facade contract Claude has always honoured.**
+
+- All three providers publish their parsed run trajectory through `AgentClientResponse.getPhaseCapture()`; live facade integration gates verify each one returns a capture containing tool uses, and offline model tests assert capture is additive rather than a replacement for the provider's terminal result
+- Grok reads its native `streaming-json` ACP stream, Antigravity its `stream-json`, and Codex harvests its durable rollout JSONL after execution, matching the file by session id or working directory with a bounded wait for delayed flushes
+- The adapters consume the released Agent Journal 1.8.0 capture modules, so capture stays provider-owned and `agent-model` and the production surface of `agent-client-core` take on no journal dependency
+- LOOSE-mode Codex execution is repaired: current Codex versions reject `--full-auto` after `exec`, so full-auto now maps to the global `--sandbox workspace-write` and `--ask-for-approval never` options and stays distinct from the unrestricted bypass level, which portable auto-approve no longer grants implicitly
+- All 29 modules are published, `agent-tck` included
+
+[Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
+
+### Agent Journal 1.8.0
+
+**Tool-trajectory capture for three more CLIs, each parsed from its own durable stream.**
+
+- New `grok-cli-capture`, `codex-cli-capture`, and `antigravity-cli-capture` modules turn each CLI's JSONL into ordered `ToolCallEvent` and `StepCostEvent` records with stable tool-call identities
+- Codex capture sidesteps the outer-`exec` trap by classifying the nested `payload.input` call, assigning names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`, and falling back to `Shell` — with the raw command retained — wherever shell syntax makes the intent ambiguous
+- Grok's stream has no durable turn-to-tool cost join, so its real session total is kept and split evenly across captured steps; Codex and Antigravity report no monetary cost at all, and say so explicitly with `costAvailable=false`
+- Gemini CLI capture remains turn-level and is deliberately excluded from the multi-CLI tool-trajectory claim
+- Additive on the existing event and trace contracts; 488 tests pass across the seven-module reactor
+
+[Project](/projects/agent-journal) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
+
+### Agent Client 0.28.0
+
+**Two new CLI providers, both carried through the full parity TCK.**
+
+- A Grok CLI provider — `agent-grok`, `grok-cli-sdk`, `agent-starter-grok` — whose headless runs return a real JSON envelope, so session id, token usage and a genuine per-run USD cost are read rather than scraped, and a caller-supplied session UUID makes resume possible without recovering an id from output
+- An Antigravity provider for Google's `agy` — `agent-antigravity`, `antigravity-cli-sdk`, `agent-starter-antigravity` — which declares its working directory with `--add-dir` so the CLI cannot divert writes to a shared scratch directory while reporting success
+- Antigravity run success is derived from whether work was produced and nothing was refused, not from its `status` field, which reports ERROR alongside complete and correct responses; soft denials are detected from both the result envelope and stderr
+- `GROK` and `ANTIGRAVITY` join the provider parity TCK and pass all ten scenarios each against live CLIs, with zero skips and zero failures. CI cannot re-verify them because both CLIs authenticate interactively and cache credentials rather than reading an API key
+
+[Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
+
+### AgentWorks BOM 1.16.0
+
+**The managed set catches up across the whole portfolio.**
+
+- Repins the Agent Client family to 0.28.0, bringing the Grok and Antigravity providers into the managed set
+- Repins Agent Journal 1.7.0, Agent Hooks 0.7.0, Agent Judge 0.15.0, Agent Sandbox 0.10.0, Agent Bench 0.6.0, Agent Experiment 0.6.0, Agent Memory 0.4.0, Claude Agent SDK 1.5.0, and the acp-java family 0.15.0
+- Drops `loopy` from the managed set; it ships an executable distribution and is depended on directly
+- The BOM tracks a set verified together, so it trails the newest individual releases — Agent Client 0.29.0 and Agent Journal 1.8.0 must be declared explicitly
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
 ### ACP Java SDK 0.15.0
 
 **Notifications arrive in order and survive a graceful close; the published closure and the license are now what they claim to be.**

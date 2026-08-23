@@ -4,7 +4,18 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Client — auto-generated from git history"
 ---
 
-## 0.28.0 (unreleased)
+## 0.29.0 (2026-08-22)
+
+- Grok, Codex, and Antigravity now publish their parsed run trajectory through `AgentClientResponse.getPhaseCapture()`, matching the Claude facade contract; live facade integration gates verify that all three return a capture containing tool uses
+- Grok reads its native `streaming-json` ACP stream and Antigravity its `stream-json`; both SDKs retain the full stream for capture while preserving the existing terminal text, status, token, and session fields
+- Codex harvests its durable rollout JSONL after execution, locating the matching file by session id or working directory with a bounded wait for delayed flushes
+- The three provider adapters consume the released Agent Journal 1.8.0 capture modules; capture stays provider-owned, and `agent-model` and the production surface of `agent-client-core` remain free of journal dependencies
+- Repair LOOSE-mode Codex execution: current Codex versions reject `--full-auto` after `exec`, so full-auto now maps to the global `--sandbox workspace-write` and `--ask-for-approval never` options placed before the subcommand
+- Keep full-auto distinct from the explicit unrestricted `--dangerously-bypass-approvals-and-sandbox` level, so portable auto-approve no longer grants full-disk access implicitly; add repeated `--add-dir` support for explicitly named writable roots
+- Document that provider trajectories come from the `AgentClient` facade response rather than a direct `AgentApi.call()`, and are independent of raw trace-file configuration
+- Remove the inert module-local deploy skip from `agent-tck` — the artifact remains published — and delete the orphaned sandbox TCK package, which tested a sandbox SPI this repository no longer owns
+
+## 0.28.0 (2026-08-22)
 
 - Add a Grok CLI provider: `agent-grok`, `grok-cli-sdk`, and `agent-starter-grok`. Headless runs return a real JSON envelope, so session id, token usage and a genuine per-run USD cost are read rather than scraped, and a caller-supplied session UUID makes resume possible without recovering an id from output
 - Add an Antigravity CLI provider for Google's `agy`: `agent-antigravity`, `antigravity-cli-sdk`, and `agent-starter-antigravity`

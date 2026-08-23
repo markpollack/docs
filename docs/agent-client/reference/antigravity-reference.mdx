@@ -66,9 +66,16 @@ The documentation says these notices go to stderr. agy 1.1.13 puts some of them 
 
 ## The status field is not the verdict
 
-agy returns `"status":"ERROR"` alongside a complete, correct response when an unrelated internal condition trips — for example `search directory /workspace does not exist`. Trusting the status would discard good runs; ignoring it would hide refused ones.
+In agy 1.1.13, `status` behaves like a sticky execution-error indicator, not a verdict on the completed task. A tool call that fails can leave the terminal envelope at `"status":"ERROR"` even after later tool calls complete and the agent produces a valid review. Conversely, a refused tool call has been observed with `"status":"SUCCESS"` and no response. Trusting the field discards good recovered work; ignoring it hides real failures.
 
-`isSuccessful()` is therefore derived from whether the run produced a response and had nothing refused. The CLI's own answer is recorded verbatim beside it as `status` and `reportedSuccessful`, so a caller that prefers it can have it.
+`isSuccessful()` therefore requires all of the following:
+
+- the process exited with code 0
+- the run produced a non-empty response
+- no tool call was refused
+- the stream contains no tool error left unrecovered by a later completed tool call
+
+An `ERROR` envelope without stream evidence is treated conservatively as unrecovered. The CLI's own account remains available as `status`, `reportedSuccessful` and `error`; `softDenied` and `unrecoveredError` expose the two independent reasons the derived result can reject it.
 
 ## Portable Option Mapping
 
@@ -109,7 +116,7 @@ most exposed to — see also soft denial below.
 
 ## Result Metadata
 
-`getProviderFields()` carries `inputTokens`, `outputTokens`, `thinkingTokens`, `cacheReadTokens`, `totalTokens`, `numTurns`, `status`, `reportedSuccessful`, `error`, `softDenied`, `permissionNotices`, `exitCode` and `structured`. `getSessionId()` carries the conversation id, which `AntigravityClient.resume(conversationId, ...)` accepts via `--conversation`.
+`getProviderFields()` carries `inputTokens`, `outputTokens`, `thinkingTokens`, `cacheReadTokens`, `totalTokens`, `numTurns`, `status`, `reportedSuccessful`, `error`, `softDenied`, `unrecoveredError`, `permissionNotices`, `exitCode` and `structured`. `getSessionId()` carries the conversation id, which `AntigravityClient.resume(conversationId, ...)` accepts via `--conversation`.
 
 ## Availability
 

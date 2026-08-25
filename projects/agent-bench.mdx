@@ -6,7 +6,7 @@ description: "Benchmarking suite for Java-centric AI agents on real-world softwa
 **[What's New →](/docs/agent-bench/whats-new)**
 
 <Info>
-The latest public release is 0.6.0 under the `io.github.markpollack` Maven group and Java package
+The latest public release is 0.6.1 under the `io.github.markpollack` Maven group and Java package
 namespace.
 </Info>
 
@@ -28,7 +28,7 @@ Use the core module for the agent-neutral CLI and Java API:
 <dependency>
   <groupId>io.github.markpollack</groupId>
   <artifactId>agent-bench-core</artifactId>
-  <version>0.6.0</version>
+  <version>0.6.1</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Use the agents module when `BenchApp` and the real Agent Client-backed LLM judge
 <dependency>
   <groupId>io.github.markpollack</groupId>
   <artifactId>agent-bench-agents</artifactId>
-  <version>0.6.0</version>
+  <version>0.6.1</version>
 </dependency>
 ```
 
@@ -80,7 +80,7 @@ other externally managed isolation.
 ```bash
 git clone https://github.com/markpollack/agent-bench.git
 cd agent-bench
-git checkout v0.6.0
+git checkout v0.6.1
 ./mvnw clean verify
 
 ./mvnw -q -pl agent-bench-core exec:java \
@@ -115,5 +115,5 @@ git checkout v0.6.0
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-bench">
-  Released 0.6.0 source --- two published modules and a 199-test verified build
+  Released 0.6.1 source --- two published modules
 </Card>

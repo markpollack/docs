@@ -5,7 +5,7 @@ description: "Reproducible Java experiment lifecycle for evaluating AI agents"
 
 **[What's New →](/docs/agent-experiment/whats-new)**
 
-**Current release: 0.6.0** · Java 21 · three modules · 544 tests
+**Current release: 0.7.1** · Java 21 · three modules
 
 ## Overview
 
@@ -48,9 +48,9 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
 
 | Module | Description | Key Dependencies |
 |--------|-------------|------------------|
-| `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.14.0, Agent Journal 1.7.0, Jackson |
-| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.4.0 |
-| `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.10.0, Agent Client 0.26.0 |
+| `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.15.1, Agent Journal 1.8.2, Jackson |
+| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.5.1 |
+| `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.12.1, Agent Client 0.29.3 |
 
 ## Documentation
 
@@ -75,7 +75,7 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
-    <version>0.6.0</version>
+    <version>0.7.1</version>
 </dependency>
 ```
 
@@ -108,7 +108,7 @@ Experiment-owned `RecordedJudgment` and `RecordedVerdict` projections. Existing 
 metadata, and available composite evidence. Re-saving writes the new format; obsolete range bounds,
 categorical allow-lists, and unnamed legacy composite identity cannot be reconstructed losslessly.
 
-Standalone consumers resolve Agent Journal/Capture 1.7.0, Jackson 2.21.6, and Jackson 3.1.6 without
+Standalone consumers resolve Agent Journal/Capture 1.8.2, Jackson 2.22.2, and Jackson 3.2.2 without
 an AgentWorks BOM. The parent artifact publishes one aggregate CycloneDX 1.6 JSON SBOM, and the
 stable release includes signed binaries, sources, and Javadocs with the project BSL text.
 

@@ -15,7 +15,7 @@ Portable Java API for autonomous CLI agents. No Spring Boot required — build a
 
 Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk)) and higher-level orchestration ([Agent Workflow](/projects/agent-workflow)).
 
-**Version 0.29.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
+**Version 0.29.3** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:agent-client-core)
 
 **0.29.0:** Provider trajectories through the facade. Grok, Codex, and Antigravity now publish their parsed run trajectory through `AgentClientResponse.getPhaseCapture()`, matching the Claude facade contract — Grok from its native `streaming-json` ACP stream, Antigravity from `stream-json`, and Codex by harvesting its durable rollout JSONL after execution. Live facade gates verify all three return a capture containing tool uses. The adapters consume the released Agent Journal 1.8.0 capture modules, so `agent-model` and the production surface of `agent-client-core` take on no journal dependency. LOOSE-mode Codex execution is repaired: full-auto now maps to the global `--sandbox workspace-write` and `--ask-for-approval never` options and no longer implicitly grants full-disk access. All 29 modules are published, `agent-tck` included.
 

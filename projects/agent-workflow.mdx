@@ -5,6 +5,8 @@ description: "Build agents that work — and measure why they work. Multi-step p
 
 **[What's New →](/docs/agent-workflow/whats-new)**
 
+> **Current release: 0.12.1.**
+>
 > **What's new in 0.10.0:** Upgraded to Spring AI 2.0.0 GA, which clears CVE-2026-41712. Builds on 0.9.0 — `AgentCallback.onQuestion` now takes a tool-agnostic Question/Option callback record (no longer leaking a tool-library type), and judge integration moved to the `io.github.markpollack` namespace — plus 0.8.0 trace capture (`AgentClientStep` propagates trace file paths into the workflow journal) and 0.7.0 `ManagedAgentStep` (run steps in Anthropic's hosted sandbox).
 
 ## Overview
@@ -97,7 +99,7 @@ This isn't obvious until you measure it. In our [code coverage experiments](/exp
 
 <CardGroup cols={2}>
   <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-workflow">
-    Source code (0.10.0 on Maven Central)
+    Source code (0.12.1 on Maven Central)
   </Card>
   <Card title="Tutorial Code" icon="graduation-cap" href="https://github.com/markpollack/workflow-dsl-examples">
     13 runnable examples — validated with real LLM calls

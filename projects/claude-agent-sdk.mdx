@@ -17,7 +17,9 @@ Java SDK for programmatic access to Claude Code. Three APIs at different abstrac
 
 This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-workflow) — each step runs a full multi-turn Claude session internally.
 
-**Current release: 1.5.0.** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568. See [What's New →](/docs/claude-agent-sdk/whats-new).
+**Current release: 1.5.1.**
+
+**1.5.0:** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568. See [What's New →](/docs/claude-agent-sdk/whats-new).
 
 ## Using it
 
@@ -25,7 +27,7 @@ This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-wor
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-sdk</artifactId>
-    <version>1.5.0</version>
+    <version>1.5.1</version>
 </dependency>
 ```
 

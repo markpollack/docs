@@ -31,6 +31,9 @@ and run on Java 17. The change is additive on the existing event and trace contr
 | `journal-core` | Runs, events, storage, metrics, feedback, evaluation subjects, and portable traces | Java 17+ |
 | `claude-code-capture` | Claude Code SDK parsing and recording | Java 21+ |
 | `gemini-cli-capture` | Gemini CLI result parsing and recording | Java 21+ |
+| `grok-cli-capture` | Grok CLI trajectory parsing and recording | Java 17+ |
+| `codex-cli-capture` | Codex CLI trajectory parsing and recording | Java 17+ |
+| `antigravity-cli-capture` | Antigravity CLI trajectory parsing and recording | Java 17+ |
 
 `journal-core` uses Jackson 2 and the SLF4J API.
 The capture modules also depend on their respective Java SDKs, whose published bytecode requires Java 21.
@@ -45,7 +48,7 @@ The capture modules also depend on their respective Java SDKs, whose published b
 </dependency>
 ```
 
-The three released artifacts use the `io.github.markpollack` group ID and are available from [Maven Central](https://central.sonatype.com/search?q=g%3Aio.github.markpollack%20AND%20a%3Ajournal-core).
+The six released artifacts use the `io.github.markpollack` group ID and are available from [Maven Central](https://central.sonatype.com/search?q=g%3Aio.github.markpollack%20AND%20a%3Ajournal-core).
 
 ## Documentation
 

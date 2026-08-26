@@ -14,11 +14,14 @@ Terms are grouped by domain. Click any linked term to go deeper.
 | **Structured execution** | Task sequencing, deterministic checkpoints, scoped context, and tiered validation — the infrastructure that shapes agent behavior without prompt engineering. |
 | **The equation** | `knowledge + structured execution > model` — shorthand for the thesis. |
 
-## Forge Pipeline
+## Forge and Knowledge Packaging
 
 | Term | Definition |
 |------|-----------|
-| **[Forge](/methodology/forge)** | The deterministic customization pipeline that transforms knowledge into agent-ready artifacts. Named after a botanical metaphor: Define → Forge → Run → Grow. |
+| **[Forge](/methodology/forge)** | The six-phase methodology for building and evolving agentic software, plus the slash-command toolkit that runs it. Discovery (phases 0-2) iterates; execution (phases 3-5) is sequential. |
+| **Authority trio** | `VISION.md`, `DESIGN.md`, `ROADMAP.md` — the three documents a Forge project reads to know what it is doing. |
+| **[Steward](/methodology/forge#the-steward-pattern)** | An agent continuously accountable for a project or domain, combining Curator (knowledge base) and Developer (roadmap and build) roles. |
+| **[JIT Retrieval](/methodology/knowledge-base-design#jit-retrieval)** | Also *Explore RAG*. Knowledge retrieval over structured markdown in git using ordinary file tools — no vector store, no embeddings, no indexing pipeline. |
 | **Skill** | A Markdown file with YAML frontmatter that provides domain knowledge to an agent. Follows the [agentskills.io](https://agentskills.io) spec. |
 | **SkillsJar** | A Java JAR that packages skills under `META-INF/skills/` for classpath discovery. Teams get skills automatically via Maven dependencies. |
 | **Progressive disclosure** | The agent sees skill names and descriptions upfront but loads full content only when relevant. Reduces token waste. |

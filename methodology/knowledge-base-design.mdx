@@ -9,6 +9,30 @@ Agents read files. The question is: which files, in what order, with what struct
 
 A flat directory of Markdown files forces the agent to read everything or guess. A well-structured KB lets the agent navigate to exactly what it needs in 1-2 file reads.
 
+## JIT Retrieval
+
+The approach on this page has a name: **JIT Retrieval**, also called **Explore RAG**.
+
+It is knowledge retrieval with **no vector store, no embeddings, and no indexing pipeline**. The knowledge is structured markdown in git, and the agent navigates it with the file tools it already has — glob, grep, read. There is nothing to stand up and nothing to keep in sync with the files.
+
+That sounds like a limitation. It is closer to the opposite, for five reasons:
+
+1. **Routing tables are human-authored rerankers.** A "read when…" column encodes domain expertise about what is relevant to what. That beats statistical similarity, because it is a judgment about relevance rather than a measurement of resemblance.
+2. **Negative knowledge saves more time than positive routing.** Recording what *is not* here prevents the most wasteful searches — the ones that end in nothing after reading half the corpus.
+3. **Hierarchical navigation is O(log n).** Root index → domain index → file. Adding files does not lengthen the path.
+4. **No infrastructure.** No embedding model, no vector store, no indexing job, no re-embedding when a document changes. A `git commit` is the entire update pipeline.
+5. **It works to roughly 500 files per KB.** Beyond that, federate rather than growing a single corpus.
+
+**The quality metric is the right file in three hops or fewer.** That is the number to test against, and the reason index files stay short.
+
+Maintenance is two-agent: a **Curator** with read-write access who owns structure and currency, and a **Navigator** with read-only access who consumes it. Separating them keeps the corpus from being quietly reshaped by whoever last needed an answer.
+
+<Note>
+  The honest trade-off: somebody has to build the routing tables. Vector RAG is automatic but dumber; structured routing is manual but dramatically more accurate for domain-specific Q&A. If the corpus is large, general, and nobody will own it, this is the wrong tool.
+</Note>
+
+The rest of this page is how the routing is built.
+
 ## The Agent-Consumption Weighting
 
 Not all documentation types are equally useful to agents. Based on [Diataxis](https://diataxis.fr/) (Daniele Procida), we weight the four document types for agent consumption:
@@ -150,10 +174,10 @@ For a narrative walkthrough of how these patterns were discovered and applied ac
   <Card title="Knowledge Base Freshness" icon="clock-rotate-left" href="/methodology/knowledge-base-freshness">
     How knowledge stays true after it's written — drift, rituals, and the trust principle
   </Card>
-  <Card title="Forge Pipeline" icon="hammer" href="/methodology/forge">
-    How knowledge gets packaged into agent-ready artifacts
+  <Card title="Forge" icon="hammer" href="/methodology/forge">
+    The methodology this KB pattern belongs to, and the `/forge-kb` command that builds one
   </Card>
-  <Card title="Extending Loopy" icon="puzzle-piece" href="/docs/loopy/extending">
-    Skills, SkillsJars, and progressive disclosure in practice
+  <Card title="Your First Research Agent" icon="play" href="/docs/forge/getting-started">
+    JIT Retrieval end to end — five papers, twenty minutes, a corpus you can query
   </Card>
 </CardGroup>

@@ -1,11 +1,15 @@
 ---
 title: "Loopy"
-description: "Loop-driven interactive coding agent CLI for Java developers"
+description: "A small agentic coding CLI for Java developers"
 ---
 
 ## Overview
 
-Loopy is where the lab's thesis becomes a product. It's an interactive coding agent CLI built on Spring AI that embodies **knowledge-directed execution** — giving the agent curated knowledge and structured workflows instead of relying on prompt engineering alone.
+Loopy is a small agentic coding CLI for Java developers — an agent loop, a terminal UI, and multi-provider support, built on Spring AI. It is a harness: somewhere to run an agent against a Java codebase, with curated domain skills available when you want them.
+
+<Note>
+  Loopy is **not** the entry point to the [Forge methodology](/methodology/forge). Forge is used through its own slash commands. Loopy was an early surface for some of them; that role has moved.
+</Note>
 
 **Version 0.5.0** — [Maven Central](https://central.sonatype.com/search?q=g:io.github.markpollack+a:loopy) | [Download](https://github.com/markpollack/loopy/releases/latest)
 
@@ -13,14 +17,14 @@ Loopy is where the lab's thesis becomes a product. It's an interactive coding ag
 
 ## Key Features
 
-- **Embedded agent loop** — Built on Agent Workflow for reliable execution
+- **Embedded agent loop** — Built on [Agent Workflow](/projects/agent-workflow) for reliable execution
 - **Domain skills** — Modular, curated capabilities (Spring Boot, testing, migration)
 - **Modern TUI** — Terminal user interface with real-time agent feedback
-- **Forge lifecycle** — Define → Forge → Run → Grow workflow customization
+- **Multi-provider** — Swap the model behind the loop without changing the harness
 
 ## Why Loopy?
 
-Most coding agents are generic. Loopy is opinionated — it ships with curated knowledge about Java/Spring development, structured as skills that guide the agent's tool selection and execution strategy. The result: more reliable completions with fewer wasted tokens.
+Most coding agents are generic. Loopy is opinionated about Java — it ships with curated knowledge about Java and Spring development, structured as skills that shape the agent's tool selection and execution strategy. The result is more reliable completions with fewer wasted tokens.
 
 ## Documentation
 

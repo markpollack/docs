@@ -1,0 +1,129 @@
+---
+title: "Agento University"
+description: "A visual operating environment for a fleet of agents that each own a codebase"
+---
+
+<div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+  <span style={{background: '#7a5ad8', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'}}>IN DEVELOPMENT</span>
+  <span style={{background: '#334155', color: '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem'}}>Exploratory — product vision</span>
+</div>
+
+<div style={{
+  margin: '2rem 0',
+  padding: '1.5rem 2rem',
+  borderRadius: '8px',
+  background: 'linear-gradient(135deg, rgba(122,90,216,0.08) 0%, rgba(2,9,21,0.95) 60%)',
+  border: '1px solid rgba(122,90,216,0.15)',
+  textAlign: 'center'
+}}>
+  <img src="/images/agento-campus.svg" alt="A team of Agenti — thinker, field agent, professor, graduate, and greeter" style={{width: '100%', maxWidth: '480px', margin: '0 auto 1rem'}} />
+  <div style={{
+    fontFamily: 'Geist Mono, monospace',
+    fontSize: '1.15rem',
+    fontWeight: 400,
+    color: '#bc8cff',
+    marginBottom: '0.5rem'
+  }}>Give every repository an agent that owns it. Then give yourself somewhere to watch them all.</div>
+  <div style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6}}>
+    Agento University is the graphical surface for the <a href="/methodology/forge#the-steward-pattern" style={{color: '#bc8cff'}}>steward pattern</a> — a workspace for the agent that owns one codebase, and a campus view for the fleet that owns the rest.
+  </div>
+</div>
+
+## The Problem It Solves
+
+The [Forge methodology](/methodology/forge) is a command-line product. You run a slash command, an agent scaffolds a vision or works a roadmap step, and the result is files in git. That works, and it is how the methodology is used today.
+
+It does not scale to *watching*. Once a dozen repositories each have an agent continuously accountable for them, the questions stop being "what did this session do" and start being: which of these needs me right now? What is that one waiting on? What did it change while I was gone? A terminal answers those one repository at a time.
+
+Agento University is the answer to the second question. It is not a different methodology — it is a **higher-level interface onto the same stewards**, aimed at the point where a fleet becomes too large to hold in your head.
+
+## Two Surfaces
+
+### The Studio — working with one agent
+
+The Studio is the workspace for a single steward. It puts four things in one shell:
+
+- **The workflow canvas** — a rendered view of the agent's workflows. Clicking a node opens the exact line of source that declared it, so the picture and the code never drift apart.
+- **The artifact panel** — the agent's documents and files, with a viewer that opens at a line and highlights it.
+- **The inbox** — the agent's message lanes, so obligations arriving from elsewhere have a human end.
+- **The action bar** — run a turn; or forge a new steward into existence and start its first conversation, without leaving the shell.
+
+### The Campus — watching the fleet
+
+The campus is the fleet view: each repository is a building, each building carries a live status billboard, and the state you are looking at is written by the stewards themselves rather than assembled by a separate monitoring service.
+
+The metaphor is a navigation aid, not a theory. A building is a repository; a billboard is that repository's current state. Where the metaphor stops being useful, the interface uses ordinary words.
+
+<div style={{
+  margin: '2rem 0',
+  padding: '2.5rem 2rem',
+  borderRadius: '8px',
+  border: '1px dashed rgba(122,90,216,0.35)',
+  background: 'rgba(122,90,216,0.04)',
+  textAlign: 'center'
+}}>
+  <div style={{fontFamily: 'Geist Mono, monospace', fontSize: '0.8rem', color: '#bc8cff', letterSpacing: '0.05em', marginBottom: '0.5rem'}}>SCREENSHOTS PENDING</div>
+  <div style={{fontSize: '0.85rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: '520px', margin: '0 auto'}}>
+    Captures of the Studio shell, the workflow canvas, the inbox, and the campus billboards are being prepared from the running application.
+  </div>
+</div>
+
+{/*
+SHOT LIST — capture from the running app, then replace the placeholder above with <Frame> blocks.
+Source: the Agento University checkout; `./mvnw spring-boot:run` (port 8486). The puppeteer
+probes under `probes/` already drive these surfaces and are the cheapest way to script captures.
+
+  1. studio-shell.png      — Studio route: steward sidebar + advisor tab bar + artifact panel,
+                             one steward selected. The establishing shot.
+  2. workflow-canvas.png   — Workflow canvas page with a workflow selected; ideally mid-click so
+                             the source viewer is open at the declaring line. This is the single
+                             most differentiating image on the page.
+  3. inbox-lanes.png       — Inbox page showing the mail lanes with a message open in the viewer.
+  4. campus-billboards.png — Campus mode, isometric, several buildings with live billboards.
+  5. forge-steward.png     — Action bar mid-flow, creating a steward. Optional; only if it reads
+                             clearly as a single frame.
+
+Keep them dark-theme to match the site. Crop out any repository, org, or path names — the
+stewards themselves are private.
+*/}
+
+## What Is Actually Built
+
+The shell is real and tested; the product thesis on top of it is not yet proved. Stating that boundary is more useful than a launch date.
+
+| Surface | State |
+|---------|-------|
+| Studio shell — sidebar, advisor tabs, artifact panel | **Built** |
+| Workflow canvas with click-through to declaring source | **Built** |
+| Inbox — message lanes with a human end | **Built** (read-only) |
+| Action bar — run a turn, forge a new steward | **Built** |
+| Campus — buildings, billboards, interiors | **Built** |
+| Review-loop cockpit — the product thesis | In progress |
+| Runtime surfaces — live run watching, approvals, experiment dashboards | Deferred |
+
+## On "Graduation"
+
+The campus metaphor supplies a word that turns out to carry a real engineering meaning, so it is worth stating plainly rather than leaving as a pun.
+
+**An agent graduates when it reliably meets a repeatable benchmark.** Not when it produces one good result — when the judges that scored its development converge, stop being development scaffolding, and become a measuring stick it clears consistently. That is a threshold you can compute, and it is the same threshold the [four-tier jury](/methodology/four-tier-jury) exists to measure.
+
+Everything else about the campus is navigation. This part is not.
+
+## Where It Sits
+
+Agento University is **exploratory and long-term**. It is deliberately not part of the control-loop architecture: the [Improvement Flywheel](/methodology/improvement-flywheel) measures and steers a single agent, and it does that whether or not any of this exists. The University is a layer above — coordination and visibility across many agents, once the single-agent problem is solved well enough to have many.
+
+<Note>
+  The projects it is built on — [Agent Workflow](/projects/agent-workflow) as the engine, [Agent Journal](/projects/agent-journal) for traces, [Agent Judge](/projects/agent-judge) for evaluation — are shipped and documented today. Agento University is the product surface being assembled on top of them.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="The Steward Pattern" icon="user-shield" href="/methodology/forge#the-steward-pattern">
+    What a steward is, and what the University is a fleet view of
+  </Card>
+  <Card title="Forge" icon="hammer" href="/methodology/forge">
+    The methodology and the command-line product underneath
+  </Card>
+</CardGroup>

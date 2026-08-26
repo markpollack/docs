@@ -1,93 +1,145 @@
 ---
-title: "Forge Methodology"
-description: "Deterministic customization pipeline — from knowledge to structured agent execution"
+title: "Forge"
+description: "A six-phase methodology for building agentic software — and the slash-command toolkit that runs it"
 ---
 
 ## What is Forge?
 
-Forge is the deterministic customization pipeline that transforms raw domain knowledge into agent-ready execution artifacts. It's the bridge between "we have knowledge" and "the agent uses it well."
+**Forge is how a developer builds and evolves agentic software: a six-phase methodology, plus a toolkit of Claude Code slash commands that scaffold and maintain the artifacts each phase produces.**
 
-The name comes from a botanical lifecycle metaphor: **Define → Forge → Run → Grow** — knowledge is forged into structured tools before the agent ever sees it.
+It answers a different question than the rest of this methodology section. The [Improvement Flywheel](/methodology/improvement-flywheel) is the *control loop* — how a working agent gets measured and steered once it exists. Forge is what happens *before and around* that loop: how the project comes into being, what artifacts it commits to, and who keeps it healthy afterwards.
 
-## Why Deterministic?
+<Note>
+  Forge does not re-explain the control loop. RUN → MEASURE → DIAGNOSE → INTERVENE → VERIFY belongs to the [Improvement Flywheel](/methodology/improvement-flywheel); Forge is the methodology that decides what gets built and hands the loop something worth measuring.
+</Note>
 
-Early versions of the lab's approach used LLMs to process and restructure knowledge. This was expensive, non-reproducible, and introduced hallucination risk at the knowledge layer — exactly where you need reliability most.
+## The Reading Contract
 
-The forge pipeline is **zero-LLM-cost**: all knowledge processing happens through deterministic Java tooling.
+Forge is deliberately small at the point of use. The obligation is one sentence:
 
-## The Pipeline
+> Read your project's trio — `VISION.md`, `DESIGN.md`, `ROADMAP.md` — and the template for the phase you are in.
+
+That is the whole contract. A session can execute a phase correctly having read only those four documents. Everything else in the corpus is reference — case law explaining why a rule is what it is. If acting correctly ever *requires* reading a concept page, that is treated as a defect: the rule has not been distilled into the template where the session meets it.
+
+## The Six Phases
+
+| Phase | Name | Purpose | Output |
+|-------|------|---------|--------|
+| 0 | Vision | Define what to build and why | `VISION.md` |
+| 1 | Research | Deep investigation of the problem space | Research corpus, reference implementations |
+| 2 | Design | Technical specification and decisions | `DESIGN.md`, decision records |
+| 3 | Roadmap | Break the design into implementable steps | `ROADMAP.md` with entry/exit criteria |
+| 4 | Learning Loop | Iterative implementation with feedback | Working implementation + learnings |
+| 5 | Documentation | User-facing docs and tutorials | `docs/` |
+
+Plus a phase-review template that gates the transition between stages.
+
+Two properties matter more than the phase names:
+
+- **Evaluation is first-class.** Judges and benchmarks are not a phase-5 afterthought; they are how phase 4 knows whether it moved.
+- **Learnings are a primary artifact.** A phase that produced working code and no recorded learning is half-finished.
+
+## Two Loops
+
+```
+        DISCOVERY LOOP (Phases 0-2)              EXECUTION PIPELINE (Phases 3-5)
+        Iterate until stable                      Sequential after discovery stabilizes
+
+     ┌──────────┐   ┌──────────┐   ┌──────────┐       ┌──────────┐   ┌──────────┐   ┌──────────┐
+     │ Phase 0  │<─>│ Phase 1  │<─>│ Phase 2  │ ───>  │ Phase 3  │──>│ Phase 4  │──>│ Phase 5  │
+     │ Vision   │   │ Research │   │ Design   │       │ Roadmap  │   │ Learning │   │   Docs   │
+     └──────────┘   └──────────┘   └──────────┘       └──────────┘   │   Loop   │   └──────────┘
+                                                                      └──────────┘
+     <─> = Iterative refinement                       ──> = Sequential execution
+```
+
+The **Discovery Loop** iterates freely — research invalidates vision assumptions, design reveals knowledge gaps. You exit when vision, research, and design are consistent with each other.
+
+The **Execution Pipeline** is sequential — you commit to a roadmap, execute with feedback, and document the result. Going back to discovery from execution is allowed, but it is a decision, not a drift.
+
+The transition between them is the highest-leverage review point in the method.
+
+## Five Variants
+
+The same six phases apply to five kinds of project. What differs is the feedback loop in phase 4:
+
+| Variant | Use when… | Phase 4 loop | Lifecycle |
+|---------|-----------|--------------|-----------|
+| **Eval-Agent** | Building an autonomous agent evaluated by judges | Loss optimization | Finite — converges |
+| **Project** | Building a library, service, or application | QA review | Finite — builds and ships |
+| **Research** | Investigating a question or testing hypotheses | Vision ↔ research iteration | Finite — publishes |
+| **Steward** | Keeping an existing project or domain healthy | Health monitoring | **Ongoing** |
+| **KB** | Structuring a corpus for agent navigation | Navigation quality | **Ongoing** |
+
+The first three converge on a deliverable and complete. The last two do not — they are custodial.
+
+## How to Start
+
+The methodology is executable. It ships as Claude Code slash commands that scaffold and maintain the artifacts, so the on-ramp is a command, not a document to imitate.
 
 <Steps>
-  <Step title="Define">
-    Declare what the agent needs to know — testing patterns, framework conventions, dependency usage, project structure. This is authored by humans as curated opinions.
+  <Step title="Bootstrap the trio">
+    `/forge-project` walks you from nothing to a vision, a design, and a roadmap, with a QA review loop between them. For research, `/forge-research` starts at forage and vision instead. For an agent with judge-based evaluation, `/forge-eval-agent` scaffolds judges and benchmarks alongside the trio.
   </Step>
-  <Step title="Forge">
-    Deterministic tooling transforms definitions into agent-ready artifacts:
-    - **SkillsJars** — Packaged, structured knowledge units the agent can discover and load
-    - **Pre-analysis rules** — Import parsing, file structure analysis, KB routing decisions
-    - **Execution constraints** — Tool configurations, checkpoint definitions, guard rails
+  <Step title="Build the knowledge layer">
+    `/forge-kb` structures an existing pile of documents into a corpus an agent can navigate — routing tables, indexes, and a session bridge, validated against real questions. `/forge-research-kb` is the superset for corpora with named consumer projects. See [Knowledge Base Design](/methodology/knowledge-base-design) for what it builds and why.
   </Step>
-  <Step title="Run">
-    The agent executes with forged artifacts available. Skills are discoverable (not force-fed), pre-analysis has already routed to the right knowledge, and execution constraints shape behavior without prompt engineering.
+  <Step title="Work the roadmap">
+    `/plan-to-roadmap` converts an ad-hoc plan into roadmap steps with entry and exit criteria. `/collect-status` produces a timestamped status report. `/kb-reindex` runs freshness checks across federated knowledge bases.
   </Step>
-  <Step title="Grow">
-    The [Improvement Flywheel](/methodology/improvement-flywheel) drives iterative refinement: **RUN → MEASURE → DIAGNOSE → INTERVENE → VERIFY**. Each cycle identifies a measurable loss signal, diagnoses its cause through [behavioral analysis](/methodology/markov-fingerprinting) and [jury evaluation](/methodology/four-tier-jury), applies a targeted intervention, and verifies the improvement without regressions. Findings feed back into the Define phase — new knowledge, tighter prompts, or deterministic replacements for exploratory steps.
+  <Step title="Close the session, don't just stop">
+    `/prepare-handoff` ends a session with a documentation currency pass and a work order for whoever picks it up next — human or agent. `/prepare-kb-handoff` is the knowledge-base equivalent. The handoff is an artifact, not a courtesy.
+  </Step>
+  <Step title="Hand the project to a steward">
+    When the build phases are done but the project is not, `/forge-steward-repo` establishes ongoing custody. See [The Steward Pattern](#the-steward-pattern) below.
   </Step>
 </Steps>
 
-## Key Principle: Curated Over Comprehensive
+Beyond the commands, the repository carries 14 document templates, 25 named concepts, 9 practice guides, and 5 project variants. The commands are the interface; the corpus is what they are an interface to.
 
-[SkillsBench](https://arxiv.org/abs/2602.12670) showed that 2-3 curated skills outperform comprehensive skill sets by +16.2pp, while comprehensive skills actually *decrease* performance by -2.9pp.
+## The Steward Pattern
 
-Forge embodies this: the forge step is opinionated curation, not exhaustive knowledge dumping. A human decides what matters, deterministic tooling packages it, and the agent discovers what it needs.
+The variants that converge produce something finished. Most software is not finished — it has users, dependencies that move, and a knowledge base that goes stale the moment nobody is accountable for it. That is what a **Steward** is for.
 
-## Forge Artifacts
+A Steward is an agent that is **continuously accountable** for a project or domain — a persistent custodian rather than a one-shot executor. In the cognitive-altitude hierarchy it sits at Level 1: above task execution, below strategic planning, with a horizon measured in days and weeks.
 
-| Artifact | What It Is | How Agent Uses It |
-|----------|-----------|-------------------|
-| **SkillsJar** | Packaged knowledge unit (JAR file with structured metadata) | Agent discovers via tool search, loads relevant skills on demand |
-| **Pre-analysis rules** | Deterministic routing logic (e.g., "if imports pytest, route to Python testing KB") | Runs before LLM, shapes context at zero cost |
-| **Execution template** | Structured Agent Execution (SAE) definition — checkpoints, phase gates | Agent follows defined execution phases |
-| **Guard rails** | Tool permission configs, output validators | Constrain agent to productive tool subsets |
+| Level | Role | Horizon |
+|-------|------|---------|
+| 0 | Task executor | Minutes |
+| **1** | **Steward** | **Days–weeks** |
+| 2 | Strategist | Weeks–months |
+| 3 | Meta-architect | Months–years |
 
-## Forge vs Prompt Engineering
+It combines two roles that reinforce each other:
 
-| Dimension | Prompt Engineering | Forge |
-|-----------|-------------------|-------|
-| **Cost** | Per-token, every run | Zero (deterministic, one-time) |
-| **Reproducibility** | Variable (LLM non-determinism) | Exact (Java tooling) |
-| **Scalability** | Prompt length limits | Unlimited (packaged artifacts) |
-| **Maintenance** | Edit prompts, hope for the best | Versioned artifacts, testable |
-| **Discoverability** | Agent sees everything at once | Agent pulls what it needs |
+- **Curator** — maintains the project's knowledge base: updates entries as APIs and patterns change, cross-references related topics, prunes stale content, federates to other knowledge bases.
+- **Developer** — executes roadmap items, runs builds and tests, flags regressions, watches upstream for breaking changes.
 
-## Implementation
+Neither works alone. A curator without development context writes abstract documentation; a developer without curated knowledge repeats past mistakes.
 
-Forge is implemented across several lab projects:
+### Where a steward's planning lives
 
-- **[Agent Workflow](/projects/agent-workflow)** — Execution loop that consumes forge artifacts
-- **[Loopy](/projects/loopy)** — CLI that exposes the full Define→Forge→Run→Grow lifecycle
-- **[Agent Judge](/projects/agent-judge)** — Evaluation in the Grow phase that identifies knowledge gaps
+The current model gives each stewarded project a **separate repository, paired one-to-one with it**, holding the project's active planning authority — the same `VISION.md` / `DESIGN.md` / `ROADMAP.md` trio — plus an inbox for steward-to-steward obligations and an audit log.
 
-## Evidence
+That separation is the point, and it is a privacy boundary rather than a filing preference: planning cannot live in a repository whose contents are world-readable. An earlier model that added stewardship *inside* the project has been retired for exactly that reason.
 
-### Code Coverage v2
-
-The [v2 experiment](/experiments/code-coverage-v2) directly tests forge effectiveness:
-- **Variant 3** (flat KB) vs **Variant 4** (SkillsJar) — same content, different packaging
-- **Variant 7** (full forge) — T3 score of 0.933, highest across all variants
-- Skills variant showed 0% JAR_INSPECT — the agent stopped needing to inspect dependencies because forge provided the knowledge upfront
-
-### Code Coverage v1
-
-The [v1 experiment](/experiments/code-coverage-v1) established that the forge variant (variant 9) produced the most efficient behavioral fingerprint — fewest expected steps, cleanest Markov trace.
+<Note>
+  The steward-repository procedure is **provisional by design** — revised from observed failures rather than worked around. The bootstrap is deliberately staged into separately inspectable transitions with a validator between them, because a single opaque command must not create repositories, rewrite a project, migrate authority, and send mail without intermediate validation.
+</Note>
 
 ## Related
 
 <CardGroup cols={2}>
   <Card title="The Thesis" icon="lightbulb" href="/methodology/knowledge-directed-execution">
-    Forge is how knowledge-directed execution gets implemented
+    Knowledge + structured execution &gt; model — what Forge is built to serve
   </Card>
-  <Card title="Loopy CLI" icon="terminal" href="/projects/loopy">
-    The product that makes forge accessible to developers
+  <Card title="Knowledge Base Design" icon="folder-tree" href="/methodology/knowledge-base-design">
+    JIT Retrieval, the two KB types, and what `/forge-kb` builds
+  </Card>
+  <Card title="Improvement Flywheel" icon="arrows-rotate" href="/methodology/improvement-flywheel">
+    The control loop Forge hands a project to
+  </Card>
+  <Card title="Your First Research Agent" icon="play" href="/docs/forge/getting-started">
+    Twenty minutes from a pile of papers to a research partner you can query
   </Card>
 </CardGroup>

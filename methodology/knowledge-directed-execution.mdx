@@ -33,6 +33,34 @@ Not "better prompts" — **infrastructure that shapes agent behavior**:
 
 This doesn't mean models don't matter. It means that for a given model, you get more reliability improvement from knowledge and execution infrastructure than from upgrading to the next model tier.
 
+## Agents Are Workflows
+
+Before the thesis can be tested, the object it applies to has to be named honestly. An agent is not a magic black box — it is a **workflow**. Each step is either **deterministic** (build, lint, test, measure coverage) or an **AI step** (reason about an error, generate code, decide what to fix next). What people casually call "an agent" is usually just the AI step — one node in a larger pipeline.
+
+```
+fetch PR  →  rebase  →  detect conflicts  →  run tests  →  fix & retest  →  cleanup  →  build gate
+ [determ.]   [determ.]     [deterministic]    [determ.]       [AI step]      [determ.]    [judge]
+                                                                                            │
+                                                              ┌────────────────────────┐    │ pass
+                                                              │ version-pattern judge  │◄───┘
+                                                              │    [deterministic]     │
+                                                              └──────────┬─────────────┘
+                                                                         │
+                                                              ┌──────────┴─────────────┐
+                                                              │    parallel AI steps   │
+                                                              │  assess-code-quality   │
+                                                              │  assess-backport       │
+                                                              └──────────┬─────────────┘
+                                                                         │
+                                                              ┌──────────┴─────────────┐
+                                                              │   quality judge → report│
+                                                              └────────────────────────┘
+```
+
+This is the actual [AgentWorks PR Review](https://github.com/markpollack/agentworks-pr-review) pipeline — seven deterministic steps, a judge gate, then parallel AI assessment only if the build passes. Most of the workflow never touches an LLM.
+
+That is what makes the thesis actionable rather than rhetorical. If an agent were a single model call, "knowledge + structured execution > model" would have nowhere to apply. Because it is a workflow, every deterministic step is a source of variance removed, and every AI step is a place where curated knowledge changes the outcome.
+
 ## Evidence
 
 ### Code Coverage v1
@@ -45,7 +73,13 @@ The [first experiment](/experiments/code-coverage-v1) showed two independent axe
 
 ### Stripe Convergence
 
-Stripe's [Minions paper](https://arxiv.org/abs/2402.15678) independently arrived at similar conclusions: "the walls matter more than the model." Their multi-agent system improves reliability through structured task decomposition, not model upgrades.
+Stripe arrived at the same structure independently, at a scale that makes it hard to dismiss. Their **Minions** system merges over a thousand pull requests a week containing no human-written code, against hundreds of millions of lines of Ruby on a platform handling more than $1 trillion in annual payment volume.
+
+They call the pattern **blueprints** — deterministic steps interleaved with agent reasoning steps, which is the diagram above under a different name. As Stripe's Alistair Gray puts it: *"Blueprints combine the determinism of workflows with agents' flexibility in dealing with the unknown."*
+
+The detail that matters most for this thesis is *why* they needed it: their stack is uncommon and their libraries are homegrown, so the model does not know their codebase. Rules files supply the knowledge and blueprints supply the structure — knowledge and execution structure compensating for what the model does not have.
+
+Two independent groups converging on interleaved determinism is better evidence than either alone. Sources: [Minions: Stripe's one-shot, end-to-end coding agents](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents) (Alistair Gray, February 2026), and Anup Jadhav's [The walls matter more than the model](https://www.anup.io/stripes-coding-agents-the-walls-matter-more-than-the-model/).
 
 ## The Equation
 
@@ -64,9 +98,7 @@ This concept has gone through several names:
 | "Infrastructure over prompts" | Early framing, too narrow |
 | "Knowledge-directed execution" | Current, captures both components |
 | "Curated opinions + structured execution" | Verbose but precise |
-| "The walls matter more than the model" | Stripe's phrasing, resonant |
-
-See [journal/2026-03-02-naming-the-thesis.md](https://github.com/markpollack) for the full naming discussion.
+| "The walls matter more than the model" | Anup Jadhav's phrasing for the Stripe result, resonant |
 
 ## How to Apply
 

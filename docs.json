@@ -34,8 +34,14 @@
   },
   "navbar": {
     "links": [
-      { "label": "pollack.ai", "href": "https://pollack.ai" },
-      { "type": "github", "href": "https://github.com/markpollack" }
+      {
+        "label": "pollack.ai",
+        "href": "https://pollack.ai"
+      },
+      {
+        "type": "github",
+        "href": "https://github.com/markpollack"
+      }
     ],
     "primary": {
       "type": "button",
@@ -80,7 +86,10 @@
             "pages": [
               {
                 "group": "AgentWorks BOM",
-                "pages": ["projects/agentworks-bom", "docs/agentworks-bom/whats-new"]
+                "pages": [
+                  "projects/agentworks-bom",
+                  "docs/agentworks-bom/whats-new"
+                ]
               },
               {
                 "group": "Agent Workflow",
@@ -185,11 +194,17 @@
               },
               {
                 "group": "Agent Hooks",
-                "pages": ["projects/agent-hooks", "docs/agent-hooks/whats-new"]
+                "pages": [
+                  "projects/agent-hooks",
+                  "docs/agent-hooks/whats-new"
+                ]
               },
               {
                 "group": "Agent Memory",
-                "pages": ["projects/agent-memory", "docs/agent-memory/whats-new"]
+                "pages": [
+                  "projects/agent-memory",
+                  "docs/agent-memory/whats-new"
+                ]
               },
               {
                 "group": "Agent Journal",
@@ -210,21 +225,11 @@
               },
               {
                 "group": "Agent Sandbox",
-                "pages": ["projects/agent-sandbox", "docs/agent-sandbox/whats-new"]
-              }
-            ]
-          },
-          {
-            "group": "Agento",
-            "pages": [
-              {
-                "group": "Agento Studio",
                 "pages": [
-                  "projects/agento-studio",
-                  "docs/agento-studio/getting-started"
+                  "projects/agent-sandbox",
+                  "docs/agent-sandbox/whats-new"
                 ]
-              },
-              "projects/agento-university"
+              }
             ]
           },
           {
@@ -232,7 +237,10 @@
             "pages": [
               {
                 "group": "Claude Agent SDK",
-                "pages": ["projects/claude-agent-sdk", "docs/claude-agent-sdk/whats-new"]
+                "pages": [
+                  "projects/claude-agent-sdk",
+                  "docs/claude-agent-sdk/whats-new"
+                ]
               },
               {
                 "group": "ACP Java SDK",
@@ -287,6 +295,17 @@
         ]
       },
       {
+        "tab": "Product",
+        "groups": [
+          {
+            "group": "Agento University",
+            "pages": [
+              "product/agento-university"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Methodology",
         "groups": [
           {
@@ -294,7 +313,13 @@
             "pages": [
               "methodology/index",
               "methodology/knowledge-directed-execution",
-              "methodology/forge",
+              {
+                "group": "Forge",
+                "pages": [
+                  "methodology/forge",
+                  "docs/forge/getting-started"
+                ]
+              },
               "methodology/improvement-flywheel",
               "methodology/knowledge-base-design",
               "methodology/knowledge-base-freshness",

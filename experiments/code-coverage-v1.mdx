@@ -40,9 +40,25 @@ Progressive knowledge injection — giving agents increasingly structured domain
 
 1. **Two independent axes discovered** — Knowledge injection and prompt hardening improve quality independently
 2. **Model floor exists** — PetClinic achieves 92-94% coverage across all variants (the model already knows PetClinic)
-3. **SAE is most efficient** — 70 expected steps, $2.84 per run
+3. **SAE is most efficient** — ~~70 expected steps~~ *(withdrawn, see below)*, $2.84 per run
 4. **Partial knowledge paradox** — Some knowledge without structure can *decrease* performance
 5. **First Markov fingerprints** — Tool-call traces reveal distinct behavioral signatures per variant
+
+<Note>
+**Updated 2026-08-27 — "70 expected steps" could not be reproduced.** Re-running the v1 traces
+through the corrected library gives **36–52 expected steps** for the SAE arms, not 70. The variant
+naming in the data on disk (`control`, `variant-a`–`e`, `claude-haiku`, `claude-*-sae`) does not
+match the nine-variant table above either, so this figure appears to come from a data or code
+vintage that no longer exists. **Treat it as unverified rather than wrong** — it may well have been
+right when written.
+
+Two things in v1's favour, both checked: it is **not** affected by CT6, because every v1 variant ran
+exactly one run per item, which is the one case where grouping by item is correct. And its
+start-state exposure (**CT7**) is small — 2–11% on the four arms that do not begin in `EXPLORE`,
+against the 30–90% seen in v3 and v4. The *relative* efficiency ordering is likely sound; the
+absolute step count is not citable.
+</Note>
+
 
 ## Markov Analysis
 

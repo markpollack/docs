@@ -54,7 +54,20 @@ Skills are extracted to `~/.claude/skills/` where any agentic CLI discovers them
 
 In the [Code Coverage v2](/experiments/code-coverage-v2) experiment, adding testing skills:
 - Reduced JAR_INSPECT tool calls from **11.0% → 1.0%** — the agent stopped inspecting dependencies because the skills already provided the knowledge
-- Reduced expected steps by **25%** (224 vs 301) compared to baseline
+- Reduced expected steps by **~25%** compared to baseline
+
+<Warning>
+**Updated 2026-08-27 — the absolute figures are withdrawn.** This read *"25% (224 vs 301)."* The
+`224` reproduces exactly from a chain that grouped by item rather than by run: v2 ran 2–3 runs
+against a single item, so every run of a variant was concatenated into one sequence, losing all but
+one absorption event and inflating expected steps about threefold (defect **CT6**). Recomputed with
+trajectories separated: **74.7 vs ~101–109**, depending on which baseline arm is meant — the page
+does not say, which is its own defect.
+
+**The ~25% survives** because both arms were inflated by the same factor. The absolute numbers do
+not. See the [v2 experiment page](/experiments/code-coverage-v2) and
+`agent-control-theory` `d18fc50`.
+</Warning>
 
 This validates the thesis: curated knowledge improves agent quality more than model upgrades.
 

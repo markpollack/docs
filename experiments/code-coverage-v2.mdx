@@ -82,6 +82,19 @@ Highest quality ceiling (0.878) but also highest cost ($5.11) and rework spiral 
 
 Zero mean bias in leave-one-out cross-validation despite formal rejection of the first-order assumption. The model is wrong in theory but useful in practice.
 
+<Note>
+**Updated 2026-08-27 — the "formal rejection" never happened.** That rejection came from
+`run_second_order_test`, which rendered its verdict from an uncorrected statistic while the correct
+one (`lr_pvalue`) sat unused in the same function — defect **CT4**. Re-measured properly,
+second-order dependence is **null** (`LR p = 1.00 / 0.97`): the first-order assumption is *not*
+rejected on this data. So the finding is simpler than it was written — the model predicts step
+counts, and the theoretical objection it was hedging against was an artifact.
+
+First-order adequacy is a property of a dataset, not a law, so it must be re-tested on each new
+corpus. Fixed in `agent-control-theory` `d18fc50`; the validator now abstains below 30 observations
+rather than asserting.
+</Note>
+
 ## Behavioral Analysis
 
 Every tool call across all 20 sessions was classified into one of 9 behavioral states using the [Markov fingerprinting](/methodology/markov-fingerprinting) methodology. This reveals *how* variants differ, not just *whether* they produce different outcomes.
@@ -116,7 +129,18 @@ The most distinctive behavioral signature was the JAR_INSPECT cluster — the ag
   <img src="/images/loop-amplification-v2.png" alt="Expected cycles through each behavioral loop" />
 </Frame>
 
-*The Markov fundamental matrix predicts how many times the agent cycles through each loop before absorbing. Skills+preanalysis cuts the EXPLORE loop from 189 expected cycles to 93 — same attention budget, better allocation.*
+*The Markov fundamental matrix predicts how many times the agent cycles through each loop before absorbing. Skills+preanalysis roughly halves the EXPLORE loop — same attention budget, better allocation.*
+
+<Warning>
+**Updated 2026-08-27 — the absolute cycle counts are withdrawn.** This caption read *"from 189
+expected cycles to 93."* Those came from a chain that grouped by item rather than by run, and this
+experiment ran 2–3 runs against a single item — so every run of a variant was concatenated into one
+sequence, losing all but one absorption event and inflating expected visits about threefold
+(defect **CT6**). Recomputed with trajectories separated: **62.0 → 31.3**.
+
+**The halving is real; the magnitudes were not.** Both arms were inflated by the same factor, so the
+ratio survived while the numbers did not.
+</Warning>
 
 ### Intervention Deltas
 

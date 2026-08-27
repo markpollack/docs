@@ -29,7 +29,7 @@
     }
   },
   "banner": {
-    "content": "[📓 Read the latest on the blog →](https://blog.pollack.ai)",
+    "content": "[\ud83d\udcd3 Read the latest on the blog \u2192](https://blog.pollack.ai)",
     "dismissible": false
   },
   "navbar": {
@@ -60,6 +60,7 @@
               "index",
               "whats-new",
               "projects/index",
+              "projects/agent-skills",
               {
                 "group": "Loopy",
                 "pages": [
@@ -303,26 +304,23 @@
         ]
       },
       {
-        "tab": "Methodology",
+        "tab": "Forge",
         "groups": [
           {
-            "group": "Methodology",
+            "group": "Forge",
             "pages": [
-              "methodology/index",
+              "methodology/forge",
+              "docs/forge/getting-started"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
               "methodology/knowledge-directed-execution",
-              {
-                "group": "Forge",
-                "pages": [
-                  "methodology/forge",
-                  "docs/forge/getting-started"
-                ]
-              },
               "methodology/improvement-flywheel",
               "methodology/knowledge-base-design",
               "methodology/knowledge-base-freshness",
-              "methodology/structured-agent-execution",
-              "methodology/four-tier-jury",
-              "methodology/markov-fingerprinting"
+              "methodology/four-tier-jury"
             ]
           }
         ]

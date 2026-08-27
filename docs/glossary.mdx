@@ -26,7 +26,7 @@ Terms are grouped by domain. Click any linked term to go deeper.
 | **SkillsJar** | A Java JAR that packages skills under `META-INF/skills/` for classpath discovery. Teams get skills automatically via Maven dependencies. |
 | **Progressive disclosure** | The agent sees skill names and descriptions upfront but loads full content only when relevant. Reduces token waste. |
 | **Pre-analysis** | Deterministic parsing (imports, dependencies, file structure) that runs before the LLM. Routes context at zero cost. |
-| **SAE** | Structured Agent Execution — a phased execution template with checkpoints and guard rails. See [full explanation](/methodology/structured-agent-execution). |
+| **SAE** | Structured Agent Execution — a phased execution template with checkpoints and guard rails. See full explanation. |
 
 ## Evaluation
 
@@ -54,7 +54,7 @@ Terms are grouped by domain. Click any linked term to go deeper.
 
 | Term | Definition |
 |------|-----------|
-| **[Markov fingerprint](/methodology/markov-fingerprinting)** | A behavioral signature derived from an agent's tool-call trace, modeled as an approximate first-order Markov chain. |
+| **Markov fingerprint** | A behavioral signature derived from an agent's tool-call trace, modeled as an approximate first-order Markov chain. |
 | **9-state taxonomy** | The classification of all tool calls into 9 states: ORIENT, READ, EDIT, BUILD, TEST, INSPECT, SEARCH, WRITE, CONFIG. |
 | **TPE** | Transition Probability Engineering — the practice of shaping agent behavior by modifying the probability of state transitions (via knowledge, tools, or execution structure). |
 | **Absorbing chain** | A Markov chain with terminal states the agent cannot leave (success or failure). Agent traces are absorbing chains, not ergodic — PageRank does not apply. |

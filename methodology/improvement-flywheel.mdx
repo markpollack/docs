@@ -23,7 +23,7 @@ Each iteration estimates where the system is failing, chooses the most promising
 
 ## Phase 0: State Taxonomy Discovery
 
-For projects that use [Markov analysis](/methodology/markov-fingerprinting), the flywheel begins with state taxonomy discovery. You need a **state taxonomy** — the named states that the classifier maps tool calls to. This taxonomy is domain-specific and must be discovered empirically.
+For projects that use Markov analysis, the flywheel begins with state taxonomy discovery. You need a **state taxonomy** — the named states that the classifier maps tool calls to. This taxonomy is domain-specific and must be discovered empirically.
 
 <Steps>
   <Step title="Run control variant 3–5 times">
@@ -67,7 +67,7 @@ Multiple analytical tools illuminate the loss signal. No single lens is the meth
 
 | Lens | What It Reveals | Best For |
 |------|----------------|----------|
-| **[Markov analysis](/methodology/markov-fingerprinting)** | State transition patterns, loop amplification, transition gaps | Behavioral loss — where the agent gets stuck |
+| **Markov analysis** | State transition patterns, loop amplification, transition gaps | Behavioral loss — where the agent gets stuck |
 | **[Judge scores](/methodology/four-tier-jury)** | Per-criterion quality assessment | Outcome loss — what the agent produces |
 | **Reasoning/intent traces** | Intent-to-action policy, planning distribution | Knowledge loss — what the agent is searching for |
 | **Oracle call log** | KB gaps the agent couldn't resolve alone | Knowledge loss — what's missing from the KB |
@@ -223,9 +223,6 @@ Regression: none detected
 <CardGroup cols={2}>
   <Card title="Forge" icon="hammer" href="/methodology/forge">
     The development methodology that builds what this loop then measures
-  </Card>
-  <Card title="Markov Fingerprinting" icon="diagram-project" href="/methodology/markov-fingerprinting">
-    Primary diagnostic lens — the DIAGNOSE step
   </Card>
   <Card title="Four-Tier Jury" icon="layer-group" href="/methodology/four-tier-jury">
     Cascaded evaluation — the MEASURE step

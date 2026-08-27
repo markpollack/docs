@@ -80,7 +80,13 @@ Despite identical quality scores, the two variants navigate the codebase differe
   <img src="/images/state-diagram-combined-v3.png" alt="Combined state diagram showing both variants" />
 </Frame>
 
-*Each arrow shows: simple value → hardened-skills value. The EXPLORE self-loop drops from 0.87 to 0.70 (less re-reading). The WRITE→BUILD arrow more than doubles (0.22 → 0.47) — the agent builds sooner.*
+*Each arrow shows: simple value → hardened-skills value. The EXPLORE self-loop drops (less re-reading) and the WRITE→BUILD arrow rises — the agent builds sooner.*
+
+<Warning>
+**Updated 2026-08-27 — the transition probabilities on this diagram are corrected.** The EXPLORE self-loop was given as **0.87 → 0.70**. Those came from the same chain as the withdrawn expected-steps row: it pooled three independent runs of each variant into one sequence. Recomputed with runs kept separate, the self-loop is **0.920 → 0.871**, and the dwell time it implies is **12.5 → 7.8** rather than 7.76 → 3.32.
+
+**The direction survives; the size does not.** The hardened prompt does return to EXPLORE less often, but by about a fifth as much as this diagram shows. The counted figures on this page — tool calls 84 → 61, redundant reads 16.7 → 4.3, quality 0.667, cost, coverage — are unaffected. The diagram image itself has not been regenerated.
+</Warning>
 
 <Note>
 **Updated 2026-08-27 — the "Expected steps (Markov)" row is withdrawn.** It carried two defects. The chain pooled three independent runs into one sequence, so it saw one finish instead of three and inflated the number about threefold. It then read the answer from the row for a starting state neither variant actually began in — all three `simple` runs opened with a shell command, not a file read. Corrected for both, the figures are 75.7 and 54.7, which is the mean tool calls per run that this same table already reports as 84 and 61. The Markov step was restating a count. It is removed rather than restated, and at three runs a side the difference is marginal anyway (p = 0.06). The "half as many reading-loop cycles" figure (189 → 93) came from the same calculation and goes with it.

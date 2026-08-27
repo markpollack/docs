@@ -73,10 +73,7 @@
               {
                 "group": "Bud",
                 "pages": [
-                  "projects/bud",
-                  "docs/bud/getting-started",
-                  "docs/bud/tools-reference",
-                  "docs/bud/architecture"
+                  "projects/bud"
                 ]
               }
             ]

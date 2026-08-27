@@ -74,7 +74,7 @@ Despite identical quality scores, the two variants navigate the codebase differe
 | Read order | production code first | existing tests first |
 | Redundant reads per run | 16.7 | 4.3 |
 | Avg tool calls | 84 | 61 |
-| Expected steps (Markov) | 260 | 164 |
+| ~~Expected steps (Markov)~~ *(withdrawn — see below)* | ~~260~~ | ~~164~~ |
 
 <Frame>
   <img src="/images/state-diagram-combined-v3.png" alt="Combined state diagram showing both variants" />
@@ -82,11 +82,17 @@ Despite identical quality scores, the two variants navigate the codebase differe
 
 *Each arrow shows: simple value → hardened-skills value. The EXPLORE self-loop drops from 0.87 to 0.70 (less re-reading). The WRITE→BUILD arrow more than doubles (0.22 → 0.47) — the agent builds sooner.*
 
+<Note>
+**Updated 2026-08-27 — the "Expected steps (Markov)" row is withdrawn.** It carried two defects. The chain pooled three independent runs into one sequence, so it saw one finish instead of three and inflated the number about threefold. It then read the answer from the row for a starting state neither variant actually began in — all three `simple` runs opened with a shell command, not a file read. Corrected for both, the figures are 75.7 and 54.7, which is the mean tool calls per run that this same table already reports as 84 and 61. The Markov step was restating a count. It is removed rather than restated, and at three runs a side the difference is marginal anyway (p = 0.06). The "half as many reading-loop cycles" figure (189 → 93) came from the same calculation and goes with it.
+
+Everything else on this page stands and was re-verified against the stored run data on the same date: 4x fewer redundant reads, tool calls 84 → 61, quality 0.667 in both arms, cost $3.60 → $3.46, coverage 95.2% against 92.9%. **The self-loop reading above — 0.87 → 0.70 — is measured directly off the transition matrix and is unaffected.**
+</Note>
+
 <Frame>
-  <img src="/images/efficiency-vs-quality-v3.png" alt="4x fewer redundant reads, 37% fewer expected steps, same quality" />
+  <img src="/images/efficiency-vs-quality-v3.png" alt="4x fewer redundant reads, 27% fewer tool calls, same quality" />
 </Frame>
 
-*4x fewer redundant reads. 37% fewer expected steps. Same quality. The efficiency story is invisible if you only look at the T2 score.*
+*4x fewer redundant reads. 27% fewer tool calls. Same quality. The efficiency story is invisible if you only look at the T2 score.*
 
 ## The Exemplar Effect: v2 vs v3
 
@@ -101,7 +107,7 @@ Despite identical quality scores, the two variants navigate the codebase differe
 
 1. **The codebase is the agent's primary teacher.** Skills and prompts are secondary signals. If the existing code demonstrates older patterns, the agent will reproduce them — even when it has explicit knowledge of the better approach.
 2. **Quality ceilings come from exemplars, not prompts.** T2 = 0.667 across all 6 runs. Two variants, three runs each, identical quality score. The ceiling moved when the existing tests changed (v2 vs v3), not when the prompt changed.
-3. **Efficiency gains are still real.** 37% fewer expected steps, 4x fewer redundant reads, half as many reading-loop cycles. Prompt hardening and skills make the agent faster — they just can't make it better when the codebase says otherwise.
+3. **Efficiency gains are still real.** 27% fewer tool calls, 4x fewer redundant reads. Prompt hardening and skills make the agent faster — they just can't make it better when the codebase says otherwise.
 4. **Fix the code, not the prompt.** The highest-leverage intervention for agent quality is updating the exemplars the agent will see.
 
 ## What Comes Next
@@ -116,9 +122,6 @@ Despite identical quality scores, the two variants navigate the codebase differe
   </Card>
   <Card title="Blog: When You Come to a Fork in the Code" icon="newspaper" href="https://blog.pollack.ai/when-you-come-to-a-fork-in-the-code-take-it/">
     Narrative walkthrough of the exemplar effect
-  </Card>
-  <Card title="Results Report (PDF)" icon="file" href="/images/results-code-coverage-v3.pdf">
-    Full quantitative results with figures and tables
   </Card>
   <Card title="v2 Experiment" icon="flask" href="/experiments/code-coverage-v2">
     The previous experiment — skills vs knowledge bases with zero existing tests

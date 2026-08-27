@@ -91,7 +91,7 @@ Despite identical quality scores, the two variants navigate the codebase differe
 <Note>
 **Updated 2026-08-27 — the "Expected steps (Markov)" row is withdrawn.** It carried two defects. The chain pooled three independent runs into one sequence, so it saw one finish instead of three and inflated the number about threefold. It then read the answer from the row for a starting state neither variant actually began in — all three `simple` runs opened with a shell command, not a file read. Corrected for both, the figures are 75.7 and 54.7, which is the mean tool calls per run that this same table already reports as 84 and 61. The Markov step was restating a count. It is removed rather than restated, and at three runs a side the difference is marginal anyway (p = 0.06). The "half as many reading-loop cycles" figure (189 → 93) came from the same calculation and goes with it.
 
-Everything else on this page stands and was re-verified against the stored run data on the same date: 4x fewer redundant reads, tool calls 84 → 61, quality 0.667 in both arms, cost $3.60 → $3.46, coverage 95.2% against 92.9%. **The self-loop reading above — 0.87 → 0.70 — is measured directly off the transition matrix and is unaffected.**
+Everything **counted** on this page stands and was re-verified against the stored run data on the same date: 4x fewer redundant reads, tool calls 84 → 61, quality 0.667 in both arms, cost $3.60 → $3.46, coverage 95.2% against 92.9%. *(An earlier version of this note also claimed the self-loop reading was unaffected because it is measured directly off the transition matrix. That was wrong — the matrix is built from the same pooled chain. See the correction under the diagram above.)*
 </Note>
 
 <Frame>

@@ -109,9 +109,23 @@ Every experiment follows the [Improvement Flywheel](/methodology/improvement-fly
 | Metric | What It Measures | Source |
 |--------|-----------------|--------|
 | **T3 Score** | Overall quality (LLM jury assessment) | Agent Judge |
-| **Expected Steps** | Efficiency (Markov fundamental matrix) | Agent Journal |
+| **Steps to completion** | Efficiency — **counted per run**, not modelled | Agent Journal |
 | **P(success)** | Reliability (absorbing chain probability) | Markov Analysis |
 | **Thrash Score** | Behavioral loss (loop amplification in BUILD→TEST→EDIT) | Markov Analysis |
 | **Loop Amplification** | Per-state revisit rate — friction vs productive loops | Markov Analysis |
 | **Regression Count** | Dimensions that worsened after an intervention | Jury Comparison |
 | **Cost** | Practical efficiency ($ per experiment run) | Token tracking |
+
+<Warning>
+**Updated 2026-08-27 — "Expected Steps" was removed from this table.** It read *"Efficiency (Markov
+fundamental matrix)"* and recommended a modelled quantity where a counted one exists.
+
+At unit cost, expected-steps-to-absorption from the run's starting state **equals the mean number of
+steps in the run** — it is the transition matrix reduced to one number, and that number is one you
+can simply count. Every published figure derived that way in this programme turned out to be wrong;
+every counted figure held. The modelled version adds no information and inherits every defect in the
+chain that produced it.
+
+**Count the steps. Use the matrix for [localisation](/methodology/markov-fingerprinting) — *where*
+the time went — which is the thing a count cannot tell you.**
+</Warning>

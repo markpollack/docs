@@ -31,10 +31,35 @@ The transition matrix P(next_state | current_state) is the agent's "behavioral f
 
 ### Key Metrics
 
-- **Expected steps to completion** — From the fundamental matrix N = (I - Q)^{-1}
-- **P(success)** — Absorbing chain probability of reaching success vs. failure
-- **Thrash score** — Loop amplification in BUILD→TEST→EDIT cycles
-- **JAR cluster %** — Time spent in dependency inspection (correlates with knowledge availability)
+What the matrix tells you that a count cannot — **all of these are per-state, and that is the point**:
+
+- **Self-loop probability** — how sticky each state is, `P[s,s]`
+- **Dwell time** — how long one visit lasts, `1 / (1 - P[s,s])`
+- **Expected visits per state** — `N[s₀, ·]`, i.e. *where the time went*
+- **Thrash score** — loop amplification in BUILD→TEST→EDIT cycles
+- **JAR cluster %** — time spent in dependency inspection (correlates with knowledge availability)
+- **P(success)** — absorbing chain probability of reaching success vs. failure
+
+<Warning>
+**Updated 2026-08-27 — "expected steps to completion" was removed from this list.**
+
+It read *"From the fundamental matrix N = (I - Q)^{-1}"*, and it is the one metric here that a
+**count already gives you.** At unit cost, `V(s₀) = Σ N[s₀, ·]` **is** the expected length of the
+run — the matrix collapsed to a single number. Collapsing is a strict information loss: it discards
+the per-state breakdown above, which is the only thing the matrix contributes.
+
+It is also where the errors were. Every published figure in this programme derived from that
+collapse was wrong — inflated by chains that pooled independent runs, or read from a starting state
+the runs never occupied — while every counted figure held.
+
+**Two rules that follow:**
+
+1. **Report the counted quantity; use the matrix to explain it.** Steps per run is a count. *Where
+   those steps went* is what the matrix is for.
+2. **`V(s₀)` must equal the measured mean run length.** At unit cost that is an identity, not a fit.
+   When they disagree, the chain or the starting state is wrong — it is the cheapest check available
+   and it catches most of what can go wrong here.
+</Warning>
 
 ### What We've Found
 

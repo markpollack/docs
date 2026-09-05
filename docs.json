@@ -53,14 +53,9 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Projects",
-          "href": "/projects",
+          "anchor": "AgentWorks",
+          "href": "/projects#agentworks",
           "icon": "cubes"
-        },
-        {
-          "anchor": "Product",
-          "href": "/product/agento-university",
-          "icon": "box"
         },
         {
           "anchor": "Agento Forge",
@@ -305,6 +300,12 @@
             ]
           },
           {
+            "group": "Explorations",
+            "pages": [
+              "product/agento-university"
+            ]
+          },
+          {
             "group": "Older / Inactive Projects",
             "pages": [
               {
@@ -317,17 +318,6 @@
                   "docs/loopy/whats-new"
                 ]
               }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Product",
-        "groups": [
-          {
-            "group": "Agento University",
-            "pages": [
-              "product/agento-university"
             ]
           }
         ]

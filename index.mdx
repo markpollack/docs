@@ -1,14 +1,14 @@
 ---
 title: "Pollack AI Lab"
 sidebarTitle: "Overview"
-description: "Tools and experiments for building agents that work — and understanding why they work"
+description: "Methodology, libraries, and experiments for building and improving agentic software"
 ---
 
 <div style={{
   position: 'relative',
   marginTop: '-2rem',
-  marginBottom: '2rem',
-  padding: '3rem 2rem',
+  marginBottom: 'clamp(1.25rem, 3vw, 2rem)',
+  padding: 'clamp(1.5rem, 5vw, 3rem) clamp(1.25rem, 4vw, 2rem)',
   borderRadius: '8px',
   overflow: 'hidden',
   background: 'linear-gradient(180deg, rgba(2,9,21,0.95) 0%, rgba(2,9,21,0.98) 100%)'
@@ -28,7 +28,7 @@ description: "Tools and experiments for building agents that work — and unders
       height: '7px',
       borderRadius: '50%',
       background: '#ffd740',
-      margin: '0 auto 1.5rem',
+      margin: '0 auto clamp(1rem, 3vw, 1.5rem)',
       boxShadow: '0 0 0 2px rgba(255,215,64,0.2), 0 0 18px 5px rgba(255,215,64,0.35)'
     }} />
     <div style={{
@@ -46,13 +46,25 @@ description: "Tools and experiments for building agents that work — and unders
       letterSpacing: '0.2em',
       color: 'rgba(79, 195, 247, 0.7)',
       textTransform: 'uppercase'
-    }}>Agent Infrastructure · Experiments</div>
+    }}>Build · Evaluate · Improve Agentic Software</div>
   </div>
 </div>
 
-Helping you build agents that demonstrably work. A growing ecosystem of projects — usable together or individually — for composing, evaluating, and understanding agent behavior. Experiments that prove the approach works, with published data and reproducible results.
+Agentic software gets built inside explicit workflows, recorded as it runs, and scored against stated criteria. This lab publishes the methodology, the libraries that run it, and the experiments that test what improves agent behavior.
 
 By [Mark Pollack](https://pollack.ai), creator of [Spring AI](https://spring.io/projects/spring-ai).
+
+<CardGroup cols={3}>
+  <Card title="Agento Forge" icon="hammer" href="/methodology/forge">
+    Methodology and executable toolkit for building and evolving agentic software. Six phases, with evaluation and retained learnings as first-class artifacts.
+  </Card>
+  <Card title="AgentWorks" icon="cubes" href="/projects#agentworks">
+    Reusable infrastructure for running, observing, evaluating, and experimenting with agents on the JVM.
+  </Card>
+  <Card title="Experiments" icon="flask" href="/experiments">
+    Controlled experiments on what changes agent behavior and outcomes, with the variants and data published alongside each result.
+  </Card>
+</CardGroup>
 
 ---
 

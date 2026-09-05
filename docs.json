@@ -50,6 +50,30 @@
     }
   },
   "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Projects",
+          "href": "/projects",
+          "icon": "cubes"
+        },
+        {
+          "anchor": "Product",
+          "href": "/product/agento-university",
+          "icon": "box"
+        },
+        {
+          "anchor": "Agento Forge",
+          "href": "/methodology/forge",
+          "icon": "hammer"
+        },
+        {
+          "anchor": "Experiments",
+          "href": "/experiments",
+          "icon": "flask"
+        }
+      ]
+    },
     "tabs": [
       {
         "tab": "Projects",

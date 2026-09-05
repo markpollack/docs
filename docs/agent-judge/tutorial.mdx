@@ -1,58 +1,136 @@
 ---
 title: "Executable Tutorial"
-description: "Ten credential-free Maven modules for Agent Judge 0.15"
+description: "Eleven credential-free Maven modules, sequenced by the evaluation problem"
 ---
 
 The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial) is the canonical sample suite.
-Each module is a small executable Maven project compiled against Agent Judge 0.15.
+Each module is a small executable Maven project compiled against Agent Judge 0.15.2.
 
-Clone the repository, run `./mvnw clean test`, and then run a module with `./mvnw exec:java -pl module-01-single-judge`.
+```bash
+git clone https://github.com/markpollack/agent-judge-tutorial.git
+cd agent-judge-tutorial
+./mvnw install -DskipTests
+./mvnw exec:java -pl module-01-oracle-boundary
+```
+
+The `install` step is needed once: later modules reuse judges written in earlier ones, and `exec:java` resolves those from the local repository.
+Run every module from the repository root — the demos resolve `test-workspace` relative to where Maven was launched.
+
 No module needs an API key or a live model endpoint.
 
-## Learning path
+## The subject
 
-| Module | Focus | Canonical source |
-|---|---|---|
-| 01 | Build a `JudgmentContext` and apply one `FileExistsJudge` | [SingleJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-01-single-judge/src/main/java/io/github/markpollack/judge/tutorial/module01/SingleJudgeDemo.java) |
-| 02 | Run a real Maven build through `BuildSuccessJudge` | [BuildJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-02-build-judge/src/main/java/io/github/markpollack/judge/tutorial/module02/BuildJudgeDemo.java) |
-| 03 | Compose judges with `Judges.and`, `or`, and `negate` | [CompositionDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-03-composition/src/main/java/io/github/markpollack/judge/tutorial/module03/CompositionDemo.java) |
-| 04 | Aggregate named judges with majority and weighted-average policies | [SimpleJuryDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-04-simple-jury/src/main/java/io/github/markpollack/judge/tutorial/module04/SimpleJuryDemo.java) |
-| 05 | Arrange cost-aware tiers with `CascadedJury` | [CascadedJuryDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-05-cascaded-jury/src/main/java/io/github/markpollack/judge/tutorial/module05/CascadedJuryDemo.java) |
-| 06 | Write lambda judges and attach discoverable metadata | [LambdaJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-06-lambda-judge/src/main/java/io/github/markpollack/judge/tutorial/module06/LambdaJudgeDemo.java) |
-| 07 | Implement a reusable `DeterministicJudge` with granular checks | [PackageStructureJudge.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-07-deterministic-judge/src/main/java/io/github/markpollack/judge/tutorial/module07/PackageStructureJudge.java) |
-| 08 | Compose a prompt, model adapter, and classifier with `ModelBackedJudge` | [ModelBackedJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-08-model-backed-judge/src/main/java/io/github/markpollack/judge/tutorial/module08/ModelBackedJudgeDemo.java) |
-| 09 | Evaluate deterministic Koog agent output through `KoogEvaluator` | [KoogEvaluationDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-09-koog-evaluation/src/main/java/io/github/markpollack/judge/tutorial/module09/KoogEvaluationDemo.java) |
-| 10 | Evaluate a deterministic LangChain4j `Result` through `LangChain4jEvaluator` | [LangChain4jEvaluationDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-10-langchain4j-evaluation/src/main/java/io/github/markpollack/judge/tutorial/module10/LangChain4jEvaluationDemo.java) |
+Every module judges the same change.
+`test-workspace` is a small Maven project whose `HelloController` delegates to a service and returns a record — the codebase's idiom.
+An agent was asked to expose a sales report endpoint and added `ReportController`, which opens its own JDBC connection, concatenates SQL from request parameters, builds JSON by hand, swallows the exception, and closes nothing.
+
+It compiles. It is in the right package. It is named correctly. It has the requested method.
+
+## The sequence
+
+The modules are ordered by the evaluation problem each one creates, not by the next API.
+
+| Module | The problem it introduces |
+|---|---|
+| 01 | A criterion with no expected value. [Known oracle vs. judgment oracle](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-oracle-boundary) |
+| 02 | The compiler and JUnit are already oracles; Agent Judge carries their answers |
+| 03 | A measurement is not an acceptance decision, and a score is not a status |
+| 04 | Writing a judge: task → criterion → evidence → judgment |
+| 05 | A derived oracle: several objective facts, one finding, every part kept |
+| 06 | Composing requirements without collapsing them into a number |
+| 07 | Inside the judgment oracle: prompt template, model, classifier |
+| 08 | When aggregation *is* right: several estimates of one property |
+| 09 | A judge that could not run must not improve the result |
+| 10 | The same bar, applied to a Koog agent |
+| 11 | The same bar, applied to a LangChain4j result |
+
+A twelfth module, `judge-junit`, is a small bridge turning an Agent Judge outcome into a useful JUnit assertion failure.
+
+## Three kinds of oracle
+
+The sequence exists to make one distinction concrete.
+
+**Known.** An exact or deterministic answer exists — compilation succeeds, tests pass, a file exists, API compatibility holds, coverage clears a threshold.
+Use ordinary Java tooling or a deterministic judge. Modules 01–03.
+
+**Derived.** No single expected value exists, but several objective facts settle the question — a class is where the layout says it should be, a patch touched only allowed files, coverage improved without deleting tests.
+Still deterministic, just not one assertion. Module 05.
+
+**Judgment.** The property itself requires interpretation — does this fit the conventions of this codebase, did the review identify the important risks, is the proposed API sensible, did the implementation satisfy the user's intent.
+This is where a model-backed judge earns its existence. Modules 01 and 07.
+
+## The live path
+
+Four modules, roughly ten minutes, in directory order:
+
+```bash
+./mvnw exec:java -pl module-01-oracle-boundary      # where JUnit stops
+./mvnw exec:java -pl module-02-build-and-tests      # the oracles you already trust
+./mvnw exec:java -pl module-03-coverage-evidence    # a measurement is not a decision
+./mvnw exec:java -pl module-06-definition-of-done   # would you merge this?
+```
+
+It ends here:
+
+```
+  CRITERION          ORACLE     STATUS
+  ------------------ ---------- ------
+  build              known      PASS
+  tests              known      PASS
+  coverage           known      FAIL
+  package-structure  derived    PASS
+  architectural-fit  judgment   FAIL
+
+  done: false
+```
+
+Modules 02, 03 and 06 run real Maven builds; run each once before presenting so dependencies are warm.
 
 ## What to observe
 
-Modules 01 through 07 establish the framework-neutral contract.
-Read the required status first and treat a stored score or label as optional evidence.
+**Module 01** keeps four criteria in plain `assertTrue` on purpose.
+Agent Judge appears only for the criterion that has no expected value, and the judgment it returns carries one `Check` per criterion rather than an average — five failures out of six do not become `0.17`, because a number cannot name the criterion that binds.
 
-Module 08 demonstrates that AI-backed evaluation is composition rather than inheritance.
-Its stub model makes the complete prompt-to-classifier path executable without credentials.
+**Module 03** separates three things a score normally collapses: the measurement (`100.00% → 36.00%`), the normalized score (`0.0`, which floors and so cannot distinguish a 1-point drop from a 64-point one), and the status (`FAIL`, against a bar written down with its derivation).
+Pointed at a workspace where no build ran, the judge returns `ERROR` — not `FAIL`, and not `0.0`.
 
-Modules 09 and 10 replace the former README-only bridge samples.
-They execute real adapter code with deterministic framework objects, so bridge construction and metadata extraction remain verifiable offline.
+**Module 06** is the distinction the library most needs stated.
+Five criteria are not five opinions about one thing, so `3 of 5 = 0.60` is the wrong rule.
+It also counts invocations to show that `Judges.allOf` short-circuits after 3 of 5 judges, and runs the conjunction over an empty list to show that `allMatch` returns `true` there.
 
-## Framework versions used by the samples
+**Module 08** is the case where a jury is correct: three reviewers independently estimating one property, disagreeing two to one.
+Majority returns `FAIL`; consensus returns `ABSTAIN`, because a split vote is indeterminate rather than negative.
+
+**Module 09** runs one panel under all four error policies.
+Three of the four report `PASS` for a run in which a required criterion was never evaluated.
+
+**Modules 10 and 11** execute real adapter code with deterministic framework objects, so bridge construction and metadata extraction stay verifiable offline.
+
+## Credential-free model-backed judges
+
+Modules 01 and 07 use a fixture `JudgeModel` that replays recorded replies.
+The source says so rather than dressing the fixture up as a recording: a fixture cannot tell you a judge is *right*, only that the wiring around it is.
+
+Everything else on the path is real — the prompt is rendered from the actual `JudgmentContext`, the classifier parses free text into a `Judgment` with `Check`s, and swapping the model for `SpringAiJudgeModel` is a one-line change.
+
+An unrecorded subject returns `ERROR` rather than a default `PASS`.
+A stand-in that approves what it has not seen is a judge that cannot fail.
+
+## Framework versions
 
 | Integration | Tutorial target |
 |---|---|
-| Agent Judge | `0.15.0` |
+| Agent Judge | `0.15.2` |
 | Koog | `1.1.1` |
 | LangChain4j | `1.19.0` |
-
-Spring AI and AgentClient integration APIs are covered by the library's bridge modules and tests.
-The tutorial's framework examples deliberately avoid online calls and credentials.
 
 ## Continue
 
 <CardGroup cols={2}>
-  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
-    Choose an aggregation policy
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Design an oracle before choosing a mechanism
   </Card>
-  <Card title="Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
-    Turn domain rules into judgments
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    Requirements versus estimates
   </Card>
 </CardGroup>

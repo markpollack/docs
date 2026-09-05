@@ -4,6 +4,26 @@ sidebarTitle: "What's New"
 description: "Curated Agent Judge release notes"
 ---
 
+## 0.15.2
+
+Correctness release. **If you have collected scores with a parallel jury on any release from 0.11.0 through 0.15.1, read this.**
+
+In every release from 0.11.0 through 0.15.1 a jury could drop a judge from the vote and still return a verdict.
+The verdict did not fail, did not warn, and still named every configured judge — but the aggregate was computed from the judges that survived.
+
+Two independent defects combined to produce it.
+`TextSources.classpath(...)` resolved prompt templates lazily on the rendering thread, and a parallel `SimpleJury` renders on a `ForkJoinPool.commonPool()` worker whose context classloader cannot see them.
+A separate uncontained-throw path in `SimpleJury`, present since 0.9.2, then let the resulting failure remove the judge from the vote instead of surfacing it.
+
+**Treat any score from a parallel jury on an affected release as suspect and re-run anything you rely on.**
+All six affected versions are published on Maven Central.
+
+See the [0.15.2 release notes](https://github.com/markpollack/agent-judge/blob/main/RELEASE_NOTES_0.15.2.md).
+
+## 0.15.1
+
+Maintenance release aligning Agent Client and compatible Spring, Jackson, test, and analysis dependencies, and publishing consumer-correct CycloneDX SBOMs for every artifact.
+
 ## 0.15.0
 
 Agent Judge 0.15 is a compatibility-preserving dependency-alignment and release-reproducibility

@@ -1,10 +1,13 @@
 ---
 title: "Built-in Judges"
-description: "Deterministic, execution, file, LLM, and RAG judges in Agent Judge 0.15"
+description: "Deterministic, execution, file, LLM, and RAG judges in Agent Judge 0.15.2"
 ---
 
 Every built-in judge returns the normalized `Judgment` model.
 Status is required, while a stored score and label are present only when that judge completed a measurement or classification.
+
+Reach for these in the order the [tutorial](/docs/agent-judge/tutorial) does: the least interpretive instrument that can reliably answer the question.
+A criterion the compiler, JUnit, ArchUnit or JaCoCo already settles does not need a judge at all — it needs the judge only when its answer has to travel into a definition of done.
 
 ## Core file-system judges
 
@@ -17,7 +20,7 @@ Artifact: `agent-judge-core`.
 | `SupersetDiffJudge` | Require output to contain a byte-exact reference project plus any allowed additions |
 
 These judges produce Boolean outcomes and therefore normally store no score.
-The executable starting point is [tutorial module 01](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-single-judge).
+The executable starting point is [tutorial module 01](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-oracle-boundary).
 
 ## Command and coverage judges
 
@@ -31,9 +34,17 @@ Artifact: `agent-judge-exec`.
 | `CoveragePreservationJudge` | Reject a JaCoCo coverage regression beyond the configured tolerance |
 | `CoverageImprovementJudge` | Measure normalized coverage improvement with an optional floor |
 
+The two coverage judges answer different questions and are meant to be used together.
+`CoverageImprovementJudge` **measures**; `CoveragePreservationJudge` **decides**, against a tolerance you supply.
+
+Its normalized score floors at `0.0`, so a one-point drop and a sixty-point drop score identically.
+The distance survives in the judgment's `improvementPp` metadata and its `coverage_improved` check — read the parts, not the score.
+Both judges return `ERROR` when no JaCoCo report is present: the subject was never measured, and zero would be a real assessment rather than the absence of one.
+[Tutorial module 03](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-03-coverage-evidence) runs all three cases.
+
 Build and command judges run real processes in the context workspace.
 Use the project wrapper when present and choose timeouts appropriate to untrusted work.
-[Tutorial module 02](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-02-build-judge) executes the Maven build path.
+[Tutorial module 02](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-02-build-and-tests) executes the Maven build path.
 
 ## Semantic file judges
 
@@ -59,7 +70,7 @@ Artifact: `agent-judge-llm`.
 | `LLMJudge` | Base template for specialized Spring AI LLM judges |
 
 For a framework-neutral composition, use `ModelBackedJudge` from `agent-judge-ai-core` with a `JudgePromptTemplate`, `JudgeModel`, and `JudgmentClassifier`.
-[Tutorial module 08](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-08-model-backed-judge) runs that complete path with no credentials.
+[Tutorial module 07](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-07-model-backed-judge) runs that complete path with no credentials.
 
 ## RAG judges
 
@@ -86,10 +97,11 @@ They execute or adapt framework output into `JudgmentContext`, then apply an ord
 | `agent-judge-koog` | `KoogEvaluator` | Koog `AIAgent` output |
 | `agent-judge-agent-client` | `AgentClientEvaluator` | AgentClient responses and workspaces |
 
-The credential-free bridge samples are [Koog module 09](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-09-koog-evaluation) and [LangChain4j module 10](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-10-langchain4j-evaluation).
+The credential-free bridge samples are [Koog module 10](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-10-koog-evaluation) and [LangChain4j module 11](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-11-langchain4j-evaluation).
 
 ## Related
 
-- [Getting started](/docs/agent-judge/getting-started)
+- [Executable tutorial](/docs/agent-judge/tutorial)
 - [Writing custom judges](/docs/agent-judge/custom-judge)
 - [Jury system](/docs/agent-judge/jury-system)
+- [Getting started](/docs/agent-judge/getting-started)

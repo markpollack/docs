@@ -1,20 +1,76 @@
 ---
 title: "Jury System"
-description: "Aggregate status-first judgments with explicit voting and error policies"
+description: "When aggregation is justified, and when it destroys the answer"
 ---
 
-A `Jury` applies multiple judges and returns a `Verdict`.
-The verdict retains the aggregated judgment, ordered individual judgments, named evidence, weights, and any nested tier verdicts.
+Before any of the mechanics, the distinction that decides whether you should be on this page at all.
+
+## Requirements are not opinions
+
+These are a **definition of done**:
+
+```
+build              PASS
+tests              PASS
+coverage           PASS
+api-compatibility  FAIL
+```
+
+They are four different questions, and every one of them has to hold.
+They are **not** four opinions about one question, so they must not become:
+
+```
+3 / 4 = 0.75
+```
+
+and be called acceptable.
+
+> **Compose requirements. Aggregate estimates of the same uncertain property.**
+
+A mean is a *compensatory* rule: it lets strong criteria offset weak ones.
+Applied to a definition of done, it lets "the tests pass" partially make up for "it does not compile" — a trade nobody would accept out loud.
+A definition of done is **conjunctive**: the aggregate is a minimum, not a mean.
+
+This is a jury:
+
+```
+review-quality / judge A   PASS
+review-quality / judge B   PASS
+review-quality / judge C   FAIL
+```
+
+All three are estimating the same semantic property, so combining them says something the individual answers did not.
+
+<Warning>
+Do not build a definition of done out of a jury.
+A majority vote over `build`, `tests` and `coverage` returns `PASS` at 2 of 3 with coverage failing.
+</Warning>
+
+[Tutorial module 06](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-06-definition-of-done) composes requirements; [module 08](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-08-jury) aggregates estimates.
+
+## Preserve the individual results
+
+Even when an aggregate exists, the individual judgments are the diagnosis.
+`FAIL, 2 of 3` cannot tell you who dissented or why — the first thing worth reading when a panel splits.
+
+`Verdict` retains the aggregated judgment, ordered individual judgments, named evidence, weights, and any nested tier verdicts.
+Read `verdict.aggregated().status()` for the outcome and `individualByName()` for what actually happened.
+
+<Info>
+`weights` is keyed by the judge's **position** in the builder, while `individualByName()` is keyed by its **name**.
+Join them by order, not by name.
+</Info>
 
 ## SimpleJury
 
 `SimpleJury` runs peer judges, optionally in parallel, and delegates aggregation to a `VotingStrategy`.
 Its builder accepts named or anonymous judges, per-judge weights, a strategy, a parallel flag, and an optional executor.
 
-The canonical compiled construction and verdict inspection live in [tutorial module 04](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-04-simple-jury/src/main/java/io/github/markpollack/judge/tutorial/module04/SimpleJuryDemo.java).
-
-Read `verdict.aggregated().status()` for the outcome.
-Use `individualByName()` and `individual()` for diagnostics, and use the aggregate metadata's `aggregation` object for portable policy evidence.
+<Warning>
+In every release from **0.11.0 through 0.15.1**, a parallel jury could drop a judge from the vote and still return a verdict naming every configured judge.
+Any score produced by a parallel jury on those releases may have been computed from fewer judges than it reports.
+Upgrade to **0.15.2** or later and re-run anything you rely on.
+</Warning>
 
 ## Voting strategies
 
@@ -23,69 +79,111 @@ Use `individualByName()` and `individual()` for diagnostics, and use the aggrega
 | `MajorityVotingStrategy` | Counts applicable `PASS` and `FAIL` statuses |
 | `ConsensusStrategy` | Requires every applicable judgment to agree |
 | `AverageVotingStrategy` | Averages eligible `effectiveScore()` values |
-| `WeightedAverageStrategy` | Computes a weighted average of eligible `effectiveScore()` values |
-| `MedianVotingStrategy` | Uses the median eligible `effectiveScore()` |
+| `WeightedAverageStrategy` | Weighted average of eligible `effectiveScore()` values |
+| `MedianVotingStrategy` | Median eligible `effectiveScore()` |
 
 Status-counting strategies do not consult stored scores.
 Numeric strategies use an explicit score when present and derive `1.0` or `0.0` from `PASS` or `FAIL` otherwise.
-`ABSTAIN` and `ERROR` never become numeric zero by default because they are not completed measurements.
+`ABSTAIN` and `ERROR` never become numeric zero by default, because they are not completed measurements.
 
-## Tie and error policies
+<Warning>
+Use a numeric strategy only when the judges genuinely produce **measurements**.
+Averaging Boolean judges means reading `PASS` as `1.0` and `FAIL` as `0.0` and reporting a number the aggregation step invented — carrying a precision nobody measured, comparable against thresholds nobody derived.
+Weight one judge above another only when you can say what the weight is for.
+</Warning>
 
-`TiePolicy` selects `PASS`, `FAIL`, or `ABSTAIN` when a strategy has no winner.
-The default tie policy for majority voting is `FAIL`.
+## Consensus, and why a split is not a rejection
+
+Consensus returns `PASS` when all applicable judges pass and `FAIL` when all applicable judges fail.
+A mixed panel returns `ABSTAIN`, because it has no collective finding.
+
+**A split vote is indeterminate, not negative.**
+Rejection belongs to the gate or the tier policy, not to the aggregation step — a disagreeing panel usually calls for a human rather than a merge button.
+
+If no applicable judges remain after abstention and error handling, the result is also `ABSTAIN`, with reasoning and aggregation evidence distinguishing the cases.
+
+## Error policies, and the roster
 
 `ErrorPolicy` makes error handling observable.
 
 | Policy | Effect |
 |---|---|
-| `PROPAGATE` | Return an aggregate `ERROR` immediately; this is the default |
+| `PROPAGATE` | Return an aggregate `ERROR` immediately; the default |
 | `TREAT_AS_FAIL` | Include the errored judgment as a failure |
-| `TREAT_AS_ABSTAIN` | Convert it to a non-vote while recording that conversion |
+| `TREAT_AS_ABSTAIN` | Convert it to a non-vote, recording the conversion |
 | `IGNORE` | Remove it from the aggregation population and weight denominator |
 
-The original error judgment remains in the verdict's individual evidence even when a policy excludes it from reduction.
+`TiePolicy` selects `PASS`, `FAIL`, or `ABSTAIN` when a strategy has no winner; the default for majority voting is `FAIL`.
 
-## Consensus semantics
+Every one of these policies is right somewhere.
+The default being right is the part that happens by accident, so choose deliberately.
+[Module 09](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-09-error-and-escalation) runs one panel — two passing judges and one that cannot complete — under all four:
 
-Consensus returns `PASS` when all applicable judges pass and `FAIL` when all applicable judges fail.
-A mixed applicable panel returns `ABSTAIN` because it has no collective finding; a downstream gate or tier decides whether disagreement rejects or escalates.
-If no applicable judges remain after abstention and error handling, the result is also `ABSTAIN`, with reasoning and aggregation evidence distinguishing the cases.
+```
+POLICY             STATUS   ROSTER
+------------------ ------   ----------
+PROPAGATE          ERROR    0 of 3
+TREAT_AS_FAIL      PASS     3 of 3
+TREAT_AS_ABSTAIN   PASS     2 of 3
+IGNORE             PASS     2 of 3
+```
+
+Three of four report `PASS` for a run in which a required criterion was never evaluated.
+`TREAT_AS_FAIL` is the instructive one: it *did* convert the error into a failure, and the verdict is still `PASS`, because majority voting is compensatory and two passes outvote one failure.
+
+**The error policy and the aggregation rule are two separate decisions, and getting one right does not save you from the other.**
+
+### Assert the roster
+
+The original error judgment stays in the verdict's individual evidence even when a policy excludes it from reduction, and the aggregation block records both counts:
+
+```
+inputCount:     3
+eligibleCount:  2
+```
+
+Nothing is hidden — and nothing raises its voice either.
+
+> **Assert `eligibleCount == inputCount` wherever you expect a full panel.**
+> That single equality is the difference between a jury that scored what you asked for and one that scored what survived.
+
+"Every judge errored" is not "the jury abstained."
 
 ## CascadedJury
 
-`CascadedJury` orders juries into named tiers.
-Each tier has one control-flow policy.
+`CascadedJury` orders juries into named tiers, each with one control-flow policy.
 
 | Tier policy | Behavior |
 |---|---|
 | `REJECT_ON_ANY_FAIL` | Stop and reject if any judge in the tier fails |
 | `ACCEPT_ON_ALL_PASS` | Stop and accept if every judge in the tier passes |
-| `FINAL_TIER` | Always produce the final verdict and must be last |
+| `FINAL_TIER` | Always produce the final verdict; must be last |
 
-This separates cost control from a judge's evaluation logic.
-A typical cascade runs deterministic checks, then structural checks, then an LLM-backed final tier only when earlier evidence cannot decide.
+A cascade is **cost control**, not an evaluation policy.
+It separates spend from a judge's logic and changes no judge's decision.
+A typical cascade runs deterministic checks, then structural checks, then a model-backed final tier only when earlier evidence cannot decide.
 
-[Tutorial module 05](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-05-cascaded-jury/src/main/java/io/github/markpollack/judge/tutorial/module05/CascadedJuryDemo.java) is the canonical compiled two-tier example.
+Which tiers appear in the composite evidence is itself the record, so a subject rejected at tier 1 stays distinguishable from one that failed at tier 2 — and a tier that never ran is never mistaken for a tier that passed.
 
 ## Identity and composition
 
 Wrap a lambda with `Judges.named` so verdicts have stable identities.
 The `Juries` utility builds a jury from judges and combines existing juries into a meta-jury.
-`Verdict.single(name, judgment)` creates complete evidence for a one-member jury without duplicating builder calls.
+`Verdict.single(name, judgment)` creates complete evidence for a one-member jury.
 
-## Choosing a policy
+## Choosing
 
-| Situation | Suggested policy |
+| Situation | Use |
 |---|---|
-| Equal peer decisions | Majority |
-| Every requirement must hold | Consensus |
-| Measurements have different importance | Weighted average |
+| Several different requirements, all required | **Not a jury.** A conjunction — see module 06 |
+| Independent estimates of one uncertain property | Majority |
+| Independent estimates that must all agree | Consensus |
+| Genuine measurements of differing importance | Weighted average |
 | Outlier-resistant numeric reduction | Median |
 | Cheap gates before expensive evaluation | Cascaded jury |
 
 ## Related
 
 - [Executable tutorial](/docs/agent-judge/tutorial)
+- [Writing custom judges](/docs/agent-judge/custom-judge)
 - [Built-in judges](/docs/agent-judge/built-in-judges)
-- [API reference](/docs/agent-judge/api-reference)

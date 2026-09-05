@@ -1,18 +1,54 @@
 ---
 title: "Getting Started with Agent Judge"
-description: "Add status-first evaluation to a Java 21 agent pipeline"
+description: "Extend the testing discipline you already have to criteria that need judgment"
 ---
 
-Agent Judge evaluates an agent execution after it runs.
-A `Judge` receives a `JudgmentContext` and returns a `Judgment` whose required status is independent from its optional normalized score and optional label.
+The agent says it is done. Should you merge?
+
+Part of that question already has an answer you know how to write down — it compiles, the tests pass, the file is there.
+Part of it does not.
+
+> **JUnit handles assertions where we know how to write the oracle. Agent Judge extends that testing discipline to criteria whose oracle requires richer evidence or judgment.**
+
+Agent Judge is not a replacement for JUnit, AssertJ, ArchUnit, Checkstyle, JaCoCo, JApiCmp, or the compiler.
+The rule it is built around is the opposite one: *use the least interpretive instrument that can reliably answer the question.*
+
+## Where the boundary falls
+
+An agent was asked to expose a sales report endpoint and produced a `ReportController`.
+It compiles, it is in the right package, it is named correctly, and it has the requested method.
+
+Those criteria have a **known oracle** — an exact answer exists and you can write it down in advance.
+Keep using the instrument that already owns them:
+
+```java
+@Test
+void theControllerExists() {
+    assertTrue(Files.exists(workspace.resolve(REPORT_CONTROLLER)));
+}
+```
+
+This one does not:
+
+> Does this controller fit the architectural conventions and idioms of this codebase, without introducing unnecessary complexity?
+
+There is no expected value to compare against.
+The oracle has to be *produced* rather than looked up, and that is the whole of what a judge is:
+
+```java
+Judgment judgment = architecturalFitJudge.judge(context);
+```
+
+`ReportController` opens its own JDBC connection, concatenates SQL from request parameters, builds JSON by hand, and swallows the exception.
+Every cheap check said yes.
 
 ## Prerequisites
 
 - Java 21 or newer
 - Maven 3.9 or the Maven Wrapper
-- Credentials only when you choose a live LLM-backed judge
+- Credentials only when you choose a live model-backed judge
 
-The canonical tutorial modules use deterministic inputs and require no credentials.
+The tutorial modules use deterministic inputs and require none.
 
 ## Add the dependency
 
@@ -20,11 +56,60 @@ The canonical tutorial modules use deterministic inputs and require no credentia
 <dependency>
   <groupId>io.github.markpollack</groupId>
   <artifactId>agent-judge-core</artifactId>
-  <version>0.15.0</version>
+  <version>0.15.2</version>
 </dependency>
 ```
 
-All ten artifacts use the same group and version.
+<Warning>
+Releases **0.11.0 through 0.15.1** could drop a judge from a parallel jury and still return a verdict naming every configured judge.
+If you have collected scores with a parallel jury on any of those, treat them as suspect and upgrade to **0.15.2** or later.
+</Warning>
+
+## Run one judge
+
+```java
+Path workspace = Path.of("test-workspace");
+
+JudgmentContext context = JudgmentContext.builder()
+    .goal("Expose a sales report endpoint")
+    .workspace(workspace)
+    .status(ExecutionStatus.SUCCESS)
+    .startedAt(Instant.now())
+    .executionTime(Duration.ofMinutes(2))
+    .build();
+
+Judgment result = new FileExistsJudge(
+    "src/main/java/com/example/ReportController.java").judge(context);
+```
+
+Read `result.status()` first.
+
+`result.score()` and `result.label()` may be `null` because a Boolean decision does not duplicate its outcome as a stored number or category.
+Use `result.effectiveScore()` only when an aggregation algorithm deliberately needs a numeric view of `PASS` or `FAIL`.
+
+## Four outcomes, not two
+
+| Status | Meaning |
+|---|---|
+| `PASS` | checked, satisfied |
+| `FAIL` | checked, not satisfied |
+| `ABSTAIN` | not applicable to this subject |
+| `ERROR` | could not complete — **not** a low score, and not a number at all |
+
+`pass()` is `false` for `FAIL`, `ERROR` **and** `ABSTAIN` alike.
+A consumer that branches on `!pass()` records a judge that never ran as a rejected subject.
+Assert `status()`.
+
+## Understand result portability
+
+A result can carry strings, booleans, interoperable integers, finite numbers, arrays, and string-keyed objects in metadata.
+Agent Judge recursively copies and freezes those values.
+Live exceptions, SDK responses, `Duration` objects, and enums do not belong in result metadata.
+
+`JudgmentContext` is an in-process input and may hold framework-native objects a judge needs.
+`Judgment` is the portable output boundary.
+
+## The artifacts
 
 | Artifact | Add it for |
 |---|---|
@@ -39,62 +124,34 @@ All ten artifacts use the same group and version.
 | `agent-judge-koog` | Evaluate Koog output |
 | `agent-judge-agent-client` | Evaluate or judge through AgentClient |
 
-The framework bridge dependencies are optional at the application boundary.
-Your application supplies the framework runtime version it uses.
-
-## Build a context and run one judge
-
-This excerpt is compiled as [tutorial module 01](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-01-single-judge/src/main/java/io/github/markpollack/judge/tutorial/module01/SingleJudgeDemo.java).
-
-```java
-Path workspace = Path.of("test-workspace");
-
-JudgmentContext context = JudgmentContext.builder()
-    .goal("Add a HelloController class")
-    .workspace(workspace)
-    .status(ExecutionStatus.SUCCESS)
-    .startedAt(Instant.now())
-    .executionTime(Duration.ofSeconds(5))
-    .build();
-
-Judge fileJudge = new FileExistsJudge(
-    "src/main/java/com/example/HelloController.java");
-
-Judgment result = fileJudge.judge(context);
-```
-
-Read `result.status()` first.
-`result.score()` and `result.label()` may be `null` because a Boolean decision does not duplicate its outcome as a stored number or category.
-Use `result.effectiveScore()` only when an aggregation algorithm deliberately needs a numeric view of `PASS` or `FAIL`.
-
-## Understand result portability
-
-A result can carry strings, booleans, interoperable integers, finite numbers, arrays, and string-keyed objects in metadata.
-Agent Judge recursively copies and freezes those values.
-Live exceptions, SDK responses, `Duration` objects, enums, and other Java identities do not belong in result metadata.
-
-`JudgmentContext` is an in-process input and may hold framework-native objects needed by a judge.
-`Judgment` is the portable output boundary.
+All ten use the same group and version.
+The framework bridges are optional at the application boundary; your application supplies the framework runtime version it uses.
 
 ## Run the tutorial
 
-Clone `https://github.com/markpollack/agent-judge-tutorial.git`, enter the checkout, run `./mvnw clean test`, and then run `./mvnw exec:java -pl module-01-single-judge`.
+```bash
+git clone https://github.com/markpollack/agent-judge-tutorial.git
+cd agent-judge-tutorial
+./mvnw install -DskipTests
+./mvnw exec:java -pl module-01-oracle-boundary
+```
 
-The tutorial contains ten modules and progresses through composition, juries, custom judges, model-backed evaluation, Koog, and LangChain4j.
+Eleven modules, sequenced by the evaluation problem rather than by the API.
+No module needs an API key.
 
 ## Next
 
 <CardGroup cols={2}>
   <Card title="Tutorial" icon="graduation-cap" href="/docs/agent-judge/tutorial">
-    Run every compiled sample
+    The executable sequence
   </Card>
-  <Card title="Design Philosophy" icon="lightbulb" href="/docs/agent-judge/design-philosophy">
-    Learn the normalized result invariants
+  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
+    Design an oracle you can trust
+  </Card>
+  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
+    When aggregation is justified
   </Card>
   <Card title="Built-in Judges" icon="gavel" href="/docs/agent-judge/built-in-judges">
     Choose a judge family
-  </Card>
-  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
-    Aggregate multiple judgments
   </Card>
 </CardGroup>

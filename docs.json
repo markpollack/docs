@@ -62,16 +62,6 @@
               "projects/index",
               "projects/agent-skills",
               {
-                "group": "Loopy",
-                "pages": [
-                  "projects/loopy",
-                  "docs/loopy/getting-started",
-                  "docs/loopy/extending",
-                  "docs/loopy/cli-reference",
-                  "docs/loopy/whats-new"
-                ]
-              },
-              {
                 "group": "Bud",
                 "pages": [
                   "projects/bud"
@@ -288,6 +278,21 @@
             "group": "Migration",
             "pages": [
               "docs/migration/spring-ai-community-to-markpollack"
+            ]
+          },
+          {
+            "group": "Older / Inactive Projects",
+            "pages": [
+              {
+                "group": "Loopy",
+                "pages": [
+                  "projects/loopy",
+                  "docs/loopy/getting-started",
+                  "docs/loopy/extending",
+                  "docs/loopy/cli-reference",
+                  "docs/loopy/whats-new"
+                ]
+              }
             ]
           }
         ]

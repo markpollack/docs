@@ -24,6 +24,32 @@ For a categorical policy, set an optional label in addition to the required stat
 Use `Judgment.abstain(reasoning)` when the judge is not applicable or lacks required evidence.
 Use `Judgment.error(reasoning)` when evaluation could not complete, and log the originating exception where it was caught.
 
+## Scores: measure, never invent
+
+A judge may report a number it computed. It must not report a number it made up.
+
+Do not ask a model-backed judge for a score. "Conformance: 0.85" has no procedure behind it, and nobody can say what would have made it 0.86. It looks like a measurement and is an impression wearing one. Let the model assess, and let the code count and decide.
+
+Splitting those two jobs is measurable. A judge asked to invent its criteria, apply them, and state a verdict returned both `PASS` and `FAIL` on identical input across four runs. It agreed on the facts every time and disagreed only about how to carve them into criteria. Supplying the criteria and doing the rollup in code produced an identical criteria set, verdict, and binding criterion across five consecutive runs. Five runs is a small sample, and it is a measurement rather than an impression.
+
+A criteria-based judge does have a legitimate number, and it is a count. If the judge assessed five named criteria and four were met, then "4 of 5" is a real measurement: computed from parts the judge recorded, reproducible, and auditable back to the criterion that failed.
+
+Record each criterion as a `Check` and derive the count when you read it rather than storing the total. An aggregate is cheap to recompute from its parts, and parts cannot be recovered from an aggregate. The part you lose is the one you act on, which is the criterion that decided the verdict.
+
+### The count reports, it does not gate
+
+Keep the gate conjunctive. Four of five is not eighty percent of done, and a strong criterion must not pay for a weak one.
+
+The count earns its place elsewhere. It is the only thing that shows movement between runs. `PASS` and `FAIL` cannot tell "one gap remaining" from "ignored the pattern entirely", so with a Boolean alone you cannot tell whether a change to your agent improved anything. Four of five becoming five of five is a signal. `FAIL` becoming `PASS` is the same signal arriving too late to be useful.
+
+### A mean can pass a zero
+
+The failure is not theoretical. A judge that averages per-criterion scores and takes its verdict from the average will pass work that missed a criterion entirely, whenever enough sibling criteria score well enough to pay for it. If your rubric names a per-criterion acceptability line, a mean contradicts your own rubric.
+
+Two things make this hard to see from inside. The number looks like evidence, so nobody asks what it averaged. And a test written against the buggy behavior will assert the pass as correct, so the fix arrives looking like a regression.
+
+Check two things on any scoring judge you already have. How often has its threshold actually rejected anything, counted over your archive rather than estimated? And does any test in the suite assert `FAIL`? A gate that has never rejected and a suite that has never been watched red are the same finding twice.
+
 ## Start with a lambda
 
 The complete compiled lambda examples live in [tutorial module 06](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-06-lambda-judge/src/main/java/io/github/markpollack/judge/tutorial/module06/LambdaJudgeDemo.java).

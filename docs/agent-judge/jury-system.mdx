@@ -25,10 +25,35 @@ Use `individualByName()` and `individual()` for diagnostics, and use the aggrega
 | `AverageVotingStrategy` | Averages eligible `effectiveScore()` values |
 | `WeightedAverageStrategy` | Computes a weighted average of eligible `effectiveScore()` values |
 | `MedianVotingStrategy` | Uses the median eligible `effectiveScore()` |
+| `ConjunctiveStrategy` | Reduces eligible `effectiveScore()` values with `min` |
+| `AllMustPassStrategy` | Requires every applicable judgment to be `PASS` |
 
 Status-counting strategies do not consult stored scores.
 Numeric strategies use an explicit score when present and derive `1.0` or `0.0` from `PASS` or `FAIL` otherwise.
 `ABSTAIN` and `ERROR` never become numeric zero by default because they are not completed measurements.
+
+### Compensatory and non-compensatory aggregation
+
+The distinction that decides which of these you want, and the one a default quietly makes for you.
+
+`AverageVotingStrategy` is **compensatory**: a high score on one criterion offsets a low score on
+another. That is right when the criteria trade off against each other — a slower solution that is
+markedly clearer may genuinely be the better one.
+
+`ConjunctiveStrategy` is **non-compensatory**: it reduces with `min`, so a single low assessment
+decides the aggregate and nothing else can lift it. That is right when the criteria are
+independently necessary. Correctness is not offset by elegance; a migration that loses data is not
+redeemed by good naming.
+
+`AllMustPassStrategy` is the same conjunction taken over **outcomes** rather than scores. Every
+applicable judgment must return `PASS`, and a mixed jury is a rejection. Use it as a gate, where the
+question is admissibility rather than quality.
+
+<Warning>
+Averaging a jury whose criteria are independently necessary is the most common way a rubric reports
+a healthy number for work that is unusable. If any single criterion failing should sink the result,
+an average will not say so — it will report the mean and look reasonable doing it.
+</Warning>
 
 ## Tie and error policies
 

@@ -1,6 +1,6 @@
 ---
 title: "Built-in Judges"
-description: "Deterministic, execution, file, LLM, and RAG judges in Agent Judge 0.15"
+description: "Deterministic, execution, file, LLM, RAG, and requirements judges in Agent Judge 0.16"
 ---
 
 Every built-in judge returns the normalized `Judgment` model.
@@ -18,6 +18,18 @@ Artifact: `agent-judge-core`.
 
 These judges produce Boolean outcomes and therefore normally store no score.
 The executable starting point is [tutorial module 01](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-single-judge).
+
+<Warning>
+**Changed in 0.16.0 — degenerate inputs no longer pass.** An empty path, `.`, a directory, an
+absolute path outside the workspace, and a parent traversal are each refused rather than treated as
+a satisfied check. Previously some of these returned `PASS` without examining anything.
+
+This is the failure mode judges are most prone to: **a broken judge fails open with a plausible
+result.** A test that cannot run reports a failure, but a judge that examines nothing still returns
+a status, and `PASS` on an unexamined thing is indistinguishable from `PASS` on a verified one. If
+you have suites that were quietly passing on a mistyped or empty path, they will start failing —
+that is the fix working, not a regression.
+</Warning>
 
 ## Command and coverage judges
 
@@ -87,6 +99,45 @@ They execute or adapt framework output into `JudgmentContext`, then apply an ord
 | `agent-judge-agent-client` | `AgentClientEvaluator` | AgentClient responses and workspaces |
 
 The credential-free bridge samples are [Koog module 09](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-09-koog-evaluation) and [LangChain4j module 10](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-10-langchain4j-evaluation).
+
+## Requirements judges
+
+<Info>New in 0.16.0. Artifact: `agent-judge-ai-core`.</Info>
+
+These run a **written requirements document back against the implementation it describes**. The
+input is something somebody wrote before the code existed — acceptance criteria, architectural
+constraints — and the question is whether the implementation satisfies it.
+
+| Type | Purpose |
+|---|---|
+| `EarsCriterion` | One acceptance criterion, parsed from the specification |
+| `EarsJudge` | Answers every acceptance criterion |
+| `Rfc2119Constraint` | One architectural constraint, with its RFC 2119 keyword |
+| `Rfc2119Judge` | Answers every architectural constraint |
+| `Observation` | Non-binding evidence noticed while establishing a judgment |
+
+### The document supplies the roster
+
+This is what separates these from the other judges, and it changes how they aggregate. Elsewhere a
+jury samples a population and an `ABSTAIN` is dropped as not applicable. Here the roster is fixed:
+the document says the requirement applies, so *"could not be established"* is not *"does not
+apply."*
+
+The rollup is therefore strict, and abstentions are **not** dropped:
+
+```
+any ERROR        -> ERROR
+else any FAIL    -> FAIL
+else any ABSTAIN -> ABSTAIN
+else             -> PASS
+```
+
+<Warning>
+Fifty-one criteria established and one unsettled is `ABSTAIN`, not `PASS`. The specification has not
+been shown to hold — which is a different statement from it having been shown to fail, and both are
+different from success. Understand this before composing these judges with anything else, because a
+strategy that drops abstentions will silently convert "unverified" into "fine."
+</Warning>
 
 ## Related
 

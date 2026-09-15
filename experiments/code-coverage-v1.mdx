@@ -46,7 +46,7 @@ Progressive knowledge injection — giving agents increasingly structured domain
 
 <Note>
 **Updated 2026-08-27 — "70 expected steps" could not be reproduced.** Re-running the v1 traces
-through the corrected library gives **36–52 expected steps** for the SAE arms, not 70. The variant
+through the corrected library did not reproduce it. The variant
 naming in the data on disk (`control`, `variant-a`–`e`, `claude-haiku`, `claude-*-sae`) does not
 match the nine-variant table above either, so this figure appears to come from a data or code
 vintage that no longer exists. **Treat it as unverified rather than wrong** — it may well have been
@@ -55,8 +55,10 @@ right when written.
 Two things in v1's favour, both checked: it is **not** affected by CT6, because every v1 variant ran
 exactly one run per item, which is the one case where grouping by item is correct. And its
 start-state exposure (**CT7**) is small — 2–11% on the four arms that do not begin in `EXPLORE`,
-against the 30–90% seen in v3 and v4. The *relative* efficiency ordering is likely sound; the
-absolute step count is not citable.
+against the 30–90% seen in v3 and v4. **Updated 2026-09-15 — the relative ordering is withdrawn too.** Reanalysis found the arms do not
+share a start state, so a start-state defect does not cancel between them, and no corrected figure
+is offered while that work is open. At nine runs across nine variants, three of them a single run,
+v1 cannot carry a comparison in any case. Kept as a record of method, not of result.
 </Note>
 
 

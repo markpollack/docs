@@ -129,7 +129,7 @@ The most distinctive behavioral signature was the JAR_INSPECT cluster — the ag
   <img src="/images/loop-amplification-v2.png" alt="Expected cycles through each behavioral loop" />
 </Frame>
 
-*The Markov fundamental matrix predicts how many times the agent cycles through each loop before absorbing. Skills+preanalysis roughly halves the EXPLORE loop — same attention budget, better allocation.*
+*The Markov fundamental matrix predicts how many times the agent cycles through each loop before absorbing. The size of the difference between variants is withdrawn; see below.*
 
 <Warning>
 **Updated 2026-08-27 — the absolute cycle counts are withdrawn.** This caption read *"from 189
@@ -138,8 +138,10 @@ experiment ran 2–3 runs against a single item — so every run of a variant wa
 sequence, losing all but one absorption event and inflating expected visits about threefold
 (defect **CT6**). Recomputed with trajectories separated: **62.0 → 31.3**.
 
-**The halving is real; the magnitudes were not.** Both arms were inflated by the same factor, so the
-ratio survived while the numbers did not.
+**Updated 2026-09-15 — the halving is withdrawn too.** That conclusion rested on both arms being
+inflated by the same factor. Reanalysis has since found a second defect that distorts each arm by
+where its runs began, and these arms did not begin alike, so no common factor cancels. No
+replacement figure is offered while that reanalysis is open.
 </Warning>
 
 ### Intervention Deltas

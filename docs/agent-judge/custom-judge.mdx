@@ -1,9 +1,60 @@
 ---
 title: "Writing Custom Judges"
-description: "Implement status-first deterministic and model-backed judges"
+description: "Design the oracle first, then pick the mechanism"
 ---
 
-Choose the smallest extension point that expresses your policy.
+> **A JUnit test *has* an oracle. A judge *is* the oracle.**
+
+You wrote `expected` in `assertEquals(expected, actual)` because you knew the answer, so the check was checked — by a human, at authoring time.
+A judge has no `expected`. It produces one. Nothing checks the checker.
+
+That asymmetry is the reason this page starts with design rather than with extension points:
+
+```
+a broken TEST   fails CLOSED  ->  red, loud, you fix it
+a broken JUDGE  fails OPEN    ->  a plausible number, and you build on it
+```
+
+## Six questions before you write code
+
+### 1. What one claim does this judge evaluate?
+
+If you cannot state it in a sentence, it is two judges.
+"Is this good?" cannot be debugged. "Does every critical finding cite a file and line?" can.
+
+### 2. What evidence would convince you?
+
+Write the evidence down before the implementation.
+It becomes the judge's `Check` list, and the list is what anyone reads when the judgment is a `FAIL`.
+
+### 3. Is the oracle known, derived, or judgment?
+
+| Kind | There is… | Use |
+|---|---|---|
+| **Known** | an exact answer | the compiler, JUnit, ArchUnit, JaCoCo, or a deterministic judge |
+| **Derived** | no single expected value, but several objective facts that settle it | `DeterministicJudge` with one `Check` per fact |
+| **Judgment** | a property that requires interpretation | `ModelBackedJudge` |
+
+Most criteria that feel like they need a model do not.
+
+### 4. Choose the least interpretive instrument that can reliably answer it
+
+Agent Judge does not replace JUnit, AssertJ, ArchUnit, Checkstyle, JaCoCo, JApiCmp, or the compiler.
+Reach for a model only for what is left over after those.
+
+### 5. Keep distinct failure criteria visible
+
+> **Aggregate at read time, never at write time.**
+> An aggregate is cheap to recompute from parts. Parts cannot be recovered from an aggregate.
+
+Every per-item result computed on the way to a verdict is evidence and must be persisted.
+That is what `Check` is for.
+A judgment carrying its parts can be re-aggregated under a different rule for free; one carrying only a number needs a re-run of the *agent*, not just the judge.
+
+Report the **binding item** — which criterion, which entry, which input decided the verdict.
+A mean cannot produce it, and it is the part anyone acts on.
+
+### 6. Only now, pick the mechanism
 
 | Need | Use |
 |---|---|
@@ -13,32 +64,76 @@ Choose the smallest extension point that expresses your policy.
 | Prompt, model, and classifier composition | `ModelBackedJudge` |
 | A specialized Spring AI template method | Extend `LLMJudge` |
 
+Start with a lambda.
+A plain lambda has no discoverable identity, so wrap it with `Judges.named` as soon as anything but the call site reads its result.
+
 ## Return a status-first result
 
 For a Boolean policy, return `Judgment.pass(reasoning)`, `Judgment.fail(reasoning)`, or begin with `Judgment.verdict(boolean)` when you also need checks or metadata.
-Do not store `1.0` or `0.0` merely to repeat the status.
 
-For a real measurement, begin with `Judgment.scored(normalizedScore)` and finish by declaring the passing threshold.
-For a categorical policy, set an optional label in addition to the required status.
+**Do not store `1.0` or `0.0` merely to repeat the status.**
+`PASS` already carries that fact, and storing it twice creates two places that can disagree.
 
-Use `Judgment.abstain(reasoning)` when the judge is not applicable or lacks required evidence.
-Use `Judgment.error(reasoning)` when evaluation could not complete, and log the originating exception where it was caught.
+For a real measurement, begin with `Judgment.scored(normalizedScore)` and declare the passing threshold.
+For a categorical policy, set a label in addition to the required status.
 
-## Start with a lambda
+Use `Judgment.abstain(reasoning)` when the judge is not applicable or lacks required evidence, and `Judgment.error(reasoning)` when evaluation could not complete — logging the originating exception where it was caught.
 
-The complete compiled lambda examples live in [tutorial module 06](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-06-lambda-judge/src/main/java/io/github/markpollack/judge/tutorial/module06/LambdaJudgeDemo.java).
-They cover a three-line file rule, a named wrapper, jury participation, and error conversion.
+<Warning>
+`ERROR` is not a low score. It is not a number at all.
+A judge that could not run has not rejected the subject; scoring it zero blames the subject for a missing input, and averaging that zero into anything is worse.
+</Warning>
 
-A plain lambda has no discoverable identity.
-Wrap it with `Judges.named` when verdicts and logs need a stable name, description, and `JudgeType`.
+## Where the pass mark comes from
 
-## Build a reusable deterministic judge
+`0.5` is not an answer, and neither is "it looked about right."
+In order of preference:
 
-Extend `DeterministicJudge` when the rule has constructor configuration, helper methods, or granular checks.
-Its constructor supplies `JudgeMetadata`; the subclass implements only `judge(JudgmentContext)`.
+1. **The rubric's own level semantics.** If the rubric says "raise a concern below 2", the bar is 2. It is already written down.
+2. **Standard setting** (Angoff, Bookmark) — a mature field for deriving a cut score from expert judgement about content.
+3. **An explicitly provisional number**, marked as such at the call site, with a date.
 
-[PackageStructureJudge.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-07-deterministic-judge/src/main/java/io/github/markpollack/judge/tutorial/module07/PackageStructureJudge.java) is the canonical compiled example.
-It resolves paths from the context workspace, records three `Check` values, derives the overall status with `Judgment.verdict`, and converts file-reading failures to a reasoned `ERROR`.
+Put the derivation on the **constant**, not on the method that uses it.
+That is where the next person changing the value will be standing.
+
+<Warning>
+**Bar-fitting.** Setting the threshold just under what a known-good run scored is fitting the bar to the data it must judge.
+It will always pass, and you will never know.
+</Warning>
+
+## Degeneracies to check before trusting a judge
+
+Most of these cost nothing to run.
+
+- **Enumerate the inputs on which it *cannot* return `FAIL`.** Not "can it fail?" — *which inputs cannot*. Empty strings, `.`, an absolute path, `../escape`, and a directory where a file was expected are the usual five.
+- `allMatch` / `anyMatch` over a possibly-empty stream. `allMatch` over empty is `true`: a check that passes because it examined nothing.
+- **State the denominator in the message.** `"0 of 0 references resolved"` must not render as `"all references resolve"`.
+- **Path escape.** `resolve()` returns an *absolute* argument unchanged, so a path can leave the workspace. That is a misconfigured judge — `ERROR`, not `FAIL`.
+- **Checks vs. status.** A judgment carrying a failing `Check` must not be `PASS`.
+- **Dated assets.** A pinned model id is a dated asset. Scan for retired ones.
+
+## Test all four outcome paths
+
+Assert `status()`, never `pass()`.
+`pass()` is `false` for `FAIL`, `ERROR` **and** `ABSTAIN` alike, so a test written on it cannot tell a rejection from a judge that never ran.
+
+> **Write the verdict tests from the criterion, never from the code.**
+> A test written from the code's behaviour cannot disagree with the code.
+
+Include a **negative control**: feed the judge a subject you know is bad and assert `FAIL`.
+A judge with only one reachable verdict is a constant, and a suite that never watches the other one cannot tell the difference.
+
+<Info>
+When you make a judge more honest — returning `ABSTAIN` or `ERROR` where it previously returned a score — **fix its consumer in the same change**.
+A consumer branching on `!pass()` will record the honest abstention as a rejected subject: the judge stops lying and the system starts blaming the subject.
+</Info>
+
+## Compiled examples
+
+- A lambda, a named lambda, and a conjunction: [tutorial module 04](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-04-custom-judge)
+- A derived oracle with granular checks: [module 05](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-05-derived-judge)
+- A judgment oracle, opened up: [module 07](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-07-model-backed-judge)
+- Turning an outcome into a JUnit failure: [judge-junit](https://github.com/markpollack/agent-judge-tutorial/tree/main/judge-junit)
 
 ## Compose a model-backed judge
 
@@ -48,26 +143,18 @@ It resolves paths from the context workspace, records three `Check` values, deri
 2. `JudgeModel` invokes a backend.
 3. `JudgmentClassifier` converts the response into a normalized judgment.
 
-[ModelBackedJudgeDemo.java](https://github.com/markpollack/agent-judge-tutorial/blob/main/module-08-model-backed-judge/src/main/java/io/github/markpollack/judge/tutorial/module08/ModelBackedJudgeDemo.java) compiles and runs this pipeline with a stub model.
-Production adapters include `SpringAiJudgeModel` and `AgentClientJudgeModel`.
-
 `LabelJudgmentClassifier` requires an explicit label-to-status policy.
-Assign a normalized score only when the label policy genuinely declares a measurement.
-Unknown labels produce a reasoned `ABSTAIN` with the raw judge output in metadata and neither a label nor a score.
+Unknown labels produce a reasoned `ABSTAIN` with the raw output in metadata and neither a label nor a score — not a guess, and not a default `PASS`.
+
+Production adapters include `SpringAiJudgeModel` and `AgentClientJudgeModel`.
 
 ## Keep metadata portable
 
 Judgment metadata may contain only portable primitives, arrays, and string-keyed objects.
-Convert SDK objects to stable fields before attaching them.
-Keep live exceptions and framework-native objects in logs or `JudgmentContext`, not in the result.
-
-## Test all outcome paths
-
-A custom judge test should cover at least its passing, failing, abstaining, and error paths when those paths exist.
-Assert the status first, then assert optional score, label, checks, reasoning, and portable metadata that the policy intentionally produces.
+Convert SDK objects to stable fields before attaching them, and keep live exceptions and framework-native objects in logs or `JudgmentContext`, not in the result.
 
 ## Related
 
 - [Executable tutorial](/docs/agent-judge/tutorial)
-- [Result API](/docs/agent-judge/api-reference#judgment)
 - [Jury system](/docs/agent-judge/jury-system)
+- [Result API](/docs/agent-judge/api-reference#judgment)

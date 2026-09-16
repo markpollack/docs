@@ -1,0 +1,204 @@
+---
+title: "Migrating to 0.17"
+sidebarTitle: "Migrating to 0.17"
+description: "What changes for existing Agent Judge consumers in 0.17: containment, NOT_APPLICABLE, reason codes, the seven-component verdict, and reading stored verdicts"
+---
+
+0.17 changes what a jury does when its own machinery fails, adds a fifth judgment status, and makes
+every verdict say what decided it. Most consumers need no code change. The one intended compile
+break and the one construction-time behaviour change are named below.
+
+## Containment: a broken instrument no longer rejects the subject
+
+This is the change to read first, because it alters results you have already stored.
+
+In one evaluation corpus, **20 of 39 runs had a jury that errored or abstained, and every one was
+recorded as a subject that did not pass**. The instrument failed and the subject was charged for it,
+silently, in more than half the corpus.
+
+0.17 separates the two:
+
+- A strategy that throws, returns `null`, or returns an aggregate it was not entitled to produce now
+  yields an `ERROR aggregation_failed` verdict marked undecided, **with every judge's own result
+  intact**. Previously it discarded the whole jury, and inside a cascade the enclosing tier with it.
+  `Error` is not caught.
+- A meta-jury member that throws, returns an undecided verdict, or excludes itself without declaring
+  it may is a **stage failure**: excluded from strategy input, its actual verdict kept on the
+  attempt, the aggregate `ERROR stage_failed`.
+- A `JudgeWithMetadata` whose `metadata()` returns `null` or throws no longer escapes
+  `SimpleJury.vote()`. The jury reads every seat's key once, on the caller's thread, before any judge
+  runs. Such a seat becomes `ERROR judge_metadata_unreadable`, keyed `Judge#N`, for the `ErrorPolicy`
+  to resolve, and the judge does not run.
+
+### The one cascade rule
+
+A cascade tier that did not produce a usable determination but had already established a genuine
+individual `FAIL` **stops** — under `REJECT_ON_ANY_FAIL` only. `ACCEPT_ON_ALL_PASS` escalates past
+it, because a broken reduction cannot demonstrate that a subject is fine.
+
+When it stops that way, no `FAIL` and no score is manufactured. The rejection is carried by the
+*decision*; the root aggregate stays a machinery error.
+
+<Warning>
+Machinery failure never supplies rejection evidence — **not even under** `TREAT_AS_FAIL`, which
+propagates instead. An error from a configured judge is the error policy's business; an error from
+the library's own composition or reduction is not. Charging a broken reduction to the subject would
+produce a rejection indistinguishable from a real one in every stored field.
+</Warning>
+
+## `NOT_APPLICABLE` is its own status
+
+Five statuses now. The difference between the last three is what a denominator does with them.
+
+| Status | The question | A denominator |
+|---|---|---|
+| `PASS` | asked, answered yes | counted, in the numerator |
+| `FAIL` | asked, answered no | counted, against the subject |
+| `ABSTAIN` | applied, undecided | counted; no vote cast |
+| `NOT_APPLICABLE` | should not have been asked | **excluded**, and counted separately |
+| `ERROR` | never reached | excluded from the subject denominator |
+
+`ABSTAIN` no longer means "not applicable" anywhere. Missing evidence is still `ABSTAIN`.
+
+### Exclusion must be declared in advance
+
+Exclusion is the one outcome that removes a judge from its own denominator, which makes it the one
+outcome an instrument could use to dodge a question it does not like the look of.
+
+- `JudgeMetadata` gains `notApplicableWhen`: the condition under which this judge may exclude.
+- `Judges.notApplicableCapability(Judge)` is the one lookup, and walks wrapper chains outward in, so
+  a deduplicating rename cannot strip a capability off the judge underneath.
+- A `SimpleJury` refuses a capable seat under a strategy that refuses exclusions, and `Juries.meta`
+  refuses a possibly-excluding member — both at **construction**.
+- At vote time, an exclusion from an undeclared seat becomes `ERROR undeclared_not_applicable`.
+- `Jury.aggregateMayBeNotApplicable()` defaults to `false`, so an opaque jury makes no pre-spend
+  guarantee and is checked at runtime.
+
+### `NotApplicablePolicy`
+
+`REFUSE` (the default), `EXCLUDE`, `TREAT_AS_FAIL`. Every built-in strategy takes one, and
+`VotingStrategy.notApplicablePolicy()` declares it so composition can be validated before anything
+runs.
+
+## Every `ERROR` names its cause
+
+`Judgment` gains `reasonCode`, a closed vocabulary in two families.
+
+**Instrument codes, required on every `ERROR`:** `judge_failed`, `judge_metadata_unreadable`,
+`judge_reported`, `undeclared_not_applicable`, `errors_propagated`, `not_applicable_refused`,
+`aggregation_failed`, `stage_failed`, `no_tier_decided`.
+
+**The subject code `subject_empty`,** optional on a `FAIL`. A `FAIL` with no code is an uncoded
+rejection, by deliberate choice.
+
+`errors_propagated` must carry its origin: a non-empty `errorCodeCounts` block naming the terminal
+causes it propagated, flattened through nested wrappers. `Judgment.propagatedError` builds it
+atomically, and construction refuses the code without it.
+
+## Configuration is refused at construction
+
+| Was | Now |
+|---|---|
+| `null` `ErrorPolicy` — every aggregation threw `NullPointerException` out of `vote()`, even when every judge passed | `IllegalArgumentException` from all ten strategy constructors |
+| `null` `TiePolicy` — **failed only at the first tie** | `MajorityVotingStrategy` refuses it at construction |
+| `null` `NotApplicablePolicy` | refused at construction |
+| A `NaN` or infinite judge weight — `NaN < 0` is false, so the sign check let both through | `SimpleJury.Builder` rejects any non-finite weight |
+
+<Warning>
+**This is a behaviour change, not only a message change.** A jury constructed with a `null`
+`TiePolicy` that never tied used to build and run. It now fails to build. The no-argument
+constructors already passed `PROPAGATE` and `TiePolicy.FAIL`, and are unchanged.
+</Warning>
+
+## The seven-component verdict
+
+| Surface | Change |
+|---|---|
+| `Verdict` | `+ seats`, `+ decision` — seven components |
+| `CompositeAttempt` | `+ disposition`, `+ dispositionReason` |
+| `AggregationEvidence` | `+ notApplicablePolicy`, `notApplicableCount`, `notApplicableTreatedAsFailCount`, `errorCodeCounts` |
+| `SimpleJury.Builder` | `+ requireDeclaredNames()` (opt-in) |
+| Description | `notApplicableWhen`, `aggregateMayBeNotApplicable`, strategy `notApplicablePolicy`; `descriptionVersion` **2** |
+
+`Seat` records where each judgment sat and under what key, so the ordered list and the keyed map can
+be joined without guessing; only a `DECLARED` key is an identity. `Decision` says what produced the
+aggregate — this jury's own reduction, a named direct tier, or nothing at all — so a copied outcome
+is no longer indistinguishable from a computed one.
+
+`requireDeclaredNames()` is worth turning on wherever a verdict is stored: it rejects positional
+seats, duplicate declared names, and the collision that makes it necessary — a judge declaring the
+name `Judge#2`, which is exactly the key an unnamed second seat takes.
+
+## What you may have to change
+
+### One intended compile break
+
+Exhaustive switches over `JudgmentStatus` no longer compile, because there is a fifth constant.
+That break is intended: every exhaustive switch is a place where a decision about `NOT_APPLICABLE`
+has to be made rather than defaulted. `fromWire` stays exact and throws on an unknown name.
+
+### `JudgeMetadata`'s three-argument constructor is retained
+
+`new JudgeMetadata(name, description, type)` still works and delegates to the canonical
+four-argument constructor with a `null` condition.
+
+**A judge that never excludes a subject needs no change.** Absence of `notApplicableWhen` is the
+statement that it never excludes, not a blank or missing declaration, and it is what
+`Judges.notApplicableCapability(Judge)` and the seat guard read. Declaring `notApplicableWhen` is
+the deliberate opt-in, taken through the four-argument constructor.
+
+### Hand-built verdicts
+
+A hand-built `Verdict` — a test fixture, a re-scorer, a replay tool, a fake jury in a consumer test
+— now needs `seats` that line up with `individual` and `individualByName`, and a `decision`.
+`build()` throws without one.
+
+For the ordinary case `Verdict.of(aggregated, individualByName)` is the whole call: it takes the
+individuals from the map's values in encounter order, seats each entry as `DECLARED` at `0..n-1`,
+and records `Decision.own()`.
+
+<Note>
+Pass an ordered map (`LinkedHashMap`) if the positions matter — `Map.of` does not specify an order.
+`Verdict.single(name, judgment)` still covers one judge. Duplicate declared names, positional keys,
+weights, seat gaps, and any decision other than `own` are still built with `Verdict.builder()` and
+explicit seats.
+</Note>
+
+### Requirements judges: an empty roster no longer passes
+
+`EarsJudge.create` and `Rfc2119Judge.create` reject an empty roster, and the rollup refuses one
+independently. A roster is a denominator, and a conjunctive rollup over an empty one is vacuously
+true.
+
+**A stored `PASS` with a `criteriaTotal` or `constraintsTotal` of `0` identifies a run affected
+before this fix.** Parsing is unchanged: a document that matches nothing still yields an empty list,
+because that is a fact about the document. The judge is what refuses.
+
+### Downstream readers
+
+`agent-experiment`'s `RecordedJudgmentStatus` must learn `not_applicable` **before** any run that
+can emit it, and Python readers must raise on an unknown status rather than defaulting it. Counts
+are stored and rates are derived, so a reader that persisted a pass rate should recompute it.
+
+A legacy `ABSTAIN` carrying the label `not_applicable` is **never** reinterpreted automatically. A
+deliberate re-curation records that it reclassified.
+
+## Reading verdicts you have already stored
+
+New construction is strict; reading old data is a separate decision. The live types refuse an
+incomplete result by name, because a reader lenient enough to load a 0.14 document is lenient enough
+to accept a 0.17 result that lost a required fact in transit — and it would accept it silently.
+
+So reading stored verdicts is a separate entry point. `Verdicts.interpret` returns one
+`Interpretation` for any verdict, live or stored since 0.13:
+
+```java
+Interpretation live   = Verdicts.interpret(verdict);    // a live verdict
+Interpretation stored = Verdicts.interpret(storedMap);  // any stored verdict, any age
+```
+
+The original verdict stays beside the interpretation, unchanged — `interpret` reads, it does not
+rewrite.
+
+See [Interpreting verdicts](/docs/agent-judge/interpreting-verdicts) for the full shape, what each
+stored form yields, and a worked consumer example.

@@ -168,8 +168,10 @@
                     ]
                   },
                   "docs/agent-judge/jury-system",
+                  "docs/agent-judge/interpreting-verdicts",
                   "docs/agent-judge/built-in-judges",
                   "docs/agent-judge/api-reference",
+                  "docs/agent-judge/migration-0.17",
                   "docs/agent-judge/design-philosophy",
                   "docs/agent-judge/research-foundations"
                 ]

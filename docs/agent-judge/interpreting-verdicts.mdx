@@ -1,0 +1,170 @@
+---
+title: "Interpreting verdicts"
+sidebarTitle: "Interpreting verdicts"
+description: "Verdicts.interpret returns one Interpretation for any verdict, live or stored since 0.13, so consumers stop deciding for themselves what counts as a rejection"
+---
+
+A stored verdict says what happened. It did not say what that **means**, so every consumer walked
+`compositeAttempts`, compared disposition strings, and decided for itself which status was a
+rejection.
+
+One measured consequence: in a single evaluation corpus, **20 of 39 runs had a jury that errored or
+abstained, and every one was recorded as a subject that did not pass.** The rules for reading a
+verdict belong to the library that wrote it, so 0.17 adds them as one shape and two entry points.
+
+## The two entry points
+
+```java
+Interpretation live   = Verdicts.interpret(verdict);    // a live verdict
+Interpretation stored = Verdicts.interpret(storedMap);  // any stored verdict, any age
+String text           = Summaries.of(stored);           // deterministic, from the fields alone
+```
+
+<Note>
+`interpret` reads; it does not rewrite. The original verdict stays beside the interpretation,
+unchanged — a re-exported file parses equal to the original in every respect except the added
+`interpretation` keys.
+</Note>
+
+## What an `Interpretation` says
+
+`Interpretation` is the same shape whether the verdict was written by 0.17 or by 0.13. What differs
+between a complete record and an incomplete one is only its `defects`.
+
+| Field | What it says |
+|---|---|
+| `reading` | what the verdict says about the subject: `ACCEPTED`, `REJECTED`, `UNDECIDED`, `NOT_APPLICABLE`, `NOT_ASSESSED`. A decision that stopped on an individual rejection reads `REJECTED` whatever the aggregate says; an `error` aggregate reads `NOT_ASSESSED` **before** an `abstain` reads `UNDECIDED` |
+| `readingSupport` | whether the recorded facts back that reading: `SUPPORTED`; `CONTRADICTED`, with one `INCONSISTENT` defect per contradiction; or `UNDETERMINED`, when the facts needed are absent. The evidence check reads the root's **own** aggregation block, never one found elsewhere in the tree |
+| `decidedBy` | which stage decided, read from the recorded decision chain — **never inferred** from the root equalling a sub-verdict, from attempt order, or from reasoning text. `null` when the root decided itself or the record does not say |
+| `root`, `stages` | the verdict's own aggregate and judges, then every attempt a composite jury entered, recursively, each with its full `path`, its own reasoning and `evidence`, and every judge with its recorded reasoning, checks, score and reason code |
+| `defects` | what the record is missing (`ABSENT`), cannot say (`UNPARSEABLE`), carries in a token this version does not define (`UNKNOWN_VOCABULARY`), or contradicts itself on (`INCONSISTENT`) — each with a path and a field. Empty for every verdict a built-in jury produces |
+| `summary` | prose generated from the fields above and nothing else: every name, status, reason code, reading and support value it mentions is in the fields, and every one in the fields is mentioned |
+| `schemaVersion`, `sourceVersion` | `1`; and `0` for an unstamped verdict, `1` for the seven-component form 0.17 writes |
+
+A stage that entered and never produced a verdict has a null `status` and its `failure` code.
+**An absent status is never read as a failure.**
+
+## Every stored shape reads
+
+| Stored form | What `interpret` does with it |
+|---|---|
+| **0.13** `subVerdicts` | upper-case statuses read as their 0.17 tokens; a `{value, min, max}` score is normalised on its own recorded scale, with that scale reported beside it as `scoreScale`; a `{value: boolean}` score object is `UNPARSEABLE` and ignored |
+| **0.14–0.16** `compositeAttempts` | no decision, seats or dispositions, each an `ABSENT` defect, while the evidence block binds leniently with the counts it lacks null — so a block that agrees with its status is `SUPPORTED` even though `decidedBy` is `null` |
+| **0.17** seven-component | the live and stored paths agree byte for byte |
+
+An unknown token is carried as recorded with a defect rather than refused, and a map of the wrong
+shape degrades into a list of missing facts rather than an exception.
+
+## A consumer example
+
+This reads the explanation's fields only. It never traverses the stored verdict.
+
+```python
+import json
+from collections import Counter
+
+# --- Experiment's policy. Every line here is Experiment's, and none of it is in the file. ---
+BUCKET = {"ACCEPTED": "passes", "REJECTED": "nonPasses", "UNDECIDED": "nonPasses",
+          "NOT_APPLICABLE": "excluded", "NOT_ASSESSED": "instrumentFailures"}
+COUNT_UNVERIFIED = True   # an UNDETERMINED reading is counted by its reading, and reported as unverified
+
+def tally(items):
+    t = Counter()
+    for item in items:
+        i = item["interpretation"]
+        if i["readingSupport"] == "CONTRADICTED":
+            t["unattestable"] += 1                 # reported, never counted
+            continue
+        if i["readingSupport"] == "UNDETERMINED":
+            t["unverified"] += 1                   # always reported
+            if not COUNT_UNVERIFIED:
+                continue
+        t[BUCKET[i["reading"]]] += 1
+    return t
+
+def pass_rate(t):
+    judged = t["passes"] + t["nonPasses"]
+    return t["passes"] / judged if judged else None   # absent, never 0
+
+# --- Reading the explanation: fields only, no traversal of the stored verdict. ---
+def describe(item):
+    i = item["interpretation"]
+    d = i["decidedBy"]
+    print(f"{item['itemSlug']}: {i['reading']} ({i['readingSupport']}); "
+          f"decided by {d['stage'] if d else 'not recorded'}")
+    for s in [i["root"], *i["stages"]]:
+        where = "/".join(s["path"]) or "<root>"
+        print(f"  {where} [{s['policy'] or '-'}] {s['status']}"
+              + (f" {s['reasonCode']}" if s["reasonCode"] else "") + f": {s['reasoning']}")
+        for j in s["judges"]:
+            print(f"    seat {j['position']} {j['name']}: {j['status']}"
+                  + (f" ({j['reasonCode']})" if j["reasonCode"] else "") + f" — {j['reasoning']}")
+            for c in j["checks"]:
+                print(f"      [{'x' if c['passed'] else ' '}] {c['name']}: {c['detail']}")
+    for x in i["defects"]:
+        print(f"  ! {x['kind']} {x['path']}.{x['field']}: {x['note']}")
+    print(f"  {i['summary']}")
+```
+
+<Note>
+This example is executed, not illustrative. It runs against the generated cascade example committed
+with the implementation review, and prints a full reading including every recorded check.
+</Note>
+
+### When a pass rate is absent
+
+`pass_rate` returns absent rather than `0` when the denominator is empty. Describe that as **no
+items eligible for the denominator** — never as "no item was judged", which is a different claim and
+is usually false in exactly this case.
+
+Two absences leave the denominator for different reasons, and they stay distinct:
+
+- An item with **no verdict at all** never enters the tally. Nothing ran.
+- `NOT_ASSESSED` means a jury **did** run and could not assess. That is an instrument failure, and it
+  is counted as one.
+
+An item can also be `NOT_APPLICABLE` — excluded and counted separately. So a denominator can be empty
+while every item was judged.
+
+## What this deliberately does not say
+
+Whether any reading counts against the subject, enters a denominator, or affects a rate. **That
+policy belongs to the consumer that owns the denominator**, which is why the counting above is
+Experiment's and none of it is in the file.
+
+## The Java surface
+
+```java
+public record Interpretation(int schemaVersion, int sourceVersion,
+                             @Nullable VerdictReading reading, ReadingSupport readingSupport,
+                             @Nullable DecidedBy decidedBy,
+                             Stage root, List<Stage> stages,
+                             List<Defect> defects, String summary) { }
+
+public record Stage(@Nullable String stage, List<String> path,
+                    @Nullable String relation, @Nullable String policy,
+                    @Nullable String disposition, @Nullable String reason, @Nullable String failure,
+                    @Nullable Boolean usedByParent,
+                    @Nullable String status, @Nullable String reasonCode, @Nullable String reasoning,
+                    @Nullable Evidence evidence, List<JudgeSeat> judges) { }
+
+public record JudgeSeat(int position, String name, @Nullable String keySource,
+                        @Nullable String status, @Nullable String reasonCode, @Nullable Double score,
+                        @Nullable ScoreScale scoreScale, String reasoning, List<Check> checks) { }
+
+public record Check(String name, boolean passed, String detail) { }
+public record DecidedBy(String stage, List<String> path, String basis) { }
+public record Defect(String path, String field, DefectKind kind, String note) { }
+
+public enum DefectKind { ABSENT, UNPARSEABLE, UNKNOWN_VOCABULARY, INCONSISTENT }
+public enum VerdictReading { ACCEPTED, REJECTED, UNDECIDED, NOT_APPLICABLE, NOT_ASSESSED }
+public enum ReadingSupport { SUPPORTED, CONTRADICTED, UNDETERMINED }
+```
+
+All of it lives in `io.github.markpollack.judge.jury.interpretation`. `Evidence` is the nullable view of the keys `AggregationEvidence` writes, so an older record binds leniently with the counts it lacks left null; `ScoreScale` reports the scale a normalised score was recorded on.
+
+## Related
+
+- [Migrating to 0.17](/docs/agent-judge/migration-0.17) — containment, the fifth status, and the
+  seven-component verdict
+- [Jury system](/docs/agent-judge/jury-system) — the policies that produce what is being read

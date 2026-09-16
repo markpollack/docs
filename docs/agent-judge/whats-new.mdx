@@ -4,6 +4,60 @@ sidebarTitle: "What's New"
 description: "Curated Agent Judge release notes"
 ---
 
+## 0.17.0
+
+### Requirements judges: conditional criteria, and a roster that cannot be empty
+
+The EARS and RFC 2119 judges, introduced in 0.16, read a written requirements document back against
+the implementation it describes. 0.17 changes both.
+
+`EarsCriterion` and `Rfc2119Constraint` gain an optional **applicability clause**. A criterion may
+declare when it does not apply; the prompt then offers `NOT_APPLICABLE` only for criteria that carry
+one, naming them. An excluded criterion leaves the roster's denominator and is counted separately,
+with a mandatory reason. Excluding an unconditional criterion, or excluding one with no reason, is a
+protocol error rather than a finding, and is never counted as an authorized exclusion.
+
+<Warning>
+**A requirements judge with no requirements no longer passes.** `EarsJudge.create` and
+`Rfc2119Judge.create` reject an empty roster, and the rollup refuses one independently.
+
+A roster is a denominator, and a conjunctive rollup over an empty one is vacuously true: nothing
+failed, nothing was unestablished, so the implementation "satisfies the specification". Released
+0.16.0 returns `PASS` for that, and the result is indistinguishable in every stored field from a
+specification that was genuinely met.
+
+**A stored `PASS` with a `criteriaTotal` or `constraintsTotal` of `0` identifies a run affected
+before this fix.** Parsing is unchanged — a document that matches nothing still yields an empty list,
+because that is a fact about the document. The judge is what refuses.
+</Warning>
+
+### An instrument failure is no longer a rejection
+
+A jury whose own machinery breaks used to charge the subject for it. In one evaluation corpus, 20 of
+39 runs had a jury that errored or abstained, and every one was recorded as a subject that did not
+pass.
+
+0.17 separates the two. A strategy that throws or returns an aggregate it was not entitled to
+produce yields an `ERROR aggregation_failed` verdict marked undecided, with every judge's own result
+intact. Machinery failure never supplies rejection evidence, not even under `TREAT_AS_FAIL`.
+
+`NOT_APPLICABLE` also becomes its own judgment status, distinct from `ABSTAIN`: a question that
+should not have been asked, excluded from the denominator and counted separately. Exclusion must be
+declared in advance, and every `ERROR` now carries a `reasonCode` naming its cause.
+
+### Reading a stored verdict later
+
+Advanced, and only needed if you store verdicts and read them back.
+
+`Verdict` gains `seats` and `decision` — which judgment sat where and whether its key is a real
+identity, and whether this jury decided or adopted the outcome of a tier. `Verdicts.interpret`
+returns one `Interpretation` for any verdict, live or stored since 0.13, so consumers no longer each
+decide for themselves which status was a rejection.
+
+See [Interpreting verdicts](/docs/agent-judge/interpreting-verdicts), and
+[Migrating to 0.17](/docs/agent-judge/migration-0.17) for the one intended compile break and the
+construction-time changes.
+
 ## 0.15.0
 
 Agent Judge 0.15 is a compatibility-preserving dependency-alignment and release-reproducibility

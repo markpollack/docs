@@ -55,10 +55,11 @@ Bridge modules use it to expose relevant runtime evidence to ordinary judges.
 
 | Component | Contract |
 |---|---|
-| `status` | Required `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` |
+| `status` | Required `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR` |
 | `score` | Optional finite `Double` normalized to `[0.0, 1.0]` |
 | `label` | Optional non-blank classification |
-| `reasoning` | Required text and non-blank for `ABSTAIN` or `ERROR` |
+| `reasonCode` | Optional; required on `ERROR` from the instrument family, optional on `FAIL` from the subject family, forbidden otherwise |
+| `reasoning` | Required text; non-blank for `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR`, and for a coded `FAIL` |
 | `checks` | Immutable granular Boolean checks |
 | `metadata` | Recursively portable and immutable evidence |
 
@@ -67,7 +68,7 @@ Direct factories are `pass(reasoning)`, `fail(reasoning)`, `abstain(reasoning)`,
 `scored(normalizedScore).passingAt(threshold)` builds a measured result whose status follows an explicit threshold.
 The raw-scale overload normalizes a bounded source measurement before the threshold is applied.
 
-`effectiveScore()` returns the explicit score when present, derives `1.0` or `0.0` for an unscored `PASS` or `FAIL`, and is empty for `ABSTAIN` or `ERROR`.
+`effectiveScore()` returns the explicit score when present, derives `1.0` or `0.0` for an unscored `PASS` or `FAIL`, and is empty for `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR`.
 `elapsed()` derives `Duration` from the portable `elapsedMillis` metadata value.
 
 ## Check
@@ -80,8 +81,10 @@ Use its passing and failing factories to explain the evidence contributing to an
 `Jury.vote(context)` returns a `Verdict` containing aggregate and individual evidence.
 `SimpleJury` runs peer judges, while `CascadedJury` evaluates ordered tiers.
 
-Voting strategies are `MajorityVotingStrategy`, `ConsensusStrategy`, `AverageVotingStrategy`, `WeightedAverageStrategy`, and `MedianVotingStrategy`.
-`TiePolicy`, `ErrorPolicy`, and `TierPolicy` make edge behavior explicit.
+Voting strategies are `MajorityVotingStrategy`, `ConsensusStrategy`, `AverageVotingStrategy`, `WeightedAverageStrategy`, `MedianVotingStrategy`, `ConjunctiveStrategy`, and `AllMustPassStrategy`.
+`TiePolicy`, `ErrorPolicy`, `TierPolicy`, and `NotApplicablePolicy` make edge behavior explicit.
+
+`Verdict` carries seven components in 0.17, including `seats` and `decision`. See [Migrating to 0.17](/docs/agent-judge/migration-0.17) and [Interpreting verdicts](/docs/agent-judge/interpreting-verdicts).
 
 See [Jury System](/docs/agent-judge/jury-system) for their reduction rules.
 
@@ -107,5 +110,5 @@ It never derives price or assumes that the categories sum to the reported total.
 
 ## Version and migration
 
-Use all Agent Judge artifacts at version `0.15.0`.
+Use all Agent Judge artifacts at version `0.17.0`.
 Consumers migrating from the former score hierarchy should follow the [normalized Judgment migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md).

@@ -4,6 +4,25 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of September 13, 2026
+
+### Agent Judge 0.17.0
+
+**A jury whose own machinery fails no longer charges the subject for it, and `NOT_APPLICABLE` becomes its own status.**
+
+- Containment separates instrument failure from rejection: a strategy that throws or returns an aggregate it was not entitled to produce yields an `ERROR aggregation_failed` verdict marked undecided, with every judge's own result intact. In one evaluation corpus 20 of 39 runs had a jury that errored or abstained, and every one had been recorded as a subject that did not pass
+- `NOT_APPLICABLE` is the fifth judgment status — a question that should not have been asked, excluded from the denominator and counted separately. Exclusion must be declared in advance through `JudgeMetadata.notApplicableWhen`, and `NotApplicablePolicy` (`REFUSE` by default) governs what a strategy does with one
+- Every `ERROR` carries a `reasonCode` from a closed instrument vocabulary, and `errors_propagated` must name its origin
+- `Verdict` gains `seats` and `decision` — seven components — so a copied outcome is no longer indistinguishable from a computed one
+- `Verdicts.interpret` returns one `Interpretation` for any verdict, live or stored since 0.13, so consumers stop each deciding for themselves which status was a rejection
+- The EARS and RFC 2119 requirements judges gain conditional criteria, and reject an empty roster: a conjunctive rollup over an empty denominator was vacuously true, and 0.16.0 returned `PASS` for it
+
+Exhaustive switches over `JudgmentStatus` no longer compile, which is intended. The three-argument `JudgeMetadata` constructor is retained, so a judge that never excludes a subject needs no change.
+
+[Project](/projects/agent-judge) | [What's New](/docs/agent-judge/whats-new) | [Migrating to 0.17](/docs/agent-judge/migration-0.17) | [Source](https://github.com/markpollack/agent-judge)
+
+---
+
 ## Week of August 16, 2026
 
 ### Agent Client 0.29.0

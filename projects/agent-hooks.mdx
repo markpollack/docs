@@ -5,7 +5,9 @@ description: "Portable hook API for steering agent behavior at the tool-call bou
 
 **[What's New →](/docs/agent-hooks/whats-new)**
 
-**Current release: 0.8.2.**
+**Current release: 0.8.3.**
+
+**0.8.3:** Moves the Claude adapter to Claude Agent SDK 1.7.0 in provided scope; consumers supply the SDK. No source or API change. [Release notes](https://github.com/markpollack/agent-hooks/releases/tag/v0.8.3).
 
 **0.7.0:** Built on Spring AI 2.0.0, Spring Boot 4.0.7, and Claude Agent SDK 1.5.0. This release keeps the core-plus-adapters architecture and public dispatch API while correcting standalone dependency resolution, packaging, diagnostics, and Java compatibility claims.
 
@@ -122,14 +124,14 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-core</artifactId>
-    <version>0.8.2</version>
+    <version>0.8.3</version>
 </dependency>
 
 <!-- Spring AI adapter (auto-configured) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-spring</artifactId>
-    <version>0.8.2</version>
+    <version>0.8.3</version>
 </dependency>
 ```
 
@@ -138,7 +140,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-claude</artifactId>
-    <version>0.8.2</version>
+    <version>0.8.3</version>
 </dependency>
 ```
 
@@ -147,7 +149,7 @@ The event system is open (unsealed) — you can define custom events for your ru
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-hooks-gemini</artifactId>
-    <version>0.8.2</version>
+    <version>0.8.3</version>
 </dependency>
 ```
 

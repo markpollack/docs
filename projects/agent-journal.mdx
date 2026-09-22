@@ -3,11 +3,13 @@ title: "Agent Journal"
 description: "Structured execution events, portable agent traces, and derived analysis for Java agent research"
 ---
 
-**Current release: 1.8.2** · **[What's New →](/docs/agent-journal/whats-new)**
+**Current release: 1.10.1** · **[What's New →](/docs/agent-journal/whats-new)**
 
 Agent Journal is a Java library for recording agent runs as typed events and analyzing them after execution.
 It stores immutable execution facts separately from derived analysis, and it can project Claude Code, Gemini CLI,
 Grok, Codex, and Antigravity results into a shared journal model.
+Release 1.10.1 aligns `claude-code-capture` with Claude Agent SDK 1.7.0 and `gemini-cli-capture` with Gemini CLI SDK 0.30.0. No source or schema change from 1.10.0. [Release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.10.1).
+
 Release 1.8.0 adds tool-trajectory capture for Grok, Codex, and Antigravity, each parsed from that CLI's own
 durable JSONL stream into ordered tool and cost events. The three new modules carry no vendor SDK dependency
 and run on Java 17. The change is additive on the existing event and trace contracts.
@@ -44,7 +46,7 @@ The capture modules also depend on their respective Java SDKs, whose published b
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.8.2</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
@@ -66,7 +68,7 @@ The six released artifacts use the `io.github.markpollack` group ID and are avai
     Query generated journals with DuckDB.
   </Card>
   <Card title="API reference" icon="brackets-curly" href="/docs/agent-journal/api-reference">
-    Stable 1.8.2 entry points, events, storage operations, and capture options.
+    Stable 1.10.1 entry points, events, storage operations, and capture options.
   </Card>
 </CardGroup>
 

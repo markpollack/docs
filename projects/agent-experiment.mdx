@@ -5,7 +5,7 @@ description: "Reproducible Java experiment lifecycle for evaluating AI agents"
 
 **[What's New →](/docs/agent-experiment/whats-new)**
 
-**Current release: 0.7.1** · Java 21 · three modules
+**Current release: 0.9.0** · Java 21 · three modules
 
 ## Overview
 
@@ -48,9 +48,9 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
 
 | Module | Description | Key Dependencies |
 |--------|-------------|------------------|
-| `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.15.1, Agent Journal 1.8.2, Jackson |
-| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.5.1 |
-| `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.12.1, Agent Client 0.29.3 |
+| `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.17.0, Agent Journal 1.10.0, Jackson |
+| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.6.0 |
+| `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.12.3, Agent Client 0.30.0 |
 
 ## Documentation
 
@@ -75,7 +75,7 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
-    <version>0.7.1</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -102,13 +102,15 @@ credential-free smoke test.
 
 ## Release and Compatibility
 
+Version 0.9.0 records Agent Judge's verdict interpretation beside each result and uses Workflow 0.12.3. Earlier results remain readable and are not rewritten; `InterpretationReExport` can add readings while preserving stored verdicts. [Release notes](https://github.com/markpollack/agent-experiment/releases/tag/v0.9.0).
+
 Version 0.6.0 moves runtime judging to Agent Judge 0.14.0. Stored results use Agent
 Experiment-owned `RecordedJudgment` and `RecordedVerdict` projections. Existing 0.5 / Agent Judge
 0.13 result files load automatically and preserve normalized outcomes, reasoning, checks, labels,
 metadata, and available composite evidence. Re-saving writes the new format; obsolete range bounds,
 categorical allow-lists, and unnamed legacy composite identity cannot be reconstructed losslessly.
 
-Standalone consumers resolve Agent Journal/Capture 1.8.2, Jackson 2.22.2, and Jackson 3.2.2 without
+Standalone consumers resolve Agent Journal/Capture 1.10.0, Jackson 2.22.2, and Jackson 3.2.2 without
 an AgentWorks BOM. The parent artifact publishes one aggregate CycloneDX 1.6 JSON SBOM, and the
 stable release includes signed binaries, sources, and Javadocs with the project BSL text.
 

@@ -4,6 +4,40 @@ sidebarTitle: "What's New"
 description: "Release notes for AgentWorks BOM — auto-generated from git history"
 ---
 
+## 1.21.0 (2026-09-17)
+
+- Coordinate Agent Judge 0.17.0 with Workflow 0.12.3, Bench 0.6.3, and Experiment 0.9.0. The judge's result-format change adds `NOT_APPLICABLE` and rejects empty requirements rosters; workflow gates route an excluded aggregate as inconclusive.
+- Align Client 0.31.0, Journal 1.10.1, and Hooks 0.8.3 with Claude Agent SDK 1.7.0, which destroys the CLI process tree before closing streams on cancellation.
+- Add `agent-acp`, `agent-junie`, `agent-starter-junie`, and `junie-cli-capture` to management. The POM contains 85 managed entries, including 76 AgentWorks coordinates and nine third-party entries.
+
+## 1.20.0 (2026-08-28)
+
+- Repin Journal to 1.10.0, Experiment to 0.8.0, ACP Java SDK to 0.17.0, Claude Agent SDK to 1.6.0, and Client to 0.30.0.
+- Remove Jackson BOM and annotations management so the consumer's framework owns its Jackson line.
+
+## 1.19.1 (2026-08-25)
+
+- Correct Workflow to 0.12.2, Bench to 0.6.2, and Experiment to 0.7.2 — the upgrades claimed by 1.19.0's notes but absent from its shipped POM. Judge 0.15.2 and Journal 1.9.0 are unchanged.
+- Upgrade from 1.19.0 to bring the three consumers onto the parallel-jury correction train.
+
+## 1.19.0 (2026-08-25)
+
+- Repin Judge to 0.15.2, fixing a classloader defect that could silently drop judges from a parallel jury. Re-run evaluation scores that relied on affected juries.
+- Repin Journal to 1.9.0, retaining per-turn cost vectors, stop reasons, and tool-call ordinals and durations that earlier capture discarded.
+- Workflow 0.12.2, Bench 0.6.2, and Experiment 0.7.2 were intended, but the shipped pins remained 0.12.1, 0.6.1, and 0.7.1. The 1.19.1 correction takes precedence over the original release notes.
+
+## 1.18.0 (2026-08-25)
+
+- Assemble the maintenance train: Hooks 0.8.2, Journal 1.8.2, Workflow 0.12.1, Experiment 0.7.1, Memory 0.5.1, ACP Java SDK 0.16.1, Claude Agent SDK 1.5.1, Bench 0.6.1, Judge 0.15.1, Sandbox 0.10.2, and Client 0.29.3.
+- Expand management to all 72 discovered consumer-facing AgentWorks coordinates, including Client integrations, provider SDKs and starters, Journal capture integrations, Judge integrations, and the Experiment Workflow adapter.
+- Advance compatible dependency maintenance and converge JSpecify in the combined consumer graph; JUnit 6 remains deferred.
+
+## 1.17.0 (2026-08-24)
+
+- Assemble the compatibility train: Workflow 0.12.0, Hooks 0.8.0, Memory 0.5.0, Experiment 0.7.0, ACP Java SDK 0.16.0, Client 0.29.0, and Journal 1.8.0.
+- Carry Workflow's Agent Judge compatibility migration and preservation of inconclusive evidence through gate recovery, alongside the released Client and Journal compatibility baseline.
+- Add NetworkNT JSON Schema Validator management and select its compatible Jackson line; Workflow's direct published declarations also protect standalone consumers.
+
 ## 1.16.0 (2026-08-22)
 
 - Repin agent-client family 0.25.0 → 0.28.0, adding the Grok and Antigravity providers to the managed set

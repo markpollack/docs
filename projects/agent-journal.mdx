@@ -7,8 +7,12 @@ description: "Structured execution events, portable agent traces, and derived an
 
 Agent Journal is a Java library for recording agent runs as typed events and analyzing them after execution.
 It stores immutable execution facts separately from derived analysis, and it can project Claude Code, Gemini CLI,
-Grok, Codex, and Antigravity results into a shared journal model.
+Grok, Codex, Antigravity, and Junie results into a shared journal model.
 Release 1.10.1 aligns `claude-code-capture` with Claude Agent SDK 1.7.0 and `gemini-cli-capture` with Gemini CLI SDK 0.30.0. No source or schema change from 1.10.0. [Release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.10.1).
+
+Release **1.10.0** adds `junie-cli-capture` for Junie session traces, bringing six CLI runtimes into the portable trace and cost schema.
+Agent Client's Junie provider is wired to this capture module from Client 0.30.0.
+See the [Junie integration release notes](https://github.com/markpollack/agent-client/blob/v0.30.0/RELEASE_NOTES_0.30.0.md).
 
 Release 1.8.0 adds tool-trajectory capture for Grok, Codex, and Antigravity, each parsed from that CLI's own
 durable JSONL stream into ordered tool and cost events. The three new modules carry no vendor SDK dependency
@@ -36,9 +40,10 @@ and run on Java 17. The change is additive on the existing event and trace contr
 | `grok-cli-capture` | Grok CLI trajectory parsing and recording | Java 17+ |
 | `codex-cli-capture` | Codex CLI trajectory parsing and recording | Java 17+ |
 | `antigravity-cli-capture` | Antigravity CLI trajectory parsing and recording | Java 17+ |
+| `junie-cli-capture` | Junie CLI session trace parsing and recording | Java 17+ |
 
 `journal-core` uses Jackson 2 and the SLF4J API.
-The capture modules also depend on their respective Java SDKs, whose published bytecode requires Java 21.
+The Claude Code and Gemini CLI capture modules also depend on their respective Java SDKs, whose published bytecode requires Java 21.
 
 ## Install
 
@@ -50,7 +55,7 @@ The capture modules also depend on their respective Java SDKs, whose published b
 </dependency>
 ```
 
-The six released artifacts use the `io.github.markpollack` group ID and are available from [Maven Central](https://central.sonatype.com/search?q=g%3Aio.github.markpollack%20AND%20a%3Ajournal-core).
+The seven released artifacts use the `io.github.markpollack` group ID and are available from [Maven Central](https://central.sonatype.com/search?q=g%3Aio.github.markpollack%20AND%20a%3Ajournal-core).
 
 ## Documentation
 

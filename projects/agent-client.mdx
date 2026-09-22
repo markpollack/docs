@@ -54,6 +54,10 @@ AgentClientResponse response = client.run("Create hello.txt");
 
 ## Providers
 
+Since Agent Client **0.30.0**, the `agent-junie` provider brings Junie through the same Java API.
+It speaks the Agent Client Protocol using `acp-core` as its transport, so it needs no provider SDK.
+See the [0.30.0 release notes](https://github.com/markpollack/agent-client/blob/v0.30.0/RELEASE_NOTES_0.30.0.md).
+
 Claude Code, Codex, Gemini CLI, Grok, and Antigravity all pass the provider parity TCK — ten scenarios each, zero skips, against live CLIs. CI re-verifies Claude Code, Codex, and Gemini on every commit; Grok and Antigravity are verified against live CLIs but cannot run in CI, because both authenticate interactively and cache credentials rather than reading an API key. Amazon Q, Amp, Qwen Code, and SWE-agent carry no parity coverage and remain experimental. Provider selection happens at construction time — everything after `AgentClient.create(model)` uses the shared client contract.
 
 ## LOOSE / STRICT Modes

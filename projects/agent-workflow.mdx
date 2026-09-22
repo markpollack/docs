@@ -49,6 +49,36 @@ A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a comple
 - **Steering** (planned) — runtime hooks that intercept before/after steps to enforce constraints, redirect behavior, or inject guidance. Deterministic or LLM-powered. Integrates with [Spring AI](https://spring.io/projects/spring-ai) advisors and the [Claude Agent SDK](/projects/claude-agent-sdk) hook system
 - **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
 
+## Hosted execution with ManagedAgentStep
+
+`ManagedAgentStep` runs a workflow step in Anthropic's hosted sandbox, with bash, file operations, and web tools.
+The workflow graph still controls the sequence; the hosted agent performs the work inside that step and returns its text result.
+Each execution creates a new session for the agent.
+
+Use `workflow-flows`, set `ANTHROPIC_API_KEY` for an account with Managed Agents access, and create an agent and environment in Anthropic's API first.
+In this example from the [0.7.0 release notes](/docs/agent-workflow/whats-new#managedagentstep), `agentId` and `envId` are those existing IDs, and `analyzeStep` and `validateStep` are steps you have already defined:
+
+```java
+var workflow = WorkflowGraph.builder()
+    .step("analyze", analyzeStep)
+    .step("remediate", ManagedAgentStep.of(agentId, envId).name("fix"))
+    .step("validate", validateStep)
+    .build();
+```
+
+Add the official Anthropic SDK dependency alongside `workflow-flows`.
+It is optional and needed only when you use `ManagedAgentStep`:
+
+```xml
+<dependency>
+    <groupId>com.anthropic</groupId>
+    <artifactId>anthropic-java</artifactId>
+    <version>2.34.0</version>
+</dependency>
+```
+
+The [ManagedAgentStep release notes](/docs/agent-workflow/whats-new#managedagentstep) also show timeouts, direct execution, and provisioning an agent inline with `ManagedAgentStep.create(...)`.
+
 ## Start Here
 
 <CardGroup cols={2}>

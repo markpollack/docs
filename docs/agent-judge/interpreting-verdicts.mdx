@@ -113,23 +113,23 @@ with the implementation review, and prints a full reading including every record
 
 ### When a pass rate is absent
 
-`pass_rate` returns absent rather than `0` when the denominator is empty. Describe that as **no
-items eligible for the denominator** — never as "no item was judged", which is a different claim and
-is usually false in exactly this case.
+`pass_rate` returns absent rather than `0` when no items qualify. Describe that as
+**no items qualify for inclusion in this pass rate** — never as "no item was judged", which is a
+different claim and is usually false in exactly this case.
 
-Two absences leave the denominator for different reasons, and they stay distinct:
+Two absences leave the scoring set for different reasons, and they stay distinct:
 
 - An item with **no verdict at all** never enters the tally. Nothing ran.
 - `NOT_ASSESSED` means a jury **did** run and could not assess. That is an instrument failure, and it
   is counted as one.
 
-An item can also be `NOT_APPLICABLE` — excluded and counted separately. So a denominator can be empty
-while every item was judged.
+An item can also be `NOT_APPLICABLE` — excluded and counted separately. So there can be nothing
+left to score even though every item was judged.
 
 ## What this deliberately does not say
 
-Whether any reading counts against the subject, enters a denominator, or affects a rate. **That
-policy belongs to the consumer that owns the denominator**, which is why the counting above is
+Whether any reading counts against the subject, counts toward a rate, or changes that rate. **That
+policy belongs to the consumer that owns the counting**, which is why the counting above is
 Experiment's and none of it is in the file.
 
 ## The Java surface

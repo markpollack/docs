@@ -136,7 +136,7 @@ If no applicable judges remain after abstention and error handling, the result i
 | `PROPAGATE` | Return an aggregate `ERROR` immediately; the default |
 | `TREAT_AS_FAIL` | Include the errored judgment as a failure |
 | `TREAT_AS_ABSTAIN` | Convert it to a non-vote, recording the conversion |
-| `IGNORE` | Remove it from the aggregation population and weight denominator |
+| `IGNORE` | Remove it from the vote and from the weight total |
 
 `TiePolicy` selects `PASS`, `FAIL`, or `ABSTAIN` when a strategy has no winner; the default for majority voting is `FAIL`.
 

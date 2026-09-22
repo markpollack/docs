@@ -48,22 +48,22 @@ produce a rejection indistinguishable from a real one in every stored field.
 
 ## `NOT_APPLICABLE` is its own status
 
-Five statuses now. The difference between the last three is what a denominator does with them.
+Five statuses now. The difference between the last three is how each status is counted.
 
-| Status | The question | A denominator |
+| Status | The question | How it is counted |
 |---|---|---|
-| `PASS` | asked, answered yes | counted, in the numerator |
+| `PASS` | asked, answered yes | counted as a success |
 | `FAIL` | asked, answered no | counted, against the subject |
 | `ABSTAIN` | applied, undecided | counted; no vote cast |
 | `NOT_APPLICABLE` | should not have been asked | **excluded**, and counted separately |
-| `ERROR` | never reached | excluded from the subject denominator |
+| `ERROR` | never reached | not counted against the subject |
 
 `ABSTAIN` no longer means "not applicable" anywhere. Missing evidence is still `ABSTAIN`.
 
 ### Exclusion must be declared in advance
 
-Exclusion is the one outcome that removes a judge from its own denominator, which makes it the one
-outcome an instrument could use to dodge a question it does not like the look of.
+Exclusion is the one outcome that lets a judge exclude its own judgment from the combined result,
+which makes it the one outcome an instrument could use to dodge a question it does not like the look of.
 
 - `JudgeMetadata` gains `notApplicableWhen`: the condition under which this judge may exclude.
 - `Judges.notApplicableCapability(Judge)` is the one lookup, and walks wrapper chains outward in, so
@@ -167,8 +167,8 @@ explicit seats.
 ### Requirements judges: an empty roster no longer passes
 
 `EarsJudge.create` and `Rfc2119Judge.create` reject an empty roster, and the rollup refuses one
-independently. A roster is a denominator, and a conjunctive rollup over an empty one is vacuously
-true.
+independently. The roster is what the result is measured against. With nothing in it, nothing could
+fail, so the roll-up passed.
 
 **A stored `PASS` with a `criteriaTotal` or `constraintsTotal` of `0` identifies a run affected
 before this fix.** Parsing is unchanged: a document that matches nothing still yields an empty list,

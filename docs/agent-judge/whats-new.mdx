@@ -13,18 +13,17 @@ the implementation it describes. 0.17 changes both.
 
 `EarsCriterion` and `Rfc2119Constraint` gain an optional **applicability clause**. A criterion may
 declare when it does not apply; the prompt then offers `NOT_APPLICABLE` only for criteria that carry
-one, naming them. An excluded criterion leaves the roster's denominator and is counted separately,
-with a mandatory reason. Excluding an unconditional criterion, or excluding one with no reason, is a
+one, naming them. An excluded criterion drops out of what the result is measured against, and is
+reported on its own, with a mandatory reason. Excluding an unconditional criterion, or excluding one with no reason, is a
 protocol error rather than a finding, and is never counted as an authorized exclusion.
 
 <Warning>
 **A requirements judge with no requirements no longer passes.** `EarsJudge.create` and
 `Rfc2119Judge.create` reject an empty roster, and the rollup refuses one independently.
 
-A roster is a denominator, and a conjunctive rollup over an empty one is vacuously true: nothing
-failed, nothing was unestablished, so the implementation "satisfies the specification". Released
-0.16.0 returns `PASS` for that, and the result is indistinguishable in every stored field from a
-specification that was genuinely met.
+The roster is what the result is measured against. With nothing in it, nothing could fail, so the
+roll-up passed. Released 0.16.0 returns `PASS` for that, and the result is indistinguishable in every
+stored field from a specification that was genuinely met.
 
 **A stored `PASS` with a `criteriaTotal` or `constraintsTotal` of `0` identifies a run affected
 before this fix.** Parsing is unchanged — a document that matches nothing still yields an empty list,
@@ -42,7 +41,7 @@ produce yields an `ERROR aggregation_failed` verdict marked undecided, with ever
 intact. Machinery failure never supplies rejection evidence, not even under `TREAT_AS_FAIL`.
 
 `NOT_APPLICABLE` also becomes its own judgment status, distinct from `ABSTAIN`: a question that
-should not have been asked, excluded from the denominator and counted separately. Exclusion must be
+should not have been asked, left out of the pass rate, and **counted separately**. Exclusion must be
 declared in advance, and every `ERROR` now carries a `reasonCode` naming its cause.
 
 ### Reading a stored verdict later

@@ -107,7 +107,7 @@ Most of these cost nothing to run.
 
 - **Enumerate the inputs on which it *cannot* return `FAIL`.** Not "can it fail?" — *which inputs cannot*. Empty strings, `.`, an absolute path, `../escape`, and a directory where a file was expected are the usual five.
 - `allMatch` / `anyMatch` over a possibly-empty stream. `allMatch` over empty is `true`: a check that passes because it examined nothing.
-- **State the denominator in the message.** `"0 of 0 references resolved"` must not render as `"all references resolve"`.
+- **State how many references were checked and how many resolved.** `"0 of 0 references resolved"` must not render as `"all references resolve"`.
 - **Path escape.** `resolve()` returns an *absolute* argument unchanged, so a path can leave the workspace. That is a misconfigured judge — `ERROR`, not `FAIL`.
 - **Checks vs. status.** A judgment carrying a failing `Check` must not be `PASS`.
 - **Dated assets.** A pinned model id is a dated asset. Scan for retired ones.

@@ -26,7 +26,8 @@ This avoids two fields representing the same fact and later disagreeing.
 `effectiveScore()` derives a numeric view when a voting strategy needs one.
 
 The constructor enforces the cross-field rules.
-`ABSTAIN` and `ERROR` cannot carry a score, `ERROR` cannot carry a label, and both require non-blank reasoning.
+`ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` cannot carry a score, and all three require non-blank reasoning.
+`ERROR` cannot carry a label.
 
 ## Errors are outcomes, not exception transport
 

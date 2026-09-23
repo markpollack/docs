@@ -63,7 +63,8 @@ Bridge modules use it to expose relevant runtime evidence to ordinary judges.
 | `checks` | Immutable granular Boolean checks |
 | `metadata` | Recursively portable and immutable evidence |
 
-Direct factories are `pass(reasoning)`, `fail(reasoning)`, `abstain(reasoning)`, and `error(reasoning)`.
+Direct factories are `pass(reasoning)`, `fail(reasoning)`, `abstain(reasoning)`, `notApplicable(reasoning)`, and `error(reasoning)`.
+Returning `NOT_APPLICABLE` requires an [exclusion condition declared in advance](/docs/agent-judge/migration-0.17#exclusion-must-be-declared-in-advance).
 `verdict(boolean)` starts an enrichable Boolean result without storing a duplicate score.
 `scored(normalizedScore).passingAt(threshold)` builds a measured result whose status follows an explicit threshold.
 The raw-scale overload normalizes a bounded source measurement before the threshold is applied.

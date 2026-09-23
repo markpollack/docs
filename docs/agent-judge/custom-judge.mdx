@@ -77,7 +77,9 @@ For a Boolean policy, return `Judgment.pass(reasoning)`, `Judgment.fail(reasonin
 For a real measurement, begin with `Judgment.scored(normalizedScore)` and declare the passing threshold.
 For a categorical policy, set a label in addition to the required status.
 
-Use `Judgment.abstain(reasoning)` when the judge is not applicable or lacks required evidence, and `Judgment.error(reasoning)` when evaluation could not complete — logging the originating exception where it was caught.
+Use `Judgment.abstain(reasoning)` when the question applies but remains undecided, including when required evidence is missing.
+Use `Judgment.notApplicable(reasoning)` when the question should not have been asked, and [declare the exclusion condition in advance](/docs/agent-judge/migration-0.17#exclusion-must-be-declared-in-advance).
+Use `Judgment.error(reasoning)` when evaluation could not complete — logging the originating exception where it was caught.
 
 <Warning>
 `ERROR` is not a low score. It is not a number at all.
@@ -112,10 +114,11 @@ Most of these cost nothing to run.
 - **Checks vs. status.** A judgment carrying a failing `Check` must not be `PASS`.
 - **Dated assets.** A pinned model id is a dated asset. Scan for retired ones.
 
-## Test all four outcome paths
+## Test the five outcome paths
 
 Assert `status()`, never `pass()`.
-`pass()` is `false` for `FAIL`, `ERROR` **and** `ABSTAIN` alike, so a test written on it cannot tell a rejection from a judge that never ran.
+`pass()` is `false` for `FAIL`, `ABSTAIN`, `NOT_APPLICABLE` **and** `ERROR` alike, so a test written on it cannot tell a rejection from a judge that never ran.
+For a judge that declares an exclusion condition, test both the applicable and excluded cases; an undeclared exclusion must not be accepted.
 
 > **Write the verdict tests from the criterion, never from the code.**
 > A test written from the code's behaviour cannot disagree with the code.

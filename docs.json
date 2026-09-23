@@ -164,6 +164,7 @@
                     "group": "Tutorial",
                     "pages": [
                       "docs/agent-judge/tutorial",
+                      "docs/agent-judge/petclinic-case-study",
                       "docs/agent-judge/custom-judge"
                     ]
                   },

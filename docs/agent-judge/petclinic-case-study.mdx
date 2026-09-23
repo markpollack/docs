@@ -1,0 +1,226 @@
+---
+title: "PetClinic: running the specification"
+description: "Follow five evaluations from a passing build through written requirements, a JUnit merge gate, and an investigation"
+---
+
+An agent has implemented smart appointment scheduling for PetClinic.
+The application builds and its existing tests pass.
+How do you establish whether it meets the requirements it was given?
+
+This case study runs written requirements back against that implementation.
+It follows the [conference example](https://www.youtube.com/live/sTcx0EvILr4?t=3702) through five modules: build, a small acceptance-criteria slice, a complete use case, architectural constraints, and one investigation.
+Each step asks a different question of the same prepared candidate.
+
+The [fundamentals tutorial](/docs/agent-judge/tutorial) teaches evaluation concepts one at a time.
+This applied path has its own numbering and Maven reactor under [`case-studies/spec-driven-petclinic/`](https://github.com/markpollack/agent-judge-tutorial/tree/main/case-studies/spec-driven-petclinic).
+Module 01 here is the PetClinic build, not fundamentals module 01.
+
+## The specification sets the bar
+
+The subject is Anton Arhipov's spec-driven PetClinic branch at `fc9df4af`.
+The acceptance criteria and architectural rules were written before its implementation.
+The case study reads them from the vendored specification without rewriting them to fit the generated code.
+
+Two documents provide the criteria for this path:
+
+- `manage-appointment-lifecycle/criteria.md`: 52 EARS acceptance criteria describing behavior.
+- `rules.md`: 13 feature-wide architectural constraints using RFC 2119 `MUST` requirements.
+
+The vendored source remains unchanged.
+Preparation creates a buildable copy and applies the project's formatter to it, as described in the [fixture provenance](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/fixtures/petclinic/PROVENANCE.md).
+That prepared candidate stays fixed throughout the evaluations.
+
+## Four separate decisions
+
+The model does not decide whether to merge.
+Keep these responsibilities separate as you follow the examples:
+
+| Stage | Responsibility |
+|---|---|
+| Model assessment | Answer each requirement and supply supporting evidence |
+| Java rollup | Check the response against the document's roster and compute the judgment |
+| Merge policy | Require `PASS`; an undecided or failed requirement does not clear the gate |
+| Investigation | Take a failed requirement as a lead and establish its consequence and reachability |
+
+The model-backed steps replay committed responses from earlier agent runs.
+Parsing, rollup, and assertions still execute, but replay does not reassess the implementation with a new model call.
+It makes this particular run inspectable and repeatable.
+
+## 01: Does it build and pass its existing tests?
+
+Start with a question that deterministic tools can answer.
+`BuildSuccessJudge.maven("test")` runs the real candidate build and carries its outcome as a `Judgment`.
+The evidence comes from Maven, the compiler, and the existing tests.
+**Expected result: `PASS`.**
+
+This establishes that the build and those tests succeeded.
+It does not establish conformance to every requirement in the specification: that depends on what the tests actually check.
+A fixture test count describes the tested codebase; it is not telemetry reported by `BuildSuccessJudge`.
+
+Use ordinary tooling whenever you can write the rule that decides the answer.
+The next step introduces a question that requires reading a written requirement against the implementation.
+
+## 02: Do six acceptance criteria hold?
+
+`EarsJudge` reads six consecutive criteria, `UC6-AC7` through `UC6-AC12`, from the appointment-lifecycle document.
+They form a coherent slice about cancellation and rebooking.
+For example, `UC6-AC7` requires an owner's cancellation of a future, booked appointment to change its status to `CANCELLED`.
+
+The requirements are read verbatim into the assessment.
+The recorded response gives one answer per criterion, with references to the implementation and supporting tests.
+Java checks those answers against the six-item roster.
+**Expected result: six criteria established, overall `PASS`.**
+
+The response also includes observations about nearby behavior and test coverage.
+Those observations are non-binding evidence: they add no criteria, have no status of their own, and do not affect the rollup.
+The specification remains the source of the evaluation bar.
+
+Passing this slice establishes the recorded assessment of these six requirements.
+It says nothing about the rest of the use case, so the next module reads the entire document.
+
+## 03: Does the complete use case hold?
+
+The instrument remains `EarsJudge`; the roster grows to all 52 acceptance criteria.
+The recorded answers establish 51, reject none, and leave `UC6-AC41` undecided.
+That criterion asks whether deactivating a veterinarian preserves that veterinarian on existing appointments.
+**Expected result: 51 `PASS`, zero `FAIL`, one `ABSTAIN`; overall `ABSTAIN`.**
+
+Every applicable required criterion must be established before this judge can return `PASS`.
+The unresolved criterion stays named in the result.
+An average would hide the question that remains open, while calling it `FAIL` would assert a violation the assessment did not establish.
+
+For these unconditional requirements, the strict rollup is:
+
+```text
+any ERROR        -> ERROR
+else any FAIL    -> FAIL
+else any ABSTAIN -> ABSTAIN
+else             -> PASS
+```
+
+This is the requirements judges' own rollup.
+`AllMustPassStrategy` drops abstentions and does not implement it; passing 51 `PASS` judgments and one `ABSTAIN` through that strategy yields `PASS`.
+See [Requirements judges](/docs/agent-judge/requirements-judges#the-document-supplies-the-roster) for the full contract, including conditional requirements.
+
+## 04: Is the same code built the way it was specified?
+
+Keep the implementation fixed and change the authoritative document.
+`Rfc2119Judge` reads the thirteen constraints in `rules.md`, including transaction boundaries, lock ordering, and authorization.
+The recorded response assesses each rule against the code, and Java computes the result.
+**Expected result: five `PASS`, eight `FAIL`; overall `FAIL`.**
+
+Behavioral acceptance criteria and architectural constraints ask different questions.
+A passing build or an established behavior does not settle whether the implementation follows its specified architecture.
+The changed result comes from the changed question, not from changing the candidate.
+
+Each failed constraint identifies something to investigate.
+Eight failed constraints are not eight proven bugs: their consequences and reachability still need to be established.
+Inspect the cited code rather than treating the model's surrounding prose as verified fact.
+Citation checks in this case study are evidence about this checked run, not a guarantee that model citations are reliable in general.
+
+## Put the bar in JUnit
+
+The behavioral merge gate is an ordinary JUnit test.
+This excerpt omits the class setup and imports; [the complete source](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java) supplies the specification path, candidate context, and recorded-response backend.
+
+```java
+@Test
+@DisplayName("Should I merge? All 52 UC6 requirements must PASS")
+void shouldMergeUc6Behavior() {
+    var requirements = EarsCriterion.from(CRITERIA);
+
+    var judge = EarsJudge.create("appointment-lifecycle", requirements, model);
+
+    assertPass(judge, context);
+}
+```
+
+The tutorial's `JudgeAssertions.assertPass` requires the exact `PASS` status and reports the actual status, reasoning, and checks that did not pass.
+The behavioral gate goes red on `ABSTAIN`; the architectural gate goes red on `FAIL`.
+The six-criterion slice goes green.
+No one has to translate a score into a merge decision after the run: the acceptance policy was explicit beforehand.
+
+The regression tests ask a different question:
+
+| Test | Assertion | Expected result |
+|---|---|---|
+| Evaluator regression test | Replay reproduces its recorded `ABSTAIN` or `FAIL` | Green when the evaluator behaves as expected |
+| `ShouldIMerge*Demo` gate | The application meets the required bar: `PASS` | Red for the behavioral and architectural runs |
+
+The deliberately red demonstration gates are separate from the ordinary regression suite.
+Follow [DRY-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/DRY-RUN.md) for the presenter workflow and exact gate invocations.
+
+## 05: What does one failed rule mean, and can it happen?
+
+Module 05 takes `RULE-4` from the architectural judgment's failed checks.
+The rule specifies a global order for acquiring locks.
+The first assessment points to a path that acquires a request lock before acquiring an owner lock, reversing the required order.
+
+The investigation asks a separate question: establish the consequence and whether it is reachable.
+It may disagree with the initial assessment, narrow its claim, or de-escalate it.
+Finding that a concern cannot occur would be a useful answer.
+
+Exactly one investigation is replayed here.
+**Recorded result: `CONFIRMED` / `REACHABLE`.**
+The evidence connects the staff-offer path's lock order to an owner-first path reached by the scheduled lifecycle processor.
+The investigation also refines the first citation from `StaffFallbackService.java:247`, the method declaration, to `:248`, the first lock acquisition.
+
+The lock ordering and reachability were checked in the source.
+The recording additionally claims an H2 deadlock reproduction, but that claim was not independently verified and is not an established result of this tutorial.
+
+Investigation explains a rejected gate; it does not repair the implementation.
+The final merge gate stays rejected.
+
+## Read the released 0.17 status contract
+
+Keep the outcome separate from the merge policy that consumes it:
+
+| Status | What it establishes |
+|---|---|
+| `PASS` | The question was answered yes |
+| `FAIL` | The question was answered no |
+| `ABSTAIN` | The question applies, but remains undecided |
+| `NOT_APPLICABLE` | A declared exclusion applies; the question should not have been asked |
+| `ERROR` | The instrument failed to complete a valid assessment |
+
+Missing evidence is not a reason to exclude a requirement.
+In 0.17, requirements may be excluded only when their applicability condition was declared before assessment, and the exclusion must give a reason.
+Authorized exclusions are left out and counted separately; an unauthorized exclusion is a protocol error.
+An `ERROR` carries an instrument-family reason code and non-blank reasoning, not a negative finding against the application.
+
+The PetClinic rosters used here are unconditional.
+Their undecided criterion remains `ABSTAIN` and blocks a pass.
+For executable examples against released 0.17.0, use the [requirements guide](/docs/agent-judge/requirements-judges#run-the-examples); for consumer changes, see [Migrating to 0.17](/docs/agent-judge/migration-0.17).
+
+## When a judgment can become a deterministic check
+
+After investigation, ask which requirements can be expressed reliably as an ordinary test, an ArchUnit rule, or another deterministic check.
+Once a tool can settle that question, use it instead of repeatedly asking a model.
+This remains a future direction here: module 06 and ArchUnit promotion are not implemented in the current case-study path.
+
+There is a second obligation: name the judgments the proposed check cannot express.
+A check that inspects package dependencies, for example, does not by itself establish a global lock order across concurrent transactions.
+Replacing a richer judgment with that check would lose part of the requirement while still producing a reassuring green result.
+
+This path establishes an evaluation bar and applies it to one fixed subject.
+[Agent Experiment](/projects/agent-experiment) asks which change improves the system while holding that bar fixed.
+Changing the criteria along with the implementation would make the before-and-after results incomparable.
+
+## Run it and continue
+
+Use the [case-study README](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/README.md) for preparation, commands, and expected output at the linked revision.
+Use [DRY-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/DRY-RUN.md) for the presentation workflow.
+The [tutorial version table](/docs/agent-judge/tutorial#framework-versions) records the dependency used by the published tutorial; the released library's contract and the tutorial's dependency version are separate facts.
+
+Recorded responses remove live model calls, but Maven still needs first-build downloads, including dependencies for the real PetClinic build.
+Prepare those caches before an offline run, and ensure offline settings reach nested builds as well as the outer reactor.
+An unset API key does not establish that no network access occurred.
+
+<CardGroup cols={2}>
+  <Card title="Fundamentals tutorial" icon="graduation-cap" href="/docs/agent-judge/tutorial">
+    Learn the evaluation concepts one at a time in eleven modules.
+  </Card>
+  <Card title="Requirements judges" icon="list-check" href="/docs/agent-judge/requirements-judges">
+    Run standalone EARS and RFC 2119 examples and understand their contracts.
+  </Card>
+</CardGroup>

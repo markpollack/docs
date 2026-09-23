@@ -87,16 +87,17 @@ Read `result.status()` first.
 `result.score()` and `result.label()` may be `null` because a Boolean decision does not duplicate its outcome as a stored number or category.
 Use `result.effectiveScore()` only when an aggregation algorithm deliberately needs a numeric view of `PASS` or `FAIL`.
 
-## Four outcomes, not two
+## Five outcomes, not two
 
 | Status | Meaning |
 |---|---|
 | `PASS` | checked, satisfied |
 | `FAIL` | checked, not satisfied |
-| `ABSTAIN` | not applicable to this subject |
+| `ABSTAIN` | applied, undecided |
+| `NOT_APPLICABLE` | should not have been asked |
 | `ERROR` | could not complete — **not** a low score, and not a number at all |
 
-`pass()` is `false` for `FAIL`, `ERROR` **and** `ABSTAIN` alike.
+`pass()` is `false` for `FAIL`, `ABSTAIN`, `NOT_APPLICABLE` **and** `ERROR` alike.
 A consumer that branches on `!pass()` records a judge that never ran as a rejected subject.
 Assert `status()`.
 

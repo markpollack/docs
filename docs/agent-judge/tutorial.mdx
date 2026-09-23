@@ -1,6 +1,6 @@
 ---
 title: "Executable Tutorial"
-description: "Eleven credential-free Maven modules, sequenced by the evaluation problem"
+description: "Eleven credential-free fundamentals modules and the PetClinic requirements case study from the conference"
 ---
 
 The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial) is the canonical sample suite.
@@ -18,15 +18,37 @@ Run every module from the repository root — the demos resolve `test-workspace`
 
 No module needs an API key or a live model endpoint.
 
-## The subject
+## PetClinic case study
 
-Every module judges the same change.
+The conference example, [Running the Spec You Already Wrote](https://github.com/markpollack/agent-judge-tutorial/tree/main/case-studies/spec-driven-petclinic), lives alongside the fundamentals in `case-studies/spec-driven-petclinic/`.
+It evaluates a generated Spring application against requirements written before the code existed.
+Its five modules have their own numbering and Maven reactor:
+
+| Module | What it checks |
+|---|---|
+| `module-01-build` | Build and existing tests, using `BuildSuccessJudge` |
+| `module-02-ears-slice` | Six acceptance criteria, using `EarsJudge` |
+| `module-03-ears-usecase` | All 52 criteria in one use case, using `EarsJudge` |
+| `module-04-rfc2119-rules` | Thirteen architectural constraints, using `Rfc2119Judge` |
+| `module-05-investigation` | The consequence and reachability of one failed constraint |
+
+The model-backed steps replay committed recordings without credentials.
+Module 01 runs a real build; download dependencies before attempting an offline run.
+Follow the case study's [README](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/README.md) to run it, or its [presenter walkthrough](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/DRY-RUN.md) for the IntelliJ merge gates.
+The regression tests assert recorded outcomes; the merge gates require `PASS`, so the behavior and architecture gates deliberately go red.
+Module 06, deterministic promotion, remains a discussion rather than an implemented module.
+
+For the judge contract and standalone examples using released Agent Judge 0.17.0, see [Requirements judges](/docs/agent-judge/requirements-judges).
+
+## The fundamentals subject
+
+Every fundamentals module judges the same change.
 `test-workspace` is a small Maven project whose `HelloController` delegates to a service and returns a record — the codebase's idiom.
 An agent was asked to expose a sales report endpoint and added `ReportController`, which opens its own JDBC connection, concatenates SQL from request parameters, builds JSON by hand, swallows the exception, and closes nothing.
 
 It compiles. It is in the right package. It is named correctly. It has the requested method.
 
-## The sequence
+## The fundamentals sequence
 
 The modules are ordered by the evaluation problem each one creates, not by the next API.
 
@@ -59,7 +81,7 @@ Still deterministic, just not one assertion. Module 05.
 **Judgment.** The property itself requires interpretation — does this fit the conventions of this codebase, did the review identify the important risks, is the proposed API sensible, did the implementation satisfy the user's intent.
 This is where a model-backed judge earns its existence. Modules 01 and 07.
 
-## The live path
+## The fundamentals live path
 
 Four modules, roughly ten minutes, in directory order:
 

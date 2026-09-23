@@ -21,7 +21,7 @@ Exact comparison is still appropriate when exact output is part of the specifica
 | Judge requirements, not resemblance | Express the invariants the result must satisfy instead of assuming one reference implementation is uniquely correct. | Composable deterministic, file-semantic, execution, RAG, and model-backed judges |
 | Escalate in stages | Run cheap, decisive checks before slower or more subjective evaluation. | `CascadedJury` with explicit tier policies |
 | Compose independent perspectives | Combine checks with different failure modes and make their aggregation policy visible. | `SimpleJury`, `MetaJury`, majority, consensus, average, weighted-average, and median strategies |
-| Preserve uncertainty | Keep disagreement, lack of applicability, and evaluator failure distinct from a negative finding. | `PASS`, `FAIL`, `ABSTAIN`, and `ERROR` outcomes with structured aggregation evidence |
+| Preserve uncertainty | Keep disagreement, lack of applicability, and evaluator failure distinct from a negative finding. | `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` outcomes with structured aggregation evidence |
 
 These are design principles, not claims that Agent Judge implements every technique proposed in the literature. Calibrated guarantees of human agreement, dynamic judge-team selection, multi-round debate, and formal program-equivalence proofs remain research or application-level concerns.
 

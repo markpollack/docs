@@ -130,15 +130,18 @@ The framework bridges are optional at the application boundary; your application
 
 ## Run the tutorial
 
+Check out the tested tutorial revision for Agent Judge 0.17.0:
+
 ```bash
 git clone https://github.com/markpollack/agent-judge-tutorial.git
 cd agent-judge-tutorial
-./mvnw install -DskipTests
+git checkout 106ca35a74ebdd9995329cb0bde63d66a9e7e8ed
+./mvnw install
 ./mvnw exec:java -pl module-01-oracle-boundary
 ```
 
 Eleven modules, sequenced by the evaluation problem rather than by the API.
-No module needs an API key.
+No module needs an API key. The first build downloads Maven dependencies; see the [tutorial](/docs/agent-judge/tutorial) for the fundamentals and PetClinic learning paths.
 
 ## Next
 

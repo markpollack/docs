@@ -3,13 +3,15 @@ title: "Executable Tutorial"
 description: "Eleven credential-free fundamentals modules and the PetClinic requirements case study from the conference"
 ---
 
-The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial) is the canonical sample suite.
-Each module is a small executable Maven project compiled against Agent Judge 0.16.0-SNAPSHOT.
+The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) is the canonical sample suite.
+Each module is a small executable Maven project compiled against Agent Judge 0.17.0.
+The commands and source links on these pages select the tested 0.17.0 tutorial revision.
 
 ```bash
 git clone https://github.com/markpollack/agent-judge-tutorial.git
 cd agent-judge-tutorial
-./mvnw install -DskipTests
+git checkout 106ca35a74ebdd9995329cb0bde63d66a9e7e8ed
+./mvnw install
 ./mvnw exec:java -pl module-01-oracle-boundary
 ```
 
@@ -17,10 +19,11 @@ The `install` step is needed once: later modules reuse judges written in earlier
 Run every module from the repository root — the demos resolve `test-workspace` relative to where Maven was launched.
 
 No module needs an API key or a live model endpoint.
+The first build downloads Maven dependencies; prepare the caches before attempting an offline run.
 
 ## PetClinic case study
 
-The conference example, [Running the Spec You Already Wrote](https://github.com/markpollack/agent-judge-tutorial/tree/main/case-studies/spec-driven-petclinic), lives alongside the fundamentals in `case-studies/spec-driven-petclinic/`.
+The conference example, [Running the Spec You Already Wrote](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic), lives alongside the fundamentals in `case-studies/spec-driven-petclinic/`.
 It evaluates a generated Spring application against requirements written before the code existed.
 Read [PetClinic: running the specification](/docs/agent-judge/petclinic-case-study) for the learning sequence, the evidence behind each result, and the distinction between assessment, rollup, merge policy, and investigation.
 Its five modules have their own numbering and Maven reactor:
@@ -35,7 +38,7 @@ Its five modules have their own numbering and Maven reactor:
 
 The model-backed steps replay committed recordings without credentials.
 Module 01 runs a real build; download dependencies before attempting an offline run.
-Follow the case study's [README](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/README.md) to run it, or its [presenter walkthrough](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/DRY-RUN.md) for the IntelliJ merge gates.
+Follow the case study's [README](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/README.md) to run it, or its [presenter walkthrough](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/DRY-RUN.md) for the IntelliJ merge gates.
 The regression tests assert recorded outcomes; the merge gates require `PASS`, so the behavior and architecture gates deliberately go red.
 Module 06, deterministic promotion, remains a discussion rather than an implemented module.
 
@@ -55,7 +58,7 @@ The modules are ordered by the evaluation problem each one creates, not by the n
 
 | Module | The problem it introduces |
 |---|---|
-| 01 | A criterion with no expected value. [Known oracle vs. judgment oracle](https://github.com/markpollack/agent-judge-tutorial/tree/main/module-01-oracle-boundary) |
+| 01 | A criterion with no expected value. [Known oracle vs. judgment oracle](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/module-01-oracle-boundary) |
 | 02 | The compiler and JUnit are already oracles; Agent Judge carries their answers |
 | 03 | A measurement is not an acceptance decision, and a score is not a status |
 | 04 | Writing a judge: task → criterion → evidence → judgment |
@@ -126,12 +129,13 @@ Majority returns `FAIL`; consensus returns `ABSTAIN`, because a split vote is in
 
 **Module 09** runs one panel under all four error policies.
 Three of the four report `PASS` for a run in which a required criterion was never evaluated.
+It also distinguishes `ABSTAIN` (an applicable question left undecided) from `NOT_APPLICABLE` (a declared exclusion); an undeclared exclusion in a jury becomes `ERROR`.
 
 **Modules 10 and 11** execute real adapter code with deterministic framework objects, so bridge construction and metadata extraction stay verifiable offline.
 
 ## Credential-free model-backed judges
 
-Modules 01 and 07 use a fixture `JudgeModel` that replays recorded replies.
+Modules 01 and 07 use a fixture `JudgeModel` that supplies fixed replies.
 The source says so rather than dressing the fixture up as a recording: a fixture cannot tell you a judge is *right*, only that the wiring around it is.
 
 Everything else on the path is real — the prompt is rendered from the actual `JudgmentContext`, the classifier parses free text into a `Judgment` with `Check`s, and swapping the model for `SpringAiJudgeModel` is a one-line change.
@@ -143,7 +147,7 @@ A stand-in that approves what it has not seen is a judge that cannot fail.
 
 | Integration | Tutorial target |
 |---|---|
-| Agent Judge | `0.16.0-SNAPSHOT` |
+| Agent Judge | `0.17.0` |
 | Koog | `1.1.1` |
 | LangChain4j | `1.19.0` |
 

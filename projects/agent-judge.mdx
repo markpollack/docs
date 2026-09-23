@@ -27,7 +27,7 @@ When that check can be expressed reliably with deterministic tooling, give it ba
 Both are available in `agent-judge-ai-core` in Agent Judge 0.17.0.
 **The model assesses each requirement; the code decides the verdict.**
 
-This is the JUnit test from the [PetClinic tutorial's behavioral merge gate](https://github.com/markpollack/agent-judge-tutorial/blob/main/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java), with class setup and imports omitted:
+This is the JUnit test from the [PetClinic tutorial's behavioral merge gate](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java), with class setup and imports omitted:
 
 ```java
 @Test
@@ -42,7 +42,7 @@ void shouldMergeUc6Behavior() {
 ```
 
 `CRITERIA` points to the specification, `context` identifies the implementation under evaluation, and `model` replays a committed response from a real agent run.
-The tutorial's [`JudgeAssertions.assertPass`](https://github.com/markpollack/agent-judge-tutorial/blob/main/judge-junit/src/main/java/io/github/markpollack/judge/junit/JudgeAssertions.java) helper requires `PASS` and reports the actual status, reasoning, and checks that did not pass in the JUnit failure message.
+The tutorial's [`JudgeAssertions.assertPass`](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/judge-junit/src/main/java/io/github/markpollack/judge/junit/JudgeAssertions.java) helper requires `PASS` and reports the actual status, reasoning, and checks that did not pass in the JUnit failure message.
 
 ## Same code, different questions
 
@@ -129,7 +129,7 @@ For EARS and RFC 2119 judges, add `agent-judge-ai-core` as shown in the [require
 
 ## Learn with executable examples
 
-The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) progresses from one deterministic acceptance check to composed judges, voting and cascaded juries, custom and model-backed judges, and framework bridges. Every example runs without credentials.
+The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) progresses from one deterministic acceptance check to composed judges, voting and cascaded juries, custom and model-backed judges, and framework bridges. Every example runs without credentials.
 
 <CardGroup cols={2}>
   <Card title="Getting Started" icon="rocket" href="/docs/agent-judge/getting-started">
@@ -149,7 +149,7 @@ The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) 
 ## Resources
 
 - [Source](https://github.com/markpollack/agent-judge)
-- [Tutorial source](https://github.com/markpollack/agent-judge-tutorial)
+- [Tutorial source](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed)
 - [0.17 release notes](https://github.com/markpollack/agent-judge/blob/v0.17.0/RELEASE_NOTES_0.17.0.md)
 - [GitHub release v0.17.0](https://github.com/markpollack/agent-judge/releases/tag/v0.17.0)
 - [Migrating to 0.17](/docs/agent-judge/migration-0.17)

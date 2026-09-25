@@ -283,13 +283,19 @@
                       "docs/acp-java-sdk/tutorial/17-capability-negotiation",
                       "docs/acp-java-sdk/tutorial/18-terminal-operations",
                       "docs/acp-java-sdk/tutorial/19-mcp-servers",
+                      "docs/acp-java-sdk/tutorial/20-session-management",
                       "docs/acp-java-sdk/tutorial/21-async-client",
                       "docs/acp-java-sdk/tutorial/22-async-agent",
                       "docs/acp-java-sdk/tutorial/23-spring-boot-agent",
                       "docs/acp-java-sdk/tutorial/24-spring-boot-client",
+                      "docs/acp-java-sdk/tutorial/25-ai-chatbot-agent",
+                      "docs/acp-java-sdk/tutorial/26-spring-ai-chatbot",
+                      "docs/acp-java-sdk/tutorial/27-langchain4j-chatbot",
                       "docs/acp-java-sdk/tutorial/28-zed-integration",
                       "docs/acp-java-sdk/tutorial/29-jetbrains-integration",
-                      "docs/acp-java-sdk/tutorial/30-vscode-integration"
+                      "docs/acp-java-sdk/tutorial/30-vscode-integration",
+                      "docs/acp-java-sdk/tutorial/31-elicitation",
+                      "docs/acp-java-sdk/tutorial/32-agent-client"
                     ]
                   },
                   "docs/acp-java-sdk/reference/java"

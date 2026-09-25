@@ -90,4 +90,4 @@ The client tells the agent which MCP servers are available. The agent is respons
 
 ## Next Module
 
-[Module 21: Async Client](/docs/acp-java-sdk/tutorial/21-async-client) — use the reactive, non-blocking client API.
+[Module 20: Session Management](/docs/acp-java-sdk/tutorial/20-session-management) — list, resume, and close sessions.

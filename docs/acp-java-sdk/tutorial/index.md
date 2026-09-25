@@ -11,16 +11,20 @@ A progressive, hands-on tutorial. Each module focuses on one concept and include
 - Java 17 or later
 - Maven 3.8+ (or use the included `./mvnw` wrapper)
 - For client modules (01-11, 21): [Gemini CLI](https://github.com/google-gemini/gemini-cli) with `--experimental-acp` flag, and a `GEMINI_API_KEY`. The tutorial uses Gemini as a real ACP agent to talk to — the SDK launches it as a subprocess and communicates over stdin/stdout.
-- For agent modules (12-19, 22): no external dependencies. You build the agent and the tutorial provides a test client that launches it.
+- For agent modules (12-20, 22, 31): no external dependencies. You build the agent and the tutorial provides a test client that launches it.
+- For the AI chatbot modules (25-27): an `ANTHROPIC_API_KEY`, which the agent actually uses to call the model.
+- For the agent-client module (32): the Claude CLI installed and logged in, run without `ANTHROPIC_API_KEY`.
 
 ## Tutorial Structure
 
 | Part | Modules | Topics |
 |------|---------|--------|
 | **1. Client Basics** | 01-11 | Connect, sessions, prompts, streaming, updates, file handlers, permissions, resume, cancel, errors |
-| **2. Building Agents** | 12-19 | Echo agent, handlers, updates, requests, testing, capabilities, terminal, MCP |
-| **3. Advanced** | 21-22 | Async client, async agent (Project Reactor) |
-| **4. IDE Integration** | 28-30 | Zed, JetBrains, VS Code |
+| **2. Building Agents** | 12-20 | Echo agent, handlers, updates, requests, testing, capabilities, terminal, MCP, session management |
+| **3. Advanced** | 21-24 | Async client, async agent (Project Reactor), Spring Boot agent and client |
+| **4. AI-Backed Agents** | 25-27 | The echo agent with a real model behind it: Anthropic Java SDK, Spring AI, LangChain4j |
+| **5. IDE Integration** | 28-30 | Zed, JetBrains, VS Code |
+| **6. Beyond Chat** | 31-32 | Elicitation (structured user input), an agent loop behind an ACP agent |
 
 ## Getting the Code
 
@@ -62,4 +66,4 @@ The tutorial uses Sync for agent examples (most accessible to most developers) a
 
 Begin with [Module 01: First Contact](/docs/acp-java-sdk/tutorial/01-first-contact) to connect to your first ACP agent.
 
-Or jump to [Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) to build an agent without any API key.
+Or jump to [Module 12: Echo Agent](/docs/acp-java-sdk/tutorial/12-echo-agent) to build an agent without any API key, then give it a brain in [Module 25: AI Chatbot Agent](/docs/acp-java-sdk/tutorial/25-ai-chatbot-agent).

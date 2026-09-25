@@ -87,3 +87,7 @@ VS Code does not have native ACP support yet. Microsoft is tracking it in [Issue
 ./mvnw package -pl module-30-vscode-integration -q
 ./mvnw exec:java -pl module-30-vscode-integration
 ```
+
+## Next Module
+
+[Module 31: Elicitation](/docs/acp-java-sdk/tutorial/31-elicitation) — ask the user for structured input from inside a prompt.

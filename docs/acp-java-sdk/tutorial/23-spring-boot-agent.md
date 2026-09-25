@@ -21,9 +21,11 @@ Add the ACP Spring Boot Starter:
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.11.1</version>
+    <version>0.12.0</version>
 </dependency>
 ```
+
+Starter 0.12.0 builds on ACP Java SDK 0.18.0 and brings the Jackson 3 JSON module, `acp-json-jackson3`, so you add no JSON dependency yourself.
 
 ## The Agent
 
@@ -125,7 +127,7 @@ The `keep-alive` setting is essential. Without it, the Spring Boot application s
 | Handlers | Lambda callbacks via builder | Annotated methods on a bean |
 | Lifecycle | Explicit `agent.run()` | `SmartLifecycle` (automatic) |
 | Configuration | Hardcoded in Java | `application.properties` |
-| Dependencies | `acp-core` only | `acp-spring-boot-starter` |
+| Dependencies | `acp-core` and `acp-json-jackson2` | `acp-spring-boot-starter` |
 
 ## Configuration Properties
 

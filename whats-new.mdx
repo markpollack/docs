@@ -4,6 +4,36 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of September 20, 2026
+
+### ACP Java SDK 0.18.0
+
+**Remote ACP agents, any number of clients.** 0.18.0 implements the protocol's Streamable HTTP and
+WebSocket transport, so a Java agent can listen on one HTTP endpoint and serve every client that
+connects, one agent per connection. The previous WebSocket agent transport served a single client.
+Contributed by @kamikaz1k.
+
+- `StreamableHttpAcpClientTransport` in `acp-core` connects to a remote agent over HTTP POST and
+  Server-Sent Events; the new `acp-streamable-http-jetty` module serves HTTP/SSE and a WebSocket
+  upgrade on the same path. Plain `http://` is a first-class deployment, on HTTP/2 wherever the
+  server speaks h2c
+- `StreamableHttpAcpServlet` mounts the endpoint in your own Servlet 6 container, including Spring Boot
+- JSON is now a choice: `acp-json-jackson2` or the new `acp-json-jackson3`. **`acp-core` alone no
+  longer carries a JSON implementation**, so a project that depends on it alone must add one
+- A second client built on an already-connected transport now fails at construction instead of
+  timing out later; this was the cause of the Spring Boot autoconfiguration failure reported in June
+- A second prompt on a session no longer hangs or is rejected under CPU contention
+- `WebSocketAcpAgentTransport` is deprecated for removal in favour of `StreamableHttpAcpAgentTransport`
+
+The AgentWorks BOM still manages the acp-java family at 0.17.0; the repin to 0.18.0 ships with the
+next BOM release. Until then, declare the 0.18.0 versions explicitly.
+
+[Remote agents →](/docs/acp-java-sdk/index#remote-agents-over-streamable-http) ·
+[What's New](/docs/acp-java-sdk/whats-new) ·
+[Source](https://github.com/agentclientprotocol/java-sdk)
+
+---
+
 ## Week of September 13, 2026
 
 ### Agent Judge 0.17.0
@@ -309,7 +339,7 @@ facts support that, and what an older record cannot say.
 
 **7 new protocol methods.** Session lifecycle (list, close, resume) is now stable. Elicitation, fork, and config options land as unstable with the new `@UnstableAcpApi` marker.
 
-- [Details](/projects/acp-java-sdk) | [Source](https://github.com/markpollack/acp-java-sdk)
+- [Details](/projects/acp-java-sdk) | [Source](https://github.com/agentclientprotocol/java-sdk)
 
 ### AgentWorks BOM 1.2.0
 

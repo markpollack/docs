@@ -9,9 +9,9 @@ Pure Java implementation of the Agent Communication Protocol (ACP) — a standar
 
 ACP is the planned wire protocol for `A2AStep` in [Agent Workflow](/projects/agent-workflow) — wrapping a remote agent as a local `Step<I,O>`.
 
-**Current release: 0.17.0.**
+**Current release: 0.18.0.**
 
-**0.15.0:** notifications now arrive in order and survive a graceful close; Jackson 2.21.5 and Jetty 12.0.37 clear 17 known advisories in the published closure; the verbatim Apache-2.0 license ships inside every artifact. No protocol or public API changes — a drop-in upgrade from 0.14.0.
+**0.18.0:** remote agents over the ACP Streamable HTTP and WebSocket transport, one agent per connection, with a servlet you can mount in Spring Boot or any Servlet 6 container; a choice of Jackson 2 or Jackson 3. `acp-core` alone no longer carries a JSON implementation, so add `acp-json-jackson2` or `acp-json-jackson3` if you depend on it directly. See [Remote agents](/docs/acp-java-sdk/index#remote-agents-over-streamable-http).
 
 ## Getting Started
 

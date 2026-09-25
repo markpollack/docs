@@ -4,6 +4,69 @@ sidebarTitle: "What's New"
 description: "Release notes for ACP Java SDK — auto-generated from git history"
 ---
 
+## 0.18.0 (2026-09-25)
+
+Remote agents: the Streamable HTTP and WebSocket transport from the ACP RFD, over plain `http://` and `https://`, and a choice of Jackson 2 or Jackson 3. See [Remote agents](/docs/acp-java-sdk/index#remote-agents-over-streamable-http) for the code.
+
+<Warning>
+Three changes need attention when upgrading:
+
+- **`acp-core` no longer contains a JSON implementation.** If you depend on `acp-core` alone, add `acp-json-jackson2` or `acp-json-jackson3`, otherwise `AcpJsonMapper.createDefault()` fails with "No AcpJsonMapperSupplier found on the classpath". `acp-agent-support`, `acp-test`, `acp-websocket-jetty` and `acp-streamable-http-jetty` already bring `acp-json-jackson2`.
+- **A second client on an already-connected transport now fails at construction.** A transport instance carries exactly one session.
+- **`JacksonAcpJsonMapper` built from a bare `new ObjectMapper()` is now strict about unknown fields.** Start from `JacksonAcpJsonMapper.defaultObjectMapper()` to keep the lenient behavior.
+</Warning>
+
+**Added**
+
+- Streamable HTTP transport (RFD [streamable-http-websocket-transport](https://agentclientprotocol.com/rfds/streamable-http-websocket-transport)), contributed by @kamikaz1k (#7). `StreamableHttpAcpClientTransport` in `acp-core` talks to a remote agent over HTTP POST with SSE response streams. The new `acp-streamable-http-jetty` module provides `StreamableHttpAcpAgentTransport`, a Jetty listener that serves HTTP/SSE and a WebSocket upgrade on the same path and hosts one agent per remote connection through `AcpAgentFactory`. Header names and path match the TypeScript and Rust SDKs
+- `StreamableHttpAcpServlet` is public and mountable in any Servlet 6 container (Spring Boot, Tomcat, Jetty, Undertow) at your own path; register it with async support. It serves the HTTP/SSE profile; the WebSocket upgrade needs `StreamableHttpAcpAgentTransport`
+- Limits and keep-alive for the HTTP agent transport (`StreamableHttpAcpAgentTransportOptions`): POST bodies capped at 16 MiB by default, bounded WebSocket send queues and provisional `session/load` streams, a `: keep-alive` comment every 15 s on attached SSE streams, and 1,024 concurrent HTTP/2 streams per connection instead of Jetty's default 128
+- HTTP/2 over plain `http://`: the client sends a bodiless GET first so that, against a server that speaks h2c, every request runs on HTTP/2; otherwise it settles on HTTP/1.1
+- The Streamable HTTP client reconnects a dropped SSE stream with a short backoff; it gives up on a 404 or after three reconnects in a row that delivered nothing
+- `AcpClientTransport.awaitTermination()`, implemented by the Streamable HTTP and WebSocket client transports: when the transport dies, pending and later requests fail at once with the cause instead of waiting out the request timeout
+- JSON modules (#12): the Jackson 2 mapper moved into `acp-json-jackson2`, and `acp-json-jackson3` adds `Jackson3AcpJsonMapper` on Jackson 3 (3.1.5, the version Spring Boot 4.1 manages). Both write the same bytes on the wire. Proposed by @bengbengbalabalabeng
+- Deterministic JSON mapper selection by `AcpJsonMapperSupplier.priority()`: with both modules present Jackson 3 wins, and an application's own supplier wins over both. The system property `acp.json.mapper.supplier` names one explicitly
+- `CancelNotification` carries `_meta`; `AcpSyncClient(AcpAsyncClient)` is public, so both APIs can share one session
+
+**Changed**
+
+- Breaking: `acp-core` depends on `jackson-annotations` only, not on `jackson-databind` or `jackson-core` (#12). `JacksonAcpJsonMapper` keeps its package and name
+- Single-turn enforcement is per logical session (keyed by `sessionId`), because one HTTP connection carries many sessions. Stdio and WebSocket agents behave as before (#7, #9)
+- Unknown-field policy moved from the schema records to the mapper (#10). The default mapper stays lenient and logs each ignored property at DEBUG; a strict mapper you pass in is now honored. Reported by @KallivdH
+- Request timeouts run on one shared library-owned daemon timer instead of a thread pool per session
+
+**Deprecated**
+
+- `WebSocketAcpAgentTransport` (`acp-websocket-jetty`) is deprecated for removal. It serves a single WebSocket client; `StreamableHttpAcpAgentTransport` serves the WebSocket upgrade for any number of clients, and `WebSocketAcpClientTransport` clients connect to it unchanged
+
+**Fixed**
+
+- A second `AcpClient.async(transport)` or `AcpClient.sync(transport)` on the same stdio transport started a second agent process whose requests could only time out. This was the Spring Boot autoconfiguration failure reported in June 2026. The stdio transport now refuses a second `connect()`, and sessions surface connect failures instead of dropping them
+- A second prompt on a session could be rejected with `-32000` or hang under CPU contention (#14): the prompt lock is now released before the response is published. Reported by @krickert
+- `WebSocketAcpAgentTransport` wrote frames without waiting for the previous write, and could throw a `NullPointerException` on close
+- The agent session reads `sessionId` from typed `PromptRequest` and `CancelNotification` params, so in-process transports match cancels correctly
+
+## 0.17.0 (2026-08-28)
+
+Wire-format correction. No public API change: every constructor and accessor is unchanged, and the ACP surface is identical to 0.16.1.
+
+- Fix the duplicate discriminator on the wire: every polymorphic type wrote its `type` property twice, so `new TextContent("hello")` serialized to `{"type":"text","type":"text","text":"hello"}` and every `session/prompt` carried a duplicate JSON key. Jackson-based peers accept duplicates; a strict parser rejects the message. The type id is now written once and is populated on deserialization (previously `null`). 27 records across 6 hierarchies
+
+## 0.16.1 (2026-08-24)
+
+Release-tooling patch. The ACP surface is identical to 0.16.0.
+
+- Every module artifact publishes a CycloneDX 1.6 SBOM (classifier `cyclonedx`) covering that module's compile and runtime scope
+- Each `vX.Y.Z` tag now points at a commit whose POMs carry that version
+- SLF4J 2.0.17 → 2.0.18
+
+## 0.16.0 (2026-08-24)
+
+Maintenance dependency and release-tooling refresh. No protocol or public API changes: the ACP surface is identical to 0.15.0.
+
+- Security: Jackson 2.21.5 → 2.22.2, Jetty 12.0.37 → 12.1.12, Reactor 3.6.12 → 3.8.7
+- SLF4J, Logback, JUnit 5, Mockito, Maven build plugins, Central publishing, JaCoCo and the optional OWASP dependency-check profile move to current compatible releases
+
 ## 0.15.0 (2026-08-21)
 
 Correctness and supply-chain hygiene. No protocol or public API changes — a drop-in upgrade from 0.14.0.

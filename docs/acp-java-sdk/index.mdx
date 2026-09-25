@@ -8,7 +8,7 @@ A pure Java implementation of the [Agent Client Protocol (ACP)](https://agentcli
 
 ## How ACP Works
 
-ACP uses a subprocess model. A **client** (your application, or an editor like Zed) launches an **agent** as a child process and communicates over stdin/stdout using JSON-RPC messages. The protocol has three phases:
+ACP uses a subprocess model by default. A **client** (your application, or an editor like Zed) launches an **agent** as a child process and communicates over stdin/stdout using JSON-RPC messages. An agent can also run remotely and accept connections over HTTP or WebSocket (see [Remote agents](#remote-agents-over-streamable-http)); the messages are the same. The protocol has three phases:
 
 1. **Initialize** — client and agent exchange protocol versions and capabilities
 2. **Session** — client creates a session with a working directory context
@@ -189,7 +189,9 @@ The stdio transport reads from stdin and writes to stdout. `run()` blocks until 
 import com.agentclientprotocol.sdk.annotation.*;
 import com.agentclientprotocol.sdk.agent.SyncPromptContext;
 import com.agentclientprotocol.sdk.agent.support.AcpAgentSupport;
+import com.agentclientprotocol.sdk.agent.transport.StdioAcpAgentTransport;
 import com.agentclientprotocol.sdk.spec.AcpSchema.*;
+import java.util.UUID;
 
 @AcpAgent
 class EchoAgent {
@@ -214,6 +216,7 @@ class EchoAgent {
 // Reads JSON-RPC from stdin, writes to stdout — editors connect here
 AcpAgentSupport.create(new EchoAgent())
     .transport(new StdioAcpAgentTransport())
+    .build()
     .run();
 ```
 
@@ -223,25 +226,150 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 
 ### Adding the SDK to your project
 
+`acp-core` holds the client and agent SDKs and the stdio, WebSocket, and Streamable HTTP client transports. From 0.18.0 it contains no JSON implementation, so add one JSON module next to it:
+
 ```xml
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.15.0</version>
+    <version>0.18.0</version>
 </dependency>
+<!-- Jackson 2 (com.fasterxml.jackson.databind) -->
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-json-jackson2</artifactId>
+    <version>0.18.0</version>
+</dependency>
+<!-- or Jackson 3 (tools.jackson.databind), for example alongside Spring Boot 4 -->
+<!--
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-json-jackson3</artifactId>
+    <version>0.18.0</version>
+</dependency>
+-->
 ```
 
-For annotation-based agents (as shown above), add `acp-agent-support` instead — it includes `acp-core` transitively:
+<Warning>
+**Upgrading from 0.17 or earlier on `acp-core` alone?** Without a JSON module, `AcpJsonMapper.createDefault()` fails at runtime with `No AcpJsonMapperSupplier found on the classpath`. `acp-agent-support`, `acp-test`, `acp-websocket-jetty`, and `acp-streamable-http-jetty` already bring `acp-json-jackson2`, so users of those modules need nothing more. Both JSON modules write the same bytes on the wire; with both on the classpath, Jackson 3 wins.
+</Warning>
+
+For annotation-based agents (as shown above), add `acp-agent-support` instead — it includes `acp-core` and `acp-json-jackson2` transitively:
 
 ```xml
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.15.0</version>
+    <version>0.18.0</version>
 </dependency>
 ```
 
-Version `0.12.0` added session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.14.0` (superseding the never-released 0.13.0) adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
+### Remote agents over Streamable HTTP
+
+An agent does not have to be a subprocess. From 0.18.0 the SDK implements the ACP [Streamable HTTP and WebSocket transport](https://agentclientprotocol.com/rfds/streamable-http-websocket-transport): the agent listens on an HTTP endpoint, and any number of clients connect to it over HTTP POST with Server-Sent Event streams, or over a WebSocket upgrade on the same path. Each connection gets its own agent. Plain `http://` (for example on localhost) is a first-class deployment.
+
+**Agent** — add `acp-streamable-http-jetty`:
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-streamable-http-jetty</artifactId>
+    <version>0.18.0</version>
+</dependency>
+```
+
+`StreamableHttpAcpAgentTransport` runs an embedded Jetty listener and creates one fresh agent per remote connection through an `AcpAgentFactory`. The agent definition is the same builder you would use over stdio:
+
+```java
+import com.agentclientprotocol.sdk.agent.AcpAgent;
+import com.agentclientprotocol.sdk.agent.AcpAgentFactory;
+import com.agentclientprotocol.sdk.agent.transport.StreamableHttpAcpAgentTransport;
+import com.agentclientprotocol.sdk.json.AcpJsonMapper;
+import com.agentclientprotocol.sdk.spec.AcpSchema.*;
+import java.util.UUID;
+
+// One fresh agent per remote connection
+AcpAgentFactory agents = AcpAgentFactory.sync(transport -> AcpAgent.sync(transport)
+    .initializeHandler(req -> InitializeResponse.ok())
+    .newSessionHandler(req -> new NewSessionResponse(UUID.randomUUID().toString(), null, null))
+    .promptHandler((req, ctx) -> {
+        ctx.sendMessage("Echo: " + req.text());
+        return PromptResponse.endTurn();
+    })
+    .build());
+
+var server = new StreamableHttpAcpAgentTransport(8080, AcpJsonMapper.createDefault(), agents);
+server.start().block();            // serves http://localhost:8080/acp and ws://localhost:8080/acp
+server.awaitTermination().block();
+```
+
+**Client** — `StreamableHttpAcpClientTransport` is in `acp-core`. Everything after the transport is the same client code as over stdio:
+
+```java
+import com.agentclientprotocol.sdk.client.AcpClient;
+import com.agentclientprotocol.sdk.client.AcpSyncClient;
+import com.agentclientprotocol.sdk.client.transport.StreamableHttpAcpClientTransport;
+import com.agentclientprotocol.sdk.json.AcpJsonMapper;
+import com.agentclientprotocol.sdk.spec.AcpSchema.*;
+import java.net.URI;
+import java.util.List;
+
+var transport = new StreamableHttpAcpClientTransport(
+    URI.create("http://localhost:8080/acp"), AcpJsonMapper.createDefault());
+
+AcpSyncClient client = AcpClient.sync(transport)
+    .sessionUpdateConsumer(notification -> {
+        if (notification.update() instanceof AgentMessageChunk msg) {
+            System.out.print(((TextContent) msg.content()).text());
+        }
+    })
+    .build();
+
+client.initialize();
+var session = client.newSession(new NewSessionRequest(".", List.of()));
+var response = client.prompt(new PromptRequest(
+    session.sessionId(), List.of(new TextContent("Hello over HTTP!"))));
+
+System.out.println("\nStop reason: " + response.stopReason());
+client.close();
+// Output: Echo: Hello over HTTP!
+// Stop reason: END_TURN
+```
+
+A `WebSocketAcpClientTransport` pointed at `ws://localhost:8080/acp` talks to the same agent unchanged.
+
+**Mounting in your own server** — `StreamableHttpAcpServlet` serves the HTTP/SSE profile in any Servlet 6 container (Spring Boot, Tomcat, Jetty, Undertow) at a path you choose. Register it with async support. In Spring Boot:
+
+```java
+import com.agentclientprotocol.sdk.agent.AcpAgentFactory;
+import com.agentclientprotocol.sdk.agent.transport.StreamableHttpAcpServlet;
+import com.agentclientprotocol.sdk.json.AcpJsonMapper;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+class AcpServletConfig {
+
+    @Bean
+    ServletRegistrationBean<StreamableHttpAcpServlet> acpServlet(AcpAgentFactory agents) {
+        var registration = new ServletRegistrationBean<>(
+            new StreamableHttpAcpServlet(AcpJsonMapper.createDefault(), agents), "/acp");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+}
+```
+
+The container's lifecycle drives the servlet: `init()` starts the SSE keep-alive and `destroy()` closes every connection, cancelling in-flight prompts. The servlet does not handle the WebSocket upgrade; use `StreamableHttpAcpAgentTransport` when you need both on one path.
+
+<Note>
+`WebSocketAcpAgentTransport` in `acp-websocket-jetty` is **deprecated for removal** in 0.18.0. It serves a single WebSocket client. Replace it with `StreamableHttpAcpAgentTransport` as shown above, which serves the WebSocket upgrade for any number of clients, one agent per connection.
+</Note>
+
+### Release history
+
+Version `0.18.0` adds remote agents over the Streamable HTTP and WebSocket transport and splits JSON into `acp-json-jackson2` and `acp-json-jackson3`; see [What's New](/docs/acp-java-sdk/whats-new) for the three changes to check when upgrading. Versions `0.15.0` through `0.17.0` changed no public API. Version `0.12.0` added session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.14.0` (superseding the never-released 0.13.0) adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
 
 ## Three Agent API Styles
 
@@ -260,14 +388,14 @@ All three styles produce identical protocol behavior. Choose based on programmin
     Client API, Agent API (all three styles), protocol types, transports, errors
   </Card>
   <Card title="Tutorial" icon="graduation-cap" href="/docs/acp-java-sdk/tutorial/index">
-    30-module progressive tutorial from client basics to IDE integration
+    32-module progressive tutorial from client basics to IDE integration
   </Card>
 </CardGroup>
 
 ## Resources
 
 - [GitHub Repository](https://github.com/agentclientprotocol/java-sdk) — Source code
-- [ACP Java Tutorial](https://github.com/markpollack/acp-java-tutorial) — 30 hands-on modules
+- [ACP Java Tutorial](https://github.com/markpollack/acp-java-tutorial) — 32 hands-on modules
 
 ### ACP Ecosystem
 

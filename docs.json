@@ -2,6 +2,36 @@
   "$schema": "https://mintlify.com/schema.json",
   "theme": "mint",
   "name": "Pollack AI Lab",
+  "redirects": [
+    {
+      "source": "/docs/experiment-driver/getting-started",
+      "destination": "/docs/agent-experiment/getting-started"
+    },
+    {
+      "source": "/docs/experiment-driver/creating-experiments",
+      "destination": "/docs/agent-experiment/creating-experiments"
+    },
+    {
+      "source": "/docs/experiment-driver/sessions-and-sweeps",
+      "destination": "/docs/agent-experiment/sessions-and-sweeps"
+    },
+    {
+      "source": "/docs/experiment-driver/pipeline",
+      "destination": "/docs/agent-experiment/pipeline"
+    },
+    {
+      "source": "/docs/experiment-driver/diagnostic-reasoning",
+      "destination": "/docs/agent-experiment/diagnostic-reasoning"
+    },
+    {
+      "source": "/docs/experiment-driver/jury-system",
+      "destination": "/docs/agent-experiment/jury-system"
+    },
+    {
+      "source": "/docs/experiment-driver/api-reference",
+      "destination": "/docs/agent-experiment/api-reference"
+    }
+  ],
   "ignore": [
     "DESIGN.md",
     "README.md",
@@ -194,13 +224,13 @@
                 "pages": [
                   "projects/agent-experiment",
                   "docs/agent-experiment/whats-new",
-                  "docs/experiment-driver/getting-started",
-                  "docs/experiment-driver/creating-experiments",
-                  "docs/experiment-driver/sessions-and-sweeps",
-                  "docs/experiment-driver/pipeline",
-                  "docs/experiment-driver/diagnostic-reasoning",
-                  "docs/experiment-driver/jury-system",
-                  "docs/experiment-driver/api-reference"
+                  "docs/agent-experiment/getting-started",
+                  "docs/agent-experiment/creating-experiments",
+                  "docs/agent-experiment/sessions-and-sweeps",
+                  "docs/agent-experiment/pipeline",
+                  "docs/agent-experiment/diagnostic-reasoning",
+                  "docs/agent-experiment/jury-system",
+                  "docs/agent-experiment/api-reference"
                 ]
               },
               {

@@ -126,14 +126,14 @@ public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `status` | `JudgmentStatus` | Required outcome: `PASS`, `FAIL`, `ABSTAIN`, or `ERROR` |
+| `status` | `JudgmentStatus` | Required outcome: `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR` |
 | `score` | `Double` (optional) | Explicit normalized score in `[0.0, 1.0]`; use `effectiveScore()` for a numeric view of PASS/FAIL |
 | `label` | `String` (optional) | Independent classification label when the judge assigned one |
 | `reasoning` | `String` | Human-readable explanation |
 
-Agent Judge 0.14 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
+Agent Judge 0.17.0 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
 uses `Judgment.pass(...)` or `Judgment.fail(...)`; it does not duplicate the same fact in a score
-object. `ABSTAIN` and `ERROR` contribute no effective score.
+object. `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` contribute no effective score.
 
 ## Diagnostic Feedback
 
@@ -158,7 +158,7 @@ This classification feeds the [Improvement Flywheel](/methodology/improvement-fl
   <Card title="Four-Tier Jury Methodology" icon="gavel" href="/methodology/four-tier-jury">
     The evaluation framework behind experiment scoring
   </Card>
-  <Card title="Creating Experiments" icon="vial" href="/docs/experiment-driver/creating-experiments">
+  <Card title="Creating Experiments" icon="vial" href="/docs/agent-experiment/creating-experiments">
     Dataset design, variant ladders, configuration
   </Card>
 </CardGroup>

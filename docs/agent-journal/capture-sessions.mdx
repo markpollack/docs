@@ -1,15 +1,15 @@
 ---
 title: "Capture SDK Sessions"
-description: "Record Claude Code, Gemini CLI, Grok, Codex, and Antigravity results with Agent Journal 1.8.0"
+description: "Record Claude Code, Gemini CLI, Grok, Codex, Antigravity, and Junie results with Agent Journal 1.10.1"
 ---
 
-Agent Journal provides five vendor adapters that write compatible core events and portable traces.
+Agent Journal provides six vendor adapters that write compatible core events and portable traces.
 
 The Claude and Gemini adapters parse a typed SDK object: Claude consumes the [Claude Agent SDK for Java](/projects/claude-agent-sdk) and Gemini the `gemini-cli-sdk` published with [Agent Client](/projects/agent-client).
 Both require a Java 21 runtime, because those SDK dependencies are published as Java 21 bytecode.
 
-The Grok, Codex, and Antigravity adapters parse their CLI's durable JSONL directly and carry no vendor SDK dependency, so they run on Java 17 like `journal-core`.
-All three produce an ordered tool trajectory; Gemini does not.
+The Grok, Codex, Antigravity, and Junie adapters parse their CLI's durable JSONL directly and carry no vendor SDK dependency, so they run on Java 17 like `journal-core`.
+All four produce an ordered tool trajectory; Gemini does not.
 
 ## Claude Code
 
@@ -19,11 +19,12 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
-    <version>1.8.0</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
 `SessionLogParser` converts an `Iterator<ParsedMessage>` from the Claude Code SDK into a `PhaseCapture`.
+Despite its name, it reads the live SDK message stream, not a session log file.
 The six-argument overload also writes a portable trace and controls modeled and raw content independently:
 
 ```java
@@ -74,7 +75,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>gemini-cli-capture</artifactId>
-    <version>1.8.0</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
@@ -108,7 +109,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>grok-cli-capture</artifactId>
-    <version>1.8.0</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
@@ -138,7 +139,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>codex-cli-capture</artifactId>
-    <version>1.8.0</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
@@ -176,7 +177,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>antigravity-cli-capture</artifactId>
-    <version>1.8.0</version>
+    <version>1.10.1</version>
 </dependency>
 ```
 
@@ -198,10 +199,51 @@ new AntigravityRunRecorder(run).recordPhase(phase);
 The parser pairs active and terminal updates by `step_index` and handles both `DONE` and `ERROR` steps, recording parameters, output or error text, duration, and terminal token usage.
 Stable identities are derived from the conversation and step positions.
 
+## Junie CLI
+
+Add the adapter:
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>junie-cli-capture</artifactId>
+    <version>1.10.1</version>
+</dependency>
+```
+
+`JunieSessionParser` reads Junie's durable session trace, `~/.junie/sessions/<sessionId>/events.jsonl`, from a file or a `BufferedReader`:
+
+```java
+import io.github.markpollack.journal.Run;
+import io.github.markpollack.journal.junie.JuniePhaseCapture;
+import io.github.markpollack.journal.junie.JunieRunRecorder;
+import io.github.markpollack.journal.junie.JunieSessionParser;
+import java.nio.file.Path;
+
+JuniePhaseCapture phase = JunieSessionParser.parse(
+        Path.of("events.jsonl"), "implement", promptText);
+
+new JunieRunRecorder(run).recordPhase(phase);
+```
+
+Junie re-emits the same `stepId` as a step's status progresses, so the parser folds every update for a step into one record rather than counting lines.
+Junie reports no tool name; the record keeps the block event kind that described the step (`TerminalBlockUpdatedEvent`, `ViewFilesBlockUpdatedEvent`, `FileChangesBlockUpdatedEvent`, or `ToolBlockUpdatedEvent`) and maps it to an execute, read, edit, or other tool kind.
+The parser reads both the plain-CLI and the Agent Client Protocol shapes of the trace.
+
+<Note>
+Junie's trace includes an event carrying the agent's environment variables, unredacted.
+The parser deliberately drops that event, so none of it reaches the capture or the journal.
+</Note>
+
+Junie prices every LLM call, and the per-call costs reconcile to the session total, so the capture carries a real cost.
+It reports no thinking-token count, so the capture has no thinking-token field; thinking text is captured when the trace contains it.
+
 ## Cost provenance
 
 Neither Codex nor Antigravity reports monetary cost in these streams.
 Their cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source, so a downstream reader can distinguish "this run cost nothing" from "this CLI never said."
+Junie does report cost: its records are marked `costAvailable=true` with a `reported` source when the trace carries per-call costs.
+Like Grok, Junie reports a session total but no per-step cost, so its per-step `StepCostEvent` shares are an even split of that total.
 
 ## Portable trace modes
 

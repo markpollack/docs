@@ -15,6 +15,7 @@ This page describes the public API shipped in Agent Journal 1.10.1.
 | `io.github.markpollack:grok-cli-capture:1.10.1` | Grok CLI capture | 17+ |
 | `io.github.markpollack:codex-cli-capture:1.10.1` | Codex CLI capture | 17+ |
 | `io.github.markpollack:antigravity-cli-capture:1.10.1` | Antigravity CLI capture | 17+ |
+| `io.github.markpollack:junie-cli-capture:1.10.1` | Junie CLI capture | 17+ |
 
 ## `Journal`
 
@@ -34,7 +35,7 @@ This page describes the public API shipped in Agent Journal 1.10.1.
 |---|---|
 | `name(String)` | Human-readable run name |
 | `agent(String)` | Agent identifier |
-| `task(String)` | Task identifier |
+| `task(String)` | Accepts a task identifier; 1.10.1 does not persist it or act on it |
 | `repository(String)` | Accepts a repository path; 1.10.1 does not persist it or act on it |
 | `config(Config)` | Replace the run configuration |
 | `config(String, Object)` | Add one immutable input value |
@@ -45,7 +46,7 @@ This page describes the public API shipped in Agent Journal 1.10.1.
 | `start()` | Create a `RUNNING` `Run` |
 
 There is no `config(Map)` overload in 1.10.1.
-The `repository(String)` setter is present, but the 1.10.1 run implementation does not consume the stored builder value.
+The `task(String)` and `repository(String)` setters are present, but the 1.10.1 run implementation does not consume either stored builder value.
 
 ## `Run`
 
@@ -133,9 +134,11 @@ SessionLogParser.parse(response, phaseName, promptText)
 SessionLogParser.parse(response, phaseName, promptText, traceFile)
 SessionLogParser.parse(response, phaseName, promptText, traceFile, contentMode)
 SessionLogParser.parse(response, phaseName, promptText, traceFile, contentMode, rawMode)
+SessionLogParser.parse(response, phaseName, promptText, traceFile, contentMode, rawMode, maxTurns)
 ```
 
-`response` is an `Iterator<ParsedMessage>`.
+`response` is the live `Iterator<ParsedMessage>` returned by the SDK; the parser does not read a session log file.
+The `maxTurns` overload records the turn ceiling the caller launched the run with, because Claude Code does not report it back; pass `SessionLogParser.UNKNOWN_MAX_TURNS` (`-1`) when no ceiling was set. The shorter overloads pass `-1`.
 The default content mode for trace-writing overloads is `TRUNCATED`; the default raw mode is `NONE`.
 
 `RunRecorder` wraps an open `Run`, inherits `recordPhase(PhaseCapture)`, exposes `run()` and `lenient()`, and owns `finish()`/`close()`.
@@ -150,6 +153,16 @@ GeminiSessionParser.parse(result, phaseName, promptText, traceFile, contentMode)
 
 `result` is a Gemini SDK `QueryResult`.
 `GeminiRunRecorder.recordPhase(GeminiPhaseCapture)` records the core and derived projections.
+
+### Junie CLI
+
+```java
+JunieSessionParser.parse(eventsFile, phaseName, promptText)
+JunieSessionParser.parse(reader, phaseName, promptText)
+```
+
+`eventsFile` is a `Path` to Junie's session `events.jsonl` and `reader` is a `BufferedReader` over the same content; both throw `IOException`.
+`JunieRunRecorder.recordPhase(JuniePhaseCapture)` records the core and derived projections.
 
 ## Storage cautions
 

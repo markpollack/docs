@@ -30,7 +30,7 @@ These are identifiers recorded on the run; Agent Journal does not schedule retri
 ## Execution events
 
 `JournalEvent` is an extensible interface, not a closed or sealed hierarchy.
-Agent Journal 1.8.0 registers these built-in JSON subtypes:
+Agent Journal 1.10.1 registers these built-in JSON subtypes:
 
 | `@type` | Java type | Purpose |
 |---|---|---|
@@ -58,13 +58,14 @@ The type name and class are supplied by the integration that owns the external e
 `events.jsonl` is the append-only record of what the application logged during execution.
 `analysis.jsonl` is a separate append-only stream for interpretations computed about that execution.
 
-Agent Journal 1.8.0 provides two derived event types:
+Agent Journal 1.10.1 provides two derived event types:
 
 - `StepCostEvent` records a cost allocation and preserves the actual run cost separately from the attributed share.
 - `StepOutcomeEvent` records caller-supplied goal distance and outcome metrics for a step.
 
 Both streams begin with an independent schema header when the first event is appended.
 `JsonFileStorage` skips header lines when loading events.
+`feedback.jsonl` has no header line; every line is a feedback record.
 The canonical stream schema version is independent from the portable trace schema version.
 
 ## Metrics and calls
@@ -105,7 +106,7 @@ Its load methods currently read the whole requested file into memory before dese
 </Warning>
 
 - Treat journal directories as potentially sensitive operational data.
-- Use trusted caller-controlled experiment IDs, run IDs, and artifact names; 1.8.0 does not enforce path containment.
+- Use trusted caller-controlled experiment IDs, run IDs, and artifact names; 1.10.1 does not enforce path containment.
 - Use one writer per run for file-backed storage.
 - Do not infer concurrent-append or multi-process safety from the append-only format; current tests do not establish those guarantees.
 - Large journals can require substantial heap when loaded because file-backed reads use whole-file loading.

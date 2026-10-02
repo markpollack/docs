@@ -73,7 +73,15 @@ agent.start().then(agent.awaitTermination()).block();
 The client declares elicitation support in its capabilities and registers a handler. A real client shows the form to the user; the demo fills it in automatically:
 
 ```java
+// Advertise the elicitation modes this client handles: form only.
+// The agent may not request a mode the client did not advertise.
+var caps = new ClientCapabilities(
+    new FileSystemCapability(), false,
+    null, null,                          // session, auth
+    ElicitationCapabilities.formOnly(), null);
+
 AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(caps)
     .createElicitationHandler(req -> {
         System.out.println("Agent asks: " + req.message());
         ElicitationSchema schema = req.requestedSchema();
@@ -87,14 +95,12 @@ AcpSyncClient client = AcpClient.sync(transport)
     })
     .build();
 
-// Advertise the elicitation modes this client handles: form only.
-// The agent may not request a mode the client did not advertise.
-var caps = new ClientCapabilities(
-    new FileSystemCapability(), false,
-    null, null,                          // session, auth
-    ElicitationCapabilities.formOnly(), null);
-client.initialize(new InitializeRequest(1, caps));
+client.initialize();
 ```
+
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ## Form Field Types
 

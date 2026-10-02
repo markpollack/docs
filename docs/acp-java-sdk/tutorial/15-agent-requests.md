@@ -60,6 +60,10 @@ The client registers handlers to respond to agent requests:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(new ClientCapabilities(
+        new FileSystemCapability(true, true),  // read=true, write=true
+        false  // terminalExecution
+    ))
     .readTextFileHandler(req -> {
         String fileContent = Files.readString(Path.of(req.path()));
         return new ReadTextFileResponse(fileContent);
@@ -82,15 +86,11 @@ Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-R
 
 ## Client Capabilities
 
-The client must advertise file system support during initialization:
+The client advertises file system support on the builder, shown above (`.clientCapabilities(...)`), then just calls `client.initialize()`.
 
-```java
-client.initialize(new InitializeRequest(1,
-    new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read=true, write=true
-        false  // terminalExecution
-    )));
-```
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 Agents can check capabilities before using them:
 

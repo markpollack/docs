@@ -14,10 +14,14 @@ In ACP, the request direction is inverted for file operations compared to tradit
 
 ## The Code
 
-To enable this, the client registers file handlers on its builder and advertises file system capabilities during initialize. When the agent calls `context.readFile()` or `context.writeFile()`, these handlers are invoked:
+To enable this, the client registers file handlers on its builder and advertises file system capabilities on the same builder. When the agent calls `context.readFile()` or `context.writeFile()`, these handlers are invoked:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(new ClientCapabilities(
+        new FileSystemCapability(true, true),  // read=true, write=true
+        false  // terminalExecution
+    ))
     .readTextFileHandler(req -> {
         Path path = Path.of(req.path());
         if (!Files.exists(path)) {
@@ -32,13 +36,12 @@ AcpSyncClient client = AcpClient.sync(transport)
     .sessionUpdateConsumer(notification -> { /* handle updates */ })
     .build();
 
-// Advertise file system capabilities
-client.initialize(new InitializeRequest(1,
-    new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read=true, write=true
-        false  // terminalExecution
-    )));
+client.initialize();
 ```
+
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 <Warning>
 Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-RPC error responses. Do not return error strings as content.

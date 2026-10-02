@@ -20,8 +20,10 @@ The prompt handler demonstrates each update type:
     context.sendThought("Let me analyze this request...");
 
     // 2. Plan — show steps and progress (full API)
+    // Short constructors drop the discriminator as of 0.80.0: it could only
+    // ever be the variant's own name, so writing it was noise.
     context.sendUpdate(sessionId,
-        new Plan("plan", List.of(
+        new Plan(List.of(
             new PlanEntry("Analyze the prompt",
                 PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
             new PlanEntry("Generate response",
@@ -49,7 +51,7 @@ The prompt handler demonstrates each update type:
 
     // 5. Available Commands — advertise slash commands
     context.sendUpdate(sessionId,
-        new AvailableCommandsUpdate("available_commands_update", List.of(
+        new AvailableCommandsUpdate(List.of(
             new AvailableCommand("help", "Show help",
                 new AvailableCommandInput("topic")),
             new AvailableCommand("clear", "Clear context", null)
@@ -57,11 +59,11 @@ The prompt handler demonstrates each update type:
 
     // 6. Mode Update — report current mode
     context.sendUpdate(sessionId,
-        new CurrentModeUpdate("current_mode_update", "default"));
+        new CurrentModeUpdate("default"));
 
     // 7. Usage Update — report token usage and cost
     context.sendUpdate(sessionId,
-        new UsageUpdate("usage_update", 53000L, 200000L));
+        new UsageUpdate(53000L, 200000L));
 
     // 8. Message chunks — the actual response (convenience method)
     context.sendMessage("Here is my response ");

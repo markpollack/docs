@@ -13,13 +13,17 @@ Client and agent agree on what each supports during initialization.
 ### Client: Advertise capabilities
 
 ```java
-// Tell the agent what we support
+// Tell the agent what we support: set on the client builder, not on initialize()
 var clientCaps = new ClientCapabilities(
     new FileSystemCapability(true, true),  // readTextFile, writeTextFile
     true                                    // terminal
 );
 
-client.initialize(new InitializeRequest(1, clientCaps));
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(clientCaps)
+    .build();
+
+client.initialize();
 
 // Check what the agent supports
 NegotiatedCapabilities agentCaps = client.getAgentCapabilities();
@@ -27,6 +31,10 @@ System.out.println("loadSession: " + agentCaps.supportsLoadSession());
 System.out.println("mcpHttp: " + agentCaps.supportsMcpHttp());
 System.out.println("mcpSse: " + agentCaps.supportsMcpSse());
 ```
+
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities (and now `clientInfo`) are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ### Agent: Advertise and check capabilities
 

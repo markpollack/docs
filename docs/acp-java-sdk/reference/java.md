@@ -548,13 +548,18 @@ var caps = new AgentCapabilities(
 return InitializeResponse.ok(caps);
 
 // Send non-text update types (Plan, ToolCall, AvailableCommandsUpdate, etc.)
-context.sendUpdate(sessionId, new Plan("plan", List.of(
+// Plan's short constructor no longer takes the discriminator (0.80.0): it can
+// only be the variant's own name, so writing it was noise.
+context.sendUpdate(sessionId, new Plan(List.of(
     new PlanEntry("Analyze code", PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
     new PlanEntry("Generate tests", PlanEntryPriority.MEDIUM, PlanEntryStatus.PENDING)
 )));
 
 context.sendUpdate(sessionId, new ToolCall("tool_call",
-    "search-1", "code-search", ToolKind.SEARCH, ToolCallStatus.IN_PROGRESS,
+    "search-1",
+    "code-search",   // title: what the user sees
+    "code_search",   // name: the tool's own identifier (may be null)
+    ToolKind.SEARCH, ToolCallStatus.IN_PROGRESS,
     null, null, null, null, null));
 
 // Read file with offset and line limit
@@ -707,14 +712,17 @@ PromptResponse.text("response")
 
 ### Client Capabilities
 
-Advertised during `initialize`:
+Advertised on the client builder, before `initialize()` is called. As of 0.80.0, `initialize(InitializeRequest)` is removed; capabilities are set only this way. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 ```java
-client.initialize(new InitializeRequest(1,
-    new ClientCapabilities(
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(new ClientCapabilities(
         new FileSystemCapability(true, true),  // read, write
         true  // terminalExecution
-    )));
+    ))
+    .build();
+
+client.initialize();
 ```
 
 ### `NegotiatedCapabilities`
@@ -769,7 +777,11 @@ var caps = new ClientCapabilities(
     new FileSystemCapability(), false,
     null, null,                          // session, auth
     ElicitationCapabilities.formOnly(), null);
-client.initialize(new InitializeRequest(1, caps));
+
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(caps)
+    .build();
+client.initialize();
 ```
 
 ```java

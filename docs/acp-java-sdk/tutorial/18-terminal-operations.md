@@ -19,6 +19,7 @@ var clientCaps = new ClientCapabilities(
 );
 
 AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(clientCaps)
     .createTerminalHandler(req -> {
         List<String> cmd = new ArrayList<>();
         cmd.add(req.command());
@@ -47,8 +48,12 @@ AcpSyncClient client = AcpClient.sync(transport)
     })
     .build();
 
-client.initialize(new InitializeRequest(1, clientCaps));
+client.initialize();
 ```
+
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder (`.clientCapabilities(...)`), and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ### Agent: Use terminal API
 

@@ -51,6 +51,72 @@ new StreamableHttpAcpAgentTransport(port, mapper,
 `WebSocketAcpClientTransport` (`acp-core`) is unchanged and connects to it as before; only the
 agent-side, single-client transport is gone.
 
+## Removed: `@SessionState` and `@AcpExceptionHandler`
+
+Both annotations were declared in `acp-annotations` but nothing implemented them: a `@SessionState`
+parameter failed every call with "No resolver for parameter", and an `@AcpExceptionHandler` method
+was never called. They are removed in 0.80.0, not merely deprecated.
+
+Migration: keep per-session state in the agent itself, in a thread-safe map keyed by the session ID
+(an `@SessionId String` parameter or the request's `sessionId()`), and remove it in the
+`@CloseSession`/`@DeleteSession` handler. Handle exceptions in the handler method itself, or in an
+`AcpInterceptor`'s `onError`, and throw `AcpProtocolException` to answer with a specific JSON-RPC
+error.
+
+## Client `initialize(InitializeRequest)` is removed
+
+A client's capabilities and info are now set **only** on its builder, not on the `initialize` call.
+
+**Before:** the builder's `clientCapabilities(...)` was used only by the no-argument `initialize()`;
+the request-taking overload silently replaced it. A client that set capabilities on the builder and
+then called `initialize(new InitializeRequest(1, new ClientCapabilities()))` advertised nothing,
+while its own handlers enforced what the builder said: a real trap, not just an inconsistency.
+
+**Now:**
+- `AcpClient.async(...)` / `AcpClient.sync(...)`: `.clientCapabilities(ClientCapabilities)` (as
+  before) and the new `.clientInfo(Implementation)`.
+- `initialize()` sends protocol version 1 with the builder's capabilities and client info.
+- `initialize(int protocolVersion, Map<String, Object> meta)` (new) sends a chosen protocol version
+  and `_meta` with the same builder values; for `_meta` and version-negotiation tests, not for
+  capabilities.
+
+Migration: move the request's capabilities to `.clientCapabilities(...)` on the builder and its
+`clientInfo` to `.clientInfo(...)`, then call `initialize()`; pass `_meta` through
+`initialize(1, meta)` instead. A client that passed `new InitializeRequest(1, null)` now advertises
+the default `new ClientCapabilities()` (no file system, no terminal) instead of omitting
+`clientCapabilities` entirely; check code that relied on omission meaning "nothing negotiated."
+
+```java
+// Before (removed)
+AcpSyncClient client = AcpClient.sync(transport).build();
+client.initialize(new InitializeRequest(1, myCapabilities));
+
+// After
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(myCapabilities)
+    .build();
+client.initialize();
+```
+
+## Session-update short constructors drop the discriminator
+
+The short constructors of the session-update types no longer take the discriminator string: it
+could only ever be the variant's own name, so writing it was noise.
+
+| Was | Now |
+|---|---|
+| `new ConfigOptionUpdate(null, options)` | `new ConfigOptionUpdate(options)` |
+| `new Plan("plan", entries)` | `new Plan(entries)` |
+| `new AvailableCommandsUpdate("available_commands_update", commands)` | `new AvailableCommandsUpdate(commands)` |
+| `new CurrentModeUpdate("current_mode_update", modeId)` | `new CurrentModeUpdate(modeId)` |
+| `new UsageUpdate("usage_update", used, size)` | `new UsageUpdate(used, size)` |
+| `new UserMessageChunk(...)`, `AgentMessageChunk(...)`, `AgentThoughtChunk(...)` | `(content)` and `(content, messageId)` overloads, discriminator dropped |
+
+The canonical constructors (discriminator first, `null` or the variant's own name) are unchanged;
+`SessionInfoUpdate(title, updatedAt)` already had this shape before 0.80.0. Migration: drop the
+first argument wherever one of these short constructors is called, e.g.
+`new AgentMessageChunk("agent_message_chunk", content)` becomes `new AgentMessageChunk(content)`.
+
 ## Error codes now follow the ACP v1 schema
 
 A prompt sent while the session already has an active prompt used to answer `-32000`, which ACP
@@ -211,11 +277,32 @@ is load-bearing anywhere, since 0.80.0 now actually stops the work.
 | Surface | Change |
 |---|---|
 | `SyncPromptContext.askChoice` | Returns `Optional<String>`, empty on client cancellation (was documented to return `null` and failed instead) |
+| `SyncPromptContext` | Gains an abstract `async()` method, returning the `PromptContext` it blocks on (same session, turn, and client). A custom implementation (a test double, say) must implement it |
+| `StreamableHttpAcpAgentTransportOptions` | Gains `shutdownTimeout` (builder `shutdownTimeout(Duration)`, default 5 seconds): how long closing the servlet or listener waits for connected agents before closing the rest at once. Breaking only for code calling the record's canonical constructor directly; the builder is unaffected |
 | `CommandResult` | `(String output, @Nullable Integer exitCode, @Nullable String signal)`: no `timedOut` flag; a signal-killed command has no exit code |
 | `Command.env()` | Never `null`; empty when no variables are set. Migration: test `.isEmpty()` instead of `== null` |
 | `AcpInvocationContext`, `AcpMethodParameter` | Moved to `com.agentclientprotocol.sdk.agent.support.invocation`: update imports in custom `ArgumentResolver`, `ReturnValueHandler`, and `AcpInterceptor` implementations |
-| Unstable providers API | `ProviderInfo`, `SetProviderRequest`, `DisableProviderRequest` rename `id()` to `providerId()`, matching the unstable schema's actual wire property |
+| Unstable providers API | `ProviderInfo`, `SetProviderRequest`, `DisableProviderRequest` rename `id()` to `providerId()`, matching the unstable schema's actual wire property. `session/fork` and `providers/*` are now consistently marked `@UnstableAcpApi` everywhere they appear |
 | Every package | Null-marked (JSpecify `@NullMarked`); Java callers compile unchanged, Kotlin and other nullness-aware callers see the new annotations |
+
+## Fixes worth knowing about, even though nothing to migrate
+
+These don't require a code change, but they change observed behavior, so code that worked around the
+old behavior should be revisited.
+
+- **A handler that threw an `Error` used to leave the peer waiting forever.** Any `Throwable`
+  escaping a request handler (sync or async, agent or client, annotation-based included) now answers
+  `-32603` (Internal error) instead, and the connection keeps serving. This matters directly for the
+  0.18.0-to-0.80.0 upgrade itself: a handler calling a removed 0.18.0 constructor throws
+  `NoSuchMethodError` at runtime, and before this fix that hung the caller instead of failing fast.
+- **`AcpAgentSupport.Builder` can now be built more than once.** Previously, `build()` appended
+  custom resolvers/handlers to the builder's own lists, so a second `build()` duplicated them, a
+  custom entry added after the first `build()` call never ran, and agents already built silently
+  shared (and saw later changes to) the builder's lists. `build()` now snapshots a composed
+  configuration without mutating the builder, enabling `AcpAgentSupport.Builder.buildFactory()` (an
+  `AcpAgentFactory` that creates a fresh agent per connection from one shared, thread-safe handler
+  bean), a new-feature page held until the architecture brief is approved, but the underlying bug
+  fix applies now to anyone who builds an `AcpAgentSupport` agent more than once.
 
 ## What you may have to change: a quick checklist
 
@@ -234,3 +321,15 @@ is load-bearing anywhere, since 0.80.0 now actually stops the work.
    wait for the cancelled prompt's answer.
 7. Check any test or display code that asserts an exact status string: it now sees the wire value
    (`end_turn`), not the enum name (`END_TURN`).
+8. Grep for `@SessionState` and `@AcpExceptionHandler`: both are removed (they were non-functional
+   placeholders). Move session state into the agent itself; handle exceptions in the handler or an
+   `AcpInterceptor`.
+9. Grep for `initialize(new InitializeRequest(`: move capabilities to `.clientCapabilities(...)` on
+   the client builder and call `initialize()` instead.
+10. Grep for discriminator-first short constructors of `Plan`, `AvailableCommandsUpdate`,
+    `CurrentModeUpdate`, `UsageUpdate`, `ConfigOptionUpdate`, `UserMessageChunk`, `AgentMessageChunk`,
+    and `AgentThoughtChunk` (e.g. `new Plan("plan", ...)`): drop the first argument.
+11. If any code constructs `StreamableHttpAcpAgentTransportOptions` via its canonical constructor
+    (not the builder), add the new `shutdownTimeout` component.
+12. If any `SyncPromptContext` is implemented directly (a test double, typically), implement the new
+    abstract `async()` method.

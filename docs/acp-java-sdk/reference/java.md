@@ -272,7 +272,6 @@ The `acp-agent-support` module provides a declarative programming model using an
 | Annotation | Description |
 |------------|-------------|
 | `@SessionId` | Injects the current session ID as `String` |
-| `@SessionState` | Injects session-specific state |
 
 ### Flexible Method Signatures
 
@@ -590,19 +589,19 @@ All protocol types are defined in `AcpSchema` as Java records.
 | `LogoutRequest` | *(empty)* *(0.14.0)* |
 | `LogoutResponse` | *(empty)* *(0.14.0)* |
 | `NewSessionRequest` | `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.14.0)* |
-| `NewSessionResponse` | `sessionId`, `modes`, ~~`models`~~ *(`models` deprecated — see below)* |
+| `NewSessionResponse` | `sessionId`, `modes`, `configOptions` *(`models` removed in 0.80.0; see migration guide)* |
 | `LoadSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.14.0)* |
-| `LoadSessionResponse` | `modes`, ~~`models`~~ *(deprecated)* |
+| `LoadSessionResponse` | `modes`, `configOptions` *(`models` removed in 0.80.0)* |
 | `ListSessionsRequest` | `cwd` (optional filter), `cursor` (pagination) *(0.12.0)* |
 | `ListSessionsResponse` | `sessions` (list of `SessionInfo`), `nextCursor` *(0.12.0)* |
 | `ResumeSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0; `additionalDirectories` 0.14.0)* |
-| `ResumeSessionResponse` | `modes`, ~~`models`~~ *(0.12.0; `models` deprecated)* |
+| `ResumeSessionResponse` | `modes`, `configOptions` *(0.12.0; `models` removed in 0.80.0)* |
 | `CloseSessionRequest` | `sessionId` *(0.12.0)* |
 | `CloseSessionResponse` | *(empty)* *(0.12.0)* |
 | `DeleteSessionRequest` | `sessionId` *(0.14.0)* |
 | `DeleteSessionResponse` | *(empty)* *(0.14.0)* |
 | `ForkSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0, unstable)* |
-| `ForkSessionResponse` | `sessionId`, `modes`, ~~`models`~~, `configOptions` *(0.12.0, unstable; `models` deprecated)* |
+| `ForkSessionResponse` | `sessionId`, `modes`, `configOptions` *(0.12.0, unstable; `models` removed in 0.80.0)* |
 | `SetSessionConfigOptionRequest` | `sessionId`, `configId`, `value`, `type` *(0.12.0)* |
 | `SetSessionConfigOptionResponse` | `configOptions` (full config state) *(0.12.0)* |
 | `ListProvidersRequest` | *(empty)* *(0.14.0, unstable)* |
@@ -760,15 +759,16 @@ if (caps.supportsAdditionalDirectories()) {
 }
 ```
 
-### Elicitation Capabilities *(0.12.0, unstable)*
+### Elicitation Capabilities *(stable since 0.80.0; added 0.12.0 as unstable)*
 
-Clients advertise elicitation support during initialization:
+Clients advertise elicitation support during initialization. The capability's modes are typed (`ElicitationFormCapabilities`, `ElicitationUrlCapabilities`); the no-argument `ElicitationCapabilities()` constructor is removed in 0.80.0 in favor of `formOnly()`, `urlOnly()`, and `formAndUrl()`:
 
 ```java
 // Client: advertise form-mode elicitation support
 var caps = new ClientCapabilities(
     new FileSystemCapability(), false,
-    new ElicitationCapabilities(), null);
+    null, null,                          // session, auth
+    ElicitationCapabilities.formOnly(), null);
 client.initialize(new InitializeRequest(1, caps));
 ```
 
@@ -887,8 +887,8 @@ var pair = InMemoryTransportPair.create();
 try {
     client.prompt(request);
 } catch (AcpProtocolException e) {
-    if (e.isConcurrentPrompt()) {
-        // Another prompt is already in progress
+    if (e.isAuthenticationRequired()) {
+        // Client must authenticate (session/authenticate) before this will work
     } else if (e.isMethodNotFound()) {
         // Agent doesn't support this method
     }
@@ -897,6 +897,10 @@ try {
     System.err.println("Not supported: " + e.getCapability());
 }
 ```
+
+<Note>
+`isConcurrentPrompt()` is removed in 0.80.0: a prompt sent while one is already running on the session is now a generic `INVALID_REQUEST` (`-32600`), not its own code. `isAuthenticationRequired()` is new. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ### Agent-Side Error Handling
 

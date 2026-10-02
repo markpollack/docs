@@ -289,6 +289,7 @@
                   "projects/acp-java-sdk",
                   "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/index",
+                  "docs/acp-java-sdk/migration-0.80",
                   "docs/acp-java-sdk/autoconfig",
                   {
                     "group": "Tutorial",

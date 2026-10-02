@@ -34,7 +34,7 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
                 null, null,
                 new UntitledMultiSelectItems("string",
                     List.of("testing", "docker", "ci", "docs")),
-                null, null),
+                null, null, null),   // minItems, maxItems, _meta
             "javaVersion", new IntegerPropertySchema("integer",
                 "Java Version", null, 17L, 11L, 21L),
             "gitInit", new BooleanPropertySchema("boolean",
@@ -47,15 +47,18 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
             .createElicitation(CreateElicitationRequest.form(
                 req.sessionId(), "Configure your new project:", schema))
             .flatMap(response -> {
-                if (response.action() == ElicitationAction.ACCEPT) {
+                // ElicitationAction is an open value type, not an enum: compare
+                // with equals, never ==
+                if (ElicitationAction.ACCEPT.equals(response.action())) {
                     var content = response.content();
                     return context.sendMessage("Project configured: "
                             + content.get("name") + " (" + content.get("template") + ")\n")
                         .then(Mono.just(PromptResponse.endTurn()));
                 }
                 // DECLINE or CANCEL
-                return context.sendMessage(
-                        "User " + response.action().name().toLowerCase() + "d the form.\n")
+                String outcome = ElicitationAction.DECLINE.equals(response.action())
+                    ? "declined" : "cancelled";
+                return context.sendMessage("User " + outcome + " the form.\n")
                     .then(Mono.just(PromptResponse.endTurn()));
             });
     })
@@ -84,9 +87,12 @@ AcpSyncClient client = AcpClient.sync(transport)
     })
     .build();
 
+// Advertise the elicitation modes this client handles: form only.
+// The agent may not request a mode the client did not advertise.
 var caps = new ClientCapabilities(
     new FileSystemCapability(), false,
-    new ElicitationCapabilities(), null);
+    null, null,                          // session, auth
+    ElicitationCapabilities.formOnly(), null);
 client.initialize(new InitializeRequest(1, caps));
 ```
 
@@ -111,7 +117,7 @@ client.initialize(new InitializeRequest(1, caps));
 The agent must handle all three. A prompt that depends on the form still has to end its turn when the user declines or cancels.
 
 <Note>
-Elicitation was added in SDK 0.12.0 as an unstable protocol element, marked `@UnstableAcpApi`. It may change in a minor release.
+Elicitation was added in SDK 0.12.0 as an unstable protocol element, marked `@UnstableAcpApi`. It is **stable as of 0.80.0** (promoted in protocol v1.7.0), and its API is no longer `@UnstableAcpApi`. The elicitation capability's modes are now typed (`ElicitationFormCapabilities`, `ElicitationUrlCapabilities`), the no-argument `ElicitationCapabilities()` constructor is removed in favor of `formOnly()`/`urlOnly()`/`formAndUrl()`, and `ElicitationAction` is an open value type, not an enum: compare with `equals`, not `==`. The agent may only request a mode the client advertised.
 </Note>
 
 ## Source Code

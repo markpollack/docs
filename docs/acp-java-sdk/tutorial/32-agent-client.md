@@ -50,7 +50,7 @@ public class AgentClientAgent {
             + " - it can read and edit files and may take a moment...\n\n");
 
         ClaudeAgentOptions options = ClaudeAgentOptions.builder()
-            .model("claude-sonnet-4-20250514")
+            .model("claude-sonnet-5-5")
             .maxTurns(40)
             .yolo(true) // non-interactive: don't pause for permission prompts
             .build();

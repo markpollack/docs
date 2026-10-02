@@ -69,8 +69,9 @@ Updates arrive during `client.prompt()`. The prompt call blocks until the agent 
 
 ## Running the Example
 
+Requires the Grok CLI on your `PATH`, signed in once with `grok login`. The module launches it as `grok agent stdio`; no API key is needed.
+
 ```bash
-export GEMINI_API_KEY=your-key-here
 ./mvnw exec:java -pl module-05-streaming-updates
 ```
 

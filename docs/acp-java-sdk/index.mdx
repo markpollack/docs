@@ -4,7 +4,32 @@ sidebarTitle: "Overview"
 description: "A Java SDK for the Agent Client Protocol — build both clients and agents that work with Zed, JetBrains, VS Code, and any ACP-compliant editor."
 ---
 
+[![CI](https://img.shields.io/github/actions/workflow/status/agentclientprotocol/java-sdk/ci.yml?branch=main&label=CI)](https://github.com/agentclientprotocol/java-sdk/actions/workflows/ci.yml)
+[![Cross-SDK nightly](https://img.shields.io/github/actions/workflow/status/agentclientprotocol/java-sdk/cross-sdk.yml?branch=main&label=cross-SDK%20nightly)](https://github.com/agentclientprotocol/java-sdk/actions/workflows/cross-sdk.yml)
+[![Dependency scan](https://img.shields.io/github/actions/workflow/status/agentclientprotocol/java-sdk/dependency-scan.yml?branch=main&label=dependency%20scan)](https://github.com/agentclientprotocol/java-sdk/actions/workflows/dependency-scan.yml)
+[![Java interop](https://img.shields.io/github/actions/workflow/status/agentclientprotocol/java-sdk/interop-java.yml?branch=main&label=Java%20interop)](https://github.com/agentclientprotocol/java-sdk/actions/workflows/interop-java.yml)
+[![Maven Central](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fagentclientprotocol%2Facp-core%2Fmaven-metadata.xml&label=Maven%20Central)](https://central.sonatype.com/artifact/com.agentclientprotocol/acp-core)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/agentclientprotocol/java-sdk/blob/main/LICENSE)
+[![Java 17+](https://img.shields.io/badge/Java-17%2B-blue)](https://github.com/agentclientprotocol/java-sdk/blob/main/pom.xml)
+
 A pure Java implementation of the [Agent Client Protocol (ACP)](https://agentclientprotocol.com/) specification. Build clients that connect to ACP agents, or build agents that run inside code editors.
+
+## Quality Gates
+
+Each badge links to the configuration that enforces it.
+
+| Gate | What it guarantees |
+|------|--------------------|
+| [![NullAway](https://img.shields.io/badge/NullAway-JSpecify%20%C2%B7%20%40NullMarked-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/pom.xml) | Every SDK package is `@NullMarked`; a possible null dereference is a compile error (JDK 21+ build, `errorprone` profile). |
+| [![Error Prone](https://img.shields.io/badge/Error%20Prone-warnings%20fail-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/pom.xml) | Error Prone's default checks, plus unused Reactor results and stray `System.out`, fail compilation. |
+| [![ArchUnit](https://img.shields.io/badge/ArchUnit-every%20module%20%C2%B7%20no%20cycles-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/src/test/java/com/agentclientprotocol/sdk/ArchitectureTest.java) | Each module's layering is tested; no package cycles, and transports never reach session internals. |
+| [![PMD](https://img.shields.io/badge/PMD-complexity%20%2B%20duplication%20%C2%B7%20no%20baseline-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/config/pmd/ruleset.xml) | Methods stay below cognitive and cyclomatic complexity limits; copy-paste over 100 tokens fails. |
+| [![SpotBugs](https://img.shields.io/badge/SpotBugs-rank%20%E2%89%A4%209%20%2B%20concurrency-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/config/spotbugs/spotbugs-include.xml) | Every bug at rank 9 or worse, and the multithreading bug patterns at any rank, fail the build. |
+| [![JaCoCo](https://img.shields.io/badge/JaCoCo-acp--core%2082%25%20line%20%C2%B7%2070%25%20branch-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/pom.xml) | Each module has line and branch coverage floors in its `pom.xml`; coverage cannot silently drop. |
+| [![Lincheck](https://img.shields.io/badge/Lincheck-model--checked%20concurrency-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/src/test/java/com/agentclientprotocol/sdk/spec/ActivePromptsLincheckTest.java) | The concurrent core (prompt turns, pending responses, inbound requests, SSE streams) is model-checked for linearizability. |
+| [![PIT](https://img.shields.io/badge/PIT-protocol%20core%20%E2%89%A5%2085%25-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/pom.xml) | Mutation testing proves the protocol core's tests catch at least 85% of injected bugs. |
+| [![OSV scan](https://img.shields.io/badge/OSV-dependency%20scan-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/.github/workflows/dependency-scan.yml) | Resolved dependencies are scanned weekly and on every pom change; CVSS 7 or higher (or unscored) fails. |
+| [![Cross-SDK interop](https://img.shields.io/badge/interop-TypeScript%20%C2%B7%20Rust%20%C2%B7%20Python%20%C2%B7%20Kotlin%20%C3%97%20stdio%20%C2%B7%20HTTP%20%C2%B7%20WebSocket-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/integration-testing/README.md) | The Java client and agent talk to the other ACP SDKs over every transport each supports (Kotlin: stdio and WebSocket). |
 
 ## How ACP Works
 
@@ -121,14 +146,13 @@ The ACP Java SDK provides:
 
 ### Try it now
 
-The fastest way to see ACP in action is to clone the tutorial and run a module. The client example talks to [Gemini CLI](https://github.com/google-gemini/gemini-cli) (requires `GEMINI_API_KEY`). The agent example runs locally with no API key.
+The fastest way to see ACP in action is to clone the tutorial and run a module. The client example talks to the [Grok CLI](https://github.com/xai-org/grok-cli) (signed in once with `grok login`; no API key needed). The agent example runs locally with no API key either.
 
 ```bash
 git clone https://github.com/markpollack/acp-java-tutorial.git
 cd acp-java-tutorial
 
-# Client: talk to Gemini as an ACP agent
-export GEMINI_API_KEY=your-key-here
+# Client: talk to Grok as an ACP agent
 ./mvnw exec:java -pl module-01-first-contact
 
 # Agent: build and run your own (no API key needed)
@@ -138,9 +162,9 @@ export GEMINI_API_KEY=your-key-here
 
 ### Client — Connect to an Agent
 
-This example launches [Gemini CLI](https://github.com/google-gemini/gemini-cli) as an ACP agent subprocess and sends it a prompt. Any CLI tool that speaks ACP over stdin/stdout works here — Gemini CLI is one such tool.
+This example launches the [Grok CLI](https://github.com/xai-org/grok-cli) as an ACP agent subprocess and sends it a prompt. Any CLI tool that speaks ACP over stdin/stdout works here; Grok is one such tool.
 
-`AgentParameters` builds the command line (`gemini --experimental-acp`). `StdioAcpClientTransport` spawns the process and handles the JSON-RPC framing. The `sessionUpdateConsumer` receives the agent's response text as it streams in — without it, you'd get the stop reason but no visible output.
+`AgentParameters` builds the command line (`grok agent stdio`). `StdioAcpClientTransport` spawns the process and handles the JSON-RPC framing. The `sessionUpdateConsumer` receives the agent's response text as it streams in — without it, you'd get the stop reason but no visible output.
 
 ```java
 import com.agentclientprotocol.sdk.client.*;
@@ -148,8 +172,8 @@ import com.agentclientprotocol.sdk.client.transport.*;
 import com.agentclientprotocol.sdk.spec.AcpSchema.*;
 import java.util.List;
 
-// Launch Gemini CLI as an ACP agent subprocess
-var params = AgentParameters.builder("gemini").arg("--experimental-acp").build();
+// Launch the Grok CLI as an ACP agent subprocess
+var params = AgentParameters.builder("grok").arg("agent").arg("stdio").build();
 var transport = new StdioAcpClientTransport(params);
 
 AcpSyncClient client = AcpClient.sync(transport)
@@ -162,7 +186,8 @@ AcpSyncClient client = AcpClient.sync(transport)
     .build();
 
 client.initialize();
-var session = client.newSession(new NewSessionRequest(".", List.of()));
+// ACP requires cwd to be an absolute path; agents may reject "."
+var session = client.newSession(new NewSessionRequest(System.getProperty("user.dir"), List.of()));
 
 var response = client.prompt(new PromptRequest(
     session.sessionId(),
@@ -172,7 +197,7 @@ var response = client.prompt(new PromptRequest(
 System.out.println("\nStop reason: " + response.stopReason());
 client.close();
 // Output: 4
-// Stop reason: END_TURN
+// Stop reason: end_turn
 ```
 
 <Tip>
@@ -232,26 +257,26 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 <!-- Jackson 2 (com.fasterxml.jackson.databind) -->
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson2</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 <!-- or Jackson 3 (tools.jackson.databind), for example alongside Spring Boot 4 -->
 <!--
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson3</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 -->
 ```
 
 <Warning>
-**Upgrading from 0.17 or earlier on `acp-core` alone?** Without a JSON module, `AcpJsonMapper.createDefault()` fails at runtime with `No AcpJsonMapperSupplier found on the classpath`. `acp-agent-support`, `acp-test`, `acp-websocket-jetty`, and `acp-streamable-http-jetty` already bring `acp-json-jackson2`, so users of those modules need nothing more. Both JSON modules write the same bytes on the wire; with both on the classpath, Jackson 3 wins.
+**Upgrading from 0.17 or earlier on `acp-core` alone?** Without a JSON module, `AcpJsonMapper.createDefault()` fails at runtime with `No AcpJsonMapperSupplier found on the classpath`. `acp-agent-support`, `acp-test`, and `acp-streamable-http-jetty` already bring `acp-json-jackson2`, so users of those modules need nothing more. Both JSON modules write the same bytes on the wire; with both on the classpath, Jackson 3 wins.
 </Warning>
 
 For annotation-based agents (as shown above), add `acp-agent-support` instead — it includes `acp-core` and `acp-json-jackson2` transitively:
@@ -260,7 +285,7 @@ For annotation-based agents (as shown above), add `acp-agent-support` instead �
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -274,7 +299,7 @@ An agent does not have to be a subprocess. From 0.18.0 the SDK implements the AC
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-streamable-http-jetty</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -364,12 +389,12 @@ class AcpServletConfig {
 The container's lifecycle drives the servlet: `init()` starts the SSE keep-alive and `destroy()` closes every connection, cancelling in-flight prompts. The servlet does not handle the WebSocket upgrade; use `StreamableHttpAcpAgentTransport` when you need both on one path.
 
 <Note>
-`WebSocketAcpAgentTransport` in `acp-websocket-jetty` is **deprecated for removal** in 0.18.0. It serves a single WebSocket client. Replace it with `StreamableHttpAcpAgentTransport` as shown above, which serves the WebSocket upgrade for any number of clients, one agent per connection.
+The `acp-websocket-jetty` module and its single-client `WebSocketAcpAgentTransport` were deprecated for removal in 0.18.0 and are **removed in 0.80.0**. Use `StreamableHttpAcpAgentTransport` as shown above, which serves the WebSocket upgrade for any number of clients, one agent per connection; see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80) for the full change.
 </Note>
 
 ### Release history
 
-Version `0.18.0` adds remote agents over the Streamable HTTP and WebSocket transport and splits JSON into `acp-json-jackson2` and `acp-json-jackson3`; see [What's New](/docs/acp-java-sdk/whats-new) for the three changes to check when upgrading. Versions `0.15.0` through `0.17.0` changed no public API. Version `0.12.0` added session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.14.0` (superseding the never-released 0.13.0) adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
+Version `0.18.0` adds remote agents over the Streamable HTTP and WebSocket transport and splits JSON into `acp-json-jackson2` and `acp-json-jackson3`; see [What's New](/docs/acp-java-sdk/whats-new) for the three changes to check when upgrading. Versions `0.15.0` through `0.17.0` changed no public API. Version `0.12.0` added session/list, session/close, session/resume, elicitation, session/fork, and session/set_config_option. Version `0.14.0` (superseding the never-released 0.13.0) adds logout, session/delete, additional workspace directories, per-chunk message IDs, and the unstable providers/* configuration methods, promotes session/set_config_option to stable, and deprecates the removed session/set_model API (use session/set_config_option with a `"model"` category option). Version `0.80.0` is binary-incompatible with 0.18.0 and removes `session/set_model` and `acp-websocket-jetty`; see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80) for every breaking change. See the [API Reference](/docs/acp-java-sdk/reference/java#installation) for installation.
 
 ## Three Agent API Styles
 

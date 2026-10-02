@@ -10,7 +10,7 @@ Complete API reference for the ACP Java SDK, covering client, agent (all three s
 
 ## Installation
 
-### Maven (0.18.0 — stable)
+### Maven (0.80.0 — stable)
 
 Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no JSON implementation; add one JSON module next to it:
 
@@ -18,13 +18,13 @@ Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no J
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 <!-- Jackson 2 (com.fasterxml.jackson.databind) -->
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson2</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -36,7 +36,7 @@ Annotation-based agent support (includes `acp-core` and `acp-json-jackson2` tran
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -46,7 +46,7 @@ Test utilities:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -57,34 +57,34 @@ Streamable HTTP and WebSocket server transport for remote agents:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-streamable-http-jetty</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
-`acp-websocket-jetty` (single-client `WebSocketAcpAgentTransport`) is deprecated for removal in 0.18.0; use `acp-streamable-http-jetty`.
+`acp-websocket-jetty` (single-client `WebSocketAcpAgentTransport`) was deprecated for removal in 0.18.0 and is **removed in 0.80.0**; use `acp-streamable-http-jetty`. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 ### Gradle
 
 ```groovy
 // build.gradle
-implementation 'com.agentclientprotocol:acp-core:0.18.0'
-implementation 'com.agentclientprotocol:acp-json-jackson2:0.18.0' // or acp-json-jackson3
+implementation 'com.agentclientprotocol:acp-core:0.80.0'
+implementation 'com.agentclientprotocol:acp-json-jackson2:0.80.0' // or acp-json-jackson3
 
 // Optional modules
-implementation 'com.agentclientprotocol:acp-agent-support:0.18.0'
-implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.18.0'
-testImplementation 'com.agentclientprotocol:acp-test:0.18.0'
+implementation 'com.agentclientprotocol:acp-agent-support:0.80.0'
+implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.80.0'
+testImplementation 'com.agentclientprotocol:acp-test:0.80.0'
 ```
 
 ```kotlin
 // build.gradle.kts
-implementation("com.agentclientprotocol:acp-core:0.18.0")
-implementation("com.agentclientprotocol:acp-json-jackson2:0.18.0") // or acp-json-jackson3
+implementation("com.agentclientprotocol:acp-core:0.80.0")
+implementation("com.agentclientprotocol:acp-json-jackson2:0.80.0") // or acp-json-jackson3
 
 // Optional modules
-implementation("com.agentclientprotocol:acp-agent-support:0.18.0")
-implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.18.0")
-testImplementation("com.agentclientprotocol:acp-test:0.18.0")
+implementation("com.agentclientprotocol:acp-agent-support:0.80.0")
+implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.80.0")
+testImplementation("com.agentclientprotocol:acp-test:0.80.0")
 ```
 
 ### Snapshot (0.19.0-SNAPSHOT)
@@ -191,12 +191,13 @@ AcpSyncClient client = AcpClient.sync(transport)
 
 ### Example — Complete client lifecycle
 
-This launches Gemini CLI as an ACP agent subprocess and sends it a prompt. `AgentParameters` builds the command line; `StdioAcpClientTransport` spawns the process and handles JSON-RPC framing over stdin/stdout.
+This launches the Grok CLI as an ACP agent subprocess and sends it a prompt. `AgentParameters` builds the command line; `StdioAcpClientTransport` spawns the process and handles JSON-RPC framing over stdin/stdout.
 
 ```java
-// Launch "gemini --experimental-acp" as a subprocess
-var params = AgentParameters.builder("gemini")
-    .arg("--experimental-acp")
+// Launch "grok agent stdio" as a subprocess
+var params = AgentParameters.builder("grok")
+    .arg("agent")
+    .arg("stdio")
     .build();
 
 var transport = new StdioAcpClientTransport(params);
@@ -254,17 +255,17 @@ The `acp-agent-support` module provides a declarative programming model using an
 | `@DisableProvider` | `providers/disable` | Disables a provider by id *(0.14.0, unstable)* |
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
-| `@SetSessionModel` | `session/set_model` | **Deprecated** — removed from the spec; use `@SetSessionConfigOption` with a `"model"` category option |
 | `@Cancel` | `session/cancel` | Cancellation notification (fire-and-forget) |
 
-> **Deprecated: the session-model API (0.14.0).** `session/set_model` and the related types
-> (`@SetSessionModel`, `SetSessionModelRequest`/`Response`, `SessionModelState`, `ModelInfo`, and the
-> `models` field on session responses) were removed from the ACP spec in June 2026 and are marked
-> `@Deprecated(forRemoval = true)`. They still work for now but will be removed in a future release.
-> Expose model selection through `session/set_config_option` instead: advertise a `select` config
-> option whose `category` is `"model"`, and switch models with `setSessionConfigOption(...)`. This is
-> the same mechanism used for session modes (`category: "mode"`) and reasoning level
-> (`category: "thought_level"`).
+> **Removed in 0.80.0: the session-model API.** `session/set_model` and the related types
+> (`@SetSessionModel`, `SetSessionModelRequestResolver`, `SetSessionModelRequest`/`Response`,
+> `SessionModelState`, `ModelInfo`, and the `models` field on session responses) were deprecated for
+> removal in 0.14.0 and are gone in 0.80.0. An agent built on 0.80.0 no longer answers
+> `session/set_model`; a peer that sends it gets "method not found". Expose model selection through
+> `session/set_config_option` instead: advertise a `select` config option whose `category` is
+> `"model"`, and switch models with `setSessionConfigOption(...)`. This is the same mechanism used
+> for session modes (`category: "mode"`) and reasoning level (`category: "thought_level"`). See the
+> [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 #### Parameter Annotations
 
@@ -800,10 +801,11 @@ IntelliJ users can configure the *Unstable API Usage* inspection (*Settings > In
 
 The default transport. The client launches the agent as a subprocess and communicates via JSON-RPC over stdin/stdout. This is the same mechanism Zed, JetBrains, and VS Code use to talk to agents.
 
-**Client side** — `AgentParameters` specifies the command to launch. Any executable that speaks ACP over stdin/stdout works (Gemini CLI, your own agent JAR, etc.):
+**Client side** — `AgentParameters` specifies the command to launch. Any executable that speaks ACP over stdin/stdout works (Grok CLI, your own agent JAR, etc.):
 ```java
-var params = AgentParameters.builder("gemini")
-    .arg("--experimental-acp")
+var params = AgentParameters.builder("grok")
+    .arg("agent")
+    .arg("stdio")
     .build();
 var transport = new StdioAcpClientTransport(params);
 ```
@@ -853,7 +855,7 @@ var transport = new WebSocketAcpClientTransport(
 ```
 
 <Note>
-`WebSocketAcpAgentTransport` (`acp-websocket-jetty`) is deprecated for removal in 0.18.0. It serves a single WebSocket client. `WebSocketAcpClientTransport` clients connect to `StreamableHttpAcpAgentTransport` unchanged.
+`WebSocketAcpAgentTransport` (`acp-websocket-jetty`) was deprecated for removal in 0.18.0 and is **removed in 0.80.0**. It served a single WebSocket client. `WebSocketAcpClientTransport` clients connect to `StreamableHttpAcpAgentTransport` unchanged.
 </Note>
 
 ### In-Memory Transport
@@ -967,7 +969,8 @@ pair.closeGracefully().block();
 | `acp-agent-support` | Annotation-based agent runtime (includes acp-annotations + acp-core) |
 | `acp-test` | In-memory transport and test utilities |
 | `acp-streamable-http-jetty` | Jetty-based Streamable HTTP and WebSocket agent transport, and the mountable `StreamableHttpAcpServlet` |
-| `acp-websocket-jetty` | **Deprecated** single-client WebSocket agent transport; use `acp-streamable-http-jetty` |
+
+`acp-websocket-jetty` (single-client WebSocket agent transport) is **removed in 0.80.0**; it is not a dependable artifact as of this release. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 ---
 

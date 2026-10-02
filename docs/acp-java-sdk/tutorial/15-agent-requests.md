@@ -24,9 +24,11 @@ The prompt handler uses `SyncPromptContext` convenience methods:
 
     // 2. Request permission (full API for complex permissions)
     ToolCallUpdate toolCall = new ToolCallUpdate(
-        "tool-write-1", "Create summary.txt",
+        "tool-write-1",
+        "Create summary.txt",   // title: what the user sees
+        "write_file",           // name: the tool's own identifier (may be null)
         ToolKind.EDIT, ToolCallStatus.PENDING,
-        null, null, null, null
+        null, null, null, null, null   // content, locations, rawInput, rawOutput, _meta
     );
 
     List<PermissionOption> options = List.of(

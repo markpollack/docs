@@ -33,14 +33,17 @@ The prompt handler demonstrates each update type:
     // 3. Tool Call — show tool execution starting
     context.sendUpdate(sessionId,
         new ToolCall("tool_call",
-            "tool-1", "Analyzing prompt", ToolKind.THINK,
+            "tool-1",
+            "Analyzing prompt",   // title: what the user sees
+            "analyze_prompt",     // name: the tool's own identifier (may be null)
+            ToolKind.THINK,
             ToolCallStatus.IN_PROGRESS,
             List.of(), null, null, null, null));
 
     // 4. Tool Call Update — show progress
     context.sendUpdate(sessionId,
         new ToolCallUpdateNotification("tool_call_update",
-            "tool-1", "Analyzing prompt", ToolKind.THINK,
+            "tool-1", "Analyzing prompt", "analyze_prompt", ToolKind.THINK,
             ToolCallStatus.COMPLETED,
             List.of(), null, null, null, null));
 
@@ -68,6 +71,8 @@ The prompt handler demonstrates each update type:
     return PromptResponse.endTurn();
 })
 ```
+
+`ToolCall` and `ToolCallUpdateNotification` take a `name` argument after `title`: the tool's own identifier, separate from the human-readable title, and it may be `null`.
 
 ## Convenience vs Full API
 

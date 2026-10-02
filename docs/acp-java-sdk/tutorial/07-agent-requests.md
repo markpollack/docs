@@ -50,8 +50,9 @@ Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-R
 
 ## Running the Example
 
+Requires the Grok CLI on your `PATH`, signed in once with `grok login`. The module launches it as `grok agent --always-approve stdio`; no API key is needed.
+
 ```bash
-export GEMINI_API_KEY=your-key-here
 ./mvnw exec:java -pl module-07-agent-requests
 ```
 

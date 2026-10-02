@@ -11,21 +11,22 @@ Your first ACP client — launch an agent as a subprocess and send it a prompt.
 
 ## Prerequisites
 
-1. **[Gemini CLI](https://github.com/google-gemini/gemini-cli) with ACP support** — the tutorial uses Gemini as a real ACP agent. Your client will launch it as a subprocess and talk to it over stdin/stdout.
+1. **The [Grok CLI](https://github.com/xai-org/grok-cli) with ACP support** — the tutorial uses Grok as a real ACP agent, launched as `grok agent stdio`. Your client will launch it as a subprocess and talk to it over stdin/stdout.
    ```bash
-   gemini --experimental-acp --version
+   grok --version
    ```
 
-2. **API key**
+2. **Sign in once**
    ```bash
-   export GEMINI_API_KEY=your-key-here
+   grok login
    ```
+   No API key is needed; the module uses the account you signed in with.
 
 3. **Java 17 or later**
 
 ## The Code
 
-The client launches `gemini --experimental-acp` as a child process. `AgentParameters` builds the command line. `StdioAcpClientTransport` spawns the process and handles JSON-RPC message framing over its stdin/stdout.
+The client launches `grok agent stdio` as a child process. `AgentParameters` builds the command line. `StdioAcpClientTransport` spawns the process and handles JSON-RPC message framing over its stdin/stdout.
 
 The `sessionUpdateConsumer` is how you see the agent's response. During `prompt()`, the agent streams back `AgentMessageChunk` updates containing the response text. Without a consumer, the prompt completes but you only get the stop reason — not the actual answer.
 
@@ -37,9 +38,10 @@ import com.agentclientprotocol.sdk.client.transport.*;
 import com.agentclientprotocol.sdk.spec.AcpSchema.*;
 import java.util.List;
 
-// 1. Build the command: "gemini --experimental-acp"
-var params = AgentParameters.builder("gemini")
-    .arg("--experimental-acp")
+// 1. Build the command: "grok agent stdio"
+var params = AgentParameters.builder("grok")
+    .arg("agent")
+    .arg("stdio")
     .build();
 
 // 2. Launch it as a subprocess, communicate over stdin/stdout
@@ -57,9 +59,10 @@ AcpSyncClient client = AcpClient.sync(transport)
 // 4. Initialize — exchange protocol versions and capabilities
 client.initialize();
 
-// 5. Create session — set working directory context
+// 5. Create session — set working directory context.
+//    ACP requires cwd to be an absolute path; agents may reject "."
 var session = client.newSession(
-    new NewSessionRequest(".", List.of()));
+    new NewSessionRequest(System.getProperty("user.dir"), List.of()));
 
 // 6. Send prompt — blocks until agent responds, updates stream to consumer
 var response = client.prompt(new PromptRequest(
@@ -70,7 +73,7 @@ var response = client.prompt(new PromptRequest(
 System.out.println("\nStop reason: " + response.stopReason());
 client.close();
 // Output: 4
-// Stop reason: END_TURN
+// Stop reason: end_turn
 ```
 
 ## How It Works
@@ -81,7 +84,7 @@ ACP communication follows a three-phase lifecycle:
 2. **New Session** — establishes a working directory context for the conversation
 3. **Prompt** — sends content and receives a response with a stop reason
 
-The stdio transport is not Gemini-specific. Any executable that speaks ACP over stdin/stdout works — Gemini CLI, a custom agent JAR, or any other ACP-compliant tool. This is the same mechanism Zed, JetBrains, and VS Code use to talk to agents.
+The stdio transport is not Grok-specific. Any executable that speaks ACP over stdin/stdout works — Grok CLI, a custom agent JAR, or any other ACP-compliant tool. This is the same mechanism Zed, JetBrains, and VS Code use to talk to agents.
 
 ## Source Code
 
@@ -89,8 +92,9 @@ The stdio transport is not Gemini-specific. Any executable that speaks ACP over 
 
 ## Running the Example
 
+Requires the Grok CLI on your `PATH`, signed in once with `grok login`. The module launches it as `grok agent stdio`; no API key is needed.
+
 ```bash
-export GEMINI_API_KEY=your-key-here
 ./mvnw exec:java -pl module-01-first-contact
 ```
 

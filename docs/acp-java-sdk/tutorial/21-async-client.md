@@ -29,7 +29,7 @@ AcpAsyncClient client = AcpClient.async(transport)
 // Chain operations reactively with flatMap
 client.initialize()
     .flatMap(init -> client.newSession(
-        new NewSessionRequest(".", List.of())))
+        new NewSessionRequest(System.getProperty("user.dir"), List.of())))
     .flatMap(session -> client.prompt(
         new PromptRequest(session.sessionId(),
             List.of(new TextContent("What is 2+2?")))))
@@ -58,7 +58,7 @@ For scripts where you want async types but don't care about non-blocking I/O:
 
 ```java
 var init = client.initialize().block();
-var session = client.newSession(new NewSessionRequest(".", List.of())).block();
+var session = client.newSession(new NewSessionRequest(System.getProperty("user.dir"), List.of())).block();
 var response = client.prompt(new PromptRequest(
     session.sessionId(),
     List.of(new TextContent("Hello")))).block();
@@ -73,8 +73,9 @@ This defeats the purpose of async but can be useful during prototyping.
 
 ## Running the Example
 
+Requires the Grok CLI on your `PATH`, signed in once with `grok login`. The module launches it as `grok agent stdio`; no API key is needed.
+
 ```bash
-export GEMINI_API_KEY=your-key-here
 ./mvnw compile exec:java -pl module-21-async-client
 ```
 

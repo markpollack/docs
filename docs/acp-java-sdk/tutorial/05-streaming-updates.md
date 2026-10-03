@@ -63,6 +63,8 @@ private static void handleSessionUpdate(SessionUpdate update) {
 
 Updates arrive during `client.prompt()`. The prompt call blocks until the agent returns a `PromptResponse`, but updates stream in continuously through the consumer.
 
+As of 0.80.0, `prompt()` returns only after the consumer has finished handling every update from that turn. So by the time `prompt()` returns, whatever your consumer collected (printed text, counted tool calls, and so on) is already complete; there's no need to wait or poll for trailing updates afterward.
+
 ## Source Code
 
 [View on GitHub](https://github.com/markpollack/acp-java-tutorial/tree/main/module-05-streaming-updates)

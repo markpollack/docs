@@ -18,15 +18,21 @@ The initialize handshake is the first message exchange in ACP — it must comple
 
 ## The Code
 
-Module 01 called `client.initialize()` with defaults. Here we use the explicit form to control exactly what capabilities we advertise. The `InitializeResponse` tells us what the agent supports:
+Module 01 called `client.initialize()` with defaults. Here we set explicit capabilities on the client builder to control exactly what we advertise, then call `initialize()` the same way. The `InitializeResponse` tells us what the agent supports:
 
 ```java
-// Initialize with explicit protocol version and capabilities
-var initResponse = client.initialize(
-    new InitializeRequest(1, new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read, write
-        false  // terminalExecution
-    )));
+// Capabilities are set on the builder: what the client advertises here is
+// also what its handlers honor.
+var clientCapabilities = new ClientCapabilities(
+    new FileSystemCapability(true, true),  // read, write
+    false  // terminalExecution
+);
+
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(clientCapabilities)
+    .build();
+
+var initResponse = client.initialize();
 
 System.out.println("Protocol version: " + initResponse.protocolVersion());
 System.out.println("Agent capabilities: " + initResponse.agentCapabilities());
@@ -35,6 +41,10 @@ System.out.println("Existing sessions: " + initResponse.sessionIds().size());
 //         Agent capabilities: AgentCapabilities[...]
 //         Existing sessions: 0
 ```
+
+<Note>
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ## Source Code
 

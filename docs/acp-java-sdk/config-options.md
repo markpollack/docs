@@ -96,9 +96,15 @@ client.setSessionConfigOption(SetSessionConfigOptionRequest.bool(sessionId, "ver
 ```
 
 ```java
-// agent
-.setSessionConfigOptionHandler(req -> new SetSessionConfigOptionResponse(fullOptionsList))
+// agent, annotated
+@SetSessionConfigOption
+SetSessionConfigOptionResponse setConfigOption(SetSessionConfigOptionRequest req) {
+    return new SetSessionConfigOptionResponse(fullOptionsList);
+}
 ```
+
+The builder form is the same handler under a different name:
+`.setSessionConfigOptionHandler(req -> new SetSessionConfigOptionResponse(fullOptionsList))`.
 
 `req.value()` is untyped (`Object`): a `String` for a select, a `Boolean` for a boolean.
 `req.type()` is `null` for a select and `"boolean"` for a boolean, so dispatch on `req.configId()`

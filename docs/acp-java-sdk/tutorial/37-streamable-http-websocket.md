@@ -7,17 +7,28 @@ See [Transports](/docs/acp-java-sdk/transports) for the identity and routing tab
 ## What You'll Learn
 
 - Why a network listener takes an `AcpAgentFactory`, not an agent, and what that means for state
+- `AcpAgentSupport.Builder#buildFactory()` for an annotated agent behind a listener, and why the bean must be thread-safe
 - Starting `StreamableHttpAcpAgentTransport` on port `0` and reading the bound port with `getPort()`
 - Connecting with `StreamableHttpAcpClientTransport` and `WebSocketAcpClientTransport` to the same listener
 - Plain `http://` negotiating HTTP/2 (h2c) automatically
-- `AcpAgentSupport.Builder#buildFactory()` for an annotated agent behind a listener, and why the bean must be thread-safe
 - The built-in listener's limits in 0.80.0: no TLS, no WebSocket inside a servlet container
 
 ## The Code
 
 ### One factory, many agents
 
-Over stdio, one process is one connection is one agent. A network listener accepts many connections, so it takes a factory that builds a fresh agent for every one, bound to that connection's own transport:
+Over stdio, one process is one connection is one agent. A network listener accepts many connections, so it takes a factory that builds a fresh agent for every one, bound to that connection's own transport.
+
+The recommended way to get one is an annotated agent's `buildFactory()`:
+
+```java
+AcpAgentFactory factory = AcpAgentSupport.create(new AnnotatedHttpAgent()).buildFactory();
+var server = new StreamableHttpAcpAgentTransport(0, AcpJsonMapper.createDefault(), factory);
+```
+
+Every connection gets its own agent runtime, but they all dispatch to **this one bean**. State on the bean itself (an `AtomicInteger` counting prompts across every connection, in this module's `AnnotatedHttpAgent`) must be thread-safe; per-session state belongs in a concurrent map keyed by session id instead, as in [Module 33](/docs/acp-java-sdk/tutorial/33-session-config-options).
+
+The lower-level builder API builds a factory from a lambda instead, for cases that need a fresh agent instance (not just a shared bean) per connection:
 
 ```java
 static AcpAgentFactory factory() {
@@ -35,7 +46,7 @@ static AcpAgentFactory factory() {
 }
 ```
 
-Each connection's lambda invocation closes over its own `connection` number, so every agent instance remembers which connection it belongs to: this is what lets the demo show that two concurrent clients get two different agents.
+Each connection's lambda invocation closes over its own `connection` number, so every agent instance remembers which connection it belongs to: this is what lets the rest of this module's demo show that two concurrent clients get two different agents. The walkthrough below uses this builder factory, since its per-connection closure state makes the "different agent per connection" behavior easy to see; either factory style works identically with the listener.
 
 ### Starting the listener
 
@@ -73,15 +84,6 @@ response.version(); // HTTP_2, since the server speaks h2c
 ```
 
 The Streamable HTTP client sends this same bodiless GET first, so later requests reuse an already-upgraded HTTP/2 connection over plain `http://`. A server that doesn't upgrade just makes the client pin HTTP/1.1; both work.
-
-### An annotated agent behind a listener
-
-```java
-AcpAgentFactory factory = AcpAgentSupport.create(new AnnotatedHttpAgent()).buildFactory();
-var server = new StreamableHttpAcpAgentTransport(0, AcpJsonMapper.createDefault(), factory);
-```
-
-`buildFactory()` returns an `AcpAgentFactory`: every connection gets its own agent runtime, but they all dispatch to **this one bean**. State on the bean itself (an `AtomicInteger` counting prompts across every connection, in this module) must be thread-safe; per-session state belongs in a concurrent map keyed by session id instead, as in [Module 33](/docs/acp-java-sdk/tutorial/33-session-config-options).
 
 ### Closing
 

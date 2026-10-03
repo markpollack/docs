@@ -5,8 +5,8 @@ Add your own `_`-prefixed requests and notifications to ACP, in both directions,
 ## What You'll Learn
 
 - Why a custom method name must start with `_`, and what happens if it doesn't
-- Typed extension handlers (`TypeRef`) versus raw ones (the plain JSON value)
-- `@ExtRequest` and `@ExtNotification` on an annotated agent
+- `@ExtRequest` and `@ExtNotification` on an annotated agent, the recommended way in
+- The builder-API equivalent, typed (`TypeRef`) or raw (the plain JSON value)
 - Sending with `sendExtRequest`/`sendExtNotification` from a client or an agent
 - What happens when nothing serves a method: `-32601` for a request, silence for a notification
 
@@ -38,27 +38,6 @@ public final class Extensions {
 
 Registering a handler or sending to a name without the prefix throws `IllegalArgumentException` before anything leaves the process, so an extension can never collide with or shadow a protocol method. Namespacing the rest of the name with a domain you control (`_acptutorial/...`) keeps it from colliding with someone else's extension.
 
-### Serving, on the builder agent
-
-```java
-AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
-    // Typed request: params read as WordCountParams, result written as JSON.
-    .extRequestHandler(Extensions.WORD_COUNT, new TypeRef<WordCountParams>() {},
-            params -> new WordCountResult(params.text().split("\\s+").length, params.text().length()))
-
-    // Raw request: params arrive as the plain JSON value.
-    .extRequestHandler(Extensions.ECHO, params -> Extensions.ordered(
-            "echoed", params, "agentSawJavaType", params.getClass().getSimpleName()))
-
-    // Typed notification: no answer, so the agent acknowledges with a notification of its own.
-    .extNotificationHandler(Extensions.LOG, new TypeRef<LogEvent>() {},
-            event -> self.get().sendExtNotification(Extensions.ACK,
-                    Extensions.ordered("received", event.level() + ": " + event.message(), "by", "builder agent")))
-    .build();
-```
-
-A handler must not return `null`: a `null` result answers `-32603`; return an empty map when there's nothing to say.
-
 ### Serving, with annotations
 
 ```java
@@ -80,6 +59,27 @@ void log(LogEvent event, AcpSyncAgent agent) {
 ```
 
 The annotation names the method; discovery fails if it doesn't start with `_`. A handler takes at most one params parameter (a record for typed params, `Map<String, Object>` for raw), plus, like any other annotated handler, the connection's `AcpSyncAgent`/`AcpAsyncAgent` and `NegotiatedCapabilities`.
+
+### The same handlers, with the builder API
+
+```java
+AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
+    // Typed request: params read as WordCountParams, result written as JSON.
+    .extRequestHandler(Extensions.WORD_COUNT, new TypeRef<WordCountParams>() {},
+            params -> new WordCountResult(params.text().split("\\s+").length, params.text().length()))
+
+    // Raw request: params arrive as the plain JSON value.
+    .extRequestHandler(Extensions.ECHO, params -> Extensions.ordered(
+            "echoed", params, "agentSawJavaType", params.getClass().getSimpleName()))
+
+    // Typed notification: no answer, so the agent acknowledges with a notification of its own.
+    .extNotificationHandler(Extensions.LOG, new TypeRef<LogEvent>() {},
+            event -> self.get().sendExtNotification(Extensions.ACK,
+                    Extensions.ordered("received", event.level() + ": " + event.message(), "by", "builder agent")))
+    .build();
+```
+
+A handler must not return `null`: a `null` result answers `-32603`; return an empty map when there's nothing to say.
 
 ### Calling the other side, from a prompt handler
 

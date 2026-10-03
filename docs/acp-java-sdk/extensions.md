@@ -13,30 +13,7 @@ A custom method's name must start with `_`. `ExtensionMethods.requireExtension` 
 `IllegalArgumentException` for a name that doesn't, specifically so a custom handler can never
 collide with or replace a protocol method.
 
-## Registering handlers
-
-Both agent builders and both client specs support typed or raw extension handlers:
-
-```java
-// Typed
-AcpAgent.async(transport)
-    .extRequestHandler("_example/ping", TypeRef.of(Ping.class), (ctx, ping) -> Mono.just(new Pong(...)))
-    .extNotificationHandler("_example/event", TypeRef.of(Event.class), (ctx, event) -> Mono.empty());
-
-// Raw (Map, List, String, Number, or Boolean params)
-AcpClient.async(transport)
-    .extRequestHandler("_interop/ping", params -> Mono.just(Map.of("pong", 1)));
-```
-
-Sending is symmetric, on all four facades:
-
-```java
-client.sendExtRequest("_interop/ping", Map.of("n", 1));
-client.sendExtRequest("_interop/ping", Map.of("n", 1), TypeRef.of(PingResult.class));
-client.sendExtNotification("_example/event", event);
-```
-
-## Annotated agents
+## Annotated agents: the recommended way in
 
 ```java
 @ExtRequest("_test/ping")
@@ -50,7 +27,34 @@ void typed(Ping ping) { ... }
 
 An extension handler method takes at most one parameter for the extension's own params; it may also
 take the connection's `AcpSyncAgent`/`AcpAsyncAgent` and `NegotiatedCapabilities`, like any other
-annotated handler (see [the annotation model](/docs/acp-java-sdk/reference/java#annotation-based-agents)).
+annotated handler (see [Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents)).
+
+## The builder form
+
+For a client (no annotation model exists for clients), or an agent built with the lower-level
+builder API, register handlers directly:
+
+```java
+// Typed
+AcpAgent.async(transport)
+    .extRequestHandler("_example/ping", TypeRef.of(Ping.class), (ctx, ping) -> Mono.just(new Pong(...)))
+    .extNotificationHandler("_example/event", TypeRef.of(Event.class), (ctx, event) -> Mono.empty());
+
+// Raw (Map, List, String, Number, or Boolean params)
+AcpClient.async(transport)
+    .extRequestHandler("_interop/ping", params -> Mono.just(Map.of("pong", 1)));
+```
+
+## Sending, on either side
+
+```java
+client.sendExtRequest("_interop/ping", Map.of("n", 1));
+client.sendExtRequest("_interop/ping", Map.of("n", 1), TypeRef.of(PingResult.class));
+client.sendExtNotification("_example/event", event);
+```
+
+The same methods exist on the agent facades, for calling the client's extension methods from a
+handler.
 
 ## Behavior when nothing handles a method
 

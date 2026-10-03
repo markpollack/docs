@@ -50,7 +50,32 @@ if (state.booleansSupported) {
 
 The SDK does not filter the boolean option for you: the agent checks the client's advertised capabilities itself, once, at `session/new`.
 
-### Builder agent
+### Annotated agent
+
+```java
+@NewSession
+AcpSchema.NewSessionResponse newSession(AcpSchema.NewSessionRequest req, NegotiatedCapabilities clientCaps) {
+    String sessionId = UUID.randomUUID().toString();
+    List<AcpSchema.SessionConfigOption> options = settings.open(sessionId, clientCaps.supportsBooleanConfigOptions());
+    return new AcpSchema.NewSessionResponse(sessionId, settings.modes(sessionId), options);
+}
+
+@Prompt
+AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, @SessionId String sessionId,
+        SyncPromptContext ctx, AcpSyncAgent agent) {
+    List<AcpSchema.SessionConfigOption> changed = settings.fallBackIfRateLimited(sessionId);
+    if (changed != null) {
+        // Agent-initiated change: push the full list, here through the connection's agent.
+        agent.sendSessionUpdate(sessionId, new AcpSchema.ConfigOptionUpdate(changed));
+    }
+    ctx.sendMessage(settings.answer(sessionId, "annotated agent"));
+    return AcpSchema.PromptResponse.endTurn();
+}
+```
+
+Any handler, not only `@Prompt`, may declare `NegotiatedCapabilities` and `AcpSyncAgent`/`AcpAsyncAgent` parameters, resolved by type, for the connection the request arrived on. That's why `@NewSession` reads `supportsBooleanConfigOptions()` straight from a parameter here, with no need to capture the built agent.
+
+### The same agent, with the builder API
 
 ```java
 AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
@@ -81,32 +106,7 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
     .build();
 ```
 
-A builder handler other than the prompt handler receives only its request, so `session/new` reaches the client's capabilities through the built agent (`self.get().getClientCapabilities()`).
-
-### Annotated agent
-
-```java
-@NewSession
-AcpSchema.NewSessionResponse newSession(AcpSchema.NewSessionRequest req, NegotiatedCapabilities clientCaps) {
-    String sessionId = UUID.randomUUID().toString();
-    List<AcpSchema.SessionConfigOption> options = settings.open(sessionId, clientCaps.supportsBooleanConfigOptions());
-    return new AcpSchema.NewSessionResponse(sessionId, settings.modes(sessionId), options);
-}
-
-@Prompt
-AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, @SessionId String sessionId,
-        SyncPromptContext ctx, AcpSyncAgent agent) {
-    List<AcpSchema.SessionConfigOption> changed = settings.fallBackIfRateLimited(sessionId);
-    if (changed != null) {
-        // Agent-initiated change: push the full list, here through the connection's agent.
-        agent.sendSessionUpdate(sessionId, new AcpSchema.ConfigOptionUpdate(changed));
-    }
-    ctx.sendMessage(settings.answer(sessionId, "annotated agent"));
-    return AcpSchema.PromptResponse.endTurn();
-}
-```
-
-Any handler, not only `@Prompt`, may declare `NegotiatedCapabilities` and `AcpSyncAgent`/`AcpAsyncAgent` parameters, resolved by type, for the connection the request arrived on. That's why `@NewSession` reads `supportsBooleanConfigOptions()` straight from a parameter here, with no need to capture the built agent.
+A builder handler other than the prompt handler receives only its request, so `session/new` reaches the client's capabilities through the built agent (`self.get().getClientCapabilities()`), instead of a parameter.
 
 ### Rejecting a bad request
 

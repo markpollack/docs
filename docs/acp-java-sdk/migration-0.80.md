@@ -276,6 +276,7 @@ is load-bearing anywhere, since 0.80.0 now actually stops the work.
 
 | Surface | Change |
 |---|---|
+| `AcpError.getMessage()` | No longer ends with `[code=N]`: it is the peer's plain message, so `e.getCode() + " " + e.getMessage()` names the code once instead of twice. `toString()` (what stack traces show) still includes `[code=N]`. Code that parsed the code out of the message should call `getCode()` instead |
 | `SyncPromptContext.askChoice` | Returns `Optional<String>`, empty on client cancellation (was documented to return `null` and failed instead) |
 | `SyncPromptContext` | Gains an abstract `async()` method, returning the `PromptContext` it blocks on (same session, turn, and client). A custom implementation (a test double, say) must implement it |
 | `StreamableHttpAcpAgentTransportOptions` | Gains `shutdownTimeout` (builder `shutdownTimeout(Duration)`, default 5 seconds): how long closing the servlet or listener waits for connected agents before closing the rest at once. Breaking only for code calling the record's canonical constructor directly; the builder is unaffected |
@@ -302,6 +303,22 @@ old behavior should be revisited.
   configuration without mutating the builder, enabling `AcpAgentSupport.Builder.buildFactory()` (an
   `AcpAgentFactory` that creates a fresh agent per connection from one shared, thread-safe handler
   bean), a new-feature page held until the architecture brief is approved, but the underlying bug
+- **A client's `prompt()` now returns only after every earlier notification on that connection has
+  been handled.** Before, a response could complete its caller while the session-update consumer was
+  still processing the turn's last updates, so a caller that read what it had collected right after
+  `prompt()` returned could silently miss some. Code that slept, polled, or otherwise waited for
+  "trailing" updates after `prompt()` returns can drop that workaround; the guarantee is now built
+  in. A slow consumer delays the response and still counts against the request timeout, so a
+  consumer that sends its own request and waits for it cannot deadlock against a prompt in flight,
+  but must not itself wait for that prompt to complete.
+- **The stdio client's graceful close lets the agent exit on its own, instead of always killing it.**
+  `closeGracefully()` used to send SIGTERM immediately, without closing the agent's standard input,
+  so an SDK stdio agent's own end-of-input handling never ran and every close ended in exit code 143.
+  It now closes the agent's standard input first and waits up to two seconds for the agent to exit
+  by itself; only an agent still running after that is sent SIGTERM. Code that checked for exit code
+  143 as the normal/expected close outcome should check for exit `0` instead. Closing twice (for
+  example `closeGracefully()` followed by try-with-resources `close()`) no longer stops the process
+  or logs the stop message a second time.
   fix applies now to anyone who builds an `AcpAgentSupport` agent more than once.
 
 ## What you may have to change: a quick checklist

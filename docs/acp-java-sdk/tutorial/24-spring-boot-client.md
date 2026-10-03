@@ -19,11 +19,18 @@ Same starter as the agent side:
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.12.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
+
+<Note>
+As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
+`org.springaicommunity`); see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). The
+downloadable module for this page predates the move and still uses the old coordinates; it will be
+updated separately. The coordinates above are current.
+</Note>
 
 ## The Client
 
@@ -74,9 +81,9 @@ The autoconfiguration detects the `stdio.command` property and creates a `StdioA
 
 ## What the Autoconfiguration Does
 
-1. **Detects transport properties** — `stdio.command` triggers stdio transport; `websocket.uri` triggers WebSocket
-2. **Creates `AcpSyncClient` and `AcpAsyncClient`** — configured with timeout and client capabilities
-3. **Manages shutdown** — `DisposableBean` calls `closeGracefully()` on context close
+1. **Detects transport properties**: `stdio.command` triggers stdio transport; `websocket.uri` triggers WebSocket; `http.uri` triggers Streamable HTTP
+2. **Creates `AcpSyncClient` and `AcpAsyncClient`**: configured with timeout and client capabilities
+3. **Manages shutdown**: the client, transport, and agent beans are closed once by the autoconfiguration's own lifecycle, not left to Spring's inferred `close()`
 
 ## Transport Selection
 
@@ -86,8 +93,10 @@ The autoconfiguration picks the transport based on which properties are set:
 |---------------|------------------|
 | `spring.acp.client.transport.stdio.command` | `StdioAcpClientTransport` |
 | `spring.acp.client.transport.websocket.uri` | `WebSocketAcpClientTransport` |
+| `spring.acp.client.transport.http.uri` | `StreamableHttpAcpClientTransport` |
 | `spring.acp.client.transport.type=stdio` | Explicit stdio selection |
 | `spring.acp.client.transport.type=websocket` | Explicit WebSocket selection |
+| `spring.acp.client.transport.type=http` | Explicit Streamable HTTP selection (fails at startup, naming the property, if `http.uri` is missing) |
 
 ## Build & Run
 
@@ -104,14 +113,15 @@ The autoconfiguration picks the transport based on which properties are set:
 | Property | Default | Description |
 |----------|---------|-------------|
 | `spring.acp.client.request-timeout` | `30s` | Request timeout |
-| `spring.acp.client.transport.type` | auto-detect | `stdio` or `websocket` |
+| `spring.acp.client.transport.type` | auto-detect | `stdio`, `websocket`, or `http` |
 | `spring.acp.client.transport.stdio.command` | — | Command to launch agent |
 | `spring.acp.client.transport.stdio.args` | — | Command arguments |
 | `spring.acp.client.transport.stdio.env.*` | — | Environment variables |
 | `spring.acp.client.transport.websocket.uri` | — | WebSocket URI |
 | `spring.acp.client.transport.websocket.connect-timeout` | `10s` | Connection timeout |
-| `spring.acp.client.capabilities.read-text-file` | `true` | Advertise file read capability |
-| `spring.acp.client.capabilities.write-text-file` | `true` | Advertise file write capability |
+| `spring.acp.client.transport.http.uri` | — | Streamable HTTP endpoint of the agent |
+| `spring.acp.client.capabilities.read-text-file` | `false` | Advertise file read capability; enable it with a file handler registered through an `AcpClientCustomizer` |
+| `spring.acp.client.capabilities.write-text-file` | `false` | Advertise file write capability; enable it with a file handler registered through an `AcpClientCustomizer` |
 | `spring.acp.client.capabilities.terminal` | `false` | Advertise terminal capability |
 
 [View on GitHub](https://github.com/markpollack/acp-java-tutorial/tree/main/module-24-spring-boot-client)

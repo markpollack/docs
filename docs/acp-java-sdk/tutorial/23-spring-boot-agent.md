@@ -19,13 +19,21 @@ Add the ACP Spring Boot Starter:
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.12.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
-Starter 0.12.0 builds on ACP Java SDK 0.18.0 and brings the Jackson 3 JSON module, `acp-json-jackson3`, so you add no JSON dependency yourself.
+As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
+`org.springaicommunity`), versioned together with it; see the
+[0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). It brings the Jackson 3 JSON module,
+`acp-json-jackson3`, so you add no JSON dependency yourself.
+
+<Note>
+The downloadable module for this page predates the move into the SDK and still uses the old
+`org.springaicommunity` coordinates; it will be updated separately. The coordinates above are current.
+</Note>
 
 ## The Agent
 
@@ -135,7 +143,7 @@ The `keep-alive` setting is essential. Without it, the Spring Boot application s
 |----------|---------|-------------|
 | `spring.acp.agent.enabled` | `true` | Enable/disable agent autoconfiguration |
 | `spring.acp.agent.request-timeout` | `60s` | Request processing timeout |
-| `spring.acp.agent.transport.type` | `stdio` | Transport type (currently only `stdio`) |
+| `spring.acp.agent.transport.type` | `stdio` | `stdio` or `http` (remote agents; see [Remote Agents over Streamable HTTP](/docs/acp-java-sdk/autoconfig#remote-agents-over-streamable-http)) |
 
 ## Next
 

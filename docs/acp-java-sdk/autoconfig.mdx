@@ -6,15 +6,25 @@ description: "Spring Boot autoconfiguration for the ACP Java SDK — auto-config
 
 Spring Boot autoconfiguration for the [ACP Java SDK](/projects/acp-java-sdk). Provides auto-configured clients, agents, and transports with property-driven configuration.
 
+<Note>
+As of 0.80.0, Spring Boot support is part of the ACP Java SDK itself: `acp-spring-boot-starter` and
+`acp-spring-boot-autoconfigure` moved from `org.springaicommunity` (version 0.13.0 and earlier) into
+`com.agentclientprotocol`, versioned together with the rest of the SDK. The package changed too
+(`com.agentclientprotocol.sdk.spring.boot.autoconfigure`, replacing `com.agentclientprotocol.autoconfigure`);
+the `spring.acp.*` property names did not. There is no relocation POM, so update the coordinates and
+imports directly. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80) for the full
+change.
+</Note>
+
 ## Quick Start
 
 Add the starter dependency:
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.12.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -221,11 +231,12 @@ A transport carries one client. The auto-configured `AcpSyncClient` wraps the `A
 
 - Java 21+
 - Spring Boot 4.0+
-- ACP Java SDK 0.80.0 (acp-autoconfig pins this version directly; it no longer carries an
-  `sdk-candidate` build profile for an alternate SDK version)
+- ACP Java SDK 0.80.0 (as of 0.80.0, `acp-spring-boot-starter` and `acp-spring-boot-autoconfigure`
+  are modules of the SDK itself, built and versioned together with it, not a separate project pinning
+  an SDK version)
 
 ## Resources
 
-- [GitHub Repository](https://github.com/spring-ai-community/acp-autoconfig) — Source code
-- [ACP Java SDK](/projects/acp-java-sdk) — The underlying SDK
-- [Maven Central](https://central.sonatype.com/artifact/org.springaicommunity/acp-spring-boot-starter) — Published artifacts
+- [GitHub Repository](https://github.com/agentclientprotocol/java-sdk): source code (the `acp-spring-boot-starter` and `acp-spring-boot-autoconfigure` modules)
+- [ACP Java SDK](/projects/acp-java-sdk): the underlying SDK
+- [Maven Central](https://central.sonatype.com/artifact/com.agentclientprotocol/acp-spring-boot-starter): published artifacts

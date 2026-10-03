@@ -20,7 +20,7 @@ The same ACP Spring Boot starter as Module 23, plus one Spring AI model starter:
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
 </dependency>
 <dependency>
@@ -29,6 +29,13 @@ The same ACP Spring Boot starter as Module 23, plus one Spring AI model starter:
 </dependency>
 <!-- swap for spring-ai-starter-model-openai, -ollama, ... -->
 ```
+
+<Note>
+As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
+`org.springaicommunity`); see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). The
+downloadable module for this page predates the move and still uses the old coordinates; it will be
+updated separately. The coordinates above are current.
+</Note>
 
 ## The Agent
 

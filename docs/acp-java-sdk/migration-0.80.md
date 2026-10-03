@@ -12,6 +12,23 @@ three-argument overload still exists (its third parameter is now `List<SessionCo
 different type). The sections below name every breaking change; this page is the complete list, not
 a sample.
 
+## Spring Boot support moved into the SDK
+
+`acp-spring-boot-starter` and `acp-spring-boot-autoconfigure` are now modules of the ACP Java SDK
+itself, built and versioned together with it, replacing the separate `spring-ai-community/acp-autoconfig`
+project:
+
+| | Before (0.13.0 and earlier) | As of 0.80.0 |
+|---|---|---|
+| Group ID | `org.springaicommunity` | `com.agentclientprotocol` |
+| Package | `com.agentclientprotocol.autoconfigure` | `com.agentclientprotocol.sdk.spring.boot.autoconfigure` |
+| Version | Independent (`0.13.0`) | `0.80.0`, matching the SDK |
+
+The `spring.acp.*` property names are unchanged. There is no relocation POM for this move: update the
+coordinate and any imports directly rather than relying on a transitive redirect. See the
+[Spring Boot Starter page](/docs/acp-java-sdk/autoconfig), now the canonical home for this
+integration's documentation.
+
 ## Removed: `session/set_model` and the WebSocket-only agent transport
 
 Two APIs that were deprecated for removal are gone.
@@ -302,7 +319,8 @@ old behavior should be revisited.
   shared (and saw later changes to) the builder's lists. `build()` now snapshots a composed
   configuration without mutating the builder, enabling `AcpAgentSupport.Builder.buildFactory()` (an
   `AcpAgentFactory` that creates a fresh agent per connection from one shared, thread-safe handler
-  bean), a new-feature page held until the architecture brief is approved, but the underlying bug
+  bean), a new-feature page held until the architecture brief is approved, but the underlying bug fix
+  applies now to anyone who builds an `AcpAgentSupport` agent more than once.
 - **A client's `prompt()` now returns only after every earlier notification on that connection has
   been handled.** Before, a response could complete its caller while the session-update consumer was
   still processing the turn's last updates, so a caller that read what it had collected right after
@@ -319,7 +337,6 @@ old behavior should be revisited.
   143 as the normal/expected close outcome should check for exit `0` instead. Closing twice (for
   example `closeGracefully()` followed by try-with-resources `close()`) no longer stops the process
   or logs the stop message a second time.
-  fix applies now to anyone who builds an `AcpAgentSupport` agent more than once.
 
 ## What you may have to change: a quick checklist
 
@@ -350,3 +367,7 @@ old behavior should be revisited.
     (not the builder), add the new `shutdownTimeout` component.
 12. If any `SyncPromptContext` is implemented directly (a test double, typically), implement the new
     abstract `async()` method.
+13. If you use Spring Boot support, change `org.springaicommunity:acp-spring-boot-starter`/
+    `acp-spring-boot-autoconfigure` to `com.agentclientprotocol`, update the version to `0.80.0`, and
+    fix any import of `com.agentclientprotocol.autoconfigure.*` to
+    `com.agentclientprotocol.sdk.spring.boot.autoconfigure.*`. Property names are unchanged.

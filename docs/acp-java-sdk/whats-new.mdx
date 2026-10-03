@@ -17,6 +17,15 @@ page say otherwise.
 breaking-change list, with a quick-mapping table from the old API to the new one, is in the
 [migration guide](/docs/acp-java-sdk/migration-0.80).
 
+**Spring Boot support is now part of the SDK.** `acp-spring-boot-starter` and
+`acp-spring-boot-autoconfigure` move from `org.springaicommunity` into `com.agentclientprotocol`,
+versioned together with the rest of the SDK (there's no relocation POM; see the
+[migration guide](/docs/acp-java-sdk/migration-0.80#spring-boot-support-moved-into-the-sdk) for the
+exact coordinate and package change). The [Spring Boot Starter page](/docs/acp-java-sdk/autoconfig)
+is the canonical home for this integration's documentation going forward. Quarkus and Micronaut
+integrations are landing in the SDK as required, non-preview 0.80.0 modules too; their docs pages
+follow once their shapes are final.
+
 **New concepts and features**, each with its own page:
 
 - **[Session config options](/docs/acp-java-sdk/config-options)** replace `session/set_model`: an

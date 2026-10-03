@@ -1,13 +1,14 @@
 # Module 31: Elicitation
 
-An agent asks the user for structured input in the middle of a prompt: a form the client renders, and the user accepts, declines, or cancels.
+An agent asks the user for structured input in the middle of a prompt, or sends them to a URL for an out-of-band interaction such as signing in.
 
 ## What You'll Learn
 
 - Sending an elicitation request from an agent with `createElicitation`
 - Building a form schema: text, single-select, multi-select, boolean, and integer fields
 - Handling accept, decline, and cancel responses in the agent
-- Advertising elicitation support and answering requests on the client
+- URL mode: no schema, no content in the answer, and a separate `elicitation/complete` notification when the out-of-band interaction finishes
+- Advertising elicitation support (`formOnly()`/`urlOnly()`/`formAndUrl()`) and answering requests on the client
 
 ## The Code
 
@@ -68,24 +69,55 @@ agentRef.set(agent);
 agent.start().then(agent.awaitTermination()).block();
 ```
 
+### URL mode: sign-in pages and other out-of-band flows
+
+A form isn't the only kind of elicitation. In URL mode, the agent sends a link (a sign-in page, a payment page) that the client opens out of band with the user's consent: no schema, and the accept answer carries no content. When the external interaction finishes (an OAuth callback, for example), the agent tells the client with a separate `elicitation/complete` notification carrying the same elicitation id:
+
+```java
+String elicitationId = "signin-" + UUID.randomUUID();
+return agentRef.get()
+    .createElicitation(CreateElicitationRequest.url(sessionId,
+        "Sign in to the issue tracker to continue",
+        elicitationId, "https://tracker.example.com/oauth/authorize?state=" + elicitationId))
+    .flatMap(response -> {
+        if (!ElicitationAction.ACCEPT.equals(response.action())) {
+            return context.sendMessage("User did not open the sign-in page.\n")
+                .then(Mono.just(PromptResponse.endTurn()));
+        }
+        // ...the user signs in on that page (the agent learns of it out of band, e.g. an
+        // OAuth callback). Then tell the client it is done:
+        return agentRef.get()
+            .completeElicitation(new CompleteElicitationNotification(elicitationId))
+            .then(context.sendMessage("Signed in; the sign-in page can be closed.\n"))
+            .then(Mono.just(PromptResponse.endTurn()));
+    });
+```
+
 ### Client: advertise support and answer
 
 The client declares elicitation support in its capabilities and registers a handler. A real client shows the form to the user; the demo fills it in automatically:
 
 ```java
-// Advertise the elicitation modes this client handles: form only.
-// The agent may not request a mode the client did not advertise.
-var caps = new ClientCapabilities(
-    new FileSystemCapability(), false,
-    null, null,                          // session, auth
-    ElicitationCapabilities.formOnly(), null);
+// Advertise both elicitation modes this client handles: form and URL.
+// The agent may not request a mode the client did not advertise
+// (formOnly() / urlOnly() / formAndUrl()).
+var caps = ClientCapabilities.builder()
+    .elicitation(ElicitationCapabilities.formAndUrl())
+    .build();
 
 AcpSyncClient client = AcpClient.sync(transport)
     .clientCapabilities(caps)
     .createElicitationHandler(req -> {
         System.out.println("Agent asks: " + req.message());
-        ElicitationSchema schema = req.requestedSchema();
 
+        if (AcpSchema.CreateElicitationRequest.MODE_URL.equals(req.mode())) {
+            // A real client shows the URL and opens it in a browser if the user agrees.
+            System.out.println("URL mode: open " + req.url() + " (id " + req.elicitationId() + ")");
+            return CreateElicitationResponse.accept();  // no content for URL mode
+            // or CreateElicitationResponse.decline()
+        }
+
+        ElicitationSchema schema = req.requestedSchema();
         Map<String, Object> values = new HashMap<>();
         for (var entry : schema.properties().entrySet()) {
             values.put(entry.getKey(), autoFill(entry.getKey(), entry.getValue()));
@@ -93,6 +125,10 @@ AcpSyncClient client = AcpClient.sync(transport)
         return CreateElicitationResponse.accept(values);
         // or CreateElicitationResponse.decline() / CreateElicitationResponse.cancel()
     })
+    // URL mode: the agent reports that the external interaction finished.
+    // Ignore ids you do not know or have already completed.
+    .completeElicitationHandler(done ->
+            System.out.println("elicitation/complete for " + done.elicitationId()))
     .build();
 
 client.initialize();
@@ -137,7 +173,7 @@ Elicitation was added in SDK 0.12.0 as an unstable protocol element, marked `@Un
 ./mvnw exec:java -pl module-31-elicitation
 ```
 
-The demo runs four exchanges against the agent: a simple single-select that the user accepts, the full project form accepted with every field type, a form the user declines, and one the user cancels. No API key required.
+The demo runs five exchanges against the agent: a simple single-select that the user accepts, the full project form accepted with every field type, a form the user declines, one the user cancels, and a URL-mode sign-in the user agrees to open, followed by the agent's `elicitation/complete`. No API key required.
 
 ## Next Module
 

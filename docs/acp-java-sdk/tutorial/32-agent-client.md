@@ -122,6 +122,6 @@ Plug it in like the other agents ([Module 29](/docs/acp-java-sdk/tutorial/29-jet
 
 The demo starts the agent in a temporary working directory and gives it a goal that requires action: create `haiku.txt` containing a haiku about AI agents. It then reads the file back from disk to show the agent wrote it.
 
-## Back to the Overview
+## Next Module
 
-[Tutorial Overview](/docs/acp-java-sdk/tutorial/index) — all modules and the recommended paths through them.
+[Module 33: Session Config Options](/docs/acp-java-sdk/tutorial/33-session-config-options): the 0.80.0 replacement for session/set_model, and the general mechanism behind it.

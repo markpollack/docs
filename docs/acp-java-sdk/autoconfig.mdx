@@ -91,12 +91,13 @@ stays up after its transport ends.
 | Property | Default | Description |
 |----------|---------|-------------|
 | `spring.acp.client.request-timeout` | `30s` | Request timeout |
-| `spring.acp.client.transport.type` | auto-detect | `stdio` or `websocket` |
+| `spring.acp.client.transport.type` | auto-detect | `stdio`, `websocket`, or `http` |
 | `spring.acp.client.transport.stdio.command` | — | Command to launch agent process |
 | `spring.acp.client.transport.stdio.args` | — | Command arguments (comma-separated) |
 | `spring.acp.client.transport.stdio.env.*` | — | Environment variables for the process |
 | `spring.acp.client.transport.websocket.uri` | — | WebSocket URI (e.g. `ws://localhost:8080/acp`) |
 | `spring.acp.client.transport.websocket.connect-timeout` | `10s` | WebSocket connection timeout |
+| `spring.acp.client.transport.http.uri` | — | Streamable HTTP endpoint of the agent (e.g. `http://localhost:8080/acp`) |
 | `spring.acp.client.capabilities.read-text-file` | `false` | Advertise file read capability; enable it with a file handler registered through an `AcpClientCustomizer` |
 | `spring.acp.client.capabilities.write-text-file` | `false` | Advertise file write capability; enable it with a file handler registered through an `AcpClientCustomizer` |
 | `spring.acp.client.capabilities.terminal` | `false` | Advertise terminal capability |
@@ -126,7 +127,9 @@ The client transport is selected automatically based on which properties are set
 
 - Set `spring.acp.client.transport.stdio.command` → stdio transport
 - Set `spring.acp.client.transport.websocket.uri` → WebSocket transport
-- Set `spring.acp.client.transport.type` → explicit selection (takes precedence)
+- Set `spring.acp.client.transport.http.uri` → Streamable HTTP transport
+- Set `spring.acp.client.transport.type` → explicit selection (takes precedence; `http` without the
+  URI property fails at startup with a message naming it)
 
 The agent defaults to stdio transport. Set `spring.acp.agent.enabled=false` to disable, or
 `spring.acp.agent.transport.type=http` to serve it remotely; see below.
@@ -160,10 +163,16 @@ How the endpoint is served depends on what's already on the classpath:
   `spring.acp.agent.transport.http.port` and serves Streamable HTTP, a WebSocket upgrade on the
   same path, and cleartext HTTP/2 (h2c).
 
-A client connects with `StreamableHttpAcpClientTransport` (`http://host:port/acp`, built and wired
-as a bean yourself, since there's no property-driven client-side HTTP transport yet) or, against the
-standalone listener, `WebSocketAcpClientTransport` using the existing
-`spring.acp.client.transport.websocket.uri=ws://host:port/acp` property.
+A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp`, which creates a
+`StreamableHttpAcpClientTransport` for you, or, against the standalone listener,
+`spring.acp.client.transport.websocket.uri=ws://host:port/acp` for `WebSocketAcpClientTransport`.
+
+<Note>
+The client's WebSocket transport has a shutdown-ordering defect under Spring's lifecycle, fixed on
+the agent/transport side in `4c0918a` but still pending an idempotent-close fix in the SDK itself.
+Until that SDK fix lands, prefer the Streamable HTTP client property over the WebSocket one in a
+Boot application.
+</Note>
 
 Override the `StreamableHttpAcpAgentTransport` bean (standalone listener) or the
 `acpServletRegistration` bean (servlet mode) the same way as any other auto-configured bean, to

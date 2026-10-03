@@ -256,6 +256,9 @@ The `acp-agent-support` module provides a declarative programming model using an
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
 | `@Cancel` | `session/cancel` | Cancellation notification (fire-and-forget) |
+| `@Authenticate` | `authenticate` | Runs an authentication attempt *(0.80.0; previously unconditionally "method not found")* |
+| `@ExtRequest("_name")` | a custom `_`-prefixed method | Handles an [extension](/docs/acp-java-sdk/extensions) request *(0.80.0)* |
+| `@ExtNotification("_name")` | a custom `_`-prefixed method | Handles an [extension](/docs/acp-java-sdk/extensions) notification *(0.80.0)* |
 
 > **Removed in 0.80.0: the session-model API.** `session/set_model` and the related types
 > (`@SetSessionModel`, `SetSessionModelRequestResolver`, `SetSessionModelRequest`/`Response`,
@@ -272,6 +275,27 @@ The `acp-agent-support` module provides a declarative programming model using an
 | Annotation | Description |
 |------------|-------------|
 | `@SessionId` | Injects the current session ID as `String` |
+
+#### Connection-Level Parameters *(0.80.0)*
+
+Any handler method, not only `@Prompt`, may also declare a parameter of type `AcpSyncAgent`/
+`AcpAsyncAgent` (the connection's own agent facade, to call back into the client) or
+`NegotiatedCapabilities` (what the connected client advertised). Resolution is by parameter type, so
+order and presence are both optional:
+
+```java
+@NewSession
+NewSessionResponse newSession(NewSessionRequest req, NegotiatedCapabilities caps) {
+    boolean canElicit = caps.supportsElicitation();
+    // ...
+}
+
+@ExtRequest("_example/status")
+StatusResult status(AcpSyncAgent agent, NegotiatedCapabilities caps) { ... }
+```
+
+Previously, a handler needing to call back into the client had to capture the agent from an
+enclosing scope; as of 0.80.0 it's an ordinary parameter like any other.
 
 ### Flexible Method Signatures
 
@@ -334,7 +358,7 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
 
     // Permissions
     boolean allowed = ctx.askPermission("Delete files in /tmp?");
-    String choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");
+    Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");  // empty() if the client cancelled (0.80.0: was a bare String)
 
     // Terminal execution (requires client capabilities)
     CommandResult result = ctx.execute("ls", "-la");
@@ -343,7 +367,14 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
 }
 ```
 
+`ctx.async()` *(0.80.0)* returns the same turn's `PromptContext` (the async, Reactor-based view),
+for the rare case where a sync handler needs to compose one of the async-only APIs. If you implement
+`SyncPromptContext` yourself, for a test double, `async()` is an abstract method you must provide
+too; it's not a default method.
+
 ### `AcpAgentSupport` — Bootstrap
+
+For a single stdio agent, `.run()` blocks until the client disconnects:
 
 ```java
 AcpAgentSupport.create(new MyAgent())
@@ -354,6 +385,23 @@ AcpAgentSupport.create(new MyAgent())
     .returnValueHandler(new FutureHandler())   // Optional
     .run();  // Blocks until client disconnects
 ```
+
+For Streamable HTTP or WebSocket, where one JVM serves many remote connections,
+`buildFactory()` *(0.80.0)* hands back an `AcpAgentFactory` instead of running one agent directly;
+the server creates a fresh agent per connection from it, sharing the same handler bean (which must be
+thread-safe) across all of them:
+
+```java
+AcpAgentFactory agents = AcpAgentSupport.create(new MyAgent())
+    .requestTimeout(Duration.ofSeconds(60))
+    .buildFactory();
+
+new StreamableHttpAcpAgentTransport(0, AcpJsonMapper.createDefault(), agents).start().block();
+```
+
+The builder is safely reusable across multiple `buildFactory()` calls, if you need more than one
+listener sharing the same configuration. See [Transports](/docs/acp-java-sdk/transports) for the
+full connection lifecycle.
 
 ### Interceptors
 
@@ -720,10 +768,28 @@ AcpSyncClient client = AcpClient.sync(transport)
         new FileSystemCapability(true, true),  // read, write
         true  // terminalExecution
     ))
+    .clientInfo(new Implementation("my-client", "1.0.0"))  // optional; name and version sent to the agent
     .build();
 
 client.initialize();
 ```
+
+For a full `ClientCapabilities` including session, auth, and elicitation support, start from
+`ClientCapabilities.builder()` rather than the positional constructor:
+
+```java
+.clientCapabilities(ClientCapabilities.builder()
+    .fs(new FileSystemCapability(true, true))
+    .terminal(true)
+    .session(ClientSessionCapabilities.withBooleanConfigOptions())
+    .auth(new AuthCapabilities(true))           // terminal auth
+    .elicitation(ElicitationCapabilities.formAndUrl())
+    .build())
+```
+
+`initialize(int protocolVersion, Map<String, Object> meta)` is still available for the rare case of
+pinning a specific protocol version or attaching `_meta` to the handshake; plain `initialize()` is
+what nearly every client should call.
 
 ### `NegotiatedCapabilities`
 

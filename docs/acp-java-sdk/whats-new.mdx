@@ -4,6 +4,57 @@ sidebarTitle: "What's New"
 description: "Release notes for ACP Java SDK — auto-generated from git history"
 ---
 
+## 0.80.0 (unreleased)
+
+<Warning>
+**This version has not shipped yet.** This entry describes a release candidate under active
+verification; version numbers, dates and content may still change before it's tagged. Don't treat
+anything below as available until the [migration guide](/docs/acp-java-sdk/migration-0.80) and this
+page say otherwise.
+</Warning>
+
+0.80.0 is binary-incompatible with 0.18.0: recompile against it, don't just swap the jar. The full
+breaking-change list, with a quick-mapping table from the old API to the new one, is in the
+[migration guide](/docs/acp-java-sdk/migration-0.80).
+
+**New concepts and features**, each with its own page:
+
+- **[Session config options](/docs/acp-java-sdk/config-options)** replace `session/set_model`: an
+  agent declares its own selectors (model choice is now just the one with `category: "model"`), plus
+  a new boolean kind for simple on/off settings.
+- **[`$/cancel_request`](/docs/acp-java-sdk/cancellation)**, in both directions, lets either side
+  cancel a single in-flight request without ending the whole session. Two new agent-side settings,
+  `cancelGracePeriod` (default 60s) and `maxPromptDuration` (off by default), bound how long a prompt
+  handler can run; see that page for exactly what they do and why they exist.
+- **[Extension methods](/docs/acp-java-sdk/extensions)** (`_`-prefixed custom requests and
+  notifications) are now a first-class, typed feature on every client and agent builder, not just a
+  raw escape hatch.
+- **Elicitation is stable**, with explicit mode-checking: see
+  [Elicitation](/docs/acp-java-sdk/elicitation).
+- **[Terminal authentication and logout](/docs/acp-java-sdk/terminal-auth-and-logout)**: an agent can
+  ask the client to run an interactive login, and advertise that it supports logging out.
+- The Streamable HTTP and WebSocket transports gain a graceful shutdown window
+  (`shutdownTimeout`) and clearer connection/session routing; see
+  [Transports](/docs/acp-java-sdk/transports) for the identity and routing tables.
+- **Forward compatibility** got more deliberate: former enums (`StopReason`, `ToolCallStatus`, and
+  others) are now open value types, and several unions gained explicit `Unknown*` fallback variants.
+  Error codes now match the ACP v1 schema exactly. See
+  [Forward compatibility](/docs/acp-java-sdk/forward-compatibility).
+- **[One stability convention](/docs/acp-java-sdk/stability)**: an API is unstable if and only if it
+  carries `@UnstableAcpApi`. Today that's session fork and the providers methods; everything else,
+  including everything listed above, is a stable promise.
+
+**Fixes worth knowing about**
+
+- A handler that throws a bare `Error` now answers `-32603` instead of leaving the caller hanging.
+- `AcpAgentSupport.Builder` is safely reusable across multiple `buildFactory()` calls, which the
+  Streamable HTTP listener relies on to hand each connection its own agent instance.
+- `prompt()` (and every other client request) now returns only after every notification received
+  before its response has been handled by the session-update consumer; see
+  [Concepts: the ordering guarantee](/docs/acp-java-sdk/concepts#session-updates-and-the-ordering-guarantee).
+- Closing a stdio client now lets the agent exit on its own (a 2-second wait) before sending
+  SIGTERM, instead of terminating it immediately.
+
 ## 0.18.0 (2026-09-25)
 
 Remote agents: the Streamable HTTP and WebSocket transport from the ACP RFD, over plain `http://` and `https://`, and a choice of Jackson 2 or Jackson 3. See [Remote agents](/docs/acp-java-sdk/index#remote-agents-over-streamable-http) for the code.

@@ -108,7 +108,17 @@ stays up after its transport ends.
 | `spring.acp.agent.enabled` | `true` | Enable agent autoconfiguration |
 | `spring.acp.agent.request-timeout` | `60s` | Request processing timeout |
 | `spring.acp.agent.shutdown-on-transport-end` | `true` | Close the application context when the agent's transport ends; for stdio, when the client closes the agent's input, so the process exits |
-| `spring.acp.agent.transport.type` | `stdio` | Transport type |
+| `spring.acp.agent.transport.type` | `stdio` | `stdio` or `http` |
+| `spring.acp.agent.transport.http.path` | `/acp` | Endpoint path |
+| `spring.acp.agent.transport.http.port` | `8080` | Port of the standalone listener (not used in a servlet web app, which uses `server.port`) |
+| `spring.acp.agent.transport.http.max-post-body-size` | `16MB` | Largest inbound message (POST body or WebSocket text message) |
+| `spring.acp.agent.transport.http.keep-alive-interval` | `15s` | Interval between SSE keep-alive comments; `0` disables them |
+| `spring.acp.agent.transport.http.mailbox-capacity` | `1024` | Events kept per outbound stream while no subscriber is attached |
+| `spring.acp.agent.transport.http.max-pending-sse-events` | `1024` | Events queued for one SSE subscriber before it is closed |
+| `spring.acp.agent.transport.http.max-web-socket-pending-frames` | `1024` | Frames queued for one WebSocket connection before it is closed |
+| `spring.acp.agent.transport.http.max-provisional-sessions` | `64` | Session streams a connection may open before the session is known |
+| `spring.acp.agent.transport.http.max-concurrent-streams-per-connection` | `1024` | HTTP/2 streams per client connection (standalone listener only) |
+| `spring.acp.agent.transport.http.shutdown-timeout` | `5s` | How long closing the endpoint waits for connections to close gracefully |
 
 ## Transport Selection
 
@@ -118,11 +128,72 @@ The client transport is selected automatically based on which properties are set
 - Set `spring.acp.client.transport.websocket.uri` → WebSocket transport
 - Set `spring.acp.client.transport.type` → explicit selection (takes precedence)
 
-The agent defaults to stdio transport. Set `spring.acp.agent.enabled=false` to disable.
+The agent defaults to stdio transport. Set `spring.acp.agent.enabled=false` to disable, or
+`spring.acp.agent.transport.type=http` to serve it remotely; see below.
+
+## Remote Agents over Streamable HTTP
+
+Add `com.agentclientprotocol:acp-streamable-http-jetty` and set
+`spring.acp.agent.transport.type=http`. Every remote connection gets its own agent runtime, created
+from the SDK's `AcpAgentFactory`, all served by your one `@AcpAgent` bean, so that bean must be
+thread-safe.
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-streamable-http-jetty</artifactId>
+</dependency>
+```
+
+```properties
+spring.acp.agent.transport.type=http
+spring.acp.agent.transport.http.port=8080
+```
+
+How the endpoint is served depends on what's already on the classpath:
+
+- **Servlet web application** (`spring-boot-starter-web` present): the agent mounts on the
+  application's own server, at `spring.acp.agent.transport.http.path` (default `/acp`), serving
+  Streamable HTTP (POST and SSE) on `server.port`. WebSocket upgrades are **not** served in this
+  mode; use the standalone listener if you need them.
+- **Otherwise**: the SDK's own Jetty listener opens
+  `spring.acp.agent.transport.http.port` and serves Streamable HTTP, a WebSocket upgrade on the
+  same path, and cleartext HTTP/2 (h2c).
+
+A client connects with `StreamableHttpAcpClientTransport` (`http://host:port/acp`, built and wired
+as a bean yourself, since there's no property-driven client-side HTTP transport yet) or, against the
+standalone listener, `WebSocketAcpClientTransport` using the existing
+`spring.acp.client.transport.websocket.uri=ws://host:port/acp` property.
+
+Override the `StreamableHttpAcpAgentTransport` bean (standalone listener) or the
+`acpServletRegistration` bean (servlet mode) the same way as any other auto-configured bean, to
+customize beyond what the properties expose.
+
+### Enabling file access over HTTP (or any transport)
+
+The client advertises no file system capability by default (`spring.acp.client.capabilities.*`
+default to `false`), since the autoconfiguration registers no handler for them. Register one with an
+`AcpClientCustomizer` and turn the capability on:
+
+```java
+@Bean
+AcpClientCustomizer fileReads() {
+    return spec -> spec.readTextFileHandler(request ->
+        Mono.fromCallable(() -> new ReadTextFileResponse(Files.readString(Path.of(request.path())))));
+}
+```
+
+```properties
+spring.acp.client.capabilities.read-text-file=true
+```
+
+This is the same mechanism for terminal handlers and `spring.acp.client.capabilities.terminal`, and
+applies equally whether the client is talking stdio, WebSocket, or Streamable HTTP: the capability
+properties and the customizer are transport-independent.
 
 ## Overriding Beans
 
-All auto-configured beans back off when you provide your own. Define a custom `AcpClientTransport`, `AcpSyncClient`, `AcpAsyncClient`, or `AcpAgentTransport` bean and the autoconfiguration will use yours instead.
+All auto-configured beans back off when you provide your own. Define a custom `AcpClientTransport`, `AcpSyncClient`, `AcpAsyncClient`, `AcpAgentTransport`, `AcpAgentFactory`, `StreamableHttpAcpAgentTransport`, or `acpServletRegistration` bean and the autoconfiguration will use yours instead.
 
 A transport carries one client. The auto-configured `AcpSyncClient` wraps the `AcpAsyncClient` bean (`new AcpSyncClient(asyncClient)`), and a custom sync client should do the same. Building a second client from the transport fails at construction on ACP Java SDK 0.80.0.
 

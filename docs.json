@@ -290,7 +290,13 @@
                   "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/index",
                   "docs/acp-java-sdk/migration-0.80",
-                  "docs/acp-java-sdk/autoconfig",
+                  {
+                    "group": "Framework Integrations",
+                    "pages": [
+                      "docs/acp-java-sdk/autoconfig",
+                      "docs/acp-java-sdk/micronaut"
+                    ]
+                  },
                   {
                     "group": "Concepts",
                     "pages": [

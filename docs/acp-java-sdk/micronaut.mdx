@@ -1,0 +1,182 @@
+---
+title: "Micronaut Integration"
+sidebarTitle: "Micronaut"
+description: "acp-micronaut: serve an @AcpAgent bean over stdio, Streamable HTTP, or WebSocket, and build a client from configuration, with compile-time bean discovery"
+---
+
+`acp-micronaut` is a required (non-preview) module of the ACP Java SDK as of 0.80.0: Micronaut 4
+integration that serves your `@AcpAgent` bean and builds an ACP client from configuration, the same
+shape as [the Spring Boot integration](/docs/acp-java-sdk/autoconfig) but wired through Micronaut's
+compile-time bean definitions instead of Spring's runtime ones.
+
+## Quick Start
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-micronaut</artifactId>
+    <version>0.80.0</version>
+</dependency>
+<!-- Only for acp.agent.transport.type=http (Streamable HTTP and WebSocket) -->
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-streamable-http-jetty</artifactId>
+    <version>0.80.0</version>
+</dependency>
+```
+
+Micronaut's annotation processor (`micronaut-inject-java`) must be on your compiler's annotation
+processor path, as in any Micronaut application; Java 17+.
+
+## An agent, annotated
+
+Annotate the agent class `@AcpAgent`, and make it a bean with `@Singleton` (any bean-defining
+annotation works). It's an ordinary Micronaut bean, so other beans inject into it normally:
+
+```java
+@Singleton
+@AcpAgent(name = "echo", version = "1.0.0")
+public class EchoAgent {
+
+    private final Greeter greeter;
+
+    public EchoAgent(Greeter greeter) {
+        this.greeter = greeter;
+    }
+
+    @Prompt
+    public AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest request, SyncPromptContext context) {
+        context.sendMessage(greeter.prefix() + request.text());
+        return AcpSchema.PromptResponse.endTurn();
+    }
+}
+
+public final class Application {
+    public static void main(String[] args) {
+        // stdout carries the protocol over stdio: no banner, and log to stderr (logback.xml)
+        Micronaut.build(args).mainClass(Application.class).banner(false).start();
+    }
+}
+```
+
+Handler methods, their parameters, and return types are the same ones documented on
+[Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents): `@Prompt`, `@NewSession`,
+`@SessionId`, `NegotiatedCapabilities`, `AcpSyncAgent`/`AcpAsyncAgent`, and so on. There's no
+Micronaut-specific builder alternative; this module is annotation-only.
+
+### Discovery is compile-time, not a classpath scan
+
+`AcpAgentRuntime` reads the `@AcpAgent` bean from the bean definitions Micronaut's annotation
+processor wrote at compile time, not by scanning the classpath at startup. Exactly one such bean is
+allowed per application; with more than one, startup fails and names them all
+(`IllegalStateException`, listing every bean's class name). An application with none, such as a
+client-only one, simply starts no agent.
+
+### `agentInfo` and capabilities come from the annotations
+
+The `initialize` answer is derived the same way as plain Java and Spring: `agentInfo` from
+`@AcpAgent`'s `name`/`version`, and a capability for each handler method the class declares. One bean
+instance serves every session, and (over HTTP) every connection, so keep per-session state in a map
+keyed by session id rather than on the bean itself.
+
+### Micronaut AOP works
+
+Discovery finds the agent by its **declared bean type**, which carries the handler annotations;
+invocation goes through Micronaut's own `context.getBean(...)`, which is the actual runtime
+instance, a generated AOP subclass when `@Around` advice applies to the bean. So an
+`@Around`-intercepted agent is discovered correctly off its user class (where the `@Prompt` and
+friends live), and calling it at runtime still goes through the generated subclass, so the advice
+actually runs. No special wiring needed beyond the ordinary Micronaut AOP annotations.
+
+### Returning a `Publisher`
+
+A handler may return any Reactive Streams `Publisher` of its response type, not only `Mono` (which
+`acp-agent-support` already handles natively): a `Flux`, for instance, if that's what a Micronaut data
+or HTTP client call already returns. Its first element is taken as the response; an empty publisher
+means no response. The handler still runs, and is waited on, synchronously under the hood (the
+runtime serves handlers through the sync agent), so this is a convenience for signature compatibility
+with reactive Micronaut code, not a path to true non-blocking handling.
+
+## Lifecycle
+
+- The agent starts with the application context (`StartupEvent`) and closes gracefully with it.
+- **Over stdio**, the application stays up while the transport runs; when the client closes the
+  agent's input and every answer has been written, the context closes and the process exits `0`
+  (`acp.agent.shutdown-on-transport-end`).
+- **Over HTTP**, the listener runs until the application stops.
+- **On SIGTERM**, the agent closes gracefully. An application with no embedded server has no shutdown
+  hook of Micronaut's own, so the runtime registers one.
+- With `micronaut.lifecycle.graceful-shutdown.enabled=true`, the HTTP listener drains through
+  Micronaut's graceful shutdown first.
+
+An application bean of type `AcpAgentTransport` replaces stdio, for example `acp-test`'s in-memory
+transport in a test.
+
+<Warning>
+**HTTP and WebSocket agents run on the SDK's own Jetty listener (`StreamableHttpAcpAgentTransport`
+from `acp-streamable-http-jetty`), on its own port, not inside Micronaut's Netty HTTP server.** It
+runs alongside a Micronaut HTTP server if your application has one, not mounted on it. Binding the
+ACP endpoint into Micronaut's own Netty server is a later addition, not yet available.
+</Warning>
+
+## Agent Settings (`acp.agent.*`)
+
+| Property | Default | |
+|---|---|---|
+| `acp.agent.enabled` | `true` | serve the `@AcpAgent` bean |
+| `acp.agent.request-timeout` | `60s` | agent-to-client requests |
+| `acp.agent.cancel-grace-period` | `60s` | after `session/cancel`, the SDK answers `cancelled` itself; `0s` for never |
+| `acp.agent.max-prompt-duration` | `0s` (none) | a longer prompt is answered `-32800` |
+| `acp.agent.shutdown-on-transport-end` | `true` | close the context when the stdio input ends |
+| `acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same listener) |
+| `acp.agent.transport.http.port` | `8080` | the listener's own port; `0` for an ephemeral one (read back with `AcpAgentRuntime.port()`) |
+| `acp.agent.transport.http.path` | `/acp` | |
+| `acp.agent.transport.http.max-post-body-size` | SDK default (16MB) | e.g. `4MB` |
+| `acp.agent.transport.http.keep-alive-interval`, `.mailbox-capacity`, `.max-pending-sse-events`, `.max-web-socket-pending-frames`, `.max-provisional-sessions`, `.max-concurrent-streams-per-connection`, `.shutdown-timeout` | SDK default | `StreamableHttpAcpAgentTransportOptions` |
+
+## A client, from configuration
+
+A client is configured when `acp.client.transport.*` is set, giving three beans: the transport, an
+`AcpAsyncClient`, and an `AcpSyncClient` facade over that same client (one session on one
+connection). The client connects when you call `initialize()`, and closes gracefully, once, with the
+context. Customize it before it's built with `AcpClientCustomizer` beans, applied in `@Order`:
+
+```java
+@Singleton
+class Updates implements AcpClientCustomizer {
+    public void customize(AcpClient.AsyncSpec spec) {
+        spec.sessionUpdateConsumer(notification -> { /* ... */ return Mono.empty(); });
+    }
+}
+```
+
+| Property | Default | |
+|---|---|---|
+| `acp.client.request-timeout` | `30s` | |
+| `acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`. Unset, the transport is whichever one has its command or URI set; with several set, `type` is required |
+| `acp.client.transport.stdio.command`, `.args`, `.env.*` | | the agent process; `env` keys keep their case |
+| `acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | `ws://host:port/acp` |
+| `acp.client.transport.http.uri` | | `http://host:port/acp` |
+| `acp.client.capabilities.read-text-file`, `.write-text-file`, `.terminal` | `false` | advertise one only together with its handler, registered in a customizer |
+
+## Extension Beans
+
+Beans of type `AcpInterceptor`, `ArgumentResolver`, and `ReturnValueHandler` are added to the agent,
+in bean order, the Micronaut-native way to extend the handler pipeline without subclassing anything.
+
+## Dependencies
+
+The Micronaut modules import the Micronaut 4.10 platform BOM; the SDK's own Reactor, Jackson, Jetty,
+and JUnit versions take precedence over it. The wire format is the SDK's own Jackson mapper (see
+[JSON Mappers](/docs/acp-java-sdk/json-mappers)), not Micronaut Serialization.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Spring Boot Starter" icon="leaf" href="/docs/acp-java-sdk/autoconfig">
+    The equivalent integration for Spring Boot applications
+  </Card>
+  <Card title="Clients and Agents in Java" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
+    The annotation model this module builds on
+  </Card>
+</CardGroup>

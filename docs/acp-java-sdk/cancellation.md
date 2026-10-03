@@ -61,6 +61,38 @@ AcpAgent.async(transport)
     .build();
 ```
 
+## Noticing a cancellation from inside a `@Prompt` method
+
+A `@Prompt` handler finds out about a cancellation the same way regardless of which of the four
+triggers caused it (`session/cancel` or `session/close` for its session, `$/cancel_request` for its
+own request, or the agent itself ending it: the cancel grace period or `maxPromptDuration` passing,
+or the connection closing):
+
+```java
+@Prompt
+PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
+    for (Step step : plan) {
+        if (ctx.isCancelled()) {
+            return PromptResponse.cancelled();
+        }
+        step.run(ctx);
+    }
+    return PromptResponse.endTurn();
+}
+```
+
+`SyncPromptContext.isCancelled()` is a poll: check it between steps of a long-running handler. For
+work you can't poll, such as a subprocess or an outstanding HTTP call that needs aborting,
+`onCancel(Runnable)` registers a callback that runs once, on whichever thread delivers the
+cancellation, so it must be quick and must not block. The async `PromptContext.whenCancelled()`
+returns a `Mono<Void>` that completes (empty) on cancellation, for composing into a Reactor pipeline,
+for example `work.takeUntilOther(context.whenCancelled())` to stop a chain of operators.
+
+Once `isCancelled()` is true, it stays true. After `session/cancel`, answer within the cancel grace
+period with `PromptResponse.cancelled()`, as the example above does; after `$/cancel_request` the SDK
+has already answered and interrupted the handler's thread, so whatever the handler eventually returns
+is simply discarded.
+
 ## The full sequence
 
 ```mermaid

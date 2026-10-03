@@ -10,16 +10,12 @@ annotations or the builder API.
 
 ## Building an agent: annotations, the recommended way in
 
-For nearly every agent, write a plain class, annotate it, and let `AcpAgentSupport` wire it up:
+For nearly every agent, write a plain class, annotate it, and let `AcpAgentSupport` wire it up. No
+`@Initialize` method is needed: the response is derived from the class, covered below.
 
 ```java
 @AcpAgent(name = "echo-agent", version = "1.0.0")
 class EchoAgent {
-
-    @Initialize
-    InitializeResponse init() {
-        return InitializeResponse.ok();
-    }
 
     @NewSession
     NewSessionResponse newSession() {
@@ -27,48 +23,115 @@ class EchoAgent {
     }
 
     @Prompt
-    PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
-        ctx.sendMessage("Echo: " + req.text());
-        return PromptResponse.endTurn();
+    String prompt(PromptRequest req) {
+        return "Echo: " + req.text();
     }
 }
 
 AcpAgentSupport.create(new EchoAgent())
     .transport(new StdioAcpAgentTransport())
-    .build()
     .run();
 ```
 
 One annotation per ACP method (`@Initialize`, `@NewSession`, `@Prompt`, `@Cancel`, `@Authenticate`,
 `@Logout`, `@SetSessionConfigOption`, `@ExtRequest`/`@ExtNotification` for your own methods, and
-more), discovered once when `AcpAgentSupport` builds. A handler method takes its request type
-(optional), `@SessionId String`, and, in any handler, the connection's `NegotiatedCapabilities` and
-`AcpSyncAgent`/`AcpAsyncAgent`; a `@Prompt` method additionally takes `SyncPromptContext` (or the
-async `PromptContext`, reachable from a sync one via `ctx.async()`). Returning the response type (or
-a `Mono` of it) answers normally; `void` from `@Prompt` answers `endTurn()`.
+more), discovered once when `AcpAgentSupport` builds, on the class and its superclasses, so a
+framework-generated proxy (Spring CGLIB, Quarkus ArC, Micronaut AOP) is found through the annotated
+class it extends and invoked on the proxy itself, so its interceptors still run. A handler method
+takes its request type (optional), `@SessionId String`, and, in any handler, the connection's
+`NegotiatedCapabilities` and `AcpSyncAgent`/`AcpAsyncAgent`; a `@Prompt` method additionally takes
+`SyncPromptContext` (or the async `PromptContext`, reachable from a sync one via `ctx.async()`).
 
-<Warning>
-**Don't return a `String` from `@Prompt` today.** It's meant to send the string as a message and end
-the turn, but a current bug routes it through `PromptResponse.text(...)`, which silently drops the
-text and sends nothing. A fix is coming with the next SDK candidate. Until then, call
-`ctx.sendMessage(...)` explicitly and return `PromptResponse.endTurn()`, as the example above does.
-</Warning>
+### Capabilities, `agentInfo`, and auth methods are derived from the class
 
-There's no session-state or exception-handler annotation: keep per-session state in a thread-safe map
-keyed by session id, dropped in `@CloseSession`/`@DeleteSession`, and handle errors in the method
-itself or an `AcpInterceptor.onError`.
+With no `@Initialize` method, the response the agent sends is derived entirely from what the class
+declares:
+
+- Each handler annotation advertises the capability its method needs: `@LoadSession` sets
+  `loadSession`; `@ListSessions`/`@CloseSession`/`@ResumeSession`/`@DeleteSession`/`@ForkSession` each
+  set their `sessionCapabilities` flag; `@Logout` sets `auth.logout`. `@NewSession`, `@Prompt`, and
+  `@Cancel` advertise nothing; ACP requires every agent to support them. `@SetSessionMode` and
+  `@SetSessionConfigOption` advertise nothing at the `initialize` level either: what they offer is
+  per-session, in the modes or config options a `session/new`/`load`/`resume` response carries.
+- `@Prompt(image, audio, embeddedContext)` declares the prompt content the agent accepts, advertised
+  as `promptCapabilities`.
+- `@AcpAgent(mcpHttp, mcpSse)` declares which MCP transports the agent connects to.
+- `@AcpAgent(name, version, title)` becomes `agentInfo`: an empty `name` sends the class's simple
+  name; an empty `version` sends the jar manifest's `Implementation-Version`, or `"unknown"` with
+  neither; an empty `title` sends none.
+- `@AcpAgent(authMethods = @AuthMethod(...))` becomes `authMethods`. A terminal method is advertised
+  only to a client that announced `clientCapabilities.auth.terminal`; an agent-type method requires an
+  `@Authenticate` handler to serve it, checked when the agent is built.
+
+```java
+@AcpAgent(name = "notes-agent", version = "1.0.0",
+    authMethods = @AuthMethod(id = "api-key", name = "API key")) // type AGENT is the default
+class NotesAgent {
+
+    @Authenticate
+    AuthenticateResponse authenticate(AuthenticateRequest req) { /* ... */ }
+
+    @LoadSession
+    LoadSessionResponse loadSession(LoadSessionRequest req) { /* ... */ } // implies loadSession: true
+
+    @Logout
+    LogoutResponse logout(LogoutRequest req) { /* ... */ } // implies auth.logout: true
+
+    @Prompt(image = true)
+    String prompt(PromptRequest req) { /* ... */ } // implies promptCapabilities.image: true
+}
+```
+
+### Adding `@Initialize`: it overlays the derived response, it doesn't replace it
+
+An `@Initialize` method's return value is layered **over** the derived one, not instead of it: a
+capability is advertised if *either* side advertises it (so a handler's implied capability can never
+be silently withdrawn by returning a response that omits it); returned auth methods are appended to
+the derived ones, replacing any with the same id; a returned `agentInfo`, protocol version, or
+`_meta` wins over the derived value when it's non-null. In short, `@Initialize` is for adding to or
+overriding specific fields, not for restating the whole response.
+
+### Return values
+
+A request handler returns its response type, or a `Mono`, `CompletionStage`, or single-value
+`Publisher` of it (the runtime waits for it on the handler's thread); a `null` or empty result
+answers `-32603` (internal error), since a request always needs one. Only `@Prompt` may be `void`
+(the same as `PromptResponse.endTurn()`); a `@Prompt` method may also return (or asynchronously
+produce) a `String`, sent to the client as an agent message chunk before the turn ends the same way
+(`null` or empty sends nothing): the simple form the example above uses. A notification handler
+(`@Cancel`) returns `void`.
+
+### Cancellation
+
+`SyncPromptContext.isCancelled()` (poll it between steps) or `onCancel(Runnable)` (register a
+callback, for work you can't poll, like a subprocess); the async `PromptContext.whenCancelled()`
+composes into a Reactor pipeline. See [Cancellation](/docs/acp-java-sdk/cancellation) for the full
+annotation-model lifecycle.
+
+### Typed config values
+
+A `@SetSessionConfigOption` method may take `@ConfigId String` and `@ConfigValue` (typed `String`,
+`boolean`/`Boolean`, or `Object` for either kind); a value of the wrong kind for the parameter's type
+answers `-32602` without calling the method. See
+[Session Config Options](/docs/acp-java-sdk/config-options) for the full shape.
+
+### When something's wrong
+
+Registration errors are caught when the agent is built, each naming the class, the method, and the
+fix: two handler methods for one annotation (or two annotations on one method), a parameter no
+resolver can supply, `@SessionId`/`@ConfigId`/`@ConfigValue` on a method that doesn't have one, a
+request handler declared `void` (or returning the wrong type), and `@SetSessionMode`/
+`@SetSessionConfigOption` present without a `@NewSession` method to offer what they set. Every agent
+needs a `@Prompt` method; building one without it fails the same way. There's no session-state or
+exception-handler annotation: keep per-session state in a thread-safe map keyed by session id,
+dropped in `@CloseSession`/`@DeleteSession`, and handle errors in the method itself or an
+`AcpInterceptor.onError`.
 
 For serving many remote connections (Streamable HTTP, WebSocket) from one annotated agent,
 `AcpAgentSupport.Builder#buildFactory()` returns an `AcpAgentFactory` instead of running one agent
 directly: every connection gets its own runtime, all dispatching to this one bean, which is why the
-bean itself must be thread-safe. See [Transports](/docs/acp-java-sdk/transports).
-
-<Warning>
-**In flight, not yet landed**: a change due with the next SDK candidate makes the annotation model
-derive advertised capabilities from which handlers a class declares, instead of requiring them spelled
-out separately. This page will be updated with the exact shape once that lands; don't take the
-capability-declaration code above as final for that part.
-</Warning>
+bean itself must be thread-safe. It refuses a builder that also has `transport(...)` set, since a
+listener supplies its own transport per connection. See [Transports](/docs/acp-java-sdk/transports).
 
 ## Building an agent: the builder API
 
@@ -78,7 +141,7 @@ per connection.
 
 ```java
 AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
-    .initializeHandler(req -> InitializeResponse.ok())
+    .agentInfo(new Implementation("echo-agent", "1.0.0"))
     .newSessionHandler(req -> new NewSessionResponse(UUID.randomUUID().toString(), null, null))
     .promptHandler((req, ctx) -> {
         ctx.sendMessage("Echo: " + req.text());
@@ -90,9 +153,15 @@ agent.run();
 ```
 
 The same shape as the annotated version, one `xxxHandler(...)` setter per ACP method instead of one
-annotated method. A builder handler other than the prompt handler receives only its request; to call
-back into the client (or read `NegotiatedCapabilities`) from one of those handlers, reach the built
-agent through a reference captured after `build()`, rather than a parameter:
+annotated method. Builder agents get a default `initialize` too, so `initializeHandler(...)` is
+optional: it derives the same capabilities from which handlers are *registered* (no
+`promptCapabilities` or `mcpCapabilities`, which need annotation attributes the plain builder has no
+equivalent for), and `agentInfo(Implementation)` sets `agentInfo` on it without writing a handler.
+(`AcpAgentSupport.Builder#run()`, the annotated builder's one-call `build().run()` convenience,
+has no equivalent on this plain builder: call `.build()` then `.run()` on the result, as above.) A
+builder handler other than the prompt handler receives only its request; to call back into the
+client (or read `NegotiatedCapabilities`) from one of those handlers, reach the built agent through a
+reference captured after `build()`, rather than a parameter:
 
 ```java
 AtomicReference<AcpSyncAgent> self = new AtomicReference<>();

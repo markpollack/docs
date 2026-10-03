@@ -80,6 +80,45 @@ Migration: keep per-session state in the agent itself, in a thread-safe map keye
 `AcpInterceptor`'s `onError`, and throw `AcpProtocolException` to answer with a specific JSON-RPC
 error.
 
+## Annotation model: capabilities derived from handlers, and new return/parameter support
+
+An annotated agent with no `@Initialize` method now gets one derived from the class: each handler
+annotation advertises the capability its method needs, `@Prompt`'s `image`/`audio`/`embeddedContext`
+attributes and `@AcpAgent`'s `mcpHttp`/`mcpSse` declare the rest, and `agentInfo`/`authMethods` come
+from `@AcpAgent`'s own attributes. See
+[Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for the full shape. This is
+additive (an existing `@Initialize` method keeps working, now overlaid on the derived response), but
+it changes several things enough to call out directly:
+
+- **`@SetSessionMode` or `@SetSessionConfigOption` without a `@NewSession` method is now a build
+  error.** Those two set state a session needs to exist first; an agent offering either must also
+  offer a way to create the session with the options they set.
+- **Every agent needs a `@Prompt` method (or a prompt handler, on the plain builder).** Building one
+  without it now fails with `IllegalStateException`, rather than silently answering "Method not
+  found" for every prompt at runtime.
+- **A handler-implied capability can no longer be withdrawn by an `@Initialize` method.** Capabilities
+  merge by OR: a handler's presence always means "advertised," even if the `@Initialize` response
+  returned doesn't mention it. If you relied on `@Initialize` to selectively suppress a capability a
+  handler would otherwise imply, remove the handler instead (or gate it so it isn't registered).
+- **Misuse of the annotation model now fails at registration, not at the first call.** Two handler
+  methods for one annotation, two handler annotations on one method, a parameter no resolver can
+  supply, `@SessionId`/`@ConfigId`/`@ConfigValue` on a method that doesn't have a session or config
+  option to supply it from, and a request handler declared `void` or returning the wrong type: all of
+  these now throw when the agent is built, each naming the class, method, and fix, instead of
+  behaving unpredictably (or not at all) once traffic arrives.
+- **`MonoHandler` is renamed `AsyncValueHandler`**, and now also handles `CompletionStage` and any
+  single-value Reactive Streams `Publisher`, not only `Mono`. Code referencing the class by name
+  (a custom `ReturnValueHandler` composed alongside it, say) needs the new name. A `Publisher` that
+  emits more than one value now fails the call, where it previously wasn't a supported return type at
+  all.
+- **`PromptContext` and `SyncPromptContext` gain abstract methods**: `isCancelled()` on both,
+  `onCancel(Runnable)` on `SyncPromptContext`, `whenCancelled()` on `PromptContext`. A custom
+  implementation of either interface, typically a test double, must implement the new methods.
+- **`AcpAgentSupport.Builder.buildFactory()` now throws if `transport(...)` was also set** (a listener
+  supplies its own transport per connection, so the two are mutually exclusive), and both `build()`
+  and `buildFactory()` throw `IllegalStateException` if no agent bean was given at all. Previously
+  these cases either weren't checked or failed less clearly downstream.
+
 ## Client `initialize(InitializeRequest)` is removed
 
 A client's capabilities and info are now set **only** on its builder, not on the `initialize` call.
@@ -371,3 +410,12 @@ old behavior should be revisited.
     `acp-spring-boot-autoconfigure` to `com.agentclientprotocol`, update the version to `0.80.0`, and
     fix any import of `com.agentclientprotocol.autoconfigure.*` to
     `com.agentclientprotocol.sdk.spring.boot.autoconfigure.*`. Property names are unchanged.
+14. If any annotated agent has `@SetSessionMode`/`@SetSessionConfigOption` without `@NewSession`, add
+    one; building now fails without it.
+15. If any custom `ReturnValueHandler` composition references `MonoHandler` by name, update it to
+    `AsyncValueHandler`.
+16. If any custom `PromptContext`/`SyncPromptContext` implementation exists (typically a test
+    double), implement the new `isCancelled()`/`onCancel(Runnable)`/`whenCancelled()` methods.
+17. If an `@Initialize` method's response was relied on to suppress a capability a handler would
+    otherwise imply, remove or conditionally register the handler instead: capabilities now merge by
+    OR, so a handler's presence always advertises.

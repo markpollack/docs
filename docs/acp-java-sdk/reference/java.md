@@ -316,7 +316,7 @@ PromptResponse answer(PromptRequest req, SyncPromptContext ctx) { ... }
 
 // Auto-converted return types
 @Prompt
-String simpleAnswer(PromptRequest req) { ... }  // → PromptResponse.text(value)
+String simpleAnswer(PromptRequest req) { ... }  // sent as an agent message chunk, then endTurn()
 
 @Prompt
 void streaming(PromptRequest req, SyncPromptContext ctx) { ... }  // → endTurn()
@@ -327,9 +327,9 @@ void streaming(PromptRequest req, SyncPromptContext ctx) { ... }  // → endTurn
 | Return Type | Conversion |
 |-------------|------------|
 | Protocol response type | Passed through directly |
-| `String` | Converted to `PromptResponse.text(value)` |
+| `String` | Sent to the client as an agent message chunk, then `PromptResponse.endTurn()`; `null`/empty sends nothing |
 | `void` | Converted to `PromptResponse.endTurn()` |
-| `Mono<PromptResponse>` | Unwrapped and returned |
+| `Mono`/`CompletionStage`/single-value `Publisher` | Awaited on the handler's thread, then handled as its value means |
 
 ### `SyncPromptContext`
 
@@ -564,7 +564,7 @@ The SDK provides convenience methods that cover the most common operations. Use 
 InitializeResponse.ok()                        // default capabilities
 InitializeResponse.ok(customCapabilities)      // custom capabilities
 PromptResponse.endTurn()                       // stop reason END_TURN
-PromptResponse.text("response")                // message + endTurn in one call
+PromptResponse.cancelled()                     // stop reason CANCELLED
 
 // Sending updates (on SyncPromptContext or async equivalent)
 context.sendMessage("Hello");                  // AgentMessageChunk with TextContent
@@ -751,7 +751,7 @@ Content chunks (`UserMessageChunk`, `AgentMessageChunk`, `AgentThoughtChunk`) ca
 // Static factory methods
 InitializeResponse.ok()
 PromptResponse.endTurn()
-PromptResponse.text("response")
+PromptResponse.cancelled()
 ```
 
 ---

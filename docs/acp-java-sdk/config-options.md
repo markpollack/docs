@@ -122,6 +122,25 @@ if (!knownOptionIds.contains(req.configId())) {
 The same applies to a boolean option set by a client that never advertised boolean support: treat
 the ID as unknown and answer `-32602`, the same as any option you didn't offer that client.
 
+### Typed parameters instead of `req.value()`
+
+An annotated `@SetSessionConfigOption` method can take `@ConfigId String` and `@ConfigValue`
+directly, instead of pulling the id and value out of the request:
+
+```java
+@SetSessionConfigOption
+SetSessionConfigOptionResponse setConfigOption(@ConfigId String id, @ConfigValue String value) {
+    // value is already a String; a boolean option set on this parameter answers -32602 automatically
+}
+```
+
+`@ConfigValue` reads as whichever type the parameter declares: `String` for a select's value id,
+`boolean`/`Boolean` for a boolean option, or `Object` to accept either kind and branch yourself. A
+value of the wrong kind for the parameter's declared type answers `-32602` **before the method is
+called**, so the `req.value() instanceof String` type-check boilerplate disappears for the common
+case; whether the id and value actually name an option (and a value) the session offers is still the
+method's own job, same as with the raw request.
+
 ## When the agent sends `ConfigOptionUpdate`
 
 Send a `ConfigOptionUpdate` session update when **the agent itself** changes an option, for example

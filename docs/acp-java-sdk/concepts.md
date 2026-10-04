@@ -106,10 +106,45 @@ plain builder API directly, an application can supply its own executor instead w
 `handlerExecutor(ExecutorService)`, for example a virtual-thread-per-task executor; the SDK cancels a
 handler by cancelling its task (interrupting the thread) and never shuts the executor down itself.
 See [Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for where this fits into the
-annotated vs. builder picture. None of the three framework integrations
-([Spring Boot](/docs/acp-java-sdk/autoconfig), [Micronaut](/docs/acp-java-sdk/micronaut),
-[Quarkus](/docs/acp-java-sdk/quarkus)) expose `handlerExecutor` as a property or bean yet; they run
-handlers on the SDK's default pool.
+annotated vs. builder picture. Each framework integration now points handlers at its own threads by
+default, not a second pool of the SDK's: see
+[Spring Boot](/docs/acp-java-sdk/autoconfig#where-handlers-run),
+[Micronaut](/docs/acp-java-sdk/micronaut#where-handlers-run), and
+[Quarkus](/docs/acp-java-sdk/quarkus#where-handlers-run) for what each one actually uses.
+
+## The framework-neutral layer: `acp-integration`
+
+Spring Boot, Micronaut, and Quarkus support share one module underneath them,
+`com.agentclientprotocol.sdk.integration` (`acp-integration`, depending only on `acp-core` and
+`acp-agent-support`, on no framework itself). Each rule described on the three framework pages
+(transport selection and its failure modes, the capability/handler pairing check, the one default
+request timeout) is implemented once here and inherited by all three, which is why the three pages
+read as variations on the same rules rather than three separate designs:
+
+- **Settings**: `AcpAgentSettings`/`AcpClientSettings`, framework-neutral records with builders, and
+  `from(SettingsSource, prefix)` for kebab-case key/value configuration (`spring.acp.*`, `acp.*`,
+  `quarkus.acp.*` are all read this way). An unset value keeps the SDK's own default, not a value
+  this layer invents.
+- **Transports**: `AcpClientTransports` picks the client's transport the same way everywhere: an
+  explicit type wins and fails without its command or URI; otherwise exactly one of
+  `stdio.command`/`websocket.uri`/`http.uri` must be set, and more than one fails at startup, naming
+  them (`"Several ACP client transports are configured [...]; choose one with <prefix>.transport.type"`).
+  `AcpAgentTransports.stdio()` and `AcpListeners` (the SDK's own listener and servlet) serve the agent
+  side the same way across frameworks too.
+- **Discovery**: `AcpAgentDiscovery.requireSingle` finds the one `@AcpAgent` bean (or build-time
+  candidate) and fails, naming every match, if there's more than one; it discovers off an
+  `AgentCandidate`, the declared class plus an instance supplier, so a proxied or intercepted bean is
+  still found by its own class while being invoked through the container's real instance.
+- **Assembly and lifecycles**: `AcpAgents.builder`/`AcpClients` build the agent or client from
+  settings, discovered candidate, and the framework's own interceptor/resolver/handler beans; the
+  `AcpHost` family (`AcpAgentHost`, `AcpListenerHost`, `AcpServletHost`, `AcpClientHost`) gives every
+  framework the same start/stop/termination contract. One concrete example: `AcpClientHost` closes a
+  client exactly once, bounded by the client's request timeout plus 10 seconds (then closes it at
+  once), in all three frameworks, not just the one that happens to be described alongside it.
+- **Handler executors**: `AcpAgents.builder(..., handlerExecutor)` passes a framework's own executor
+  into `AcpAgentSupport.Builder.handlerExecutor`, so annotated handlers run on the framework's threads
+  instead of a second pool; see the per-framework "Where handlers run" sections linked above for which
+  executor each one actually passes.
 
 ## Related
 

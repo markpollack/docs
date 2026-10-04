@@ -533,6 +533,91 @@ builder, used to construct your own options, enforces it. Migration: pass at lea
   text)` (a prompt of one text block). Each equals, and writes the same JSON as, the long form; prefer
   them in new code wherever the full form adds nothing.
 
+## `acp-integration`: a shared layer under all three framework integrations, and what moves because of it
+
+Verified against the CHANGELOG and the code at the commit that introduced it (`c5084f5`). Spring Boot,
+Micronaut, and Quarkus support are now thin layers over one new module,
+`com.agentclientprotocol.sdk.integration` (`acp-integration`): settings, transport selection,
+discovery, agent/client assembly, and lifecycles, implemented once and shared. See
+[Concepts: the framework-neutral layer](/docs/acp-java-sdk/concepts#the-framework-neutral-layer-acp-integration)
+for what it actually contains; this section covers what moved or changed as a result, framework by
+framework.
+
+### `AcpClientCustomizer` and the transport-type enum move
+
+**Breaking:** both types are now framework-neutral, in `com.agentclientprotocol.sdk.integration`,
+replacing a separate copy (and a separate `TransportType` enum) in each framework's own package.
+Migration: fix the import to `com.agentclientprotocol.sdk.integration.AcpClientCustomizer` and
+`com.agentclientprotocol.sdk.integration.AcpTransportType`, wherever either was imported from a
+framework-specific package.
+
+### Spring Boot: several property changes
+
+Migrating from `org.springaicommunity:acp-spring-boot-starter` 0.12.0, or from an earlier 0.80.0
+candidate build of this same starter, several things change beyond the coordinate move already
+described above:
+
+- **`spring.acp.agent.request-timeout` and `spring.acp.client.request-timeout` have no default of
+  their own** (an earlier candidate's `60s` row in each properties table was the SDK's default showing
+  through, not Spring's own): unset, both keep following the SDK's one default request timeout, so a
+  future SDK default change would reach these properties automatically.
+- **Several client transports configured with no explicit `transport.type` now fail at startup**,
+  naming them: `"Several ACP client transports are configured [...]; choose one with
+  spring.acp.client.transport.type."` The stdio/websocket/http precedence order it used to pick
+  silently is gone.
+- **The listener-only agent properties move**: `spring.acp.agent.transport.http.port` becomes
+  `spring.acp.agent.transport.http.listener.port`, and
+  `...http.max-concurrent-streams-per-connection` becomes
+  `...http.listener.max-concurrent-streams-per-connection`. They meant nothing in a servlet web
+  application (which serves the endpoint on its own server and `server.port`) even before this move;
+  now they're grouped under a prefix that makes that explicit.
+- **`spring.acp.agent.transport.type=websocket` is accepted**, meaning the same as `http`: the endpoint
+  takes WebSocket upgrades on its path either way.
+- **New properties**: `spring.acp.client.capabilities.elicitation-form`, `.elicitation-url` and
+  `.boolean-config-options` (the last needs no handler, unlike the others);
+  `spring.acp.agent.cancel-grace-period` and `spring.acp.agent.max-prompt-duration`; and
+  `spring.acp.agent.handler-executor`, see below.
+- **`ArgumentResolver` and `ReturnValueHandler` beans are now added to the agent**, the same as
+  `AcpInterceptor` beans already were: register one as a plain `@Bean` and it's picked up automatically,
+  in bean order, with no further wiring.
+- **The agent's handler methods can run on a Spring executor.** `spring.acp.agent.handler-executor`
+  names an `Executor` bean (a plain `TaskExecutor` is adapted), or `none` for the SDK's own pool.
+  Unset, they run on the context's `applicationTaskExecutor` only when
+  `spring.threads.virtual.enabled=true` (a virtual thread per handler); without virtual threads that
+  executor is a pool of 8 threads by default, which would cap the prompts served at once, so the SDK's
+  own pool stays the default instead. See
+  [Spring Boot: Where handlers run](/docs/acp-java-sdk/autoconfig#where-handlers-run).
+- **Closing the client waits at most its request timeout plus 10 seconds, then closes it at once**,
+  bounded rather than left to whatever Spring's own shutdown ordering happened to do.
+- Everything else in this release's breaking changes still applies: Spring applications compile
+  against the SDK's current API, same as any other consumer.
+
+Migration: update any `transport.http.port`/`...max-concurrent-streams-per-connection` properties to
+their `.listener.*` form; set `transport.type` explicitly wherever more than one transport property is
+set; register `ArgumentResolver`/`ReturnValueHandler` beans the same way `AcpInterceptor` beans already
+are, if you have any outside the autoconfiguration's own discovery.
+
+### Micronaut: handler methods run on virtual threads on JDK 21+
+
+**Behavior change, not a property:** on JDK 21 and later, the agent's handler methods run on
+Micronaut's virtual-thread executor (`TaskExecutors.VIRTUAL`) instead of the SDK's own pool; on JDK 17
+they stay on the SDK's pool. This is automatic, with nothing to configure, and deliberately not
+`TaskExecutors.BLOCKING` (Micronaut's I/O pool): that pool's non-daemon threads would keep a stdio
+application's process alive past the point its context closes. See
+[Micronaut: Where handlers run](/docs/acp-java-sdk/micronaut#where-handlers-run).
+
+### Quarkus: the same transport strictness, and handlers on the `ManagedExecutor`
+
+**Breaking (behavior):** several client transports configured with no explicit
+`quarkus.acp.client.transport.type` now fail at startup, naming them, the same as Spring Boot and
+Micronaut; it used to infer WebSocket, then HTTP, then stdio, silently picking the first one
+configured. Migration: set `transport.type` explicitly wherever more than one transport property is
+set.
+
+**Additive:** the agent's handler methods now run on the `ManagedExecutor` (Quarkus' own worker pool,
+with the application's contexts propagated) instead of a second pool of the SDK's; nothing to
+configure. See [Quarkus: Where handlers run](/docs/acp-java-sdk/quarkus#where-handlers-run).
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -693,3 +778,13 @@ old behavior should be revisited.
     them, fix the options before `build()`; it now throws instead of building.
 31. If a test specifically checked `MockAcpClient`'s `initialize()` response for a `terminal`
     capability, update it: the mock no longer advertises `terminal`.
+32. Grep for `import com.agentclientprotocol.sdk.spring.boot.autoconfigure.client.AcpClientCustomizer`
+    (or the equivalent Micronaut/Quarkus package) and `TransportType`: both now come from
+    `com.agentclientprotocol.sdk.integration`.
+33. If using Spring Boot, grep for `spring.acp.agent.transport.http.port` and
+    `...max-concurrent-streams-per-connection`: both move under `...http.listener.*`.
+34. If using Spring Boot, set `spring.acp.client.transport.type`/`spring.acp.agent.transport.type`
+    explicitly wherever more than one transport property is set; it now fails at startup instead of
+    picking one silently. Quarkus and Micronaut clients need the same check.
+35. If a Spring `ArgumentResolver` or `ReturnValueHandler` was registered by hand (not as a `@Bean`),
+    register it as one instead; it's now picked up automatically, the same as `AcpInterceptor`.

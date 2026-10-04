@@ -172,8 +172,19 @@ That pairing is enforced, not just advised: setting one of these `true` without 
 handler fails bean creation, naming the property to turn off or the handler to add, for example
 "fs.readTextFile needs readTextFileHandler... The capabilities come from
 acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateConsumer` replaces the
-bean's DEBUG-logging one rather than running alongside it.
+bean's DEBUG-logging one rather than running alongside it. Unlike Spring Boot and Quarkus, this module
+does not yet expose `elicitation-form`, `elicitation-url`, or `boolean-config-options` properties: a
+Micronaut client that needs to advertise them calls `spec.clientCapabilities(...)` in a customizer with
+the whole `ClientCapabilities` object it wants (file system and terminal flags included, since this
+replaces rather than merges with what the properties built), not through `acp.client.*` alone.
 </Note>
+
+`AcpClientCustomizer` and `AcpTransportType` (used above by `acp.client.transport.type`) are not
+Micronaut-specific types: both live in `com.agentclientprotocol.sdk.integration`, the
+framework-neutral module Spring Boot and Quarkus build on too; see
+[Concepts: the framework-neutral layer](/docs/acp-java-sdk/concepts#the-framework-neutral-layer-acp-integration).
+The client (and its transport) is closed exactly once, bounded by its request timeout plus 10 seconds,
+by that same shared layer.
 
 ## Extension Beans
 
@@ -182,10 +193,13 @@ in bean order, the Micronaut-native way to extend the handler pipeline without s
 
 ## Where handlers run
 
-Sync handlers run on the SDK's own default thread pool (see
-[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)); this extension
-doesn't yet expose `handlerExecutor` as a property or bean, so there's no way to point handlers at,
-say, Micronaut's `TaskExecutors.BLOCKING` executor through configuration alone.
+On JDK 21 and later, handler methods run on Micronaut's virtual-thread executor
+(`TaskExecutors.VIRTUAL`), a bean this module looks up by name rather than something it builds itself;
+on JDK 17 they run on the SDK's own default pool (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)) instead. This is
+automatic, not a property: there's no configuration to point handlers at a different executor, and in
+particular not at Micronaut's `TaskExecutors.BLOCKING` (the I/O pool), whose non-daemon threads would
+keep a stdio application's process alive past the point its context closes.
 
 ## Dependencies
 

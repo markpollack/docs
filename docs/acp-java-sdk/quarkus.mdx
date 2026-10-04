@@ -193,7 +193,7 @@ Run time:
 | `quarkus.acp.agent.transport.http.shutdown-timeout` | `5s` | |
 | `quarkus.acp.client.request-timeout` | SDK default | |
 | `quarkus.acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
-| `quarkus.acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`; unset, WebSocket if `websocket.uri` is set, else HTTP if `http.uri`, else stdio if `stdio.command` |
+| `quarkus.acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`; unset, the transport is whichever one of `stdio.command`/`websocket.uri`/`http.uri` is set; more than one with no `type` fails at startup, naming them |
 | `quarkus.acp.client.transport.stdio.command`, `.args`, `.env.<NAME>` | | the agent process |
 | `quarkus.acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | |
 | `quarkus.acp.client.transport.http.uri` | | |
@@ -211,12 +211,19 @@ Compared with Spring Boot's `spring.acp.*`: the HTTP port is `quarkus.http.port`
 `acp.*`-namespaced property), and the listener's `max-concurrent-streams-per-connection` is
 `quarkus.http.limits.max-concurrent-streams`, Quarkus's own HTTP tuning, not the SDK's.
 
+`AcpClientCustomizer` and `AcpTransportType` (used above by `quarkus.acp.client.transport.type`) are
+not Quarkus-specific types: both live in `com.agentclientprotocol.sdk.integration`, the
+framework-neutral module Spring Boot and Micronaut build on too; see
+[Concepts: the framework-neutral layer](/docs/acp-java-sdk/concepts#the-framework-neutral-layer-acp-integration).
+The client (and its transport) is closed exactly once, bounded by its request timeout plus 10 seconds,
+by that same shared layer.
+
 ## Where handlers run
 
-Sync handlers run on the SDK's own default thread pool (see
-[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)); this extension
-doesn't yet expose `handlerExecutor` as a property or bean, so there's no way to point handlers at a
-Quarkus worker pool through configuration alone.
+Handler methods run on the `ManagedExecutor` (Quarkus' own worker pool, where blocking work belongs,
+never the Vert.x event loop), with the application's contexts propagated, instead of a second pool of
+the SDK's (see [Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)). This is
+automatic; there's no property to point handlers elsewhere.
 
 ## Related
 

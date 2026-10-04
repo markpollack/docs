@@ -28,8 +28,8 @@ Same starter as the agent side:
 <Note>
 As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
 `org.springaicommunity`); see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). The
-downloadable module for this page predates the move and still uses the old coordinates; it will be
-updated separately. The coordinates above are current.
+downloadable module builds against the released starter (SDK 0.18.0) by default; build with
+`-Psdk-candidate` to use the SDK's own starter at the coordinates shown above.
 </Note>
 
 ## The Client

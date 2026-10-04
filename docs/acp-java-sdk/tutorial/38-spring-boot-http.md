@@ -8,7 +8,7 @@ Serve a Spring Boot `@AcpAgent` over Streamable HTTP with acp-autoconfig, and ta
 
 - `spring.acp.agent.transport.type=http`: serving an `@AcpAgent` bean remotely, with no code changes to the bean itself
 - Why a non-web application runs the SDK's own Jetty listener, and a servlet web application mounts a servlet instead
-- `spring.acp.client.transport.http.uri`, the property that creates a Streamable HTTP client transport for you
+- `spring.acp.client.transport.http.uri` and `.websocket.uri`, the properties that create a client transport for you, no transport bean required
 - `AcpClientCustomizer`, and how registering a handler relates to the capability property that advertises it
 - Reading the bound port back from the listener bean when the port is `0`
 
@@ -103,12 +103,24 @@ AcpClientCustomizer printAndServeFiles() {
 
 Every `AcpClientCustomizer` bean is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. Consumers add up: the autoconfiguration's own debug-logging consumer stays alongside this one. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it.
 
-## Limits as of this candidate
+### A WebSocket client, the same way
 
-The listener also accepts a WebSocket upgrade on the same path, and `spring.acp.client.transport.websocket.uri=ws://host:port/acp` creates a WebSocket client from properties the same way. Keep the client WebSocket path out of a Spring Boot application for now: closing a WebSocket client transport isn't yet idempotent in the SDK, and Spring's lifecycle can close a bean more than once. An SDK fix is pending; until then, prefer the Streamable HTTP property in a Boot application and use WebSocket from the [plain Module 37](/docs/acp-java-sdk/tutorial/37-streamable-http-websocket) setup instead.
+The listener also accepts a WebSocket upgrade on the same path, and
+`spring.acp.client.transport.websocket.uri=ws://host:port/acp` creates a WebSocket client from
+properties exactly the same way as the Streamable HTTP property: no code change, just which property
+is set. Only a property differs between the two runs; the client application's code is identical
+either way:
+
+```java
+HttpClientApplication.run("--spring.acp.client.transport.http.uri=" + http);
+HttpClientApplication.run("--spring.acp.client.transport.websocket.uri=" + ws);
+```
 
 <Note>
-The downloadable module for this page predates `spring.acp.client.transport.http.uri` and still wires the client's transport with a hand-written `@Bean`; it will be updated to the property form in an upcoming tutorial pass. The property shown above is the current, recommended way to do this in any new Spring Boot ACP client.
+Earlier candidates kept the client WebSocket path out of this module: closing a WebSocket client
+transport wasn't idempotent, and Spring's lifecycle could close a bean more than once. Both client,
+transport, and agent-transport beans are now closed exactly once by the autoconfiguration's own
+lifecycle, so the WebSocket run works the same as the Streamable HTTP one.
 </Note>
 
 ## Source Code
@@ -126,10 +138,15 @@ The downloadable module for this page predates `spring.acp.client.transport.http
     -Dexec.mainClass=com.acptutorial.module38.agent.HttpAgentApplication
 ./mvnw exec:java -pl module-38-spring-boot-http \
     -Dexec.mainClass=com.acptutorial.module38.client.HttpClientApplication \
-    -Dexec.args=--demo.agent.url=http://localhost:8080/acp
+    -Dexec.args=--spring.acp.client.transport.http.uri=http://localhost:8080/acp
 ```
 
-The demo starts the agent application on a free port, then runs the client application against it twice: once with the file capability on (the agent reads `NOTES.md` through the handler), once with it set to `false` on the command line (the handler stays registered, but the agent never asks, since the capability was never advertised). No API key required.
+The demo starts the agent application on a free port, then runs the client application against it
+three times: over Streamable HTTP with the file capability on (the agent reads `NOTES.md` through the
+handler), over WebSocket to the same listener and path (the same read, the same answer), then over
+Streamable HTTP again with the capability set to `false` on the command line (the handler stays
+registered, but the agent never asks, since the capability was never advertised). No API key
+required.
 
 ## Next Module
 

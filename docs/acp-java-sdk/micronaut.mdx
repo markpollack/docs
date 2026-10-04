@@ -88,14 +88,21 @@ instance, a generated AOP subclass when `@Around` advice applies to the bean. So
 friends live), and calling it at runtime still goes through the generated subclass, so the advice
 actually runs. No special wiring needed beyond the ordinary Micronaut AOP annotations.
 
-### Returning a `Publisher`
+### Return types: `Mono`, `Flux`, `CompletionStage`, or any `Publisher`
 
-A handler may return any Reactive Streams `Publisher` of its response type, not only `Mono` (which
-`acp-agent-support` already handles natively): a `Flux`, for instance, if that's what a Micronaut data
-or HTTP client call already returns. Its first element is taken as the response; an empty publisher
+A handler may return its response type directly, a `Mono`, a `CompletionStage`, or any single-value
+Reactive Streams `Publisher`: a `Flux`, for instance, if that's what a Micronaut data or HTTP client
+call already returns. Its first element (or completion value) becomes the response; an empty one
 means no response. The handler still runs, and is waited on, synchronously under the hood (the
 runtime serves handlers through the sync agent), so this is a convenience for signature compatibility
 with reactive Micronaut code, not a path to true non-blocking handling.
+
+<Warning>
+If you build the `Publisher` with Micronaut's own `Publishers` helper (`io.micronaut.core.async.publisher.Publishers`)
+rather than Reactor or Mutiny directly, add `micronaut-core-reactive` to the classpath: that helper
+needs it and isn't pulled in by `acp-micronaut` alone. Returning a `Mono` or `Flux` directly needs
+nothing extra.
+</Warning>
 
 ## Lifecycle
 

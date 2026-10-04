@@ -279,6 +279,14 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 **Upgrading from 0.17 or earlier on `acp-core` alone?** Without a JSON module, `AcpJsonMapper.createDefault()` fails at runtime with `No AcpJsonMapperSupplier found on the classpath`. `acp-agent-support`, `acp-test`, and `acp-streamable-http-jetty` already bring `acp-json-jackson2`, so users of those modules need nothing more. Both JSON modules write the same bytes on the wire; with both on the classpath, Jackson 3 wins.
 </Warning>
 
+<Note>
+0.80.0 runs on the classpath and is not yet JPMS-modular (no `module-info`): two packages,
+`com.agentclientprotocol.sdk.agent.transport` and `com.agentclientprotocol.sdk.json`, are split across
+more than one jar (`acp-core` plus `acp-streamable-http-jetty`, and `acp-core` plus
+`acp-json-jackson2`/`acp-json-jackson3`, respectively), which JPMS doesn't allow for one package. A fix
+is planned after 0.80.0.
+</Note>
+
 For annotation-based agents (as shown above), add `acp-agent-support` instead — it includes `acp-core` and `acp-json-jackson2` transitively:
 
 ```xml

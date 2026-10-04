@@ -33,13 +33,14 @@ The same ACP Spring Boot starter as Module 23, plus one Spring AI model starter:
 <Note>
 As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
 `org.springaicommunity`); see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). The
-downloadable module for this page predates the move and still uses the old coordinates; it will be
-updated separately. The coordinates above are current.
+downloadable module builds against the released starter (SDK 0.18.0) by default; build with
+`-Psdk-candidate` to use the SDK's own starter at the coordinates shown above.
 </Note>
 
 ## The Agent
 
-The ACP methods are identical to Module 23's echo bean. The only difference is the body of `@Prompt`:
+The ACP methods are identical to Module 23's echo bean (and, as of 0.80.0, need no `@Initialize`
+either). The only difference is the body of `@Prompt`:
 
 ```java
 @Component
@@ -55,11 +56,6 @@ public class ChatbotAgentBean {
             .defaultSystem("You are a concise, friendly assistant running as an ACP agent inside an IDE.")
             .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
             .build();
-    }
-
-    @Initialize
-    public InitializeResponse initialize(InitializeRequest request) {
-        return InitializeResponse.ok();
     }
 
     @NewSession

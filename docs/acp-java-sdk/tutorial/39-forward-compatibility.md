@@ -117,6 +117,6 @@ This is the practical payoff of forward compatibility: a message this SDK has ne
 
 The demo runs entirely in memory with `acp-test`'s `InMemoryTransportPair`: a "newer" agent sends a session update kind, a content block type, and a stop reason this SDK doesn't define, with `_meta` on the prompt and the response; then a raw JSON notification from a newer peer is read and written back unchanged. No API key, no subprocess required.
 
-## Back to the Overview
+## Next Module
 
-[Tutorial Overview](/docs/acp-java-sdk/tutorial/index): all modules and the recommended paths through them.
+[Module 40: Micronaut](/docs/acp-java-sdk/tutorial/40-micronaut): the same annotated agent as a Micronaut bean, served over stdio and Streamable HTTP.

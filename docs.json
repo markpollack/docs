@@ -362,7 +362,9 @@
                           "docs/acp-java-sdk/tutorial/36-terminal-auth-logout",
                           "docs/acp-java-sdk/tutorial/37-streamable-http-websocket",
                           "docs/acp-java-sdk/tutorial/38-spring-boot-http",
-                          "docs/acp-java-sdk/tutorial/39-forward-compatibility"
+                          "docs/acp-java-sdk/tutorial/39-forward-compatibility",
+                          "docs/acp-java-sdk/tutorial/40-micronaut",
+                          "docs/acp-java-sdk/tutorial/41-quarkus"
                         ]
                       }
                     ]

@@ -9,6 +9,7 @@ Expose per-session settings (a model picker, a mode, and a capability-gated bool
 - Returning the full option list from `session/new` and every subsequent change, never a delta
 - Sending `ConfigOptionUpdate` only when the agent changes a setting itself
 - Rejecting a bad request with `-32602`, since the SDK validates nothing about a `set_config_option` call
+- Reading the id and value directly with `@ConfigId`/`@ConfigValue`, typed parameters instead of the raw request
 - Keeping legacy `session/set_mode` in step with a `category: "mode"` config option
 - Dispatching option types with `instanceof` and an `UnknownSessionConfigOption` branch
 
@@ -60,6 +61,14 @@ AcpSchema.NewSessionResponse newSession(AcpSchema.NewSessionRequest req, Negotia
     return new AcpSchema.NewSessionResponse(sessionId, settings.modes(sessionId), options);
 }
 
+@SetSessionConfigOption
+AcpSchema.SetSessionConfigOptionResponse setConfigOption(@ConfigId String id, @ConfigValue Object value,
+        @SessionId String sessionId) {
+    // A value of the wrong kind for the parameter's type is rejected with -32602 before this
+    // method is even called; Object here accepts either kind and dispatches on id.
+    return new AcpSchema.SetSessionConfigOptionResponse(settings.apply(sessionId, id, value));
+}
+
 @Prompt
 AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, @SessionId String sessionId,
         SyncPromptContext ctx, AcpSyncAgent agent) {
@@ -74,6 +83,12 @@ AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, @SessionId String s
 ```
 
 Any handler, not only `@Prompt`, may declare `NegotiatedCapabilities` and `AcpSyncAgent`/`AcpAsyncAgent` parameters, resolved by type, for the connection the request arrived on. That's why `@NewSession` reads `supportsBooleanConfigOptions()` straight from a parameter here, with no need to capture the built agent.
+
+`@ConfigId String` and `@ConfigValue` (typed by the parameter: `String` for a select's value,
+`boolean`/`Boolean` for a boolean, `Object` for either, as above) replace pulling `configId()` and
+`value()` out of the raw request. The SDK still doesn't check that the session actually offered that
+id or value, only that the value is the right *kind*; whether it's a value the session offers is the
+method's own job, the same as with the raw request.
 
 ### The same agent, with the builder API
 

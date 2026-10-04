@@ -4,33 +4,40 @@ An agent that requires sign-in before any session can open, offering two auth me
 
 ## What You'll Learn
 
+- Declaring `authMethods` on `@AcpAgent`, with no `@Initialize` method needed
 - `AuthMethod` as an open union: `AuthMethodAgent` versus `AuthMethodTerminal`
-- Offering a terminal method only to a client that advertised `auth.terminal`
+- Why a terminal method reaches only a client that advertised `auth.terminal`, with no hand-written check
 - `@Authenticate`, and why the client never calls it for a terminal method
 - Rejecting `session/new` with `AUTHENTICATION_REQUIRED` (`-32000`) before sign-in
-- `AgentAuthCapabilities.withLogout()`, `@Logout`, and checking `supportsLogout()` first
+- `@Logout`, derived `agentCapabilities.auth.logout`, and checking `supportsLogout()` first
 
 ## The Code
 
-### Offering auth methods at `initialize`
+### Declaring auth methods on `@AcpAgent`, with no `@Initialize` method
 
 ```java
-@Initialize
-AcpSchema.InitializeResponse initialize(AcpSchema.InitializeRequest req, NegotiatedCapabilities client) {
-    List<AcpSchema.AuthMethod> methods = new ArrayList<>();
-    methods.add(new AcpSchema.AuthMethodAgent(API_KEY_METHOD, "API key", "Use the key configured for this machine"));
-    if (client.supportsTerminalAuth()) {
-        methods.add(new AcpSchema.AuthMethodTerminal(TERMINAL_METHOD, "Log in in a terminal",
-                List.of(LOGIN_ARG), Map.of("AUTH_AGENT_LOGIN_STYLE", "plain")));
-    }
-    var capabilities = AcpSchema.AgentCapabilities.builder()
-            .auth(AcpSchema.AgentAuthCapabilities.withLogout())
-            .build();
-    return new AcpSchema.InitializeResponse(1, capabilities, methods);
+@AcpAgent(name = "auth-agent", version = "1.0.0", authMethods = {
+        @AuthMethod(id = AuthAgent.API_KEY_METHOD, name = "API key",
+                description = "Use the key configured for this machine"),
+        @AuthMethod(id = AuthAgent.TERMINAL_METHOD, name = "Log in in a terminal", type = AuthMethod.Type.TERMINAL,
+                args = AuthAgent.LOGIN_ARG, env = "AUTH_AGENT_LOGIN_STYLE=plain") })
+public class AuthAgent {
+    // ...
 }
 ```
 
-`AuthMethod` is an open union of two kinds. An agent-handled method (`AuthMethodAgent`) is the one the client calls `authenticate` for; a terminal method (`AuthMethodTerminal`) is an interactive login the **client** runs, not something passed to `authenticate`. `@Initialize` takes the connection's `NegotiatedCapabilities` directly as a parameter, so the agent decides which methods to offer from the client's own advertised capabilities: here, whether to offer the terminal method at all depends on `supportsTerminalAuth()`. An unknown auth method type from a newer agent reads as `AuthMethodAgent`.
+There's no `@Initialize` method: the SDK derives everything a client needs from the class.
+`@AcpAgent(authMethods = @AuthMethod(...))` becomes `authMethods`; `@Logout` (below) advertises
+`agentCapabilities.auth.logout`; `agentInfo` comes from `@AcpAgent(name, version)`. A terminal method
+is advertised **only** to a client that announced `clientCapabilities.auth.terminal`: the SDK does
+that per-client check itself now, rather than the agent checking `NegotiatedCapabilities` by hand in
+a written `@Initialize` method. Declaring an agent-type method (the default, as `api-key` is here)
+without an `@Authenticate` handler to serve it fails the build, naming the method.
+
+`AuthMethod` is an open union of two kinds. An agent-handled method (`AuthMethodAgent`, type `AGENT`,
+the default) is the one the client calls `authenticate` for; a terminal method (`AuthMethodTerminal`,
+type `TERMINAL`) is an interactive login the **client** runs, not something passed to `authenticate`.
+An unknown auth method type from a newer agent reads as `AuthMethodAgent`.
 
 ### Requiring sign-in
 
@@ -119,6 +126,7 @@ AcpSyncClient client = AcpClient.sync(transport)
         .build();
 
 AcpSchema.InitializeResponse init = client.initialize();
+System.out.println("agentInfo (from @AcpAgent): " + init.agentInfo().name() + " " + init.agentInfo().version());
 for (AcpSchema.AuthMethod method : init.authMethods()) {
     if (method instanceof AcpSchema.AuthMethodTerminal t) {
         // run the agent program with t.args() and t.env()

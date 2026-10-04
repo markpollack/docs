@@ -14,7 +14,7 @@ A progressive, hands-on tutorial. Each module focuses on one concept and include
 - For agent modules (12-20, 22, 31): no external dependencies. You build the agent and the tutorial provides a test client that launches it.
 - For the AI chatbot modules (25-27): an `ANTHROPIC_API_KEY`, which the agent actually uses to call the model.
 - For the agent-client module (32): the Claude CLI installed and logged in, run without `ANTHROPIC_API_KEY`.
-- For the new-in-0.80.0 modules (33-39): no external dependencies, same as the agent modules. Module 38 requires Java 21+ (Spring Boot 4.x).
+- For the new-in-0.80.0 modules (33-41): no external dependencies, same as the agent modules. Module 38 requires Java 21+ (Spring Boot 4.x); modules 40 and 41 (Micronaut, Quarkus) each pull in their own framework's BOM.
 
 ## Tutorial Structure
 
@@ -26,7 +26,7 @@ A progressive, hands-on tutorial. Each module focuses on one concept and include
 | **4. AI-Backed Agents** | 25-27 | The echo agent with a real model behind it: Anthropic Java SDK, Spring AI, LangChain4j |
 | **5. IDE Integration** | 28-30 | Zed, JetBrains, VS Code |
 | **6. Beyond Chat** | 31-32 | Elicitation (structured user input), an agent loop behind an ACP agent |
-| **7. New in 0.80.0** | 33-39 | Session config options, extension methods, cancellation and timeouts, terminal auth and logout, Streamable HTTP/WebSocket, Spring Boot over HTTP, forward compatibility |
+| **7. New in 0.80.0** | 33-41 | Session config options, extension methods, cancellation and timeouts, terminal auth and logout, Streamable HTTP/WebSocket, Spring Boot over HTTP, forward compatibility, Micronaut, Quarkus |
 
 ## Getting the Code
 

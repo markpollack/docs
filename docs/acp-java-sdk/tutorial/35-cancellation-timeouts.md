@@ -11,6 +11,7 @@ See the spec's [Cancellation](https://agentclientprotocol.com/protocol/v1/cancel
 - `cancelGracePeriod` and `maxPromptDuration`: Java SDK policy, not protocol, and why they exist
 - Writing a cooperative handler that checks for cancellation between steps
 - Why a client-side request timeout now cancels the turn at a Java agent
+- `promptTimeout(Duration)`: the client-side bound a prompt turn needs now that `requestTimeout` no longer provides one
 
 ## The Code
 
@@ -138,7 +139,18 @@ catch (AcpError e) {
 `Duration.ZERO` turns either off; exactly one answer is ever sent per prompt. Both are also available on `AcpAgentSupport.Builder` for annotated agents.
 
 <Note>
-**Document `cancelGracePeriod` and `maxPromptDuration` as SDK policy, not protocol behavior.** No other ACP SDK has an exact equivalent, and the spec defines neither. A behavior change worth knowing if you're upgrading from 0.18.0: a client-side request timeout now sends `$/cancel_request`, so it actually cancels the turn at a Java agent instead of leaving it running after the client gives up. Raise the client's request timeout for prompts that legitimately take a long time.
+**Document `cancelGracePeriod` and `maxPromptDuration` as SDK policy, not protocol behavior.** No other ACP SDK has an exact equivalent, and the spec defines neither.
+
+Two behavior changes worth knowing if you're upgrading from 0.18.0:
+
+- A client-side request timeout now sends `$/cancel_request`, so it actually cancels the work at a
+  Java agent instead of leaving it running after the client gives up.
+- **A prompt is no longer bounded by the client's `requestTimeout` at all**, since its answer comes
+  only at the end of the turn, however long that takes. To put a bound back, set
+  `promptTimeout(Duration)` on the client builder (none by default); it fails the call with a
+  `TimeoutException` and sends `$/cancel_request`, the same as a plain `requestTimeout` used to. A
+  one-off bound on a single prompt, without changing the client's configuration, still works too:
+  `client.prompt(request).timeout(Duration.ofSeconds(5))`.
 </Note>
 
 ## Source Code

@@ -376,6 +376,16 @@ old behavior should be revisited.
   143 as the normal/expected close outcome should check for exit `0` instead. Closing twice (for
   example `closeGracefully()` followed by try-with-resources `close()`) no longer stops the process
   or logs the stop message a second time.
+- **A response missing a required field now fails the request instead of silently passing nulls
+  through.** A bare `{}` used to read as, say, a `PromptResponse` with a null `stopReason` or a
+  `NewSessionResponse` with a null `sessionId`; only inbound params were checked for required fields
+  before. Results are checked the same way now: the caller's request fails with
+  `AcpProtocolException` (`-32603`), naming the missing field's full path (a nested field, such as
+  `modes.currentModeId`, is named by its path, not just its containing object). This is one of the
+  rare cases where a caller receives an `AcpProtocolException` rather than an `AcpError`: it's a
+  locally-detected malformed response, not an error the peer actually sent; see
+  [Errors](/docs/acp-java-sdk/errors). Code that tolerated a peer answering less than the schema
+  requires, intentionally or not, now sees that as a hard failure.
 
 ## What you may have to change: a quick checklist
 

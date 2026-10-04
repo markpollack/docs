@@ -13,7 +13,8 @@ page is where this SDK writes them down.
 | | Type | Where it's used |
 |---|---|---|
 | **Your handler signals an error** | `AcpProtocolException` (`com.agentclientprotocol.sdk.error`) | Thrown from an agent or client handler; the SDK converts it to a JSON-RPC error response before it's sent |
-| **You receive the peer's error** | `AcpError` (`com.agentclientprotocol.sdk.spec`) | The request's `Mono` fails with it (async), or it's thrown from the blocking call (sync) |
+| **You receive the peer's error** | `AcpError` (`com.agentclientprotocol.sdk.spec`) | The request's `Mono` fails with it (async), or it's thrown from the blocking call (sync): the peer actually sent this error |
+| **The SDK rejects the peer's response locally** | `AcpProtocolException` | The request's `Mono` fails with it: the peer's response was malformed (see below), not an error it sent |
 
 ```java
 // In a handler: signal an error to send back
@@ -38,10 +39,31 @@ catch (AcpError e) {
 
 <Note>
 Some Javadoc on `AcpProtocolException` still shows it being caught after a client call, from before
-`AcpError` was split out as its own type (0.80.0, [CL 469]). Trust the pattern above, verified against
-the SDK's own dispatch code (`AcpProtocolException` is thrown only inside handler/dispatch code and
-converted to a JSON-RPC response there; a caller always receives `AcpError`), not that Javadoc text.
+`AcpError` was split out as its own type (0.80.0, [CL 469]). That's stale for the ordinary case (a
+peer's actual error answers with `AcpError`, as above), but, as of the same release, not quite
+fiction either: see below for the one case where a caller genuinely does receive
+`AcpProtocolException`.
 </Note>
+
+## When the SDK itself rejects a malformed response
+
+A caller can also receive `AcpProtocolException` for a reason that has nothing to do with the peer
+sending an error: the peer's JSON-RPC *success* response was missing a field the schema requires. A
+bare `{}` used to read as a `PromptResponse` with a null `stopReason`, say; as of 0.80.0 that fails
+the request instead, with `-32603` naming the missing field's full path:
+
+```java
+try {
+    var response = client.prompt(request);
+}
+catch (AcpProtocolException e) {
+    // "The response to session/prompt lacks the required field stopReason"
+}
+```
+
+This is a locally-detected problem with the peer's response shape, not an error the peer chose to
+send, which is why it surfaces as the same type a handler throws rather than as `AcpError`. See the
+[migration guide](/docs/acp-java-sdk/migration-0.80) for the full behavior change.
 
 `AcpError.getCode()` returns the numeric code. `getMessage()` is the peer's message text, plus any
 detail from the error's data, with the code left out on purpose, so `e.getCode() + " " + e.getMessage()`

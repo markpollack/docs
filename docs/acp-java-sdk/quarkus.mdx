@@ -199,6 +199,14 @@ Run time:
 | `quarkus.acp.client.transport.http.uri` | | |
 | `quarkus.acp.client.capabilities.read-text-file`, `.write-text-file`, `.terminal`, `.elicitation-form`, `.elicitation-url`, `.boolean-config-options` | `false` | advertise only what a customizer registers handlers for |
 
+<Note>
+"Only what a customizer registers handlers for" is enforced at startup: setting a capability `true`
+without its handler fails client creation, naming the property to turn off or the handler to add, for
+example "fs.readTextFile needs readTextFileHandler... The capabilities come from
+quarkus.acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateConsumer`
+replaces the client's DEBUG-logging one rather than running alongside it.
+</Note>
+
 Compared with Spring Boot's `spring.acp.*`: the HTTP port is `quarkus.http.port` (not an
 `acp.*`-namespaced property), and the listener's `max-concurrent-streams-per-connection` is
 `quarkus.http.limits.max-concurrent-streams`, Quarkus's own HTTP tuning, not the SDK's.

@@ -47,7 +47,9 @@ var verbose = SessionConfigBoolean.builder()
     .build();
 ```
 
-`build()` throws `IllegalStateException` naming the first missing required field. `options()` on a
+`build()` throws `IllegalStateException` naming the first missing required field, and, for a select,
+when the options (across every group) are empty or `currentValue` isn't the value of one of them: an
+option no client could display correctly. `options()` on a
 select can be flat (`List<SessionConfigSelectOption>`) or grouped
 (`List<SessionConfigSelectGroup>`); `SessionConfigSelectOptions.allOptions()` flattens either shape,
 which is what most code should call rather than branching on `UngroupedSelectOptions` vs

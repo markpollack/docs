@@ -63,6 +63,14 @@ boilerplate for the common case; `getReceivedUpdates()`,
 `getReceivedPermissionRequests()`/`getReceivedFileReadRequests()`/`getReceivedFileWriteRequests()`
 record what your agent asked for, the same recording pattern as `MockAcpAgent`.
 
+`MockAcpClient` advertises file read and file write, which it has handlers for, and no longer
+advertises `terminal`, which it never served: a client's `build()` now fails if its advertised
+capabilities lack their handlers, the same check described on the
+[migration guide](/docs/acp-java-sdk/migration-0.80#client-capabilities-must-have-their-handlers).
+`MockAcpClient.Builder` has no capability customization at all; a test exercising terminal needs a
+plain `AcpClient.async(transport)`/`.sync(transport)` with `clientCapabilities` and the five terminal
+handlers set directly, not `MockAcpClient`.
+
 ## The directive-driven deterministic agent pattern
 
 For a scenario more elaborate than one canned response, give the mock agent's prompt handler a small

@@ -159,13 +159,21 @@ class Updates implements AcpClientCustomizer {
 
 | Property | Default | |
 |---|---|---|
-| `acp.client.request-timeout` | `30s` | |
+| `acp.client.request-timeout` | `60s` | |
 | `acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
 | `acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`. Unset, the transport is whichever one has its command or URI set; with several set, `type` is required |
 | `acp.client.transport.stdio.command`, `.args`, `.env.*` | | the agent process; `env` keys keep their case |
 | `acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | `ws://host:port/acp` |
 | `acp.client.transport.http.uri` | | `http://host:port/acp` |
 | `acp.client.capabilities.read-text-file`, `.write-text-file`, `.terminal` | `false` | advertise one only together with its handler, registered in a customizer |
+
+<Note>
+That pairing is enforced, not just advised: setting one of these `true` without registering its
+handler fails bean creation, naming the property to turn off or the handler to add, for example
+"fs.readTextFile needs readTextFileHandler... The capabilities come from
+acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateConsumer` replaces the
+bean's DEBUG-logging one rather than running alongside it.
+</Note>
 
 ## Extension Beans
 

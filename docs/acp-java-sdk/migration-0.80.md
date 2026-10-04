@@ -322,8 +322,8 @@ rather than assume the session is already free.
 ### `$/cancel_request`, both directions
 
 Separately from `session/cancel`, a request whose caller gives up now tells the peer. Disposing a
-request's `Mono` before the response arrives, or its timeout firing (30s default on the client, 60s
-on the agent), sends `$/cancel_request {"requestId": ...}` to the peer once; a peer that honors it
+request's `Mono` before the response arrives, or its timeout firing (60s default on both sides as of
+api1; see below), sends `$/cancel_request {"requestId": ...}` to the peer once; a peer that honors it
 answers `-32800` and the caller's `Mono` is cancelled at once regardless. Migration: raise
 `requestTimeout` for long prompts if the old behavior (agent keeps running after a client timeout)
 is load-bearing anywhere, since 0.80.0 now actually stops the work.
@@ -363,11 +363,12 @@ async API is unchanged (its `Mono` still fails with the `TimeoutException` itsel
 `Exceptions.unwrap(e)`) with `catch (AcpTimeoutException e)`, and catch `CancellationException` where
 you handled an interrupt. See [Errors](/docs/acp-java-sdk/errors) for the full exception picture.
 
-### A client's prompt is no longer bounded by the request timeout
+### A client's prompt is no longer bounded by the request timeout {#prompt-no-longer-bounded-by-request-timeout}
 
 **Breaking (behavior):** a prompt's answer comes only at the end of its turn, so the request timeout
-(30 seconds by default) used to cancel every turn that ran longer, sending the agent
-`$/cancel_request` and failing the call with a `TimeoutException`. `session/prompt` now waits for the
+(30 seconds by default on the client at the time this landed, in fix4; one default of 60 seconds
+everywhere came later, in api1, see below) used to cancel every turn that ran longer, sending the
+agent `$/cancel_request` and failing the call with a `TimeoutException`. `session/prompt` now waits for the
 end of the turn however long it takes; every other request keeps the request timeout. Migration: to
 keep a bound on turns, set `.promptTimeout(Duration.ofMinutes(10))` on the client builder (any
 positive duration; it fails the call with a `TimeoutException` and sends `$/cancel_request`, as
@@ -426,9 +427,111 @@ now see two more updates per call. `askPermission(action)` uses kind `other`; a 
 `askPermission("Run the tests", ToolKind.EXECUTE)`. Migration: none needed to keep working; to keep
 the old `edit` kind, call `askPermission(action, ToolKind.EDIT)`. Separately, `askChoice` used to parse
 the chosen option ID as an index and fail with `NumberFormatException` or
-`ArrayIndexOutOfBoundsException` on an unexpected answer; it now fails clearly with
-`AcpProtocolException` (`-32603`) naming the ID. Implementations of `PromptContext`/
+`ArrayIndexOutOfBoundsException` on an unexpected answer; it now fails clearly, naming the ID (reason
+`unoffered-option`, as `AcpError` since api1, see below). Implementations of `PromptContext`/
 `SyncPromptContext` (test doubles) add the new `askPermission` overload.
+
+## The api1 batch: one error type, stricter client builders, and a few new conveniences
+
+The next batch after fix4, verified against the CHANGELOG and the code at the commit that introduced
+it (`bc11736`).
+
+### A caller catches one type, `AcpError`, for every failed request
+
+**Breaking:** the two-type split this guide and [Errors](/docs/acp-java-sdk/errors) described through
+fix4 (`AcpError` for a peer's own error; `AcpProtocolException` for the SDK's own local rejection of a
+malformed response) collapses to one type a caller ever catches. A missing required field, a response
+with no result (reason `missing-result`), a result that can't be read as the method's type (reason
+`unreadable-result`), and `askChoice` answered with an option it never offered (reason
+`unoffered-option`, see above) all now fail with `AcpError`, code `-32603`, `getData()` a map with
+that `reason` and the request's `method`. `AcpTimeoutException`, `CancellationException`, and
+`AcpCapabilityException` keep their own types; they were never JSON-RPC errors in the first place.
+Migration: replace `catch (AcpProtocolException e)` around a client or agent call with
+`catch (AcpError e)`; `AcpProtocolException` remains exactly what a handler throws to answer with an
+error, it just no longer crosses to the caller's side on its own. See
+[Errors](/docs/acp-java-sdk/errors) for the full picture, including the two exceptions, now also
+living on that page, that mean a call was never sent at all: `AcpCapabilityException` and
+`IllegalStateException`, both covered next.
+
+### A client initializes first, and calls only what the agent advertised
+
+**Breaking (behavior):** every `AcpAsyncClient`/`AcpSyncClient` call but `initialize` itself now fails
+with `IllegalStateException` ("Call initialize() first: the agent has not answered initialize yet")
+until the agent has answered; it used to be sent regardless, relying on the agent to reject it.
+`loadSession`, `listSessions`, `closeSession`, `deleteSession`, `resumeSession`, `forkSession`,
+`logout`, and the `providers/*` calls additionally fail with `AcpCapabilityException` (naming the
+capability, for example `sessionCapabilities.close`) when the agent's `initialize` answer didn't
+advertise it, the same check the agent side already applies to the client's own capabilities. Neither
+check sends anything. The check runs when the call is subscribed, not when it's built, so
+`client.initialize().then(client.newSession(request))` works without waiting for `initialize` to
+complete first; extension calls (`sendExtRequest`, `sendExtNotification`) are outside ACP's lifecycle
+and skip both checks. Migration: call `initialize()` first; check `getAgentCapabilities()` before an
+optional call, or catch `AcpCapabilityException`. A test agent with its own `initializeHandler` must
+advertise the capabilities its handlers serve, or drop the handler (a builder agent's default
+`initialize` advertises them for you).
+
+### A client's advertised capabilities must have their handlers {#client-capabilities-must-have-their-handlers}
+
+**Breaking (behavior):** `AcpClient.AsyncSpec`/`SyncSpec.build()` now throws `IllegalStateException`
+("The client advertises capabilities it has no handler for: ...") when the client capabilities
+advertise `fs.readTextFile` without `readTextFileHandler`, `fs.writeTextFile` without
+`writeTextFileHandler`, `terminal` without all five terminal handlers, or an elicitation mode without
+`createElicitationHandler`. Such a client used to build, and the agent's requests were answered
+"Method not found" at runtime instead of failing at startup. A handler for a capability the client
+does not advertise now also logs one WARN, since an SDK agent will never call it. The Spring Boot,
+Micronaut, and Quarkus client beans add the specific property that advertised the capability to the
+message. Migration: register the handlers (in an `AcpClientCustomizer` when the capabilities come from
+properties), or stop advertising the capability. The test `MockAcpClient` (`acp-test`) no longer
+advertises `terminal`, which it never served; a test that checked for it being advertised needs
+updating.
+
+### Client builders reject a null, duplicate, or misdirected handler too
+
+**Breaking:** the same discipline fix4 added to the agent builders now applies to
+`AcpClient.AsyncSpec`/`SyncSpec`. Registering a second handler for one method (a typed setter such as
+`readTextFileHandler` called twice, `requestHandler`/`notificationHandler` for a method that already
+has one, a raw handler and the typed setter for the same method) throws `IllegalStateException`
+("A handler for `<method>` is already registered on this builder; `<setter>` cannot register a second
+one"), instead of silently replacing the first; `sessionUpdateConsumer` stays additive. A raw
+`requestHandler(method, ...)`/`notificationHandler(method, ...)` for a method the SDK already models
+(`fs/read_text_file`, the five `terminal/*` methods, `session/request_permission`,
+`elicitation/create`, `session/update`, `elicitation/complete`) now throws `IllegalArgumentException`
+naming the typed setter to use instead: the raw handler bypassed the typed params and, for elicitation,
+the mode check. `SyncSpec.notificationHandler` is now a blocking `Consumer<Object>`, run on the sync
+handler threads like the sync builder's other handlers, instead of the async `NotificationHandler`
+returning a `Mono`. Migration: register each handler once; use the named typed setter for a modelled
+method; on the sync builder, drop the `Mono` from a raw notification handler body.
+
+### `SessionConfigSelect.Builder.build()` checks the option's value
+
+**Breaking:** it now throws `IllegalStateException` when the options (across every group) are empty,
+or when `currentValue` isn't the value of one of them, instead of building an option no client could
+display correctly. The record's canonical constructors stay lenient, since they also read other
+agents' options over the wire, which might (by a bug on their side) be shaped this way; only the
+builder, used to construct your own options, enforces it. Migration: pass at least one option, and set
+`currentValue` to one of their values. See [Session Config Options](/docs/acp-java-sdk/config-options).
+
+### Two new conveniences
+
+- **One default request timeout, 60 seconds, everywhere.** The client builders
+  (`AcpClient.sync`/`async`) and `AcpAgentSupport.Builder` defaulted to 30 seconds while the agent
+  builders defaulted to 60; all four now default to 60. 60 seconds because an agent's own requests (a
+  permission prompt, an elicitation) wait on a person, and a client's `session/new` may wait for the
+  agent to start its MCP servers. `AcpAgentSupport.Builder.requestTimeout` now accepts `null`, meaning
+  the SDK default. The Spring Boot (`spring.acp.client.request-timeout`) and Micronaut
+  (`acp.client.request-timeout`) properties default to 60s too; Quarkus's
+  `quarkus.acp.client.request-timeout`, left unset, already followed the SDK default either way.
+  Migration: none needed; to keep the old 30-second client bound, set
+  `requestTimeout(Duration.ofSeconds(30))` (or the property to `30s`).
+- **`defaultSessionUpdateConsumer(..)` on `AcpClient.AsyncSpec`/`SyncSpec`**: a consumer that runs only
+  while no `sessionUpdateConsumer` has been added, so a framework can supply a default (logging each
+  update at DEBUG, say) that the application's own consumer replaces outright rather than running
+  beside. The Spring Boot, Micronaut, and Quarkus client beans now register their DEBUG logging this
+  way. `sessionUpdateConsumer` itself stays additive, as before.
+- **Shortcuts for the messages real code writes most**: `new NewSessionRequest(cwd)` (no MCP servers),
+  `new NewSessionResponse(sessionId)` (no modes or config options), and `PromptRequest.text(sessionId,
+  text)` (a prompt of one text block). Each equals, and writes the same JSON as, the long form; prefer
+  them in new code wherever the full form adds nothing.
 
 ## Smaller breaking changes
 
@@ -494,13 +597,13 @@ old behavior should be revisited.
 - **A response missing a required field now fails the request instead of silently passing nulls
   through.** A bare `{}` used to read as, say, a `PromptResponse` with a null `stopReason` or a
   `NewSessionResponse` with a null `sessionId`; only inbound params were checked for required fields
-  before. Results are checked the same way now: the caller's request fails with
-  `AcpProtocolException` (`-32603`), naming the missing field's full path (a nested field, such as
-  `modes.currentModeId`, is named by its path, not just its containing object). This is one of the
-  rare cases where a caller receives an `AcpProtocolException` rather than an `AcpError`: it's a
-  locally-detected malformed response, not an error the peer actually sent; see
-  [Errors](/docs/acp-java-sdk/errors). Code that tolerated a peer answering less than the schema
-  requires, intentionally or not, now sees that as a hard failure.
+  before. Results are checked the same way now, on both sides and down into nested records: the
+  caller's request fails with `AcpError` (`-32603`), data `{"reason": "missing-required-field",
+  "method": <method>, "field": <path>}`, the path naming a nested field, such as
+  `modes.currentModeId`, not just its containing object. See [Errors](/docs/acp-java-sdk/errors) for
+  this and the other reasons an `AcpError` can mean the SDK rejected the response itself rather than
+  the peer sending an error. Code that tolerated a peer answering less than the schema requires,
+  intentionally or not, now sees that as a hard failure.
 - **An agent-to-client request reaches its handler only after the session updates sent before it.**
   Requests used to be dispatched as they arrived, outside the ordered notification drain, so a
   `session/request_permission` could reach its handler before the client's session-update consumers
@@ -572,3 +675,21 @@ old behavior should be revisited.
     `.promptTimeout(...)` explicitly; the default is now unbounded.
 23. If any code constructs `CommandResult` via its canonical constructor (not the 3-argument
     convenience one), add the new `truncated` component.
+24. Grep for `catch (AcpProtocolException` around a client or agent call (not inside a handler, where
+    throwing it is still correct): replace with `catch (AcpError e)`.
+25. Grep for `client.` calls made before `client.initialize()`: every call but `initialize` itself now
+    fails locally with `IllegalStateException` until it has answered.
+26. If a client advertises `fs.readTextFile`, `fs.writeTextFile`, `terminal`, or an elicitation mode,
+    confirm the matching handler is registered; `build()` now fails without it.
+27. Grep for a raw `requestHandler`/`notificationHandler` registered for a method the SDK models
+    (`fs/read_text_file`, a `terminal/*` method, `session/request_permission`, `elicitation/create`,
+    `session/update`, `elicitation/complete`): switch to the named typed setter.
+28. If a `SyncSpec.notificationHandler` is registered, drop the `Mono` from its body; it's now a
+    blocking `Consumer<Object>`.
+29. If any code relied on the client's 30-second default request timeout specifically (for example, a
+    test asserting how long a stub takes to time out), it's now 60 seconds; set `requestTimeout(...)`
+    explicitly if the old number matters.
+30. If a `SessionConfigSelect.Builder` is ever built with no options, or a `currentValue` not among
+    them, fix the options before `build()`; it now throws instead of building.
+31. If a test specifically checked `MockAcpClient`'s `initialize()` response for a `terminal`
+    capability, update it: the mock no longer advertises `terminal`.

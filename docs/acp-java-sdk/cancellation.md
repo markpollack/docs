@@ -21,10 +21,11 @@ active until the cancelled prompt actually answers: a new prompt sent in between
 handler should answer with `StopReason.CANCELLED`.
 
 **`$/cancel_request`** cancels any single in-flight request, in either direction. Disposing a
-request's `Mono` (directly, via `.timeout(...)`, or the SDK's own request timeout: 30s on the
-client, 60s on the agent) sends `$/cancel_request` once, after the request was written; the caller's
-`Mono` ends immediately and a late answer from the peer is discarded. A **graceful** variant keeps
-waiting for the real answer:
+request's `Mono` (directly, via `.timeout(...)`, or the SDK's own request timeout, 60 seconds by
+default on both sides) sends `$/cancel_request` once, after the request was written; the caller's
+`Mono` ends immediately and a late answer from the peer is discarded. A prompt turn is the one
+exception: its answer isn't bounded by the request timeout at all, only by `promptTimeout` if one is
+set. A **graceful** variant keeps waiting for the real answer:
 
 ```java
 client.prompt(new PromptRequest(sessionId, List.of(new TextContent("..."))))

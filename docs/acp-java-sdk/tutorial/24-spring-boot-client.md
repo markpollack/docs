@@ -79,6 +79,8 @@ spring.acp.client.request-timeout=60s
 
 The autoconfiguration detects the `stdio.command` property and creates a `StdioAcpClientTransport` that launches the agent as a subprocess.
 
+The explicit `request-timeout=60s` above now just restates the default (it used to raise it from 30s); it's harmless to leave in, and makes the intent explicit regardless of what the default happens to be.
+
 ## What the Autoconfiguration Does
 
 1. **Detects transport properties**: `stdio.command` triggers stdio transport; `websocket.uri` triggers WebSocket; `http.uri` triggers Streamable HTTP
@@ -112,7 +114,7 @@ The autoconfiguration picks the transport based on which properties are set:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `spring.acp.client.request-timeout` | `30s` | Request timeout |
+| `spring.acp.client.request-timeout` | `60s` | Request timeout |
 | `spring.acp.client.transport.type` | auto-detect | `stdio`, `websocket`, or `http` |
 | `spring.acp.client.transport.stdio.command` | — | Command to launch agent |
 | `spring.acp.client.transport.stdio.args` | — | Command arguments |

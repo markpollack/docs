@@ -8,13 +8,19 @@ The spec's own [error reference](https://agentclientprotocol.com/protocol/v1/sch
 says "Documentation coming soon"; the codes exist only in the schema's `ErrorCode` definition. This
 page is where this SDK writes them down.
 
-## Two different types, two different directions
+## The rule
 
-| | Type | Where it's used |
+A handler throws `AcpProtocolException` (`com.agentclientprotocol.sdk.error`) to answer a request
+with an error; the SDK converts it to a JSON-RPC error response before sending it. Everything else is
+what a *caller* sees:
+
+| | Type | When |
 |---|---|---|
-| **Your handler signals an error** | `AcpProtocolException` (`com.agentclientprotocol.sdk.error`) | Thrown from an agent or client handler; the SDK converts it to a JSON-RPC error response before it's sent |
-| **You receive the peer's error** | `AcpError` (`com.agentclientprotocol.sdk.spec`) | The request's `Mono` fails with it (async), or it's thrown from the blocking call (sync): the peer actually sent this error |
-| **The SDK rejects the peer's response locally** | `AcpProtocolException` | The request's `Mono` fails with it: the peer's response was malformed (see below), not an error it sent |
+| A peer's error response, or a response the SDK rejects locally | `AcpError` (`com.agentclientprotocol.sdk.spec`) | Any failed request, for either reason; see below for telling the two apart |
+| A request timed out | `AcpTimeoutException` (sync), a plain `TimeoutException` (async) | `requestTimeout` or `promptTimeout` elapsed before an answer arrived |
+| The blocked thread was interrupted | `CancellationException` | Sync API only; the interrupt flag is left set |
+| The call wasn't something the peer advertised | `AcpCapabilityException` | Capability negotiation ruled it out before anything was sent |
+| The call came before `initialize()` answered | `IllegalStateException` | Every call but `initialize` itself; extension calls are exempt |
 
 ```java
 // In a handler: signal an error to send back
@@ -28,7 +34,7 @@ SetSessionConfigOptionResponse setConfigOption(SetSessionConfigOptionRequest req
 ```
 
 ```java
-// As a caller: receive the peer's error
+// As a caller: one type covers every failed request
 try {
     client.setSessionConfigOption(SetSessionConfigOptionRequest.select(sid, "model", "gpt-99"));
 }
@@ -39,31 +45,43 @@ catch (AcpError e) {
 
 <Note>
 Some Javadoc on `AcpProtocolException` still shows it being caught after a client call, from before
-`AcpError` was split out as its own type (0.80.0, [CL 469]). That's stale for the ordinary case (a
-peer's actual error answers with `AcpError`, as above), but, as of the same release, not quite
-fiction either: see below for the one case where a caller genuinely does receive
-`AcpProtocolException`.
+`AcpError` was split out as its own type ([CL 469]) and before api1 unified the SDK's own local
+rejections onto it too. A handler throwing `AcpProtocolException` is now the whole of that type's
+job: a caller never catches it, only the `AcpError` the SDK builds from it on the wire.
 </Note>
 
-## When the SDK itself rejects a malformed response
+## Telling the peer's error from the SDK's own rejection
 
-A caller can also receive `AcpProtocolException` for a reason that has nothing to do with the peer
-sending an error: the peer's JSON-RPC *success* response was missing a field the schema requires. A
-bare `{}` used to read as a `PromptResponse` with a null `stopReason`, say; as of 0.80.0 that fails
-the request instead, with `-32603` naming the missing field's full path:
+`AcpError` covers two different causes, and `getData()` is how to tell them apart. A peer's actual
+error response carries the peer's own code, message and data, unchanged. A response the SDK rejected
+locally always has code `-32603` (JSON-RPC 2.0 defines no code for an invalid response) and a `data`
+map with a `"reason"` and the request's `"method"`:
+
+| `reason` | When |
+|---|---|
+| `missing-required-field` | A success response was missing a field the ACP schema requires (`"field"` names its path, for example `modes.currentModeId`) |
+| `missing-result` | A success response had no `result` at all |
+| `unreadable-result` | The `result` couldn't be read as the method's result type |
+| `unoffered-option` | `askChoice` was answered with an option id it never offered (`"optionId"` names it) |
 
 ```java
 try {
     var response = client.prompt(request);
 }
-catch (AcpProtocolException e) {
-    // "The response to session/prompt lacks the required field stopReason"
+catch (AcpError e) {
+    if (e.getData() instanceof Map<?, ?> data && "missing-required-field".equals(data.get("reason"))) {
+        // "The response to session/prompt lacks the required field stopReason"
+    }
 }
 ```
 
-This is a locally-detected problem with the peer's response shape, not an error the peer chose to
-send, which is why it surfaces as the same type a handler throws rather than as `AcpError`. See the
-[migration guide](/docs/acp-java-sdk/migration-0.80) for the full behavior change.
+Before 0.80.0, only inbound *params* were checked against the schema's required fields; a peer's `{}`
+silently read as a `PromptResponse` with a null `stopReason`. A result is now checked the same way, on
+both sides and down into nested records. `AcpError.rejectedResponse(method, reason, message, detail)`
+builds the error for the three response-shape reasons above; it's public because the SDK's own two
+sides both call it, not for application code to throw (a handler throwing an error uses
+`AcpProtocolException` instead, which the SDK never rejects as malformed, since it reads from the
+handler's own return value, not off the wire).
 
 `AcpError.getCode()` returns the numeric code. `getMessage()` is the peer's message text, plus any
 detail from the error's data, with the code left out on purpose, so `e.getCode() + " " + e.getMessage()`
@@ -122,12 +140,48 @@ same mechanism the SDK itself uses to cancel a sync handler. The async API doesn
 these: its `Mono` fails with the plain `TimeoutException` directly.
 
 <Note>
-This page documents today's shape: a handler throws `AcpProtocolException`; a caller catches
-`AcpError` for the peer's own errors and the SDK's local response-validation failures, plus
-`AcpTimeoutException` and `CancellationException` for the two cases above. A further SDK change
-(api1) is expected to unify the caller side onto `AcpError` alone for every failed request, including
-these two; this page will be updated once that lands, not before.
+Timeouts and interrupts keep their own types rather than folding into `AcpError`: neither is a
+JSON-RPC error at all, peer-sent or locally detected, so there's nothing for `AcpError`'s code and
+data to describe.
 </Note>
+
+## Two exceptions that mean the request was never sent
+
+`AcpCapabilityException` and `IllegalStateException` both happen *before* a request leaves: capability
+negotiation, or connection lifecycle, ruled the call out, so there was nothing to send and nothing to
+time out.
+
+```java
+try {
+    client.closeSession(new CloseSessionRequest(sessionId));
+}
+catch (AcpCapabilityException e) {
+    // "Capability not supported by peer: sessionCapabilities.close" -- e.getCapability()
+}
+```
+
+A client call other than `initialize` fails locally with `AcpCapabilityException`, naming the
+capability, when the agent's `initialize` answer didn't advertise it: `loadSession`, `listSessions`,
+`closeSession`, `deleteSession`, `resumeSession`, `forkSession`, `logout`, and the `providers/*` calls.
+An agent call works the same way in the other direction for a client capability the client didn't
+advertise (`readTextFile`, a terminal method, `createElicitation` for a mode the client didn't
+announce), covered on [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
+[Elicitation](/docs/acp-java-sdk/elicitation). `AcpCapabilityException.toProtocolException()` turns it
+into the `-32600` a handler would send for the equivalent case on the wire, for code that needs to
+answer a request rather than make one.
+
+```java
+client.newSession(new NewSessionRequest(cwd));   // IllegalStateException: Call initialize() first
+client.initialize();
+client.newSession(new NewSessionRequest(cwd));   // fine
+```
+
+Every `AcpAsyncClient`/`AcpSyncClient` call but `initialize` itself fails with `IllegalStateException`
+("Call initialize() first") until `initialize` has answered; before 0.80.0's api1 batch it was sent
+anyway, relying on the agent to reject it. The check runs when the call is subscribed, not when it's
+built, so `client.initialize().then(client.newSession(request))` is fine without waiting for the
+first call to complete first. Extension calls (`sendExtRequest`, `sendExtNotification`) are outside
+ACP's lifecycle and skip both checks.
 
 ## Related
 

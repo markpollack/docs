@@ -19,7 +19,7 @@ class EchoAgent {
 
     @NewSession
     NewSessionResponse newSession() {
-        return new NewSessionResponse(UUID.randomUUID().toString(), null, null);
+        return new NewSessionResponse(UUID.randomUUID().toString());
     }
 
     @Prompt
@@ -142,7 +142,7 @@ per connection.
 ```java
 AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
     .agentInfo(new Implementation("echo-agent", "1.0.0"))
-    .newSessionHandler(req -> new NewSessionResponse(UUID.randomUUID().toString(), null, null))
+    .newSessionHandler(req -> new NewSessionResponse(UUID.randomUUID().toString()))
     .promptHandler((req, ctx) -> {
         ctx.sendMessage("Echo: " + req.text());
         return PromptResponse.endTurn();
@@ -203,7 +203,7 @@ AcpSyncClient client = AcpClient.sync(transport)
     .build();
 
 client.initialize();
-var session = client.newSession(new NewSessionRequest(cwd, List.of()));
+var session = client.newSession(new NewSessionRequest(cwd));
 var response = client.prompt(new PromptRequest(session.sessionId(), content));
 ```
 

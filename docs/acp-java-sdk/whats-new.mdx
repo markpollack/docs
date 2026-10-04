@@ -17,14 +17,22 @@ page say otherwise.
 breaking-change list, with a quick-mapping table from the old API to the new one, is in the
 [migration guide](/docs/acp-java-sdk/migration-0.80).
 
-**Spring Boot support is now part of the SDK.** `acp-spring-boot-starter` and
-`acp-spring-boot-autoconfigure` move from `org.springaicommunity` into `com.agentclientprotocol`,
-versioned together with the rest of the SDK (there's no relocation POM; see the
-[migration guide](/docs/acp-java-sdk/migration-0.80#spring-boot-support-moved-into-the-sdk) for the
-exact coordinate and package change). The [Spring Boot Starter page](/docs/acp-java-sdk/autoconfig)
-is the canonical home for this integration's documentation going forward. Quarkus and Micronaut
-integrations are landing in the SDK as required, non-preview 0.80.0 modules too; their docs pages
-follow once their shapes are final.
+**Spring Boot, Quarkus and Micronaut support, all in the SDK.** All three are required (non-preview)
+0.80.0 modules, each the same shape: annotate one `@AcpAgent` class and the framework serves it.
+
+- **Spring Boot**: `acp-spring-boot-starter`/`acp-spring-boot-autoconfigure` move from
+  `org.springaicommunity` into `com.agentclientprotocol`, versioned with the rest of the SDK (no
+  relocation POM; see the
+  [migration guide](/docs/acp-java-sdk/migration-0.80#spring-boot-support-moved-into-the-sdk) for the
+  exact coordinate and package change). See [Spring Boot Starter](/docs/acp-java-sdk/autoconfig).
+- **Micronaut** (`acp-micronaut`, new): compile-time bean discovery, Micronaut AOP interception works
+  on the annotated class, and handlers may return a Reactive Streams `Publisher`. See
+  [Micronaut Integration](/docs/acp-java-sdk/micronaut).
+- **Quarkus** (`acp-quarkus`, new): build-time (Jandex) discovery, served on Quarkus's own HTTP
+  server with no Jetty dependency, and `@Prompt` may return a Mutiny `Uni` or a streaming `Multi`. See
+  [Quarkus Integration](/docs/acp-java-sdk/quarkus).
+
+Tutorial modules for Quarkus and Micronaut are coming in a later pass.
 
 **New concepts and features**, each with its own page:
 

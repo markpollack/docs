@@ -294,7 +294,8 @@
                     "group": "Framework Integrations",
                     "pages": [
                       "docs/acp-java-sdk/autoconfig",
-                      "docs/acp-java-sdk/micronaut"
+                      "docs/acp-java-sdk/micronaut",
+                      "docs/acp-java-sdk/quarkus"
                     ]
                   },
                   {

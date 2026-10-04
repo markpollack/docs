@@ -122,7 +122,9 @@ transport in a test.
 <Warning>
 **An HTTP or WebSocket agent runs on its own port, not inside Micronaut's own HTTP server.** It runs
 alongside a Micronaut HTTP server if your application has one, not mounted on it; the two never share
-a port. Mounting the ACP endpoint on Micronaut's own server is a later addition, not yet available.
+a port. Because of that, Micronaut's own server configuration (TLS, security, metrics) doesn't reach
+the ACP endpoint in 0.80.0 the way it does on Spring Boot and Quarkus. Mounting the ACP endpoint on
+Micronaut's own server, so that configuration applies automatically, is planned for 0.81.0.
 </Warning>
 
 ## Agent Settings (`acp.agent.*`)

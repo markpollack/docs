@@ -712,6 +712,34 @@ client configuration used to hard-code all three as not advertised. See
 Migration: a Micronaut client working around the gap with a customizer's
 `spec.clientCapabilities(...)` override can drop the workaround and use the properties instead.
 
+## The fix6 batch: cancellation no longer needs an explicit answer
+
+Verified against the CHANGELOG and the code at the commit that introduced it (`2f75223`).
+
+- **A prompt answers `cancelled` once `session/cancel` was received, whatever the handler
+  returns or throws.** Before, a handler that returned another stop reason within the grace period
+  (or just let `PromptResponse.endTurn()` fall through) had that answer sent instead, and a handler
+  that failed after a cancel was answered `-32603`, not `cancelled`. The agent session now sends
+  `cancelled` regardless, keeping the handler's `_meta` when it did return a response; before a cancel,
+  failures are still answered as before (only a cancellation, or an `AcpProtocolException` the handler
+  threw itself, gets special treatment there). Migration: none needed to keep working; a `try`/`catch`
+  written solely to turn a post-cancel failure into `cancelled`, or an explicit check-and-return of
+  `StopReason.CANCELLED` for the same reason, is now redundant rather than required. See
+  [Cancellation](/docs/acp-java-sdk/cancellation) for the full behavior.
+- **Builder agents answer `session/new` without a registered handler.** `build()` used to answer
+  `-32601` without a `newSessionHandler`, so no client could open a session; it now answers with
+  `AcpSchema.NewSessionResponse.withGeneratedId()` (a random UUID, no modes or config options), the
+  same default an annotated agent without `@NewSession` already had. `build()` still requires a prompt
+  handler; that remains the one ACP method with no default. Migration: none needed; a
+  `newSessionHandler` registered explicitly still replaces the default.
+- **The agent checks the client's `terminal` capability for every terminal method, not only
+  `create`.** `terminal/output`, `terminal/wait_for_exit`, `terminal/kill` and `terminal/release` used
+  to be sent regardless of whether the client advertised `terminal`, for example with a terminal ID
+  from a different connection. All five now fail locally with `AcpCapabilityException` and send
+  nothing, from the agent and from a prompt context's `execute(...)`. Migration: none for a client that
+  already advertises `terminal` consistently; code that relied on these four methods reaching the wire
+  without the capability advertised needs to register the capability instead.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -900,3 +928,11 @@ old behavior should be revisited.
 42. If a Micronaut client worked around missing `elicitation-form`/`elicitation-url`/
     `boolean-config-options` properties with a customizer override, the properties now exist; the
     workaround can be dropped.
+43. If a `@Prompt` method (or prompt handler) has a `try`/`catch` whose only job is answering
+    `cancelled` after `session/cancel`, it can be dropped; the agent session does this regardless of
+    what the handler returns or throws.
+44. If a builder agent relies on `build()` failing without a `newSessionHandler`, note that it now
+    answers `session/new` with a generated id by default instead.
+45. If any agent code calls `terminal/output`, `wait_for_exit`, `kill`, or `release` on a connection
+    where the client might not advertise `terminal`, expect `AcpCapabilityException` now, not a sent
+    request; these four now check the same as `create` already did.

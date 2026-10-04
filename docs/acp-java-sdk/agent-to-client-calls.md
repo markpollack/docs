@@ -58,6 +58,13 @@ stream output as it happens:
 | 4 | `releaseTerminal(...)` | `releaseTerminalHandler` | Free the client's resources |
 
 `killTerminal(...)` ends a still-running terminal early, outside the normal wait-then-release flow.
+
+All five terminal methods check `NegotiatedCapabilities.supportsTerminal()` before calling, not only
+`createTerminal`: calling any of them without the capability throws `AcpCapabilityException` locally,
+before anything is sent. Before 0.80.0's fix6, only `createTerminal` was checked, so a terminal id from
+a connection where the client *did* advertise `terminal` could reach `waitForTerminalExit`,
+`getTerminalOutput`, `releaseTerminal`, or `killTerminal` on a different connection that never
+advertised it.
 `ctx.execute(Command)` is a convenience that runs all four steps for the common case: spawn, wait,
 read, release, in one call, returning a `CommandResult` (`output()`, `exitCode()`: `Integer`, nullable
 for a process a signal terminated, `signal()`, `truncated()` (whether the output was cut to the

@@ -66,6 +66,12 @@ private static AcpSchema.PromptResponse slow(SyncPromptContext ctx) throws Inter
 }
 ```
 
+As of 0.80.0, the explicit `StopReason.CANCELLED` return above is good practice (it stops the loop
+instead of ticking to 10 for nothing) but no longer the reason the turn ends in `cancelled`: once
+`session/cancel` has been received for a prompt, the agent session sends `cancelled` regardless of
+what the handler returns, or even throws, so `slow` could return `PromptResponse.endTurn()` in that
+branch too and the client would still see `cancelled`.
+
 A handler that ignores `session/cancel` entirely (`stubborn`, above) just keeps running: the SDK's grace period is what eventually ends it.
 
 ### Client: `session/cancel`
@@ -141,7 +147,7 @@ catch (AcpError e) {
 <Note>
 **Document `cancelGracePeriod` and `maxPromptDuration` as SDK policy, not protocol behavior.** No other ACP SDK has an exact equivalent, and the spec defines neither.
 
-Two behavior changes worth knowing if you're upgrading from 0.18.0:
+Three behavior changes worth knowing if you're upgrading from 0.18.0:
 
 - A client-side request timeout now sends `$/cancel_request`, so it actually cancels the work at a
   Java agent instead of leaving it running after the client gives up.
@@ -151,6 +157,11 @@ Two behavior changes worth knowing if you're upgrading from 0.18.0:
   `TimeoutException` and sends `$/cancel_request`, the same as a plain `requestTimeout` used to. A
   one-off bound on a single prompt, without changing the client's configuration, still works too:
   `client.prompt(request).timeout(Duration.ofSeconds(5))`.
+- **The handler no longer needs to answer `cancelled` itself.** Once `session/cancel` has been
+  received for a prompt, the agent session sends `cancelled` regardless of what the handler returns
+  (any stop reason) or throws (any exception, not just `InterruptedException`), keeping the handler's
+  own `_meta` when it did return a response. A `try`/`catch` written solely to turn a post-cancel
+  failure into `cancelled` is now redundant, not wrong.
 </Note>
 
 ## Source Code

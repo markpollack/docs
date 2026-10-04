@@ -275,8 +275,10 @@ It also covers a `session/new`, `session/load`, `session/resume`, or `session/fo
 non-empty `additionalDirectories` when the agent doesn't advertise
 `sessionCapabilities.additionalDirectories`: check `getAgentCapabilities().supportsAdditionalDirectories()`
 before naming any. An agent call works the same way in the other direction for a client capability the
-client didn't advertise (`readTextFile`, a terminal method, `createElicitation` for a mode the client
-didn't announce), covered on [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
+client didn't advertise: `readTextFile`, `writeTextFile`, any of the five terminal methods (`create`,
+`output`, `waitForExit`, `kill`, and `release`, all checked as of 0.80.0's fix6, not only `create`), or
+`createElicitation` for a mode the client didn't announce, covered on
+[Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
 [Elicitation](/docs/acp-java-sdk/elicitation).
 
 <Note>

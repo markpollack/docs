@@ -18,7 +18,8 @@ cooperative cancellation, `-32800`, and the spec's own cascading-cancellation di
 **`session/cancel`** (a notification) asks the agent to end the current prompt turn. The turn stays
 active until the cancelled prompt actually answers: a new prompt sent in between gets `-32600`
 (invalid request), the same as any prompt sent while another is already running on that session. The
-handler should answer with `StopReason.CANCELLED`.
+agent session answers `cancelled` once `session/cancel` has been received for the prompt, whatever the
+handler itself returns or throws; see below.
 
 **`$/cancel_request`** cancels any single in-flight request, in either direction. Disposing a
 request's `Mono` (directly, via `.timeout(...)`, or the SDK's own request timeout, 60 seconds by
@@ -74,7 +75,7 @@ or the connection closing):
 PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
     for (Step step : plan) {
         if (ctx.isCancelled()) {
-            return PromptResponse.cancelled();
+            return PromptResponse.endTurn(); // any stop reason: the agent session sends cancelled regardless
         }
         step.run(ctx);
     }
@@ -82,17 +83,27 @@ PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
 }
 ```
 
-`SyncPromptContext.isCancelled()` is a poll: check it between steps of a long-running handler. For
-work you can't poll, such as a subprocess or an outstanding HTTP call that needs aborting,
-`onCancel(Runnable)` registers a callback that runs once, on whichever thread delivers the
-cancellation, so it must be quick and must not block. The async `PromptContext.whenCancelled()`
-returns a `Mono<Void>` that completes (empty) on cancellation, for composing into a Reactor pipeline,
-for example `work.takeUntilOther(context.whenCancelled())` to stop a chain of operators.
+`SyncPromptContext.isCancelled()` is a poll: check it between steps of a long-running handler, to stop
+early rather than finish work nobody will see the result of. For work you can't poll, such as a
+subprocess or an outstanding HTTP call that needs aborting, `onCancel(Runnable)` registers a callback
+that runs once, on whichever thread delivers the cancellation, so it must be quick and must not block.
+The async `PromptContext.whenCancelled()` returns a `Mono<Void>` that completes (empty) on
+cancellation, for composing into a Reactor pipeline, for example
+`work.takeUntilOther(context.whenCancelled())` to stop a chain of operators.
 
-Once `isCancelled()` is true, it stays true. After `session/cancel`, answer within the cancel grace
-period with `PromptResponse.cancelled()`, as the example above does; after `$/cancel_request` the SDK
-has already answered and interrupted the handler's thread, so whatever the handler eventually returns
-is simply discarded.
+**The handler doesn't need to choose `cancelled` itself, or even succeed.** Once `session/cancel` has
+been received for a prompt, the agent session sends `cancelled` as the answer no matter what the
+handler returns (`PromptResponse.endTurn()` included) or throws, keeping the handler's own `_meta` when
+it returned a response. A handler that fails after a cancel, for whatever reason, no longer needs its
+own `try`/`catch` to avoid leaking `-32603`: the failure is answered `cancelled` too. Before
+`session/cancel` arrives, a handler's own failure is still answered as any other failure would be; this
+only applies once the prompt is already being cancelled. The early-exit pattern above is still worth
+writing, to stop doing work nobody will see the result of, but the specific stop reason it returns no
+longer matters.
+
+Once `isCancelled()` is true, it stays true. After `$/cancel_request` (as opposed to `session/cancel`),
+the SDK has already answered and interrupted the handler's thread, so whatever the handler eventually
+returns is simply discarded; that case is unaffected by the paragraph above.
 
 ## The full sequence
 
@@ -140,6 +151,14 @@ The agent side's incoming notification handlers are **not** ordered relative to 
 A behavior change worth knowing if you're upgrading: a client-side prompt timeout now actually
 cancels the turn at a Java agent (it used to let the agent keep running after the client gave up).
 Raise `requestTimeout` for genuinely long prompts if the old behavior was load-bearing anywhere.
+
+**Another behavior change, more recent still**: a prompt handler used to need to notice
+`session/cancel` and explicitly answer `cancelled` itself; a handler that returned another stop reason
+(or failed) after a cancel sent that instead, `-32603` included. The agent session now sends `cancelled`
+regardless of what the handler returns or throws, once `session/cancel` has been received for that
+prompt. Code written against the old behavior (an explicit `try`/`catch` around the handler body solely
+to turn a post-cancel failure into `cancelled`) still works, since catching and returning `cancelled`
+by hand is simply redundant now, not wrong.
 
 ## Related
 

@@ -108,8 +108,10 @@ produce) a `String`, sent to the client as an agent message chunk before the tur
 
 `SyncPromptContext.isCancelled()` (poll it between steps) or `onCancel(Runnable)` (register a
 callback, for work you can't poll, like a subprocess); the async `PromptContext.whenCancelled()`
-composes into a Reactor pipeline. See [Cancellation](/docs/acp-java-sdk/cancellation) for the full
-annotation-model lifecycle.
+composes into a Reactor pipeline. A `@Prompt` method doesn't need to catch its own failures or pick a
+stop reason after `session/cancel`: the agent session answers `cancelled` regardless of what the
+method returns or throws, once `session/cancel` has arrived for that prompt. See
+[Cancellation](/docs/acp-java-sdk/cancellation) for the full annotation-model lifecycle.
 
 ### Typed config values
 
@@ -166,7 +168,11 @@ The same shape as the annotated version, one `xxxHandler(...)` setter per ACP me
 annotated method. Builder agents get a default `initialize` too, so `initializeHandler(...)` is
 optional: it derives the same capabilities from which handlers are *registered* (no
 `promptCapabilities` or `mcpCapabilities`, which need annotation attributes the plain builder has no
-equivalent for), and `agentInfo(Implementation)` sets `agentInfo` on it without writing a handler.
+equivalent for), and `agentInfo(Implementation)` sets `agentInfo` on it without writing a handler. As
+of 0.80.0, `newSessionHandler(...)` is optional too: without one, `build()` answers `session/new` with
+`NewSessionResponse.withGeneratedId()` (a random UUID, no modes or config options), the same default an
+annotated agent without `@NewSession` already had. `build()` still requires a prompt handler; that's
+the one ACP method with no default.
 (`AcpAgentSupport.Builder#run()`, the annotated builder's one-call `build().run()` convenience,
 has no equivalent on this plain builder: call `.build()` then `.run()` on the result, as above.) A
 builder handler other than the prompt handler receives only its request; to call back into the

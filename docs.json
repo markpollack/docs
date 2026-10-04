@@ -50,8 +50,8 @@
   },
   "colors": {
     "primary": "#4fc3f7",
-    "light": "#81d4fa",
-    "dark": "#0097a7"
+    "dark": "#0097a7",
+    "light": "#81d4fa"
   },
   "background": {
     "color": {

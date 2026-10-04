@@ -200,6 +200,7 @@ Run time:
 
 | Property | Default | |
 |---|---|---|
+| `quarkus.acp.handler-executor` | `managed` | `managed` (Quarkus' `ManagedExecutor`) or `virtual` (Quarkus' virtual-thread executor, JDK 21+, else falls back to `managed`); see [Where handlers run](#where-handlers-run) |
 | `quarkus.acp.agent.request-timeout` | SDK default | agent requests to the client |
 | `quarkus.acp.agent.cancel-grace-period` | SDK default | |
 | `quarkus.acp.agent.max-prompt-duration` | none | |
@@ -240,10 +241,16 @@ by that same shared layer.
 
 ## Where handlers run
 
-Handler methods run on the `ManagedExecutor` (Quarkus' own worker pool, where blocking work belongs,
-never the Vert.x event loop), with the application's contexts propagated, instead of a second pool of
-the SDK's (see [Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)). This is
-automatic; there's no property to point handlers elsewhere.
+By default (`quarkus.acp.handler-executor=managed`), handler methods run on the `ManagedExecutor`
+(Quarkus' own worker pool, where blocking work belongs, never the Vert.x event loop), with the
+application's contexts propagated, instead of a second pool of the SDK's (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)).
+
+Set `quarkus.acp.handler-executor=virtual` to opt into Quarkus' virtual-thread executor on JDK 21 and
+later (it falls back to `managed` on earlier JDKs). Virtual threads keep the Vert.x context of the
+submitting thread, but propagate no MicroProfile Context Propagation context: a handler gets no CDI
+request context of its own unless the method carries `@ActivateRequestContext`, and no security
+identity, transaction, or tracing context captured from the submitting thread.
 
 ## Related
 

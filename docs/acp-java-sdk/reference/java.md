@@ -862,7 +862,7 @@ if (context.getClientCapabilities().supportsElicitation()) {
 
 ### `@UnstableAcpApi`
 
-APIs marked `@UnstableAcpApi` correspond to protocol elements in `schema.unstable.json`. They are public and functional but may change in any minor release. When the protocol element stabilizes, the annotation is removed (compatible change). See [Versioning](#versioning) for the full policy.
+APIs marked `@UnstableAcpApi` correspond to protocol elements in `schema.unstable.json`. They are public and functional but may change in any minor release. When the protocol element stabilizes, the annotation is removed (compatible change). See [Stable vs Unstable](/docs/acp-java-sdk/stability) for the full policy.
 
 IntelliJ users can configure the *Unstable API Usage* inspection (*Settings > Inspections > JVM languages*) to flag usages.
 

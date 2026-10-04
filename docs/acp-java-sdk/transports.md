@@ -172,6 +172,15 @@ Undertow) and in Micronaut, through a standard Jakarta WebSocket endpoint, so a 
 wouldn't need a second port just for the WebSocket upgrade. Not available yet.
 </Note>
 
+<Tip>
+**Handled for you.** *(Pending confirmation before 0.80.0 ships.)*
+
+- SSE responses aren't buffered by a reverse proxy such as nginx.
+- Long-lived streams aren't cut off by the servlet container's own timeouts.
+- Concurrent WebSocket writes are safe on every container.
+- Shutdown closes open streams promptly.
+</Tip>
+
 ## Not yet supported in 0.80.0
 
 - **WebSocket inside a servlet container.** The servlet serves HTTP/SSE only; the WebSocket upgrade

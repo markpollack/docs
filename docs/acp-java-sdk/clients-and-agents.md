@@ -168,7 +168,10 @@ The same shape as the annotated version, one `xxxHandler(...)` setter per ACP me
 annotated method. Builder agents get a default `initialize` too, so `initializeHandler(...)` is
 optional: it derives the same capabilities from which handlers are *registered* (no
 `promptCapabilities` or `mcpCapabilities`, which need annotation attributes the plain builder has no
-equivalent for), and `agentInfo(Implementation)` sets `agentInfo` on it without writing a handler. As
+equivalent for), and `agentInfo(Implementation)` sets `agentInfo` on it without writing a handler.
+**The rule is simpler than the annotated agent's `@Initialize` overlay above**: without an
+`initializeHandler`, the derived response is what's sent; register one by hand, and your response is
+sent exactly as returned, with no merging over what the other handlers would otherwise imply. As
 of 0.80.0, `newSessionHandler(...)` is optional too: without one, `build()` answers `session/new` with
 `NewSessionResponse.withGeneratedId()` (a random UUID, no modes or config options), the same default an
 annotated agent without `@NewSession` already had. `build()` still requires a prompt handler; that's

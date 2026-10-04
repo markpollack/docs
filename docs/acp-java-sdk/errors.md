@@ -83,7 +83,7 @@ taking over the more specific block.
 
 ## What a handler's own exception becomes
 
-Three different outcomes, depending on what the handler throws or lets escape:
+Four different outcomes, depending on what the handler throws or lets escape:
 
 1. **`AcpProtocolException`**: sent as the handler intended, code, message and data unchanged. The
    caller's `AcpError` carries exactly what was thrown.
@@ -91,7 +91,13 @@ Three different outcomes, depending on what the handler throws or lets escape:
    unchanged, not rewrapped. A handler that calls out, finds nothing of its own to add, and lets the
    failure propagate does not need to convert it: the caller sees the original code, message and data,
    not a flattened `-32603`.
-3. **Anything else** (a bare `RuntimeException`, a bug, an `Error`): answered `-32603` with the
+3. **A `CancellationException`, an interrupt, or an `AcpProtocolException` with code `-32800`**: all
+   read as the handler cancelling its own work, ACP v1's internal cancellation, and are answered
+   `-32800` with the exception's own message (or `"Request cancelled"` if it has none), not flattened
+   to `-32603` the way an ordinary exception is. A handler that catches an interrupt from the SDK
+   cancelling it and simply lets it propagate already gets the right answer without doing anything
+   else.
+4. **Anything else** (a bare `RuntimeException`, a bug, an `Error`): answered `-32603` with the
    generic message `"Internal error"` only. **The exception's own message is not sent to the peer**
    (a security fix: a database error, a file path, or a URL with credentials could otherwise reach
    whatever sent the request). The real exception, with its stack trace, is logged at `WARN` on the
@@ -111,14 +117,15 @@ PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
         throw e;
         // (2) the peer sees the downstream failure's own code and message, unchanged
     }
-    // any other exception here (3): the peer sees -32603 "Internal error" only;
-    // this side's own log has the real exception and its stack trace, at WARN
+    // a CancellationException escaping here (3): the peer sees -32800, the exception's own
+    // message or "Request cancelled"; any other exception (4): -32603 "Internal error" only,
+    // with the real exception and its stack trace logged at WARN on this side
 }
 ```
 
 Migration: a handler whose exception message the peer genuinely needs to see throws
-`AcpProtocolException` with that message explicitly; nothing else carries a message to the peer
-anymore.
+`AcpProtocolException` with that message explicitly; nothing else but a cancellation carries a message
+to the peer anymore.
 
 ## Telling the peer's error from the SDK's own rejection
 
@@ -169,7 +176,7 @@ Every code in 0.80.0 matches the ACP v1 schema exactly; nothing is this SDK's ow
 | `-32603` | `INTERNAL_ERROR` | A handler threw, including a bare `Error` escaping it, or an annotated handler returned `null` |
 | `-32002` | `RESOURCE_NOT_FOUND` | A session, resource, or similar ID that doesn't exist (replaces the old `SESSION_NOT_FOUND`) |
 | `-32000` | `AUTHENTICATION_REQUIRED` | The peer must authenticate before this call succeeds |
-| `-32800` | `REQUEST_CANCELLED` | A request ended via `$/cancel_request`, the cancel grace period, or `maxPromptDuration` |
+| `-32800` | `REQUEST_CANCELLED` | A request ended via `$/cancel_request`, the cancel grace period, or `maxPromptDuration`; or a handler answered it with a `CancellationException`, an interrupt, or an `AcpProtocolException` of this code itself |
 
 All seven live on `AcpErrorCodes` as `int` constants; throw `AcpProtocolException` with one of them
 from a handler, and compare `AcpError.getCode()` against them as a caller.

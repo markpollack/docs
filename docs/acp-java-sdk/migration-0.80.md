@@ -618,6 +618,100 @@ set.
 with the application's contexts propagated) instead of a second pool of the SDK's; nothing to
 configure. See [Quarkus: Where handlers run](/docs/acp-java-sdk/quarkus#where-handlers-run).
 
+## The fix5 batch: the errors page's final shape, interceptors, and a few more corrections
+
+Verified against the CHANGELOG and the code at the commit that introduced it (`08732ad`). The caller
+side of errors is now at its final shape, covered in full on [Errors](/docs/acp-java-sdk/errors); this
+section is the migration summary, not a restatement.
+
+### Errors: a security fix, a new exception, and a hierarchy change
+
+- **A handler's unexpected exception no longer sends its message to the peer.** Any exception other
+  than `AcpProtocolException` escaping a handler used to answer `-32603` with that exception's own
+  message, which can carry paths, SQL, or credentials; it's now answered `-32603` with the generic
+  message `"Internal error"` on both sides, and the real exception is logged at `WARN` with its stack
+  trace on the side that handled it. An `AcpError` that escapes a handler is the one exception besides
+  `AcpProtocolException` with its own, unchanged treatment: it's passed on as the answer, not
+  flattened to `-32603`, since it's already the peer's own failure moving one hop further.
+  Migration: a handler whose exception message the peer needs throws `AcpProtocolException` with that
+  message explicitly.
+- **`AcpError` now extends `AcpException`.** A multi-catch `catch (AcpException | AcpError e)` no
+  longer compiles; catch `AcpException` alone, and if `AcpError` needs its own clause, put it before
+  the `AcpException` one. Migration: fix the multi-catch, and check the order of any adjacent
+  `AcpError`/`AcpException` catch blocks.
+- **A lost connection fails a request with `AcpConnectionException`, on both sides**, replacing a
+  plain `RuntimeException` (a request pending when the transport ended) and an `IllegalStateException`
+  (sent after that, or after `close()`). Migration: replace `catch (RuntimeException e)` or
+  `catch (IllegalStateException e)` used to mean "the connection is gone" with
+  `catch (AcpConnectionException e)`.
+- **`AcpCapabilityException.toProtocolException()` is removed.** It answered `-32600`, a code the SDK
+  made up for the case; the one refusal ACP actually specifies (an elicitation mode the client never
+  declared) already answers `-32602` directly, without this method. Migration: a handler converting
+  its own capability check to an error throws
+  `new AcpProtocolException(AcpErrorCodes.INVALID_PARAMS, e.getMessage(), e.getCapability())`.
+
+### Interceptors
+
+- **`AcpInterceptor.onError` can answer with an error of its own**, and now reaches only the
+  interceptors whose `preInvoke` actually ran. An `AcpProtocolException` thrown from `onError` becomes
+  the response, with the original failure attached as suppressed; any other exception there is a fault
+  in the interceptor and is answered `-32603`. Migration: an `onError` that threw expecting to be
+  ignored should log and return `null` instead.
+- **Breaking: `afterCompletion` takes the exception the call failed with**, as a second parameter:
+  `afterCompletion(AcpInvocationContext context, Throwable ex)`, `ex` null on success. **An override
+  without `@Override` keeps compiling against the old one-argument signature but is silently never
+  called again**; add `@Override` to catch this at compile time, and add the parameter.
+- **The default `session/new` answer now passes through the interceptors too.** An annotated agent
+  with no `@NewSession` method used to answer `session/new` without going through `preInvoke`/
+  `postInvoke`/`onError`/`afterCompletion`, unlike every other derived answer. Migration: an
+  interceptor that should ignore `session/new` checks `context.getAcpMethod()`.
+
+### Rejected at build or setter, instead of failing later or silently
+
+- An `@ExtNotification` method that doesn't return `void` fails the build, naming the method: a
+  notification gets no answer, so a returned value was silently dropped before.
+- `AcpAgentSupport.Builder.cancelGracePeriod(..)` and `maxPromptDuration(..)` reject a negative value
+  at once, instead of storing it and failing later at `build()` (or, with `buildFactory()`, failing
+  every connection).
+- `AcpAgentSupport.Builder.interceptor(null)` fails at once with `IllegalArgumentException`, as
+  `argumentResolver(null)` and `returnValueHandler(null)` already did.
+
+### `additionalDirectories` needs the capability, both ways
+
+**Breaking:** the client now sends `additionalDirectories` only to an agent that advertises
+`sessionCapabilities.additionalDirectories`; naming any when the agent doesn't fails locally with
+`AcpCapabilityException`, without sending the request. An annotated agent advertises it with
+`@AcpAgent(additionalDirectories = true)`, which needs a `@NewSession` method (the default answer
+would silently drop the directories, which ACP forbids); a builder agent advertises it from its
+`initializeHandler`. Migration: a client checks `getAgentCapabilities().supportsAdditionalDirectories()`
+before naming directories; an annotated agent that reads them adds `additionalDirectories = true` to
+`@AcpAgent` (an `@Initialize` method that already advertised them keeps working unchanged).
+
+### Two more fixes worth knowing about
+
+- **A prompt's updates no longer follow its answer.** Once a prompt has been answered, by its handler
+  or by the SDK itself (the cancel grace period or `maxPromptDuration` passed), `sendUpdate` (and the
+  helpers built on it, such as `sendMessage`) now drops anything sent afterward and logs it at DEBUG,
+  without its content, instead of sending an update after the answer, which ACP forbids.
+  `sendSessionUpdate` outside a prompt context is unaffected.
+- **`SessionCapabilities` writes only objects, and reads only objects as advertised.** `Boolean.TRUE`
+  used to write `"list": true`, which the schema forbids (a session capability is an object or
+  absent); it now writes `{}`. Reading used to count any non-null value, including `false`, as
+  advertised; only a JSON object does now. Migration: none for code using the builder or the
+  `supportsX()` accessors; code that read the raw JSON by hand should expect `{}`, not `true`.
+- **A builder agent advertises `providers` for any provider handler**, not only `providers/list`: an
+  annotated agent already did; a plain builder agent with only a `providers/set` or `/disable` handler
+  used to advertise nothing, so the client refused those calls.
+
+### Micronaut: the three capability properties it was missing now exist
+
+**Fixed:** `acp.client.capabilities.elicitation-form`, `.elicitation-url`, and
+`.boolean-config-options` (default `false`) now exist, matching Spring Boot and Quarkus; the Micronaut
+client configuration used to hard-code all three as not advertised. See
+[Micronaut: A client, from configuration](/docs/acp-java-sdk/micronaut#a-client-from-configuration).
+Migration: a Micronaut client working around the gap with a customizer's
+`spec.clientCapabilities(...)` override can drop the workaround and use the properties instead.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -788,3 +882,21 @@ old behavior should be revisited.
     picking one silently. Quarkus and Micronaut clients need the same check.
 35. If a Spring `ArgumentResolver` or `ReturnValueHandler` was registered by hand (not as a `@Bean`),
     register it as one instead; it's now picked up automatically, the same as `AcpInterceptor`.
+36. Grep for `catch (AcpException | AcpError` (or any other multi-catch listing both): drop `AcpError`
+    and catch `AcpException` alone; check the order of any adjacent `catch (AcpError e)` /
+    `catch (AcpException e)` blocks, `AcpError` first.
+37. Grep for `catch (RuntimeException` or `catch (IllegalStateException` around a call, used to mean
+    "the connection is gone": replace with `catch (AcpConnectionException e)`.
+38. Grep for `.toProtocolException()` on an `AcpCapabilityException`: replace with
+    `new AcpProtocolException(AcpErrorCodes.INVALID_PARAMS, e.getMessage(), e.getCapability())`.
+39. If any `AcpInterceptor.afterCompletion` override exists, add the `Throwable` parameter and
+    `@Override`; without `@Override` it silently stops being called.
+40. If any handler relied on its own exception's message reaching the peer (other than through
+    `AcpProtocolException`), throw `AcpProtocolException` with that message explicitly; the message is
+    no longer sent otherwise.
+41. If a client sends `additionalDirectories`, check `getAgentCapabilities().supportsAdditionalDirectories()`
+    first, or catch `AcpCapabilityException`; if an annotated agent reads them, add
+    `additionalDirectories = true` to `@AcpAgent`.
+42. If a Micronaut client worked around missing `elicitation-form`/`elicitation-url`/
+    `boolean-config-options` properties with a customizer override, the properties now exist; the
+    workaround can be dropped.

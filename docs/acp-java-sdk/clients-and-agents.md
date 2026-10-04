@@ -56,6 +56,9 @@ declares:
 - `@Prompt(image, audio, embeddedContext)` declares the prompt content the agent accepts, advertised
   as `promptCapabilities`.
 - `@AcpAgent(mcpHttp, mcpSse)` declares which MCP transports the agent connects to.
+- `@AcpAgent(additionalDirectories = true)` advertises `sessionCapabilities.additionalDirectories`,
+  needed before a client will send any; it requires a `@NewSession` method, since the derived default
+  answer would silently drop the directories a client sent, which ACP forbids.
 - `@AcpAgent(name, version, title)` becomes `agentInfo`: an empty `name` sends the class's simple
   name; an empty `version` sends the jar manifest's `Implementation-Version`, or `"unknown"` with
   neither; an empty `title` sends none.
@@ -126,6 +129,13 @@ needs a `@Prompt` method; building one without it fails the same way. There's no
 exception-handler annotation: keep per-session state in a thread-safe map keyed by session id,
 dropped in `@CloseSession`/`@DeleteSession`, and handle errors in the method itself or an
 `AcpInterceptor.onError`.
+
+`onError` can answer the request itself: throw `AcpProtocolException` there and that becomes the
+response, with the original failure attached as suppressed; it reaches only the interceptors whose
+`preInvoke` actually ran. `afterCompletion(context, Throwable ex)` takes the failure as a second
+parameter now (`null` on success); **an override written against the old one-argument signature still
+compiles without `@Override`, but is silently never called again**, so add `@Override` to every
+`afterCompletion` to catch this at compile time instead of finding out at runtime.
 
 For serving many remote connections (Streamable HTTP, WebSocket) from one annotated agent,
 `AcpAgentSupport.Builder#buildFactory()` returns an `AcpAgentFactory` instead of running one agent

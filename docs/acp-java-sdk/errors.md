@@ -17,6 +17,7 @@ what a *caller* sees:
 | | Type | When |
 |---|---|---|
 | A peer's error response, or a response the SDK rejects locally | `AcpError` (`com.agentclientprotocol.sdk.spec`) | Any failed request, for either reason; see below for telling the two apart |
+| The connection is gone | `AcpConnectionException` | A request still pending when the connection ends, or sent after it ended or after `close()`; see below |
 | A request timed out | `AcpTimeoutException` (sync), a plain `TimeoutException` (async) | `requestTimeout` or `promptTimeout` elapsed before an answer arrived |
 | The blocked thread was interrupted | `CancellationException` | Sync API only; the interrupt flag is left set |
 | The call wasn't something the peer advertised | `AcpCapabilityException` | Capability negotiation ruled it out before anything was sent |
@@ -49,6 +50,75 @@ Some Javadoc on `AcpProtocolException` still shows it being caught after a clien
 rejections onto it too. A handler throwing `AcpProtocolException` is now the whole of that type's
 job: a caller never catches it, only the `AcpError` the SDK builds from it on the wire.
 </Note>
+
+## One base class for every one of these: `AcpException`
+
+`AcpError`, `AcpProtocolException`, `AcpCapabilityException`, `AcpConnectionException`, and
+`AcpTimeoutException` all extend `com.agentclientprotocol.sdk.error.AcpException`, so
+`catch (AcpException e)` handles every failure of a call in one place, whichever of these it turns out
+to be. `AcpError` extending `AcpException` is new: it used to extend `RuntimeException` directly, which
+meant `catch (AcpException e)`, the one place the SDK itself documented for handling a call's failures,
+silently missed every error the peer actually answered with.
+
+```java
+try {
+    client.prompt(request);
+}
+catch (AcpException e) {
+    // every failure above lands here: AcpError included, now that it extends AcpException
+}
+```
+
+<Warning>
+**A multi-catch `catch (AcpException | AcpError e)` no longer compiles**: `AcpError` is now a subtype
+of `AcpException`, so listing both is redundant, not just unusual. Catch `AcpException` alone. If
+separate `catch` blocks are needed for `AcpError` specifically and `AcpException` generally, put the
+`AcpError` clause **before** the `AcpException` one, the usual Java rule for a subtype and its
+supertype; the other order compiles but the `AcpException` clause now catches `AcpError` too, silently
+taking over the more specific block.
+</Warning>
+
+`CancellationException` (`java.util.concurrent`) is the one type in the table above that is **not** an
+`AcpException`: it's a JDK type reused for interrupt propagation, not an SDK-specific failure.
+
+## What a handler's own exception becomes
+
+Three different outcomes, depending on what the handler throws or lets escape:
+
+1. **`AcpProtocolException`**: sent as the handler intended, code, message and data unchanged. The
+   caller's `AcpError` carries exactly what was thrown.
+2. **An `AcpError` the handler received from its own call to the peer, left to escape**: passed on
+   unchanged, not rewrapped. A handler that calls out, finds nothing of its own to add, and lets the
+   failure propagate does not need to convert it: the caller sees the original code, message and data,
+   not a flattened `-32603`.
+3. **Anything else** (a bare `RuntimeException`, a bug, an `Error`): answered `-32603` with the
+   generic message `"Internal error"` only. **The exception's own message is not sent to the peer**
+   (a security fix: a database error, a file path, or a URL with credentials could otherwise reach
+   whatever sent the request). The real exception, with its stack trace, is logged at `WARN` on the
+   side that handled the request, so it's still visible to whoever runs that side.
+
+```java
+@Prompt
+PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
+    if (req.text().isBlank()) {
+        throw new AcpProtocolException(AcpErrorCodes.INVALID_PARAMS, "Prompt text must not be blank");
+        // (1) the peer sees exactly this: code -32602, this message
+    }
+    try {
+        return callDownstream(req);
+    }
+    catch (AcpError e) {
+        throw e;
+        // (2) the peer sees the downstream failure's own code and message, unchanged
+    }
+    // any other exception here (3): the peer sees -32603 "Internal error" only;
+    // this side's own log has the real exception and its stack trace, at WARN
+}
+```
+
+Migration: a handler whose exception message the peer genuinely needs to see throws
+`AcpProtocolException` with that message explicitly; nothing else carries a message to the peer
+anymore.
 
 ## Telling the peer's error from the SDK's own rejection
 
@@ -145,6 +215,37 @@ JSON-RPC error at all, peer-sent or locally detected, so there's nothing for `Ac
 data to describe.
 </Note>
 
+## A lost connection: `AcpConnectionException`
+
+A request can fail for a reason that has nothing to do with a JSON-RPC answer, peer-sent or locally
+detected, and nothing to do with a timeout either: the connection itself is gone, on either side.
+
+```java
+try {
+    client.sendExtNotification("_example.com/file_opened", Map.of("path", path));
+}
+catch (AcpConnectionException e) {
+    // the transport is closed: start a new transport and client to go on
+}
+```
+
+`com.agentclientprotocol.sdk.error.AcpConnectionException` covers every case where a message can't be
+carried because the connection is gone, on the client and the agent side alike: a request still
+waiting for its answer when the transport ends (`"ACP session with agent terminated"`), and a request
+or notification sent after that (`"ACP client transport is not connected: ..."`) or after `close()`
+(`"The transport is closed"`). Before 0.80.0 these were a plain `RuntimeException` and an
+`IllegalStateException` respectively, so `catch (AcpConnectionException e)` missed the commonest
+connection failure, a peer that simply went away. Its cause, when there is one, is why the connection
+ended, such as the transport's own failure, or a stdio agent's exit code
+(`"ACP agent process exited with code 137 (signal 9)"` from `awaitTermination()`). A closed transport
+does not reopen: connect a new transport and client or agent to carry on.
+
+<Note>
+Building a client or agent on a transport that refuses to connect or start at once (one already in
+use) still throws `IllegalStateException`, not `AcpConnectionException`: that's a misuse of the
+transport, not a connection that was once alive and is now lost.
+</Note>
+
 ## Two exceptions that mean the request was never sent
 
 `AcpCapabilityException` and `IllegalStateException` both happen *before* a request leaves: capability
@@ -163,12 +264,21 @@ catch (AcpCapabilityException e) {
 A client call other than `initialize` fails locally with `AcpCapabilityException`, naming the
 capability, when the agent's `initialize` answer didn't advertise it: `loadSession`, `listSessions`,
 `closeSession`, `deleteSession`, `resumeSession`, `forkSession`, `logout`, and the `providers/*` calls.
-An agent call works the same way in the other direction for a client capability the client didn't
-advertise (`readTextFile`, a terminal method, `createElicitation` for a mode the client didn't
-announce), covered on [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
-[Elicitation](/docs/acp-java-sdk/elicitation). `AcpCapabilityException.toProtocolException()` turns it
-into the `-32600` a handler would send for the equivalent case on the wire, for code that needs to
-answer a request rather than make one.
+It also covers a `session/new`, `session/load`, `session/resume`, or `session/fork` that names
+non-empty `additionalDirectories` when the agent doesn't advertise
+`sessionCapabilities.additionalDirectories`: check `getAgentCapabilities().supportsAdditionalDirectories()`
+before naming any. An agent call works the same way in the other direction for a client capability the
+client didn't advertise (`readTextFile`, a terminal method, `createElicitation` for a mode the client
+didn't announce), covered on [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
+[Elicitation](/docs/acp-java-sdk/elicitation).
+
+<Note>
+`AcpCapabilityException.toProtocolException()` is removed: it answered `-32600`, a code the SDK made
+up for the case, while the one refusal ACP actually specifies (a client asked for an elicitation mode
+it never declared) answers `-32602` directly, which the SDK's client already does without this method.
+A handler that needs to answer its own capability check as an error throws `AcpProtocolException`
+itself: `new AcpProtocolException(AcpErrorCodes.INVALID_PARAMS, e.getMessage(), e.getCapability())`.
+</Note>
 
 ```java
 client.newSession(new NewSessionRequest(cwd));   // IllegalStateException: Call initialize() first

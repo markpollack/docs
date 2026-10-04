@@ -136,6 +136,24 @@ win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.ma
 `max-frame-size` to 16 MB, and `quarkus.http.limits.max-concurrent-streams=1024` (each SSE stream is
 one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MB.
 
+## The full stack, for free
+
+<Note>
+**Pending confirmation.** Expected to hold once the SDK's own hosts and tests land; not yet
+independently verified for this integration.
+</Note>
+
+**Your framework's full stack, for free.** Because the agent is served on Quarkus's own HTTP server, behind Quarkus's own request handling,
+anything already configured for the application's other endpoints applies to `/acp` too, with no
+ACP-specific mechanism needed: HTTP security policies, `@RolesAllowed`, TLS, metrics, tracing. For
+example, restricting the ACP endpoint to a role is ordinary Quarkus configuration:
+
+```properties
+quarkus.http.auth.policy.acp-policy.roles-allowed=agent-client
+quarkus.http.auth.permission.acp.paths=/acp
+quarkus.http.auth.permission.acp.policy=acp-policy
+```
+
 ## A client, from configuration
 
 ```properties

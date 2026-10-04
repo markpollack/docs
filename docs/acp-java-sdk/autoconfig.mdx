@@ -253,6 +253,28 @@ Spring-specific types: both live in `com.agentclientprotocol.sdk.integration` (`
 the framework-neutral module Micronaut and Quarkus build on too; see
 [Concepts: the framework-neutral layer](/docs/acp-java-sdk/concepts#the-framework-neutral-layer-acp-integration).
 
+## The full stack, for free
+
+<Note>
+**Pending confirmation.** Expected to hold once the SDK's own hosts and tests land; not yet
+independently verified for this integration.
+</Note>
+
+**Your framework's full stack, for free.** In servlet mode, the agent is mounted on the application's own server, behind Spring's own request
+handling, so anything the application already has configured for its other endpoints applies to `/acp`
+too, with no ACP-specific mechanism needed: Spring Security, TLS, metrics, tracing. For example,
+requiring authentication on the ACP endpoint is ordinary Spring Security:
+
+```java
+@Bean
+SecurityFilterChain acpSecurity(HttpSecurity http) throws Exception {
+    http.authorizeHttpRequests(auth -> auth
+        .requestMatchers("/acp/**").hasRole("AGENT_CLIENT")
+        .anyRequest().permitAll());
+    return http.build();
+}
+```
+
 ## Extension Beans
 
 `AcpInterceptor`, `ArgumentResolver`, and `ReturnValueHandler` beans are added to the agent, in bean

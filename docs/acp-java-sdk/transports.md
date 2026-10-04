@@ -51,6 +51,20 @@ var params = AgentParameters.builder("my-agent")
 
 ## Streamable HTTP and WebSocket
 
+### ACP over HTTP needs almost nothing from a web framework
+
+| A general web abstraction has | ACP needs |
+|---|---|
+| Routing, path variables, many endpoints | One path, `/acp` |
+| Every HTTP method | `POST`, `GET`, `DELETE` |
+| Content negotiation, multipart, cookies, forms | A JSON body in, a few known headers |
+| Arbitrary response types | Three replies: JSON, empty, or an SSE stream |
+| Binary frames, extensions | WebSocket text frames |
+| Filters, interceptors, middleware | None: the framework's own run before the host |
+
+The host contract is about eight small types, and a host is a few hundred lines. That's why each
+framework's integration is a thin layer rather than a reimplementation of the protocol.
+
 ### Identity
 
 | Identity | Carried by | Meaning |

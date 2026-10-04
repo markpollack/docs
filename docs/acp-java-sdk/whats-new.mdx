@@ -31,6 +31,18 @@ on a separate port in 0.80.0. See
 [Deployment topologies](/docs/acp-java-sdk/transports#deployment-topologies) for exactly where ACP
 listens in each case.
 
+ACP over HTTP needs almost nothing from a web framework: one path, three HTTP methods, a JSON body in,
+three kinds of reply out (JSON, empty, or an SSE stream), and WebSocket text frames. That's why each
+framework host is small and behaves the same; see
+[the full comparison](/docs/acp-java-sdk/transports#acp-over-http-needs-almost-nothing-from-a-web-framework).
+
+**Your framework's full stack, for free.** *(Pending confirmation once the SDK's own hosts and tests
+land.)* Each host sits behind the framework's own router, so Spring Security and Quarkus's HTTP
+security policies and `@RolesAllowed` apply to `/acp` automatically, along with TLS, metrics and
+tracing: no ACP-specific configuration needed. See
+[Spring Boot](/docs/acp-java-sdk/autoconfig#the-full-stack-for-free) and
+[Quarkus](/docs/acp-java-sdk/quarkus#the-full-stack-for-free) for a concrete example.
+
 **The same annotation model works everywhere: Spring Boot, Quarkus, Micronaut, or no framework at
 all.** `@AcpAgent`, `@Prompt`, `@NewSession`, and the rest carry the handlers; whatever serves the
 class discovers them the same way. Plain Java needs nothing but `acp-core` and `acp-agent-support`:

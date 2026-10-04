@@ -57,7 +57,7 @@ On the **agent side**, throw `AcpProtocolException` with a standard error code. 
 | Code | Constant | When to Use |
 |------|----------|-------------|
 | `-32602` | `INVALID_PARAMS` | Bad input from client |
-| `-32603` | `INTERNAL_ERROR` | Unexpected agent failure |
+| `-32603` | `INTERNAL_ERROR` | Unexpected agent failure; its own message reaches the client only when it's thrown as `AcpProtocolException` explicitly, as in the example above. Any other exception is answered with the generic message "Internal error," its own message withheld, and logged on the agent's own side |
 | `-32600` | `INVALID_REQUEST` | A request invalid in the session's current state, including a second prompt sent while one is already running |
 | `-32000` | `AUTHENTICATION_REQUIRED` | Client must authenticate before the agent will do this work |
 | `-32002` | `RESOURCE_NOT_FOUND` | Unknown session, file, or other resource |

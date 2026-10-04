@@ -169,6 +169,10 @@ public class PrintingCustomizer implements AcpClientCustomizer {
 }
 ```
 
+`AcpClientCustomizer` is `com.agentclientprotocol.sdk.integration.AcpClientCustomizer`, the
+framework-neutral type Spring Boot and Quarkus customizers implement too, not a Micronaut-specific
+interface.
+
 ### Over HTTP: one bean, many connections
 
 ```java

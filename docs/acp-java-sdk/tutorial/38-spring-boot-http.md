@@ -21,7 +21,7 @@ Compared with a stdio Spring Boot agent (Module 23), only the transport property
 ```properties
 # agent.properties
 spring.acp.agent.transport.type=http
-spring.acp.agent.transport.http.port=8080
+spring.acp.agent.transport.http.listener.port=8080
 spring.acp.agent.transport.http.path=/acp
 ```
 
@@ -58,7 +58,7 @@ public class NotesAgent {
 }
 ```
 
-With `transport.type=http`, acp-autoconfig builds an `AcpAgentFactory` from this bean (`AcpAgentSupport...buildFactory()`: one agent runtime per connection, all dispatching to this one bean). Because this particular application has no servlet container on the classpath, it's a non-web application, so the autoconfiguration also runs the SDK's `StreamableHttpAcpAgentTransport` listener bean: Jetty with HTTP/1.1, h2c, and the WebSocket upgrade, on `spring.acp.agent.transport.http.port`. In a servlet web application (`spring-boot-starter-web` present), it mounts `StreamableHttpAcpServlet` on the application's own server instead: HTTP/SSE only, no WebSocket upgrade.
+With `transport.type=http`, acp-autoconfig builds an `AcpAgentFactory` from this bean (`AcpAgentSupport...buildFactory()`: one agent runtime per connection, all dispatching to this one bean). Because this particular application has no servlet container on the classpath, it's a non-web application, so the autoconfiguration also runs the SDK's `StreamableHttpAcpAgentTransport` listener bean: Jetty with HTTP/1.1, h2c, and the WebSocket upgrade, on `spring.acp.agent.transport.http.listener.port`. In a servlet web application (`spring-boot-starter-web` present), it mounts `StreamableHttpAcpServlet` on the application's own server instead: HTTP/SSE only, no WebSocket upgrade.
 
 With port `0`, read the bound port back from the listener bean:
 
@@ -95,13 +95,16 @@ AcpClientCustomizer printAndServeFiles() {
             })
             .readTextFileHandler(req -> {
                 String content = WORKSPACE.get(req.path());
+                // An AcpProtocolException is the answer the agent sees; any other exception
+                // is answered -32603 "Internal error", its own message withheld.
                 return content != null ? Mono.just(new AcpSchema.ReadTextFileResponse(content))
-                        : Mono.error(new IllegalArgumentException("No such file: " + req.path()));
+                        : Mono.error(new AcpProtocolException(AcpErrorCodes.RESOURCE_NOT_FOUND,
+                                "No such file: " + req.path()));
             });
 }
 ```
 
-Every `AcpClientCustomizer` bean is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. Consumers add up: the autoconfiguration's own debug-logging consumer stays alongside this one. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it.
+`AcpClientCustomizer` is a framework-neutral type, `com.agentclientprotocol.sdk.integration.AcpClientCustomizer`, the same one Micronaut and Quarkus build their own customizers against. Every bean of it is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. A `sessionUpdateConsumer` registered this way **replaces** the autoconfiguration's own default, which only logs each update at DEBUG; it doesn't run alongside it. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it; a handler registered for a capability the client doesn't advertise also logs one WARN at startup, since an SDK agent will never call it.
 
 ### A WebSocket client, the same way
 

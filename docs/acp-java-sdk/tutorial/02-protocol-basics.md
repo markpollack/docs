@@ -22,7 +22,9 @@ Module 01 called `client.initialize()` with defaults. Here we set explicit capab
 
 ```java
 // Capabilities are set on the builder: what the client advertises here is
-// also what its handlers honor.
+// also what its handlers honor. build() fails for an advertised capability
+// without its handler, so file read/write comes with the two handlers that
+// serve it (Module 07 covers them).
 var clientCapabilities = new ClientCapabilities(
     new FileSystemCapability(true, true),  // read, write
     false  // terminalExecution
@@ -30,6 +32,21 @@ var clientCapabilities = new ClientCapabilities(
 
 AcpSyncClient client = AcpClient.sync(transport)
     .clientCapabilities(clientCapabilities)
+    .readTextFileHandler(req -> {
+        try {
+            return new AcpSchema.ReadTextFileResponse(Files.readString(Path.of(req.path())));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    })
+    .writeTextFileHandler(req -> {
+        try {
+            Files.writeString(Path.of(req.path()), req.content());
+            return new AcpSchema.WriteTextFileResponse();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    })
     .build();
 
 var initResponse = client.initialize();

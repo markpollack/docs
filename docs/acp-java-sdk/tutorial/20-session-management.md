@@ -47,7 +47,14 @@ The agent keeps its own session state. Each lifecycle method has its own handler
 
 ```java
 AcpSyncAgent agent = AcpAgent.sync(transport)
-    .initializeHandler(req -> InitializeResponse.ok())
+    .initializeHandler(req ->
+        // Advertise session/list, session/close and session/resume: a client calls only the
+        // session methods the agent's own initialize answer names. Plain InitializeResponse.ok()
+        // here would advertise none of them, even with the handlers below registered: the
+        // plain builder, unlike the annotation model, never derives capabilities from which
+        // handlers exist when an initializeHandler is itself written by hand.
+        InitializeResponse.ok(new AgentCapabilities(false,
+                new SessionCapabilities(true, true, true), new McpCapabilities(), new PromptCapabilities(), null)))
 
     .newSessionHandler(req -> {
         String sessionId = "sess-" + UUID.randomUUID().toString().substring(0, 8);

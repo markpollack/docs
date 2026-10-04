@@ -25,7 +25,9 @@ AcpSyncClient client = AcpClient.sync(transport)
     .readTextFileHandler(req -> {
         Path path = Path.of(req.path());
         if (!Files.exists(path)) {
-            throw new RuntimeException("File not found: " + req.path());
+            // AcpProtocolException's code and message are the answer the agent gets.
+            throw new AcpProtocolException(AcpErrorCodes.RESOURCE_NOT_FOUND,
+                    "File not found: " + req.path());
         }
         return new ReadTextFileResponse(Files.readString(path));
     })
@@ -44,7 +46,12 @@ As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set o
 </Note>
 
 <Warning>
-Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-RPC error responses. Do not return error strings as content.
+Throw exceptions from handlers for errors; do not return error strings as content. Throw
+`AcpProtocolException` with a code from `AcpErrorCodes` (`RESOURCE_NOT_FOUND` above) when the agent
+should see the message: its code and message become the answer as they are. Any other exception is
+still converted to a JSON-RPC error response, but answered `-32603` with the generic message
+"Internal error" only; the real exception's own message is withheld from the agent (it can carry
+paths or other details the client shouldn't expose) and logged on the client's own side instead.
 </Warning>
 
 ## Source Code

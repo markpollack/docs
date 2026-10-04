@@ -16,11 +16,18 @@ Client and agent agree on what each supports during initialization.
 // Tell the agent what we support: set on the client builder, not on initialize()
 var clientCaps = new ClientCapabilities(
     new FileSystemCapability(true, true),  // readTextFile, writeTextFile
-    true                                    // terminal
+    false                                   // terminal: no terminal handlers here (see Module 18)
 );
 
 AcpSyncClient client = AcpClient.sync(transport)
     .clientCapabilities(clientCaps)
+    // A handler for each advertised capability, and only those: build() fails naming any
+    // advertised capability with no handler, and warns about a handler for one not advertised.
+    .readTextFileHandler(req -> new ReadTextFileResponse(Files.readString(Path.of(req.path()))))
+    .writeTextFileHandler(req -> {
+        Files.writeString(Path.of(req.path()), req.content());
+        return new WriteTextFileResponse();
+    })
     .build();
 
 client.initialize();
@@ -34,6 +41,14 @@ System.out.println("mcpSse: " + agentCaps.supportsMcpSse());
 
 <Note>
 As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities (and now `clientInfo`) are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
+
+<Note>
+Advertising `terminal` here would need all five terminal handlers registered too
+(`createTerminalHandler`, `terminalOutputHandler`, `waitForTerminalExitHandler`,
+`killTerminalHandler`, `releaseTerminalHandler`): `build()` checks every advertised capability has
+its handler, so this module keeps terminal out of its demo and leaves it to
+[Module 18](/docs/acp-java-sdk/tutorial/18-terminal-operations), which serves all five.
 </Note>
 
 ### Agent: Advertise and check capabilities

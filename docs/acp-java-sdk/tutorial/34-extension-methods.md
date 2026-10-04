@@ -58,7 +58,7 @@ void log(LogEvent event, AcpSyncAgent agent) {
 }
 ```
 
-The annotation names the method; discovery fails if it doesn't start with `_`. A handler takes at most one params parameter (a record for typed params, `Map<String, Object>` for raw), plus, like any other annotated handler, the connection's `AcpSyncAgent`/`AcpAsyncAgent` and `NegotiatedCapabilities`.
+The annotation names the method; discovery fails if it doesn't start with `_`. A handler takes at most one params parameter (a record for typed params, `Map<String, Object>` for raw), plus, like any other annotated handler, the connection's `AcpSyncAgent`/`AcpAsyncAgent` and `NegotiatedCapabilities`. An `@ExtRequest`'s return value is the result; returning `null` answers `-32603`. An `@ExtNotification` gets no answer at all, so it must return `void`, as `log` above does: building the agent rejects one that returns a value, naming the method.
 
 ### The same handlers, with the builder API
 

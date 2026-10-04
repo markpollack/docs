@@ -60,23 +60,34 @@ stream output as it happens:
 `killTerminal(...)` ends a still-running terminal early, outside the normal wait-then-release flow.
 `ctx.execute(Command)` is a convenience that runs all four steps for the common case: spawn, wait,
 read, release, in one call, returning a `CommandResult` (`output()`, `exitCode()`: `Integer`, nullable
-as of 0.80.0 for a process a signal terminated, `signal()`, and a `success()` convenience for
-`exitCode() == 0`; no more `timedOut()`):
+for a process a signal terminated, `signal()`, `truncated()` (whether the output was cut to the
+client's output limit), and a `success()` convenience for `exitCode() == 0`; no more `timedOut()`):
 
 ```java
 CommandResult result = ctx.execute("ls", "-la");
 ```
 
+The canonical constructor is `new CommandResult(output, exitCode, signal, truncated)`; the older
+3-argument form (no `truncated`) still exists as a convenience for complete output.
+
 See [Module 18: Terminal Operations](/docs/acp-java-sdk/tutorial/18-terminal-operations) for the full
 four-step version and why you'd use it instead of `execute(...)` (streaming output while the command
 is still running, for one).
+
+<Note>
+**`execute` releases the terminal when the prompt is cancelled, not only when the command ends.** ACP
+requires an agent to release every terminal it creates; `execute` now sends `terminal/release` exactly
+once on every path, including a cancellation that interrupts it while it's waiting in
+`waitForTerminalExit`. See [Cancellation](/docs/acp-java-sdk/cancellation) for the triggers that count.
+</Note>
 
 ## Permission
 
 ```java
 // Agent
-boolean allowed = ctx.askPermission("Delete files in /tmp?");                       // convenience
-String choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");              // convenience
+boolean allowed = ctx.askPermission("Delete files in /tmp?");                            // convenience, kind "other"
+boolean allowedEdit = ctx.askPermission("Rewrite config.yaml", ToolKind.EDIT);            // convenience, explicit kind
+Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");          // convenience, empty if cancelled
 
 // Full form
 var response = ctx.requestPermission(new RequestPermissionRequest(sessionId, toolCall, options));
@@ -91,6 +102,17 @@ var response = ctx.requestPermission(new RequestPermissionRequest(sessionId, too
 value, the same discipline as `StopReason`: compare with `.equals(...)`, and keep a default case for a
 kind a newer agent might send. See
 [Forward Compatibility](/docs/acp-java-sdk/forward-compatibility) for why.
+
+<Note>
+**`askPermission`/`askChoice` announce a real tool call.** Both send a `tool_call` session update
+(status `pending`) before asking, so a client that looks the tool call up by ID finds it, and settle
+it afterward with a `tool_call_update` (`completed` once answered, `failed` if the client cancelled
+the request): session-update consumers see two more updates per call than they used to.
+`askPermission(action)` alone uses kind `other`; pass a `ToolKind` explicitly (as above) for anything
+else, including `ToolKind.EDIT` if you relied on the old always-`edit` behavior. `askChoice` fails
+with `AcpProtocolException` (`-32603`) naming the option if the client answers with one it was never
+offered, instead of the old unclear `NumberFormatException`/`ArrayIndexOutOfBoundsException`.
+</Note>
 
 ## Related
 

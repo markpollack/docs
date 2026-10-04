@@ -98,6 +98,37 @@ uses to turn a thrown `AcpProtocolException` into the response it sends. `toExce
 utility with no internal caller of its own, useful if you're building something (a proxy, a bridge)
 that needs to re-throw a peer's error using this SDK's exception type rather than `AcpError`.
 
+## Two more exceptions, specific to the sync API
+
+A blocking call (`AcpSyncClient`, `AcpSyncAgent`, `SyncPromptContext`) can also fail with one of two
+exceptions that have nothing to do with a JSON-RPC error at all, peer-sent or locally detected:
+
+```java
+try {
+    var response = client.prompt(request);
+}
+catch (AcpTimeoutException e) {
+    // the request (or, with promptTimeout set, the turn) timed out; e.getCause() is a TimeoutException
+}
+catch (CancellationException e) {
+    // this thread was interrupted while blocked; the interrupt flag is still set
+}
+```
+
+`com.agentclientprotocol.sdk.error.AcpTimeoutException` (an `AcpException`) replaces what used to
+escape as Reactor's internal `Exceptions$ReactiveException`. `java.util.concurrent.CancellationException`
+is thrown, with the thread's interrupt flag left set, when a blocked call's thread is interrupted, the
+same mechanism the SDK itself uses to cancel a sync handler. The async API doesn't throw either of
+these: its `Mono` fails with the plain `TimeoutException` directly.
+
+<Note>
+This page documents today's shape: a handler throws `AcpProtocolException`; a caller catches
+`AcpError` for the peer's own errors and the SDK's local response-validation failures, plus
+`AcpTimeoutException` and `CancellationException` for the two cases above. A further SDK change
+(api1) is expected to unify the caller side onto `AcpError` alone for every failed request, including
+these two; this page will be updated once that lands, not before.
+</Note>
+
 ## Related
 
 <CardGroup cols={2}>

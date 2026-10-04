@@ -178,6 +178,17 @@ self.set(agent);
 serve many connections, building a fresh agent instance (not a shared bean) from the lambda each
 time; see [Transports](/docs/acp-java-sdk/transports) for when that distinction matters.
 
+A builder setter now rejects a `null` handler (`IllegalArgumentException`) and a second registration
+for the same method (`IllegalStateException`, naming the setter: "A handler for session/prompt is
+already registered; promptHandler was called twice on this builder"), instead of silently replacing
+the first one. Register each handler once; decide which implementation to use before calling the
+setter, not after.
+
+`AcpSyncAgent` and `AcpAgentSupport` implement `AutoCloseable`, with the same close semantics as
+`AcpSyncClient`: close gracefully, waiting up to 10 seconds, then close at once if that failed or took
+too long. Use try-with-resources on either, the same pattern as the client below. `AcpSyncAgent.await()`
+is renamed `awaitTermination()`, matching `AcpAsyncAgent`.
+
 ## Clients: builder-only
 
 There's no annotation model for clients (handlers you register are mostly one-shot: a file handler,
@@ -198,7 +209,9 @@ var response = client.prompt(new PromptRequest(session.sessionId(), content));
 
 `AcpSyncClient` implements `AutoCloseable`; a try-with-resources block is the usual shape for a
 short-lived client (a tutorial module, a CLI run). A long-lived client (a Spring Boot application)
-closes it from the owning context's lifecycle instead.
+closes it from the owning context's lifecycle instead. `client.async()` returns the `AcpAsyncClient`
+it blocks on, for composing one asynchronous call without switching the whole client over to the
+async facade.
 
 ## Sync vs async, on either side
 

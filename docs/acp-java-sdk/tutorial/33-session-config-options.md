@@ -98,7 +98,7 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
         List<AcpSchema.SessionConfigOption> changed = settings.fallBackIfRateLimited(ctx.getSessionId());
         if (changed != null) {
             // The agent changed a setting on its own: tell the client, with the full list.
-            ctx.sendUpdate(ctx.getSessionId(), new AcpSchema.ConfigOptionUpdate(changed));
+            ctx.sendUpdate(new AcpSchema.ConfigOptionUpdate(changed));
         }
         ctx.sendMessage(settings.answer(ctx.getSessionId(), "builder agent"));
         return AcpSchema.PromptResponse.endTurn();

@@ -328,19 +328,134 @@ answers `-32800` and the caller's `Mono` is cancelled at once regardless. Migrat
 `requestTimeout` for long prompts if the old behavior (agent keeps running after a client timeout)
 is load-bearing anywhere, since 0.80.0 now actually stops the work.
 
+## The fix4 batch: lifecycle renames, sync exceptions, timeouts, and more
+
+A large, later batch of breaking changes, verified against the CHANGELOG at the exact commit that
+introduced them (`74fa003`), not just a relayed summary.
+
+### Lifecycle names line up, and both sync facades close gracefully
+
+- **`AcpSyncAgent.await()` is renamed `awaitTermination()`**, matching `AcpAsyncAgent` and the
+  transports. Migration: rename the call.
+- **`AcpSyncAgent` and `AcpAgentSupport` implement `AutoCloseable`**, and `close()` now means what it
+  means on `AcpSyncClient`: close gracefully, waiting at most 10 seconds, then close at once if that
+  failed or took longer (`AcpSyncAgent.close()` used to close at once; `AcpAgentSupport.close()` used
+  to wait up to the 5-minute block timeout and never force). For the old immediate close, call
+  `agent.async().close()`. New `AcpSyncClient.async()` returns the `AcpAsyncClient` it blocks on.
+  Migration: use try-with-resources on the sync agent and the annotated agent, the same pattern
+  already shown for `AcpSyncClient`.
+- **`StdioAcpClientTransport.awaitForExit()` is renamed `awaitProcessExit()`**, so it doesn't sit
+  beside `awaitTermination()` (which completes when the transport ends, not the process). Interrupted,
+  it now throws `CancellationException` (interrupt flag kept) instead of a plain `RuntimeException`
+  (interrupt flag cleared). Migration: rename the call; catch `CancellationException` instead.
+
+### The sync API's exceptions change shape
+
+**Breaking:** the sync API throws `AcpTimeoutException` for a timeout, and `CancellationException`
+when interrupted, instead of Reactor's internal `Exceptions$ReactiveException`. Every blocking method
+of `AcpSyncClient`, `AcpSyncAgent`, and `SyncPromptContext` used to let a request timeout escape as
+`reactor.core.Exceptions$ReactiveException` (cause `TimeoutException`); both now throw
+`com.agentclientprotocol.sdk.error.AcpTimeoutException` (an `AcpException`), whose cause is the
+`TimeoutException`. A blocked call whose thread is interrupted (the SDK interrupts a sync handler to
+cancel it) throws `java.util.concurrent.CancellationException` and leaves the interrupt flag set. The
+async API is unchanged (its `Mono` still fails with the `TimeoutException` itself). Migration: replace
+`catch (RuntimeException e) { if (e.getCause() instanceof TimeoutException) ... }` (or
+`Exceptions.unwrap(e)`) with `catch (AcpTimeoutException e)`, and catch `CancellationException` where
+you handled an interrupt. See [Errors](/docs/acp-java-sdk/errors) for the full exception picture.
+
+### A client's prompt is no longer bounded by the request timeout
+
+**Breaking (behavior):** a prompt's answer comes only at the end of its turn, so the request timeout
+(30 seconds by default) used to cancel every turn that ran longer, sending the agent
+`$/cancel_request` and failing the call with a `TimeoutException`. `session/prompt` now waits for the
+end of the turn however long it takes; every other request keeps the request timeout. Migration: to
+keep a bound on turns, set `.promptTimeout(Duration.ofMinutes(10))` on the client builder (any
+positive duration; it fails the call with a `TimeoutException` and sends `$/cancel_request`, as
+before); code that raised `requestTimeout` only to let long turns finish can drop that workaround. In
+Spring Boot, `spring.acp.client.prompt-timeout`; in Micronaut, `acp.client.prompt-timeout`; in
+Quarkus, `quarkus.acp.client.prompt-timeout` (unset by default on all three).
+
+### `sendUpdate` drops the session ID
+
+**Breaking:** `PromptContext.sendUpdate(update)` and `SyncPromptContext.sendUpdate(update)` replace
+the two-argument `sendUpdate(sessionId, update)`. The context already belongs to one prompt's
+session, so the ID was redundant (and a wrong one silently sent the update to another session).
+Migration: drop the first argument, `context.sendUpdate(sessionId, update)` becomes
+`context.sendUpdate(update)`; to update a *different* session from outside its own prompt handler,
+call `AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`)
+instead, which is unchanged. A custom `PromptContext`/`SyncPromptContext` implementation (a test
+double) implements the new one-argument method.
+
+### Builders reject a null handler and a duplicate registration
+
+**Breaking:** the typed setters of `AcpAgent.AsyncAgentBuilder` and `AcpAgent.SyncAgentBuilder` used
+to accept `null` (every request for that method was then answered `-32603`), and registering a
+handler for a method a second time silently replaced the first. A null handler now fails with
+`IllegalArgumentException` at the setter; a second registration for the same method (protocol or
+extension) fails with `IllegalStateException` naming the setter, for example "A handler for
+session/prompt is already registered; promptHandler was called twice on this builder." Migration:
+register each handler once; decide which handler to use before calling the setter, not after.
+
+### `handlerExecutor` replaces the static handler pools; two public constants are gone
+
+**Breaking:** sync handlers (and a sync client's session-update consumers) used to run on static,
+unbounded, JVM-wide cached thread pools exposed as `AcpAgent.SYNC_HANDLER_SCHEDULER` and
+`AcpClient.SYNC_HANDLER_SCHEDULER`. New `handlerExecutor(ExecutorService)` on `AcpAgent.SyncAgentBuilder`,
+`AcpClient.SyncSpec`, and `AcpAgentSupport.Builder` (for annotated agents) lets you pass an executor
+of your own, for example `Executors.newVirtualThreadPerTaskExecutor()`, or a framework's own worker
+pool (Quarkus's, Micronaut's `TaskExecutors.BLOCKING`); the SDK cancels a handler by cancelling its
+task (interrupting the thread) and never shuts the executor down itself. Without one, handlers keep
+running on the same daemon pools as before, so this is additive for most applications. `AcpAgent.DEFAULT_REQUEST_TIMEOUT`
+is also removed; the default (60 seconds) is just stated on `requestTimeout`'s own Javadoc now.
+Migration: drop any reference to `AcpAgent.SYNC_HANDLER_SCHEDULER`/`AcpClient.SYNC_HANDLER_SCHEDULER`
+(use your own scheduler, or `handlerExecutor(...)` to choose where handlers run), and replace
+`AcpAgent.DEFAULT_REQUEST_TIMEOUT` with `Duration.ofSeconds(60)` directly. See
+[Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for where this fits into the
+bigger annotation/builder picture, and the framework integration pages for the executor each one
+recommends.
+
+### `askPermission`/`askChoice` now announce a tool call
+
+**Breaking (behavior):** `askPermission` and `askChoice` used to ask about a tool-call ID the client
+had never been told about (a client that looked it up in its own tool-call list found nothing), and
+`askPermission` always labeled the action `edit`. Both now announce the tool call first with a
+`tool_call` session update (status `pending`), ask about it, and settle it with a `tool_call_update`
+(`completed` once answered, `failed` if the client cancelled the request): session-update consumers
+now see two more updates per call. `askPermission(action)` uses kind `other`; a new overload,
+`askPermission(action, ToolKind kind)`, sets it explicitly, for example
+`askPermission("Run the tests", ToolKind.EXECUTE)`. Migration: none needed to keep working; to keep
+the old `edit` kind, call `askPermission(action, ToolKind.EDIT)`. Separately, `askChoice` used to parse
+the chosen option ID as an index and fail with `NumberFormatException` or
+`ArrayIndexOutOfBoundsException` on an unexpected answer; it now fails clearly with
+`AcpProtocolException` (`-32603`) naming the ID. Implementations of `PromptContext`/
+`SyncPromptContext` (test doubles) add the new `askPermission` overload.
+
 ## Smaller breaking changes
 
 | Surface | Change |
 |---|---|
 | `AcpError.getMessage()` | No longer ends with `[code=N]`: it is the peer's plain message, so `e.getCode() + " " + e.getMessage()` names the code once instead of twice. `toString()` (what stack traces show) still includes `[code=N]`. Code that parsed the code out of the message should call `getCode()` instead |
 | `SyncPromptContext.askChoice` | Returns `Optional<String>`, empty on client cancellation (was documented to return `null` and failed instead) |
-| `SyncPromptContext` | Gains an abstract `async()` method, returning the `PromptContext` it blocks on (same session, turn, and client). A custom implementation (a test double, say) must implement it |
+| `SyncPromptContext` | Gains abstract `async()`, `isCancelled()`, and `onCancel(Runnable)` methods; `PromptContext` gains abstract `isCancelled()` and `whenCancelled()`. A custom implementation (a test double, say) must implement all of them |
 | `StreamableHttpAcpAgentTransportOptions` | Gains `shutdownTimeout` (builder `shutdownTimeout(Duration)`, default 5 seconds): how long closing the servlet or listener waits for connected agents before closing the rest at once. Breaking only for code calling the record's canonical constructor directly; the builder is unaffected |
-| `CommandResult` | `(String output, @Nullable Integer exitCode, @Nullable String signal)`: no `timedOut` flag; a signal-killed command has no exit code |
+| `CommandResult` | Canonical constructor is now `(String output, @Nullable Integer exitCode, @Nullable String signal, boolean truncated)`; the old 3-argument form (`output`, `exitCode`, `signal`) still exists as a convenience constructor meaning complete (non-truncated) output. No `timedOut` flag; a signal-killed command has no exit code |
 | `Command.env()` | Never `null`; empty when no variables are set. Migration: test `.isEmpty()` instead of `== null` |
 | `AcpInvocationContext`, `AcpMethodParameter` | Moved to `com.agentclientprotocol.sdk.agent.support.invocation`: update imports in custom `ArgumentResolver`, `ReturnValueHandler`, and `AcpInterceptor` implementations |
 | Unstable providers API | `ProviderInfo`, `SetProviderRequest`, `DisableProviderRequest` rename `id()` to `providerId()`, matching the unstable schema's actual wire property. `session/fork` and `providers/*` are now consistently marked `@UnstableAcpApi` everywhere they appear |
+| Jackson floor | Each JSON module now checks its Jackson version at startup and fails with `IllegalStateException` if it's below the floor (`acp-json-jackson2`: Jackson 2.18.1; `acp-json-jackson3`: Jackson 3.0.0), naming the version found and required. Quarkus 3.40's and Spring Boot 4.1's managed Jacksons are both within the floor; migration is needed only for an older, unmanaged Jackson. See [JSON Mappers](/docs/acp-java-sdk/json-mappers) |
 | Every package | Null-marked (JSpecify `@NullMarked`); Java callers compile unchanged, Kotlin and other nullness-aware callers see the new annotations |
+
+**Additive, not breaking, but worth knowing about:**
+
+- `AgentParameters.Builder.inheritEnvironment(boolean)`: a stdio agent's process inherits the whole
+  client environment by default (unchanged; now documented as the explicit default rather than an
+  accident of the old implementation), and `inheritEnvironment(false)` starts it from an empty
+  environment plus only the safe defaults and whatever `addEnvVar(...)` adds, for a client that
+  shouldn't hand every secret in its own environment to an agent subprocess.
+- Mapper-less transport constructors: `StreamableHttpAcpClientTransport(URI)`,
+  `WebSocketAcpClientTransport(URI)`, `StreamableHttpAcpAgentTransport(int port, AcpAgentFactory)`,
+  and `StreamableHttpAcpServlet(AcpAgentFactory)` all default to `AcpJsonMapper.createDefault()`, as
+  the stdio transports already did.
 
 ## Fixes worth knowing about, even though nothing to migrate
 
@@ -386,6 +501,21 @@ old behavior should be revisited.
   locally-detected malformed response, not an error the peer actually sent; see
   [Errors](/docs/acp-java-sdk/errors). Code that tolerated a peer answering less than the schema
   requires, intentionally or not, now sees that as a hard failure.
+- **An agent-to-client request reaches its handler only after the session updates sent before it.**
+  Requests used to be dispatched as they arrived, outside the ordered notification drain, so a
+  `session/request_permission` could reach its handler before the client's session-update consumers
+  had processed the `tool_call` update the agent sent just before it, leaving the tool call impossible
+  to look up. A request now takes its place in the same drain as a response: dispatched once every
+  notification before it has been handled (handlers still run concurrently with each other and with
+  later updates; a request already being handled when a response comes in isn't held up behind it, to
+  avoid deadlocking a consumer that's waiting on its own request). See
+  [Concepts: the ordering guarantee](/docs/acp-java-sdk/concepts#session-updates-and-the-ordering-guarantee),
+  now extended to cover this case too.
+- **`execute` releases its terminal when the prompt is cancelled.** ACP requires an agent to release
+  every terminal it creates. `execute` already released it when the command ended or a step failed,
+  but not when the prompt was cancelled (the `session/cancel` grace period, `maxPromptDuration`, or
+  `$/cancel_request`) while waiting in `terminal/wait_for_exit`, leaving the client holding a terminal
+  the agent would never ask about again. It now sends `terminal/release` exactly once on every path.
 
 ## What you may have to change: a quick checklist
 
@@ -429,3 +559,16 @@ old behavior should be revisited.
 17. If an `@Initialize` method's response was relied on to suppress a capability a handler would
     otherwise imply, remove or conditionally register the handler instead: capabilities now merge by
     OR, so a handler's presence always advertises.
+18. Grep for `agent.await()` (rename to `agent.awaitTermination()`) and `awaitForExit()` (rename to
+    `awaitProcessExit()`, and catch `CancellationException` instead of `RuntimeException` around it).
+19. Grep for `context.sendUpdate(sessionId,` on a `PromptContext`/`SyncPromptContext`, dropping the
+    first argument; leave `agent.sendSessionUpdate(sessionId, ...)` alone, it's unaffected.
+20. Grep for `catch (RuntimeException` (or `Exceptions.unwrap`) around a blocking SDK call checking
+    for a `TimeoutException` cause; replace with `catch (AcpTimeoutException e)`.
+21. Grep for `AcpAgent.SYNC_HANDLER_SCHEDULER`, `AcpClient.SYNC_HANDLER_SCHEDULER`, and
+    `AcpAgent.DEFAULT_REQUEST_TIMEOUT`; the first two have no replacement constant (use
+    `handlerExecutor(...)` if you need a specific executor), the third becomes `Duration.ofSeconds(60)`.
+22. If any code relied on a long-running prompt being cut off by the client's request timeout, set
+    `.promptTimeout(...)` explicitly; the default is now unbounded.
+23. If any code constructs `CommandResult` via its canonical constructor (not the 3-argument
+    convenience one), add the new `truncated` component.

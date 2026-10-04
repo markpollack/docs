@@ -148,7 +148,7 @@ switching a mode after planning, falling back to a different model after a rate 
 an option that depends on discovered context. It always carries the full, current list:
 
 ```java
-context.sendUpdate(sessionId, new ConfigOptionUpdate(fullOptionsList));
+context.sendUpdate(new ConfigOptionUpdate(fullOptionsList));
 ```
 
 The spec is silent on whether the agent should *also* send an update after a **client-initiated**

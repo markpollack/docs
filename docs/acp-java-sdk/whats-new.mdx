@@ -34,6 +34,13 @@ breaking-change list, with a quick-mapping table from the old API to the new one
 
 Tutorial modules for Quarkus and Micronaut are coming in a later pass.
 
+**A client's prompt is no longer cut off by the request timeout.** A turn's answer only comes at the
+end of it, so the 30-second request timeout used to cancel every prompt that ran longer than that.
+`session/prompt` now waits for the turn however long it takes; set the new `.promptTimeout(Duration)`
+(`spring.acp.client.prompt-timeout` / `acp.client.prompt-timeout` / `quarkus.acp.client.prompt-timeout`
+on the three framework integrations) if you want a bound back. See the
+[migration guide](/docs/acp-java-sdk/migration-0.80#a-clients-prompt-is-no-longer-bounded-by-the-request-timeout).
+
 **New concepts and features**, each with its own page:
 
 - **[Session config options](/docs/acp-java-sdk/config-options)** replace `session/set_model`: an

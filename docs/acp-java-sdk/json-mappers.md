@@ -49,6 +49,24 @@ instead is strict about unknown fields, which can reject forward-compatible mess
 sends. Start from the module's default and customize it, rather than a bare mapper, unless strictness
 is specifically what you want.
 
+## A supported Jackson floor, checked at startup
+
+Frameworks manage their own Jackson version, and earlier SDK versions stated no floor: an older
+Jackson than the SDK's tests actually exercise (Vert.x 4.5's jackson-core 2.16.1 under
+jackson-databind 2.22.3, for example) could fail much later with a confusing `NoSuchMethodError` while
+reading a message, long after the mismatch was introduced. Each mapper supplier and mapper constructor
+now checks the jackson-core and jackson-databind actually on the classpath and fails fast with an
+`IllegalStateException` naming the version found and the version required:
+
+| Module | Floor | Why |
+|---|---|---|
+| `acp-json-jackson2` | Jackson 2.18.1 | 2.18.0 drops unknown values of the SDK's open enumerations; 2.17 drops the unknown fields it keeps for forward compatibility |
+| `acp-json-jackson3` | Jackson 3.0.0 | The first Jackson 3 release |
+
+Quarkus 3.40 (Jackson 2.21.7) and Spring Boot 4.1 (Jackson 3.1.7) are both comfortably within these
+floors. Migration is needed only for an application pinning something older; align the Jackson
+artifacts on one version at or above the floor, for example by importing `jackson-bom`.
+
 ## Open values and unions still deserialize cleanly
 
 The JSON layer is also what makes [forward compatibility](/docs/acp-java-sdk/forward-compatibility)

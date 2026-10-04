@@ -101,6 +101,7 @@ stays up after its transport ends.
 | Property | Default | Description |
 |----------|---------|-------------|
 | `spring.acp.client.request-timeout` | `30s` | Request timeout |
+| `spring.acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout`. See the [migration guide](/docs/acp-java-sdk/migration-0.80#a-clients-prompt-is-no-longer-bounded-by-the-request-timeout) |
 | `spring.acp.client.transport.type` | auto-detect | `stdio`, `websocket`, or `http` |
 | `spring.acp.client.transport.stdio.command` | — | Command to launch agent process |
 | `spring.acp.client.transport.stdio.args` | — | Command arguments (comma-separated) |
@@ -209,6 +210,13 @@ spring.acp.client.capabilities.read-text-file=true
 This is the same mechanism for terminal handlers and `spring.acp.client.capabilities.terminal`, and
 applies equally whether the client is talking stdio, WebSocket, or Streamable HTTP: the capability
 properties and the customizer are transport-independent.
+
+## Where handlers run
+
+Sync handlers run on the SDK's own default thread pool (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)); the autoconfiguration
+doesn't yet expose `handlerExecutor` as a property or bean, so there's no property-driven way to point
+handlers at, say, a virtual-thread executor.
 
 ## Overriding Beans
 

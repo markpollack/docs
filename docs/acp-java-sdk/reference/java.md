@@ -356,9 +356,11 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
     ctx.writeFile("/path/to/output.txt", "content");
     Optional<String> maybe = ctx.tryReadFile("/path/to/file.txt");
 
-    // Permissions
+    // Permissions (each announces a tool_call before asking, and settles it with a
+    // tool_call_update after; askPermission(action) alone uses kind "other")
     boolean allowed = ctx.askPermission("Delete files in /tmp?");
-    Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");  // empty() if the client cancelled (0.80.0: was a bare String)
+    boolean allowedEdit = ctx.askPermission("Rewrite config.yaml", ToolKind.EDIT);
+    Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");  // empty() if the client cancelled
 
     // Terminal execution (requires client capabilities)
     CommandResult result = ctx.execute("ls", "-la");
@@ -518,7 +520,7 @@ The `context` parameter in `promptHandler` provides:
 | `getSessionId()` | Current session ID |
 | `sendMessage(text)` | Send `AgentMessageChunk` |
 | `sendThought(text)` | Send `AgentThoughtChunk` |
-| `sendUpdate(sessionId, update)` | Send any `SessionUpdate` |
+| `sendUpdate(update)` | Send any `SessionUpdate`, to this handler's own session |
 | `readFile(path, offset, limit)` | Read file from client |
 | `writeFile(path, content)` | Write file on client |
 | `requestPermission(request)` | Ask client for permission |
@@ -579,7 +581,7 @@ CommandResult result = context.execute("ls", "-la");
 
 // Permissions
 boolean ok = context.askPermission("Delete temp files?");
-String choice = context.askChoice("Format?", "JSON", "XML", "YAML");
+Optional<String> choice = context.askChoice("Format?", "JSON", "XML", "YAML");
 ```
 
 ### When to use the full API (~20% of cases)
@@ -598,12 +600,12 @@ return InitializeResponse.ok(caps);
 // Send non-text update types (Plan, ToolCall, AvailableCommandsUpdate, etc.)
 // Plan's short constructor no longer takes the discriminator (0.80.0): it can
 // only be the variant's own name, so writing it was noise.
-context.sendUpdate(sessionId, new Plan(List.of(
+context.sendUpdate(new Plan(List.of(
     new PlanEntry("Analyze code", PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
     new PlanEntry("Generate tests", PlanEntryPriority.MEDIUM, PlanEntryStatus.PENDING)
 )));
 
-context.sendUpdate(sessionId, new ToolCall("tool_call",
+context.sendUpdate(new ToolCall("tool_call",
     "search-1",
     "code-search",   // title: what the user sees
     "code_search",   // name: the tool's own identifier (may be null)

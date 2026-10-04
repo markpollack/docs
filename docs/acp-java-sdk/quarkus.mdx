@@ -192,6 +192,7 @@ Run time:
 | `quarkus.acp.agent.transport.http.max-provisional-sessions` | `64` | |
 | `quarkus.acp.agent.transport.http.shutdown-timeout` | `5s` | |
 | `quarkus.acp.client.request-timeout` | SDK default | |
+| `quarkus.acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
 | `quarkus.acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`; unset, WebSocket if `websocket.uri` is set, else HTTP if `http.uri`, else stdio if `stdio.command` |
 | `quarkus.acp.client.transport.stdio.command`, `.args`, `.env.<NAME>` | | the agent process |
 | `quarkus.acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | |
@@ -201,6 +202,13 @@ Run time:
 Compared with Spring Boot's `spring.acp.*`: the HTTP port is `quarkus.http.port` (not an
 `acp.*`-namespaced property), and the listener's `max-concurrent-streams-per-connection` is
 `quarkus.http.limits.max-concurrent-streams`, Quarkus's own HTTP tuning, not the SDK's.
+
+## Where handlers run
+
+Sync handlers run on the SDK's own default thread pool (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)); this extension
+doesn't yet expose `handlerExecutor` as a property or bean, so there's no way to point handlers at a
+Quarkus worker pool through configuration alone.
 
 ## Related
 

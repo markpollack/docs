@@ -28,6 +28,27 @@ release it: its reader thread stays blocked until the next line arrives or input
 of `System.in` cannot be interrupted. Pass explicit streams, or use `acp-test`'s in-memory transport,
 in embedders and tests.
 
+**The client's own process doesn't exit when the agent process does.**
+`StdioAcpClientTransport.awaitProcessExit()` (renamed from `awaitForExit()`) blocks until the agent
+process itself exits, as distinct from `awaitTermination()`, which completes when the *transport*
+ends (which can happen first, for instance on a graceful close). A thread blocked in
+`awaitProcessExit()` that's interrupted throws `CancellationException` with the interrupt flag kept.
+Sending through a transport after it's closed fails with `AcpConnectionException` ("The transport is
+closed") rather than silently dropping the message and leaving the caller to wait out a timeout.
+
+**The agent process inherits the client's whole environment by default.** Every environment variable
+the client process has, including secrets, reaches the agent subprocess unless you say otherwise.
+`AgentParameters.Builder.inheritEnvironment(false)` starts the process from an empty environment
+instead, with only the "safe" defaults (`HOME`, `PATH`, `USER`, and similar) and whatever
+`addEnvVar(...)` adds on the builder:
+
+```java
+var params = AgentParameters.builder("my-agent")
+    .inheritEnvironment(false)
+    .addEnvVar("GEMINI_API_KEY", apiKey)   // the only secret this agent actually needs
+    .build();
+```
+
 ## Streamable HTTP and WebSocket
 
 ### Identity
@@ -92,7 +113,11 @@ with `maxConcurrentStreamsPerConnection` defaulting to 1024.
 ### The mountable servlet
 
 `StreamableHttpAcpServlet(mapper, factory)` works in any Servlet 6 container, with async support
-enabled; `init()`/`destroy()` drive its lifecycle.
+enabled; `init()`/`destroy()` drive its lifecycle. A mapper-less overload,
+`StreamableHttpAcpServlet(factory)`, defaults to `AcpJsonMapper.createDefault()`, the same convenience
+`StreamableHttpAcpClientTransport(URI)`, `WebSocketAcpClientTransport(URI)`, and
+`StreamableHttpAcpAgentTransport(int port, AcpAgentFactory)` all have, matching what the stdio
+transports already offered.
 
 ### Shutdown
 

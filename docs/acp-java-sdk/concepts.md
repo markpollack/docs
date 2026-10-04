@@ -74,6 +74,14 @@ Two costs worth knowing:
   handler that was already running when the response's request was sent, so a consumer *may* safely
   send its own request and wait for that one.)
 
+**The guarantee covers agent-to-client requests too, not only responses.** An agent request
+(`session/request_permission`, `fs/*`, `terminal/*`) takes its place in the same ordered drain as a
+response: it reaches its client-side handler only after every session update the agent sent before
+it has been handled. A `session/request_permission` that follows a `tool_call` update, for example,
+is guaranteed to reach its handler after the client has already processed that update, so looking the
+tool call up by ID always finds it. The same deadlock-avoidance rule applies: a request already being
+handled when another one arrives isn't held up behind it.
+
 This is a Java SDK guarantee, not a protocol one. Rust also guarantees "handled," Kotlin only
 guarantees in-order dispatch, and TypeScript and Python make no connection-level promise. Don't
 assume it carries over to another SDK.
@@ -89,6 +97,19 @@ The agent can call back into the client mid-turn: `readFile`/`writeFile` (`fs/*`
 operations (`terminal/*`), `requestPermission`, and `createElicitation`. These are ordinary
 request/response calls in the opposite direction from the usual client-to-agent flow: the same
 JSON-RPC connection, just initiated by the agent.
+
+## Where handlers run
+
+A sync handler (agent or client) blocks, so it needs a thread from somewhere. By default it runs on
+the SDK's own daemon thread pool, the same one used throughout the connection's lifetime. Using the
+plain builder API directly, an application can supply its own executor instead with
+`handlerExecutor(ExecutorService)`, for example a virtual-thread-per-task executor; the SDK cancels a
+handler by cancelling its task (interrupting the thread) and never shuts the executor down itself.
+See [Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for where this fits into the
+annotated vs. builder picture. None of the three framework integrations
+([Spring Boot](/docs/acp-java-sdk/autoconfig), [Micronaut](/docs/acp-java-sdk/micronaut),
+[Quarkus](/docs/acp-java-sdk/quarkus)) expose `handlerExecutor` as a property or bean yet; they run
+handlers on the SDK's default pool.
 
 ## Related
 

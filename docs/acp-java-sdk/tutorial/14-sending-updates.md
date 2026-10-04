@@ -14,7 +14,6 @@ The prompt handler demonstrates each update type:
 
 ```java
 .promptHandler((req, context) -> {
-    String sessionId = context.getSessionId();
 
     // 1. Thought — show thinking process (convenience method)
     context.sendThought("Let me analyze this request...");
@@ -22,7 +21,7 @@ The prompt handler demonstrates each update type:
     // 2. Plan — show steps and progress (full API)
     // Short constructors drop the discriminator as of 0.80.0: it could only
     // ever be the variant's own name, so writing it was noise.
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new Plan(List.of(
             new PlanEntry("Analyze the prompt",
                 PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
@@ -33,7 +32,7 @@ The prompt handler demonstrates each update type:
         )));
 
     // 3. Tool Call — show tool execution starting
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new ToolCall("tool_call",
             "tool-1",
             "Analyzing prompt",   // title: what the user sees
@@ -43,14 +42,14 @@ The prompt handler demonstrates each update type:
             List.of(), null, null, null, null));
 
     // 4. Tool Call Update — show progress
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new ToolCallUpdateNotification("tool_call_update",
             "tool-1", "Analyzing prompt", "analyze_prompt", ToolKind.THINK,
             ToolCallStatus.COMPLETED,
             List.of(), null, null, null, null));
 
     // 5. Available Commands — advertise slash commands
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new AvailableCommandsUpdate(List.of(
             new AvailableCommand("help", "Show help",
                 new AvailableCommandInput("topic")),
@@ -58,11 +57,11 @@ The prompt handler demonstrates each update type:
         )));
 
     // 6. Mode Update — report current mode
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new CurrentModeUpdate("default"));
 
     // 7. Usage Update — report token usage and cost
-    context.sendUpdate(sessionId,
+    context.sendUpdate(
         new UsageUpdate(53000L, 200000L));
 
     // 8. Message chunks — the actual response (convenience method)
@@ -74,6 +73,13 @@ The prompt handler demonstrates each update type:
 })
 ```
 
+<Note>
+As of the SDK's fix4 batch, `sendUpdate(update)` takes no session ID: the context already belongs to
+one prompt's session, so a separate ID was redundant (and a wrong one silently sent the update to
+another session). To update a *different* session from outside its own prompt handler, call
+`AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`) instead.
+</Note>
+
 `ToolCall` and `ToolCallUpdateNotification` take a `name` argument after `title`: the tool's own identifier, separate from the human-readable title, and it may be `null`.
 
 ## Convenience vs Full API
@@ -82,7 +88,7 @@ The prompt handler demonstrates each update type:
 |--------|-------|-------------|
 | `context.sendMessage(text)` | `AgentMessageChunk` | Response text |
 | `context.sendThought(text)` | `AgentThoughtChunk` | Thinking process |
-| `context.sendUpdate(sessionId, update)` | Any `SessionUpdate` | Plans, tool calls, commands, modes |
+| `context.sendUpdate(update)` | Any `SessionUpdate` | Plans, tool calls, commands, modes |
 
 Convenience methods handle wrapping in `TextContent` and setting the `type` field. Use `sendUpdate()` for complex types that need full control over their structure.
 

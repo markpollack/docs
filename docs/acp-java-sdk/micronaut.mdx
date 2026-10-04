@@ -153,6 +153,7 @@ class Updates implements AcpClientCustomizer {
 | Property | Default | |
 |---|---|---|
 | `acp.client.request-timeout` | `30s` | |
+| `acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
 | `acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`. Unset, the transport is whichever one has its command or URI set; with several set, `type` is required |
 | `acp.client.transport.stdio.command`, `.args`, `.env.*` | | the agent process; `env` keys keep their case |
 | `acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | `ws://host:port/acp` |
@@ -163,6 +164,13 @@ class Updates implements AcpClientCustomizer {
 
 Beans of type `AcpInterceptor`, `ArgumentResolver`, and `ReturnValueHandler` are added to the agent,
 in bean order, the Micronaut-native way to extend the handler pipeline without subclassing anything.
+
+## Where handlers run
+
+Sync handlers run on the SDK's own default thread pool (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)); this extension
+doesn't yet expose `handlerExecutor` as a property or bean, so there's no way to point handlers at,
+say, Micronaut's `TaskExecutors.BLOCKING` executor through configuration alone.
 
 ## Dependencies
 

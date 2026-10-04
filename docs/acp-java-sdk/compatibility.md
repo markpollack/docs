@@ -49,7 +49,32 @@ catalogue.
 
 ## Feature comparison across the ACP SDKs
 
-{/* TABLE PENDING: re-verifying each non-Java cell against each peer's current main/latest release. Filling in once verification completes. */}
+How this Java SDK's 0.80.0 feature set compares to the TypeScript, Python, Rust and Kotlin SDKs, each
+checked against its own current `main` (`master` for Kotlin), not a pinned release.
+
+| Feature | Java | TypeScript | Python | Rust | Kotlin |
+|---|---|---|---|---|---|
+| Annotation programming model | Yes: `@AcpAgent`, `@Prompt`, and the rest | No | No | No | No |
+| Framework integrations | Spring Boot, Quarkus, Micronaut | None | None | None | Ktor modules provide transport helpers, not a full framework integration |
+| Session config options | Stable | Implemented (typed method, reference docs only) | Implemented, documented in its 0.11 migration guide | Implemented (a migration-table entry only) | Implemented, documented in the README's v2 samples |
+| Request cancellation (`$/cancel_request`) | Stable | Implemented | Not yet exposed by the runtime; only a generated method name exists | Implemented, and the most thoroughly documented of the four (a book chapter and a rustdoc concepts chapter) | Implemented |
+| Cancel grace period / max prompt duration | Both, each configurable | Neither | Neither | Neither | A grace period only, fixed at one second and not configurable; no max prompt duration |
+| Response-follows-its-updates ordering | Documented and guaranteed | Not documented as a guarantee | Not documented as a guarantee | Documented and guaranteed, with its own concepts chapter | Not documented as a guarantee |
+| Elicitation | Stable | Stable since 1.4.0 | Still called unstable in its own docs | Implemented, used in its Testy test scenarios; no explicit stability statement found | Still behind `@UnstableApi` |
+| Terminal authentication | Documented | Implemented (reference docs only) | One sentence, in the quickstart | Not found | Implemented, code only, no prose |
+| Logout | Documented | Implemented (reference docs only) | Documented, called stable | Implemented, used in its Testy method list | Implemented, code only |
+| Extension methods (`_`-prefixed) | Stable, typed on every client and agent builder | Documented in its migration guide | Only in its examples | Documented | Implemented, code only |
+| Streamable HTTP and WebSocket | Both, stable | Both | Both | Both, on the same page | WebSocket, via Ktor; HTTP infrastructure exists in the README but isn't yet in the cross-SDK interop suite above |
+| Forward compatibility (open enums, `_meta`) | Stable: `Unknown*` fallback variants, `_meta` on every record | Partial: extensible-union guards only | Documented: `_meta`, plus `**kwargs` collecting future keys | Partial: `_meta` preserved by its MCP bridge | Implemented: `_meta` is a parameter on every sample method |
+| Published cross-SDK compatibility suite | Yes, this page | Not found | Not found | Not found | Not found |
+
+No peer SDK documents all of the rows above; each has its own strengths; Rust's cancellation and
+ordering docs and Python's web-transport page are both worth reading regardless of which SDK you use.
+
+Checked against: TypeScript SDK commit `605f3e0a` (v1.7.0, 2026-10-02); Python SDK commit `9d07d787`
+(1.0.0rc2, 2026-09-21); Rust SDK commit `65347cfb` (v2.2.0, 2026-10-02); Kotlin SDK commit `3af219ae`
+(v0.32.0, 2026-10-01, branch `master`). An SDK's own `main` moves; re-check before relying on an exact
+cell.
 
 ## Related
 

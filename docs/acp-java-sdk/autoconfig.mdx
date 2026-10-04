@@ -130,7 +130,7 @@ running alongside it.
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `spring.acp.agent.enabled` | `true` | Enable agent autoconfiguration |
+| `spring.acp.agent.enabled` | `true` | Serve the application's `@AcpAgent` bean; `false` creates no agent on any transport, and lifts the restriction against having more than one `@AcpAgent` bean |
 | `spring.acp.agent.request-timeout` | unset, follows the SDK's own default (`60s`) | Request processing timeout |
 | `spring.acp.agent.cancel-grace-period` | unset, follows the SDK's own default (`60s`) | After `session/cancel`, how long a `@Prompt` method has to return before the agent answers the prompt `cancelled` itself; `0s` for never |
 | `spring.acp.agent.max-prompt-duration` | unset (no limit) | A longer-running prompt is answered error `-32800` |
@@ -205,11 +205,11 @@ How the endpoint is served depends on what's already on the classpath:
   upgrade on the same path, and cleartext HTTP/2 (h2c).
 
 <Warning>
-**A reactive web application (`spring-boot-starter-webflux`) gets neither, and nothing reports it.**
-It's not a servlet application, so it doesn't match the first case, and it *is* a web application, so
-it doesn't match the second either: `transport.type=http` sets nothing up, with no error or warning at
-startup, and no agent is served. WebFlux isn't supported for the HTTP agent transport yet. The SDK may
-add a startup failure for this combination in a future release.
+**A reactive web application (`spring-boot-starter-webflux`) matches neither case.** It's not a
+servlet application, so it doesn't match the first, and it *is* a web application, so it doesn't match
+the second either. `transport.type=http` now fails the startup: "The ACP HTTP transport needs a
+servlet web application or the standalone listener (acp-streamable-http-jetty); WebFlux is not
+supported." WebFlux isn't supported for the HTTP agent transport.
 </Warning>
 
 A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp`, which creates a

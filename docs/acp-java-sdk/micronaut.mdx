@@ -135,18 +135,22 @@ ACP endpoint into Micronaut's own Netty server is a later addition, not yet avai
 | `acp.agent.cancel-grace-period` | `60s` | after `session/cancel`, the SDK answers `cancelled` itself; `0s` for never |
 | `acp.agent.max-prompt-duration` | `0s` (none) | a longer prompt is answered `-32800` |
 | `acp.agent.shutdown-on-transport-end` | `true` | close the context when the stdio input ends |
-| `acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same listener) |
+| `acp.agent.shutdown-timeout` | `10s` | how long closing the context waits for a stdio agent (or an `AcpAgentTransport` bean of your own) to close gracefully, before closing it at once |
+| `acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket`, read in any case; an unrecognized value fails startup, naming it |
 | `acp.agent.transport.http.port` | `8080` | the listener's own port; `0` for an ephemeral one (read back with `AcpAgentRuntime.port()`) |
 | `acp.agent.transport.http.path` | `/acp` | |
 | `acp.agent.transport.http.max-post-body-size` | SDK default (16MB) | e.g. `4MB` |
-| `acp.agent.transport.http.keep-alive-interval`, `.mailbox-capacity`, `.max-pending-sse-events`, `.max-web-socket-pending-frames`, `.max-provisional-sessions`, `.max-concurrent-streams-per-connection`, `.shutdown-timeout` | SDK default | `StreamableHttpAcpAgentTransportOptions` |
+| `acp.agent.transport.http.keep-alive-interval`, `.mailbox-capacity`, `.max-pending-sse-events`, `.max-web-socket-pending-frames`, `.max-provisional-sessions`, `.max-concurrent-streams-per-connection`, `.shutdown-timeout` | SDK default | `StreamableHttpAcpAgentTransportOptions`; this `shutdown-timeout` bounds the HTTP listener only, not a stdio agent, which uses `acp.agent.shutdown-timeout` above instead |
 
 ## A client, from configuration
 
-A client is configured when `acp.client.transport.*` is set, giving three beans: the transport, an
-`AcpAsyncClient`, and an `AcpSyncClient` facade over that same client (one session on one
-connection). The client connects when you call `initialize()`, and closes gracefully, once, with the
-context. Customize it before it's built with `AcpClientCustomizer` beans, applied in `@Order`:
+A client is configured only when `acp.client.transport.type`, `.stdio.command`, `.websocket.uri`, or
+`.http.uri` is set, giving three beans: the transport, an `AcpAsyncClient`, and an `AcpSyncClient`
+facade over that same client (one session on one connection). Setting some other
+`acp.client.transport.*` property alone, such as `.websocket.connect-timeout` or `.stdio.args` with no
+`.stdio.command`, creates no client at all, rather than one that then fails for lacking a transport.
+The client connects when you call `initialize()`, and closes gracefully, once, with the context.
+Customize it before it's built with `AcpClientCustomizer` beans, applied in `@Order`:
 
 ```java
 @Singleton
@@ -161,7 +165,7 @@ class Updates implements AcpClientCustomizer {
 |---|---|---|
 | `acp.client.request-timeout` | `60s` | |
 | `acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
-| `acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`. Unset, the transport is whichever one has its command or URI set; with several set, `type` is required |
+| `acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`, read in any case; an unrecognized value fails startup, naming it. Unset, the transport is whichever one has its command or URI set; with several set, `type` is required |
 | `acp.client.transport.stdio.command`, `.args`, `.env.*` | | the agent process; `env` keys keep their case |
 | `acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | `ws://host:port/acp` |
 | `acp.client.transport.http.uri` | | `http://host:port/acp` |

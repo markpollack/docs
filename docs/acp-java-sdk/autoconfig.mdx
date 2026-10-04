@@ -136,7 +136,7 @@ running alongside it.
 | `spring.acp.agent.max-prompt-duration` | unset (no limit) | A longer-running prompt is answered error `-32800` |
 | `spring.acp.agent.handler-executor` | unset | The name of an `Executor` bean the agent's handler methods run on, or `none` for the SDK's own pool. See [Where handlers run](#where-handlers-run) |
 | `spring.acp.agent.shutdown-on-transport-end` | `true` | Close the application context when the agent's transport ends; for stdio, when the client closes the agent's input, so the process exits |
-| `spring.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same thing: the endpoint takes WebSocket upgrades on its path either way) |
+| `spring.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same thing; WebSocket upgrades are taken only outside a servlet web application, where the SDK's own listener serves them, never on the servlet mounted in one) |
 | `spring.acp.agent.transport.http.path` | `/acp` | Endpoint path |
 | `spring.acp.agent.transport.http.max-post-body-size` | `16MB` | Largest inbound message (POST body or WebSocket text message) |
 | `spring.acp.agent.transport.http.keep-alive-interval` | `15s` | Interval between SSE keep-alive comments; `0` disables them |
@@ -200,9 +200,17 @@ How the endpoint is served depends on what's already on the classpath:
   application's own server, at `spring.acp.agent.transport.http.path` (default `/acp`), serving
   Streamable HTTP (POST and SSE) on `server.port`. WebSocket upgrades are **not** served in this
   mode; use the standalone listener if you need them.
-- **Otherwise**: the SDK's own Jetty listener opens
-  `spring.acp.agent.transport.http.listener.port` and serves Streamable HTTP, a WebSocket upgrade on
-  the same path, and cleartext HTTP/2 (h2c).
+- **Non-web application** (no `spring-boot-starter-web` or `-webflux`): the SDK's own Jetty listener
+  opens `spring.acp.agent.transport.http.listener.port` and serves Streamable HTTP, a WebSocket
+  upgrade on the same path, and cleartext HTTP/2 (h2c).
+
+<Warning>
+**A reactive web application (`spring-boot-starter-webflux`) gets neither, and nothing reports it.**
+It's not a servlet application, so it doesn't match the first case, and it *is* a web application, so
+it doesn't match the second either: `transport.type=http` sets nothing up, with no error or warning at
+startup, and no agent is served. WebFlux isn't supported for the HTTP agent transport yet. The SDK may
+add a startup failure for this combination in a future release.
+</Warning>
 
 A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp`, which creates a
 `StreamableHttpAcpClientTransport` for you, or, against the standalone listener,

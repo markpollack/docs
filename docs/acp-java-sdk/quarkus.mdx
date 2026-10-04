@@ -172,9 +172,9 @@ Build time (fixed when the application is built):
 
 | Property | Default | |
 |---|---|---|
-| `quarkus.acp.agent.enabled` | `true` | serve the `@AcpAgent` bean |
-| `quarkus.acp.agent.transport.type` | `stdio` | `stdio` or `http` |
-| `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket) |
+| `quarkus.acp.agent.enabled` | `true` | serve the `@AcpAgent` bean; off, it's an ordinary CDI bean, no agent transport starts, and a second `@AcpAgent` class is no longer a build error |
+| `quarkus.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same: Streamable HTTP and WebSocket on the Quarkus HTTP server) |
+| `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket), relative to `quarkus.servlet.context-path` |
 
 Run time:
 

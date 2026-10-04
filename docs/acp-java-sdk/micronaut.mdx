@@ -120,10 +120,9 @@ An application bean of type `AcpAgentTransport` replaces stdio, for example `acp
 transport in a test.
 
 <Warning>
-**HTTP and WebSocket agents run on the SDK's own Jetty listener (`StreamableHttpAcpAgentTransport`
-from `acp-streamable-http-jetty`), on its own port, not inside Micronaut's Netty HTTP server.** It
-runs alongside a Micronaut HTTP server if your application has one, not mounted on it. Binding the
-ACP endpoint into Micronaut's own Netty server is a later addition, not yet available.
+**An HTTP or WebSocket agent runs on its own port, not inside Micronaut's own HTTP server.** It runs
+alongside a Micronaut HTTP server if your application has one, not mounted on it; the two never share
+a port. Mounting the ACP endpoint on Micronaut's own server is a later addition, not yet available.
 </Warning>
 
 ## Agent Settings (`acp.agent.*`)
@@ -218,5 +217,8 @@ and JUnit versions take precedence over it. The wire format is the SDK's own Jac
   </Card>
   <Card title="Clients and Agents in Java" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
     The annotation model this module builds on
+  </Card>
+  <Card title="Transports" icon="plug" href="/docs/acp-java-sdk/transports#deployment-topologies">
+    Where ACP listens in every deployment shape, Micronaut included
   </Card>
 </CardGroup>

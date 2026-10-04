@@ -287,8 +287,8 @@
                 "group": "ACP Java SDK",
                 "pages": [
                   "projects/acp-java-sdk",
-                  "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/index",
+                  "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/migration-0.80",
                   {
                     "group": "Framework Integrations",
@@ -369,7 +369,9 @@
                       }
                     ]
                   },
-                  "docs/acp-java-sdk/reference/java"
+                  "docs/acp-java-sdk/reference/java",
+                  "docs/acp-java-sdk/compatibility",
+                  "docs/acp-java-sdk/resources"
                 ]
               }
             ]

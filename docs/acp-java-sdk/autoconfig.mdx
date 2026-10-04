@@ -285,10 +285,27 @@ A transport carries one client. The auto-configured `AcpSyncClient` wraps the `A
   </Card>
 </CardGroup>
 
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Micronaut Integration" icon="bolt" href="/docs/acp-java-sdk/micronaut">
+    The equivalent integration for Micronaut applications
+  </Card>
+  <Card title="Quarkus Integration" icon="bolt" href="/docs/acp-java-sdk/quarkus">
+    The equivalent integration for Quarkus applications
+  </Card>
+  <Card title="Clients and Agents in Java" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
+    The annotation model this module builds on
+  </Card>
+  <Card title="Transports" icon="plug" href="/docs/acp-java-sdk/transports#deployment-topologies">
+    Where ACP listens in every deployment shape, Spring Boot included
+  </Card>
+</CardGroup>
+
 ## Requirements
 
-- Java 21+
-- Spring Boot 4.0+
+- Java 17+
+- Spring Boot 4.1
 - ACP Java SDK 0.80.0 (as of 0.80.0, `acp-spring-boot-starter` and `acp-spring-boot-autoconfigure`
   are modules of the SDK itself, built and versioned together with it, not a separate project pinning
   an SDK version)

@@ -138,11 +138,46 @@ was actually bound. `StreamableHttpAcpClientTransportOptions.maxSseStreams` defa
 open session, plus the connection stream); raise it if a single client holds many sessions open at
 once.
 
+## Deployment topologies
+
+Where ACP actually listens depends on how the agent is built and served. One table, one port column
+each:
+
+| How the agent is served | ACP HTTP + WebSocket | The app's own traffic (if any) |
+|---|---|---|
+| Plain Java (no framework) | One port, the SDK's own server | n/a |
+| Quarkus | Quarkus's own HTTP port, alongside the app's routes | Same port |
+| Micronaut | A second port (`acp.agent.transport.http.port`) | Micronaut's own port (`micronaut.server.port`) |
+| Spring Boot, non-web application | One port, the SDK's own server | n/a |
+| Spring Boot, servlet web application | The app's own port, HTTP/SSE only (no WebSocket today) | Same port |
+
+- **Plain Java**, with no framework at all: the SDK's own server serves ACP over HTTP and WebSocket on
+  one port.
+- **Quarkus** serves ACP over HTTP and WebSocket on Quarkus's own HTTP port, alongside the
+  application's other routes. One server.
+- **Micronaut** keeps the application's own traffic on Micronaut's server
+  (`micronaut.server.port`), while ACP over HTTP and WebSocket runs on a second port
+  (`acp.agent.transport.http.port`). Two servers in one JVM: two ports, and separate TLS, security and
+  metrics configuration for each.
+- **A Spring Boot web application** (a servlet container such as Tomcat) serves ACP over HTTP and SSE
+  on the application's own port today, through the mounted servlet; there's no WebSocket upgrade in
+  this mode yet. A listener mode, serving ACP on a separate port the way Micronaut does, is coming for
+  0.80.0.
+- **A Spring Boot non-web application** has no servlet container, so the SDK's own server serves ACP
+  over HTTP and WebSocket on its own port, the same shape as plain Java.
+
+<Note>
+**Planned**: WebSocket support on the application's own port in a servlet container (Tomcat, Jetty,
+Undertow) and in Micronaut, through a standard Jakarta WebSocket endpoint, so a web application
+wouldn't need a second port just for the WebSocket upgrade. Not available yet.
+</Note>
+
 ## Not yet supported in 0.80.0
 
 - **WebSocket inside a servlet container.** The servlet serves HTTP/SSE only; the WebSocket upgrade
   needs the standalone Jetty listener (`StreamableHttpAcpAgentTransport`), not
-  `StreamableHttpAcpServlet`.
+  `StreamableHttpAcpServlet`. See [Deployment topologies](#deployment-topologies) above for what's
+  planned here.
 - **HTTP/2 configuration for the servlet.** That's the surrounding container's responsibility, not
   this SDK's.
 - **TLS on the built-in listener.** It opens a plain connector only; terminate TLS in front of it, or

@@ -65,20 +65,18 @@ public class GreeterAgent {
 }
 ```
 
-`@AcpAgent` alone makes the class a CDI bean, a singleton unless it declares its own scope. The class
-is found in the Jandex index at **build time**: a second `@AcpAgent` class fails the build, naming
-both. With none, the application is a client only. Capabilities and `agentInfo` are derived from the
-annotations the same way as everywhere else; see
-[Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for the full derivation and
-`@Initialize`-merge rules, which apply unchanged here.
+`@AcpAgent` alone makes the class a CDI bean, a singleton unless it declares its own scope. It's
+discovered at **build time**: a second `@AcpAgent` class fails the build, naming both. With none, the
+application is a client only. Capabilities and `agentInfo` are derived from the annotations the same
+way as everywhere else; see [Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for the
+full derivation and `@Initialize`-merge rules, which apply unchanged here.
 
 ### Intercepted beans work
 
-Handlers are discovered on the **user's class**, from the build-time index, not on the CDI
-container's runtime instance. So when an interceptor (`@Transactional`, a custom `@Interceptor`, or
-anything else CDI wraps the bean in) applies to the agent, discovery still finds `@Prompt` and
+So when an interceptor (`@Transactional`, a custom `@Interceptor`, or anything else CDI wraps the bean
+in) applies to the agent, its advice still runs on every ACP call: discovery still finds `@Prompt` and
 friends on the class they're actually declared on, while invocation goes through the container's
-managed instance, so the interceptor's advice still runs. No special wiring needed.
+managed instance. No special wiring needed.
 
 ### `AcpInterceptor`, `ArgumentResolver`, and `ReturnValueHandler` beans
 
@@ -117,19 +115,17 @@ own interactive commands. Develop a stdio agent in tests (an application bean of
 `AcpAgentTransport`, such as `acp-test`'s in-memory one, replaces stdio) or over HTTP instead.
 </Warning>
 
-## Over HTTP and WebSocket: Quarkus's own server, no Jetty
+## Over HTTP and WebSocket: Quarkus's own server
 
 ```properties
 quarkus.acp.agent.transport.type=http
 quarkus.acp.agent.transport.http.path=/acp
 ```
 
-Unlike [Micronaut](/docs/acp-java-sdk/micronaut) and [Spring Boot](/docs/acp-java-sdk/autoconfig),
-which both run the SDK's own Jetty listener on its own port, the Quarkus extension serves the agent
-directly on **Quarkus's own HTTP server**, on `quarkus.http.port`: Streamable HTTP through the SDK's
-servlet mounted on `quarkus-undertow`, and the WebSocket upgrade on the same path through a Vert.x
-route. There's no second server and no Jetty dependency at all; the extension excludes the Jetty jars
-that `acp-streamable-http-jetty`'s servlet class doesn't actually need.
+The agent is served directly on **Quarkus's own HTTP server**, on `quarkus.http.port`: Streamable HTTP
+and the WebSocket upgrade on the same path. There's no second server to run or port to open; unlike
+[Micronaut](/docs/acp-java-sdk/micronaut) and [Spring Boot](/docs/acp-java-sdk/autoconfig) in their
+non-web mode, which each open a standalone listener of their own.
 
 Each connection runs its own agent runtime over the one bean, so its handlers must be thread-safe,
 same as the other two integrations. On shutdown, every connection closes first, within
@@ -236,5 +232,8 @@ automatic; there's no property to point handlers elsewhere.
   </Card>
   <Card title="Clients and Agents in Java" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
     The annotation model this module builds on
+  </Card>
+  <Card title="Transports" icon="plug" href="/docs/acp-java-sdk/transports#deployment-topologies">
+    Where ACP listens in every deployment shape, Quarkus included
   </Card>
 </CardGroup>

@@ -1,7 +1,7 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Release notes for ACP Java SDK — auto-generated from git history"
+description: "What changed in each ACP Java SDK release, and why it matters"
 ---
 
 ## 0.80.0 (unreleased)
@@ -13,72 +13,158 @@ anything below as available until the [migration guide](/docs/acp-java-sdk/migra
 page say otherwise.
 </Warning>
 
-0.80.0 is binary-incompatible with 0.18.0: recompile against it, don't just swap the jar. The full
-breaking-change list, with a quick-mapping table from the old API to the new one, is in the
-[migration guide](/docs/acp-java-sdk/migration-0.80).
+0.80.0 implements the full stable ACP schema (v1.9.1), end to end, and is the clearest sign yet that
+**0.80 marks the road to 1.0**. It's binary-incompatible with 0.18.0: recompile against it, don't just
+swap the jar. The full breaking-change list, with a quick-mapping table from the old API to the new
+one, is in the [migration guide](/docs/acp-java-sdk/migration-0.80).
 
-**Spring Boot, Quarkus and Micronaut support, all in the SDK.** All three are required (non-preview)
-0.80.0 modules, each the same shape: annotate one `@AcpAgent` class and the framework serves it.
+**This SDK is checked against the protocol itself, not just its own tests.** The Java client and agent
+run a cross-SDK interop suite against the TypeScript, Rust, Python and Kotlin SDKs over stdio,
+Streamable HTTP and WebSocket. See [Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility) for
+exactly what's tested, what isn't yet, and how the feature set compares.
 
-- **Spring Boot**: `acp-spring-boot-starter`/`acp-spring-boot-autoconfigure` move from
-  `org.springaicommunity` into `com.agentclientprotocol`, versioned with the rest of the SDK (no
-  relocation POM; see the
-  [migration guide](/docs/acp-java-sdk/migration-0.80#spring-boot-support-moved-into-the-sdk) for the
-  exact coordinate and package change). See [Spring Boot Starter](/docs/acp-java-sdk/autoconfig).
-- **Micronaut** (`acp-micronaut`, new): compile-time bean discovery, Micronaut AOP interception works
-  on the annotated class, and handlers may return a Reactive Streams `Publisher`. See
-  [Micronaut Integration](/docs/acp-java-sdk/micronaut).
-- **Quarkus** (`acp-quarkus`, new): build-time (Jandex) discovery, served on Quarkus's own HTTP
-  server with no Jetty dependency, and `@Prompt` may return a Mutiny `Uni` or a streaming `Multi`. See
-  [Quarkus Integration](/docs/acp-java-sdk/quarkus).
+**The same annotation model works everywhere: Spring Boot, Quarkus, Micronaut, or no framework at
+all.** `@AcpAgent`, `@Prompt`, `@NewSession`, and the rest carry the handlers; whatever serves the
+class discovers them the same way. Plain Java needs nothing but `acp-core` and `acp-agent-support`:
 
-Tutorial modules for Quarkus and Micronaut are coming in a later pass.
+```java
+@AcpAgent(name = "echo-agent", version = "1.0.0")
+class EchoAgent {
+    @NewSession
+    NewSessionResponse newSession() {
+        return new NewSessionResponse(UUID.randomUUID().toString());
+    }
 
-**A client's prompt is no longer cut off by the request timeout.** A turn's answer only comes at the
-end of it, so the request timeout (now 60 seconds by default everywhere) used to cancel every prompt
-that ran longer than that. `session/prompt` now waits for the turn however long it takes; set the new
-`.promptTimeout(Duration)` (`spring.acp.client.prompt-timeout` / `acp.client.prompt-timeout` /
-`quarkus.acp.client.prompt-timeout` on the three framework integrations) if you want a bound back. See
-the
-[migration guide](/docs/acp-java-sdk/migration-0.80#prompt-no-longer-bounded-by-request-timeout).
+    @Prompt
+    PromptResponse prompt(PromptRequest req, SyncPromptContext ctx) {
+        ctx.sendMessage("Echo: " + req.text());
+        return PromptResponse.endTurn();
+    }
+}
 
-**New concepts and features**, each with its own page:
+AcpAgentSupport.create(new EchoAgent()).transport(new StdioAcpAgentTransport()).build().run();
+```
+
+Ten lines, no framework dependency, nothing to configure. The lower-level
+[builder API](/docs/acp-java-sdk/clients-and-agents#building-an-agent-the-builder-api) is there too,
+for dynamic handler registration or when a class and annotations don't fit.
+**[Spring Boot](/docs/acp-java-sdk/autoconfig)**, **[Quarkus](/docs/acp-java-sdk/quarkus)**, and
+**[Micronaut](/docs/acp-java-sdk/micronaut)** each serve the identical class: the framework finds the
+bean and wires its transport from configuration, nothing about the class itself changes.
+`acp-spring-boot-starter`/`acp-spring-boot-autoconfigure` moved from `org.springaicommunity` into
+`com.agentclientprotocol`, versioned with the rest of the SDK (see the
+[migration guide](/docs/acp-java-sdk/migration-0.80#spring-boot-support-moved-into-the-sdk) for the
+exact coordinate and package change); Quarkus and Micronaut support are new in 0.80.0. All three are
+required (non-preview) modules.
+
+**Remote agents, for real:** many clients per agent over Streamable HTTP and WebSocket, both served on
+the same `/acp` endpoint.
+
+**Handlers run where they belong, not on a second pool the SDK bolts on:** Micronaut's virtual threads
+on JDK 21+, Quarkus's own worker pool, or an executor you choose yourself on Spring Boot and plain
+Java. See each framework's own "Where handlers run" section for specifics.
+
+**Forty-plus tutorial modules and a new set of concept pages** are the fastest way to learn the
+annotation model, cancellation, extension methods, elicitation, and the rest hands-on; see
+[Tutorials](#tutorials) below.
+
+**Proof, not just claims:** nearly 1,400 tests, load-testing scenarios that drive hundreds of
+concurrent clients, and quality gates that fail the build on any violation, never baseline one away.
+See [Quality](#quality) below.
+
+**Start with the [quickstart](/docs/acp-java-sdk/index) or the
+[tutorial](/docs/acp-java-sdk/tutorial/index).** Upgrading from 0.18.0? Read the
+[migration guide](/docs/acp-java-sdk/migration-0.80) first; it has the full breaking-change list and a
+checklist to work through. Curious about the wider protocol, the other language SDKs, or who else
+implements ACP? See [ACP Resources](/docs/acp-java-sdk/resources).
+
+## Features
 
 - **[Session config options](/docs/acp-java-sdk/config-options)** replace `session/set_model`: an
   agent declares its own selectors (model choice is now just the one with `category: "model"`), plus
   a new boolean kind for simple on/off settings.
-- **[`$/cancel_request`](/docs/acp-java-sdk/cancellation)**, in both directions, lets either side
-  cancel a single in-flight request without ending the whole session. Two new agent-side settings,
-  `cancelGracePeriod` (default 60s) and `maxPromptDuration` (off by default), bound how long a prompt
-  handler can run; see that page for exactly what they do and why they exist.
+- **Cancellation and [`$/cancel_request`](/docs/acp-java-sdk/cancellation)**, in both directions, lets
+  either side cancel a single in-flight request without ending the whole session; a prompt turn
+  cancelled by `session/cancel` now always ends in stop reason `cancelled`, whatever the handler does.
 - **[Extension methods](/docs/acp-java-sdk/extensions)** (`_`-prefixed custom requests and
-  notifications) are now a first-class, typed feature on every client and agent builder, not just a
-  raw escape hatch.
-- **Elicitation is stable**, with explicit mode-checking: see
-  [Elicitation](/docs/acp-java-sdk/elicitation).
+  notifications) are a first-class, typed feature on every client and agent builder, not just a raw
+  escape hatch.
+- **[Elicitation](/docs/acp-java-sdk/elicitation)** is stable, with explicit mode-checking: an agent
+  can only ask for what the client actually advertised.
 - **[Terminal authentication and logout](/docs/acp-java-sdk/terminal-auth-and-logout)**: an agent can
   ask the client to run an interactive login, and advertise that it supports logging out.
-- The Streamable HTTP and WebSocket transports gain a graceful shutdown window
-  (`shutdownTimeout`) and clearer connection/session routing; see
-  [Transports](/docs/acp-java-sdk/transports) for the identity and routing tables.
-- **Forward compatibility** got more deliberate: former enums (`StopReason`, `ToolCallStatus`, and
-  others) are now open value types, and several unions gained explicit `Unknown*` fallback variants.
-  Error codes now match the ACP v1 schema exactly. See
-  [Forward compatibility](/docs/acp-java-sdk/forward-compatibility).
-- **[One stability convention](/docs/acp-java-sdk/stability)**: an API is unstable if and only if it
-  carries `@UnstableAcpApi`. Today that's session fork and the providers methods; everything else,
-  including everything listed above, is a stable promise.
+- **[Streamable HTTP and WebSocket](/docs/acp-java-sdk/transports)**: a graceful shutdown window and
+  clearer connection/session routing, on top of the remote-agent support described above.
+- **[Forward compatibility and `_meta`](/docs/acp-java-sdk/forward-compatibility)**: former enums
+  (`StopReason`, `ToolCallStatus`, and others) are open value types, several unions gained explicit
+  `Unknown*` fallback variants, and every schema record carries `_meta`.
+- **[Session list, close, resume and delete](/docs/acp-java-sdk/tutorial/20-session-management)**: the
+  full session lifecycle from both sides, beyond the original create-and-prompt loop.
 
-**Fixes worth knowing about**
+[One stability convention](/docs/acp-java-sdk/stability) covers all of it: an API is unstable if and
+only if it carries `@UnstableAcpApi`. Today that's session fork and the providers methods; everything
+listed above is a stable promise.
 
-- A handler that throws a bare `Error` now answers `-32603` instead of leaving the caller hanging.
-- `AcpAgentSupport.Builder` is safely reusable across multiple `buildFactory()` calls, which the
-  Streamable HTTP listener relies on to hand each connection its own agent instance.
-- `prompt()` (and every other client request) now returns only after every notification received
-  before its response has been handled by the session-update consumer; see
-  [Concepts: the ordering guarantee](/docs/acp-java-sdk/concepts#session-updates-and-the-ordering-guarantee).
-- Closing a stdio client now lets the agent exit on its own (a 2-second wait) before sending
-  SIGTERM, instead of terminating it immediately.
+## Tutorials
+
+Ten new or extended modules, in the tutorial's own order:
+
+- [31: Elicitation](/docs/acp-java-sdk/tutorial/31-elicitation) (extended)
+- [33: Session Config Options](/docs/acp-java-sdk/tutorial/33-session-config-options)
+- [34: Extension Methods](/docs/acp-java-sdk/tutorial/34-extension-methods)
+- [35: Cancellation and Timeouts](/docs/acp-java-sdk/tutorial/35-cancellation-timeouts)
+- [36: Terminal Auth and Logout](/docs/acp-java-sdk/tutorial/36-terminal-auth-logout)
+- [37: Streamable HTTP and WebSocket](/docs/acp-java-sdk/tutorial/37-streamable-http-websocket)
+- [38: Spring Boot over HTTP](/docs/acp-java-sdk/tutorial/38-spring-boot-http)
+- [39: Forward Compatibility and _meta](/docs/acp-java-sdk/tutorial/39-forward-compatibility)
+- [40: Micronaut](/docs/acp-java-sdk/tutorial/40-micronaut)
+- [41: Quarkus](/docs/acp-java-sdk/tutorial/41-quarkus)
+
+## Quality
+
+- **Cross-SDK interop**, over stdio, Streamable HTTP, and WebSocket:
+
+  | | stdio | HTTP | WebSocket |
+  |---|---|---|---|
+  | TypeScript, Rust, Python | verified | verified | verified |
+  | Kotlin | verified | n/a | verified |
+  | Micronaut | verified | verified | coming |
+  | Quarkus | coming | verified | verified |
+  | Spring Boot | coming | coming | coming |
+
+  See [Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility) for what each cell means and how
+  this SDK's feature set compares: it's among the most complete ACP SDKs, by that comparison.
+- **Load testing.** Scenarios drive hundreds of concurrent clients, on their own connections and
+  sharing one HTTP/2 connection, each running real prompt turns with streaming updates.
+- **Nearly 1,400 tests**, model-checked concurrency, and mutation testing on the protocol core (below).
+- **Quality gates**, every one enforced in `./mvnw verify` and never baselined:
+
+  | Gate | What it guarantees |
+  |------|--------------------|
+  | [![NullAway](https://img.shields.io/badge/NullAway-JSpecify%20%C2%B7%20%40NullMarked-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/pom.xml) | Every SDK package is `@NullMarked`; a possible null dereference is a compile error. |
+  | [![Error Prone](https://img.shields.io/badge/Error%20Prone-warnings%20fail-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/pom.xml) | Error Prone's default checks, plus unused Reactor results and stray `System.out`, fail compilation. |
+  | [![ArchUnit](https://img.shields.io/badge/ArchUnit-every%20module%20%C2%B7%20no%20cycles-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/src/test/java/com/agentclientprotocol/sdk/ArchitectureTest.java) | Each module's layering is tested; no package cycles, and transports never reach session internals. |
+  | [![PMD](https://img.shields.io/badge/PMD-complexity%20%2B%20duplication%20%C2%B7%20no%20baseline-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/config/pmd/ruleset.xml) | Methods stay below cognitive and cyclomatic complexity limits; copy-paste over 100 tokens fails. |
+  | [![SpotBugs](https://img.shields.io/badge/SpotBugs-rank%20%E2%89%A4%209%20%2B%20concurrency-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/config/spotbugs/spotbugs-include.xml) | Every bug at rank 9 or worse, and the multithreading bug patterns at any rank, fail the build. |
+  | [![JaCoCo](https://img.shields.io/badge/JaCoCo-coverage%20floors%20per%20module-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/pom.xml) | Each module has line and branch coverage floors in its `pom.xml`; coverage cannot silently drop. |
+  | [![Lincheck](https://img.shields.io/badge/Lincheck-model--checked%20concurrency-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/src/test/java/com/agentclientprotocol/sdk/spec/ActivePromptsLincheckTest.java) | The concurrent core (prompt turns, pending responses, inbound requests, SSE streams) is model-checked for linearizability. |
+  | [![PIT](https://img.shields.io/badge/PIT-protocol%20core%20%E2%89%A5%2085%25-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/acp-core/pom.xml) | Mutation testing proves the protocol core's tests catch at least 85% of injected bugs. |
+  | [![OSV scan](https://img.shields.io/badge/OSV-dependency%20scan-brightgreen)](https://github.com/agentclientprotocol/java-sdk/blob/main/.github/workflows/dependency-scan.yml) | Resolved dependencies are scanned weekly and on every pom change; CVSS 7 or higher (or unscored) fails. |
+
+  See the SDK's own [README](https://github.com/agentclientprotocol/java-sdk#quality) for the current
+  badges and exact coverage numbers; they change between releases and are not repeated here.
+
+For every other change, see the
+[CHANGELOG](https://github.com/agentclientprotocol/java-sdk/blob/main/CHANGELOG.md) and the
+[migration guide](/docs/acp-java-sdk/migration-0.80): that's where the full, current fix list lives,
+not here.
+
+## Requirements
+
+- Java 17+
+- Spring Boot 4.1 (for `acp-spring-boot-starter`)
+- Quarkus 3.40 (for `acp-quarkus`)
+- Micronaut 4 (for `acp-micronaut`)
 
 ## 0.18.0 (2026-09-25)
 

@@ -8,6 +8,10 @@ Most of ACP flows client-to-agent, but three families of call run the other way,
 into the client: file access, terminal execution, and permission requests. The agent calls them
 exactly like any other request; the client answers them with a handler it registered on its builder.
 
+The prompt context keeps a convenience layer directly on it (`sendMessage`, `readFile`, `askPermission`,
+`execute`, and the rest); the raw, full request/response form of each call below lives one step down,
+on `ctx.client()`.
+
 ## File access
 
 ```java
@@ -17,7 +21,7 @@ Optional<String> maybe = ctx.tryReadFile("src/Main.java");     // convenience: e
 ctx.writeFile("output.txt", "generated content");
 
 // The full request/response form, with an offset and line limit
-var response = ctx.readTextFile(new ReadTextFileRequest(sessionId, "large-file.txt", 100, 50));
+var response = ctx.client().readTextFile(new ReadTextFileRequest(sessionId, "large-file.txt", 100, 50));
 ```
 
 ```java
@@ -48,16 +52,17 @@ sent.
 ## Terminal execution
 
 A four-step lifecycle, because the client (not the agent) controls what actually runs and may want to
-stream output as it happens:
+stream output as it happens. Each step is a call on `ctx.client()`:
 
 | Step | Agent calls | Client handles | Purpose |
 |---|---|---|---|
-| 1 | `createTerminal(...)` | `createTerminalHandler` | Spawn the process |
-| 2 | `waitForTerminalExit(...)` | `waitForTerminalExitHandler` | Block until it finishes |
-| 3 | `getTerminalOutput(...)` | `terminalOutputHandler` | Read accumulated stdout/stderr |
-| 4 | `releaseTerminal(...)` | `releaseTerminalHandler` | Free the client's resources |
+| 1 | `client().createTerminal(...)` | `createTerminalHandler` | Spawn the process |
+| 2 | `client().waitForTerminalExit(...)` | `waitForTerminalExitHandler` | Block until it finishes |
+| 3 | `client().getTerminalOutput(...)` | `terminalOutputHandler` | Read accumulated stdout/stderr |
+| 4 | `client().releaseTerminal(...)` | `releaseTerminalHandler` | Free the client's resources |
 
-`killTerminal(...)` ends a still-running terminal early, outside the normal wait-then-release flow.
+`client().killTerminal(...)` ends a still-running terminal early, outside the normal
+wait-then-release flow.
 
 All five terminal methods check `NegotiatedCapabilities.supportsTerminal()` before calling, not only
 `createTerminal`: calling any of them without the capability throws `AcpCapabilityException` locally,
@@ -97,7 +102,7 @@ boolean allowedEdit = ctx.askPermission("Rewrite config.yaml", ToolKind.EDIT);  
 Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");          // convenience, empty if cancelled
 
 // Full form
-var response = ctx.requestPermission(new RequestPermissionRequest(sessionId, toolCall, options));
+var response = ctx.client().requestPermission(new RequestPermissionRequest(sessionId, toolCall, options));
 ```
 
 ```java
@@ -114,7 +119,7 @@ kind a newer agent might send. See
 **`askPermission`/`askChoice` announce a real tool call.** Both send a `tool_call` session update
 (status `pending`) before asking, so a client that looks the tool call up by ID finds it, and settle
 it afterward with a `tool_call_update` (`completed` once answered, `failed` if the client cancelled
-the request): session-update consumers see two more updates per call than they used to.
+the request): a session update handler sees two more updates per call than it used to.
 `askPermission(action)` alone uses kind `other`; pass a `ToolKind` explicitly (as above) for anything
 else, including `ToolKind.EDIT` if you relied on the old always-`edit` behavior. `askChoice` fails
 with `AcpProtocolException` (`-32603`) naming the option if the client answers with one it was never

@@ -166,7 +166,7 @@ All three produce identical protocol behavior and support the same capabilities.
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         // Handle streaming updates during prompt()
     })
     .readTextFileHandler(req -> {
@@ -202,7 +202,7 @@ var params = AgentParameters.builder("grok")
 
 var transport = new StdioAcpClientTransport(params);
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         var update = notification.update();
         if (update instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
@@ -520,10 +520,11 @@ The `context` parameter in `promptHandler` provides:
 | `getSessionId()` | Current session ID |
 | `sendMessage(text)` | Send `AgentMessageChunk` |
 | `sendThought(text)` | Send `AgentThoughtChunk` |
-| `sendUpdate(update)` | Send any `SessionUpdate`, to this handler's own session |
+| `sendSessionUpdate(update)` | Send any `SessionUpdate`, to this handler's own session |
 | `readFile(path, offset, limit)` | Read file from client |
 | `writeFile(path, content)` | Write file on client |
-| `requestPermission(request)` | Ask client for permission |
+| `askPermission(action)` / `askChoice(prompt, options)` | Ask client for permission, the convenience form |
+| `client().requestPermission(request)` | Ask client for permission, the full request/response form |
 | `getClientCapabilities()` | Check client capabilities |
 
 ---
@@ -551,7 +552,7 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
 agent.start().then(agent.awaitTermination()).block();
 ```
 
-The async context's `sendMessage()`, `sendUpdate()`, etc. return `Mono<Void>`, composable with `.then()` and `.flatMap()`.
+The async context's `sendMessage()`, `sendSessionUpdate()`, etc. return `Mono<Void>`, composable with `.then()` and `.flatMap()`.
 
 ---
 
@@ -590,22 +591,22 @@ Drop to the full API when you need control that convenience methods don't expose
 
 ```java
 // Custom AgentCapabilities with specific MCP and prompt settings
-var caps = new AgentCapabilities(
-    true,                                          // loadSession
-    new McpCapabilities(true, true),               // HTTP + SSE
-    new PromptCapabilities(true, false, true)       // audio, embeddedContext, image
-);
+var caps = AgentCapabilities.builder()
+    .loadSession()
+    .mcpHttp().mcpSse()
+    .promptAudio().promptImage()                  // promptEmbeddedContext left off
+    .build();
 return InitializeResponse.ok(caps);
 
 // Send non-text update types (Plan, ToolCall, AvailableCommandsUpdate, etc.)
 // Plan's short constructor no longer takes the discriminator (0.80.0): it can
 // only be the variant's own name, so writing it was noise.
-context.sendUpdate(new Plan(List.of(
+context.sendSessionUpdate(new Plan(List.of(
     new PlanEntry("Analyze code", PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
     new PlanEntry("Generate tests", PlanEntryPriority.MEDIUM, PlanEntryStatus.PENDING)
 )));
 
-context.sendUpdate(new ToolCall("tool_call",
+context.sendSessionUpdate(new ToolCall("tool_call",
     "search-1",
     "code-search",   // title: what the user sees
     "code_search",   // name: the tool's own identifier (may be null)
@@ -613,11 +614,11 @@ context.sendUpdate(new ToolCall("tool_call",
     null, null, null, null, null));
 
 // Read file with offset and line limit
-var response = context.readTextFile(
+var response = context.client().readTextFile(
     new ReadTextFileRequest(sessionId, "large-file.txt", 100, 50));
 
 // Request permission with custom options
-var permResponse = context.requestPermission(new RequestPermissionRequest(
+var permResponse = context.client().requestPermission(new RequestPermissionRequest(
     sessionId, "Run deployment script?", List.of(
         new PermissionOption("allow-once", "Allow once", PermissionOptionKind.ALLOW_ONCE),
         new PermissionOption("always", "Always allow", PermissionOptionKind.ALLOW_ALWAYS),
@@ -764,30 +765,38 @@ PromptResponse.cancelled()
 
 Advertised on the client builder, before `initialize()` is called. As of 0.80.0, `initialize(InitializeRequest)` is removed; capabilities are set only this way. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
+A client built with the matching handlers (`readTextFileHandler`, `writeTextFileHandler`, the five
+terminal handlers) advertises these capabilities automatically as of 0.80.0; setting
+`clientCapabilities(..)` explicitly, as below, always wins over what the handlers would derive. See
+[Client builders derive capabilities from handlers](/docs/acp-java-sdk/migration-0.80#client-builders-derive-capabilities-from-handlers).
+
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read, write
-        true  // terminalExecution
-    ))
+    .clientCapabilities(ClientCapabilities.builder()
+        .readTextFile().writeTextFile()
+        .terminal()
+        .build())
     .clientInfo(new Implementation("my-client", "1.0.0"))  // optional; name and version sent to the agent
     .build();
 
 client.initialize();
 ```
 
-For a full `ClientCapabilities` including session, auth, and elicitation support, start from
-`ClientCapabilities.builder()` rather than the positional constructor:
+For session, auth, and elicitation support too, add their builder calls; these aren't derived from
+handlers, so set them explicitly whenever you need them:
 
 ```java
 .clientCapabilities(ClientCapabilities.builder()
-    .fs(new FileSystemCapability(true, true))
-    .terminal(true)
+    .readTextFile().writeTextFile()
+    .terminal()
     .session(ClientSessionCapabilities.withBooleanConfigOptions())
     .auth(new AuthCapabilities(true))           // terminal auth
     .elicitation(ElicitationCapabilities.formAndUrl())
     .build())
 ```
+
+The setters that take the nested records directly (`.fs(new FileSystemCapability(true, true))`,
+`.terminal(true)`) still work, for a capability shape the one-flag setters don't cover.
 
 `initialize(int protocolVersion, Map<String, Object> meta)` is still available for the rare case of
 pinning a specific protocol version or attaching `_meta` to the handshake; plain `initialize()` is
@@ -837,25 +846,34 @@ if (caps.supportsAdditionalDirectories()) {
 
 ### Elicitation Capabilities *(stable since 0.80.0; added 0.12.0 as unstable)*
 
-Clients advertise elicitation support during initialization. The capability's modes are typed (`ElicitationFormCapabilities`, `ElicitationUrlCapabilities`); the no-argument `ElicitationCapabilities()` constructor is removed in 0.80.0 in favor of `formOnly()`, `urlOnly()`, and `formAndUrl()`:
+Clients advertise elicitation support during initialization. The capability's modes are typed (`ElicitationFormCapabilities`, `ElicitationUrlCapabilities`); the no-argument `ElicitationCapabilities()` constructor is removed in 0.80.0 in favor of `formOnly()`, `urlOnly()`, and `formAndUrl()`.
+
+A client built with a `createElicitationHandler` and no explicit `clientCapabilities(..)` advertises
+form-mode elicitation automatically (0.80.0):
 
 ```java
-// Client: advertise form-mode elicitation support
-var caps = new ClientCapabilities(
-    new FileSystemCapability(), false,
-    null, null,                          // session, auth
-    ElicitationCapabilities.formOnly(), null);
-
+// Client: a registered handler is enough; no capability call needed
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(caps)
+    .createElicitationHandler(req -> CreateElicitationResponse.accept(Map.of("choice", "option-a")))
     .build();
 client.initialize();
+```
+
+Set it explicitly with the capability builder to advertise without a handler, or to combine with
+other capabilities:
+
+```java
+var caps = ClientCapabilities.builder().elicitationForm().readTextFile().build();
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(caps)
+    .createElicitationHandler(req -> CreateElicitationResponse.accept(Map.of("choice", "option-a")))
+    .build();
 ```
 
 ```java
 // Agent: check before sending elicitation
 if (context.getClientCapabilities().supportsElicitation()) {
-    var response = context.createElicitation(
+    var response = context.client().createElicitation(
         CreateElicitationRequest.form(sessionId, "Pick one:", schema));
 }
 ```

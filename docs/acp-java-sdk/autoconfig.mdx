@@ -121,7 +121,7 @@ Setting a capability property to `true` without registering its handler in an `A
 fails at startup: the SDK's client builder now requires a handler for every capability it advertises,
 and the autoconfiguration's error names the property to turn off (or the customizer to add), for
 example "fs.readTextFile needs readTextFileHandler... The capabilities come from
-spring.acp.client.capabilities.read-text-file=true". The application's own `sessionUpdateConsumer`,
+spring.acp.client.capabilities.read-text-file=true". The application's own `sessionUpdateHandler`,
 registered through a customizer, replaces the autoconfiguration's DEBUG-logging one rather than
 running alongside it.
 </Note>

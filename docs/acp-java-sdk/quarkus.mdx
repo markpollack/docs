@@ -173,7 +173,7 @@ quarkus.acp.client.transport.stdio.args=--acp
 @Singleton
 class Updates implements AcpClientCustomizer {        // optional; @Priority orders several
     public void customize(AcpClient.AsyncSpec spec) {
-        spec.sessionUpdateConsumer(notification -> { /* ... */ return Mono.empty(); });
+        spec.sessionUpdateHandler(notification -> { /* ... */ return Mono.empty(); });
     }
 }
 ```
@@ -225,7 +225,7 @@ Run time:
 "Only what a customizer registers handlers for" is enforced at startup: setting a capability `true`
 without its handler fails client creation, naming the property to turn off or the handler to add, for
 example "fs.readTextFile needs readTextFileHandler... The capabilities come from
-quarkus.acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateConsumer`
+quarkus.acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateHandler`
 replaces the client's DEBUG-logging one rather than running alongside it.
 </Note>
 

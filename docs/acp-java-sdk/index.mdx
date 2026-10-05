@@ -164,7 +164,7 @@ cd acp-java-tutorial
 
 This example launches the [Grok CLI](https://github.com/xai-org/grok-cli) as an ACP agent subprocess and sends it a prompt. Any CLI tool that speaks ACP over stdin/stdout works here; Grok is one such tool.
 
-`AgentParameters` builds the command line (`grok agent stdio`). `StdioAcpClientTransport` spawns the process and handles the JSON-RPC framing. The `sessionUpdateConsumer` receives the agent's response text as it streams in — without it, you'd get the stop reason but no visible output.
+`AgentParameters` builds the command line (`grok agent stdio`). `StdioAcpClientTransport` spawns the process and handles the JSON-RPC framing. The `sessionUpdateHandler` receives the agent's response text as it streams in — without it, you'd get the stop reason but no visible output.
 
 ```java
 import com.agentclientprotocol.sdk.client.*;
@@ -177,7 +177,7 @@ var params = AgentParameters.builder("grok").arg("agent").arg("stdio").build();
 var transport = new StdioAcpClientTransport(params);
 
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         // Print the agent's response as it streams in
         if (notification.update() instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
@@ -351,7 +351,7 @@ var transport = new StreamableHttpAcpClientTransport(
     URI.create("http://localhost:8080/acp"), AcpJsonMapper.createDefault());
 
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         if (notification.update() instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
         }

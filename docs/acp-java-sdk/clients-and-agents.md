@@ -164,6 +164,11 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
 agent.run();
 ```
 
+`AcpAgent.AsyncAgentBuilder` and `AcpAgent.SyncAgentBuilder` are `final` classes: build an agent with
+`AcpAgent.async(transport)`/`AcpAgent.sync(transport)` and wrap the result if you need to extend it,
+rather than subclassing the builder, which was never actually possible (their constructors were
+already package-private).
+
 The same shape as the annotated version, one `xxxHandler(...)` setter per ACP method instead of one
 annotated method. Builder agents get a default `initialize` too, so `initializeHandler(...)` is
 optional: it derives the same capabilities from which handlers are *registered* (no
@@ -177,21 +182,22 @@ of 0.80.0, `newSessionHandler(...)` is optional too: without one, `build()` answ
 annotated agent without `@NewSession` already had. `build()` still requires a prompt handler; that's
 the one ACP method with no default.
 (`AcpAgentSupport.Builder#run()`, the annotated builder's one-call `build().run()` convenience,
-has no equivalent on this plain builder: call `.build()` then `.run()` on the result, as above.) A
-builder handler other than the prompt handler receives only its request; to call back into the
-client (or read `NegotiatedCapabilities`) from one of those handlers, reach the built agent through a
-reference captured after `build()`, rather than a parameter:
+has no equivalent on this plain builder: call `.build()` then `.run()` on the result, as above.) As of
+0.80.0, every typed builder handler except the prompt handler has a two-argument overload that
+receives the agent `build()` is about to return, so a handler that needs to call back into the client
+(or read `NegotiatedCapabilities`) no longer needs an `AtomicReference` to get it:
 
 ```java
-AtomicReference<AcpSyncAgent> self = new AtomicReference<>();
 AcpSyncAgent agent = AcpAgent.sync(transport)
-    .newSessionHandler(req -> {
-        boolean canElicit = self.get().getClientCapabilities().supportsElicitation();
+    .newSessionHandler((req, self) -> {
+        boolean canElicit = self.getClientCapabilities().supportsElicitation();
         // ...
     })
     .build();
-self.set(agent);
 ```
+
+A one-argument handler (as shown everywhere else on this page) still works; only a handler that
+actually needs the agent takes the two-argument form.
 
 `AcpAgentFactory.sync(transport -> AcpAgent.sync(transport)...build())` is the builder-API way to
 serve many connections, building a fresh agent instance (not a shared bean) from the lambda each
@@ -211,13 +217,12 @@ is renamed `awaitTermination()`, matching `AcpAsyncAgent`.
 ## Clients: builder-only
 
 There's no annotation model for clients (handlers you register are mostly one-shot: a file handler,
-a permission handler, a session-update consumer), so `AcpClient.sync(transport)`/`AcpClient.async(transport)`
+a permission handler, a session-update handler), so `AcpClient.sync(transport)`/`AcpClient.async(transport)`
 is the only entry point:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(ClientCapabilities.builder().fs(new FileSystemCapability(true, true)).build())
-    .sessionUpdateConsumer(notification -> { /* ... */ })
+    .sessionUpdateHandler(notification -> { /* ... */ })
     .readTextFileHandler(req -> new ReadTextFileResponse(Files.readString(Path.of(req.path()))))
     .build();
 
@@ -225,6 +230,10 @@ client.initialize();
 var session = client.newSession(new NewSessionRequest(cwd));
 var response = client.prompt(new PromptRequest(session.sessionId(), content));
 ```
+
+As of 0.80.0, `fs.readTextFile` is advertised automatically from the registered `readTextFileHandler`;
+no `clientCapabilities(..)` call needed. Set it explicitly only to override what the handlers would
+derive, or for a capability no handler expresses (session modes, terminal auth, `_meta`).
 
 `AcpSyncClient` implements `AutoCloseable`; a try-with-resources block is the usual shape for a
 short-lived client (a tutorial module, a CLI run). A long-lived client (a Spring Boot application)

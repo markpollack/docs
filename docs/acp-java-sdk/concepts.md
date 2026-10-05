@@ -58,7 +58,7 @@ As of 0.80.0, a client's capabilities are set only on its builder
 
 During a prompt turn, the agent streams `session/update` notifications: message and thought chunks,
 tool calls, plans, mode changes, usage, config option changes, and more. The client receives each one
-as a `SessionUpdate` variant through its `sessionUpdateConsumer`.
+as a `SessionUpdate` variant through its `sessionUpdateHandler`.
 
 **Ordering guarantee, new in 0.80.0 (client, sync and async):** a response completes its caller only
 after every notification received *before* it on the same connection has been handled by the

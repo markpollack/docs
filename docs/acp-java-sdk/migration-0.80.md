@@ -22,7 +22,8 @@ no authentication of its own, so anyone who could reach the machine could start 
 `127.0.0.1`, and `::1` too where the machine has IPv6, unless told otherwise. Remote exposure is an
 explicit opt-in: `StreamableHttpAcpAgentTransportOptions.builder().host("0.0.0.0")` (or a specific
 address), `spring.acp.agent.transport.http.listener.host` (Spring Boot, non-web applications),
-`acp.agent.transport.http.host` (Micronaut), or `transport.http.listener.host` in `AcpAgentSettings`.
+`acp.agent.transport.http.listener.host` (Micronaut), or `transport.http.listener.host` in
+`AcpAgentSettings`.
 Servers a framework already runs (a Spring MVC servlet container, Quarkus) keep that framework's own
 bind settings (`server.address`, `quarkus.http.host`); this change doesn't affect them. **Migration**:
 a deployment that reached the listener from another machine or a container sets the host to
@@ -407,16 +408,18 @@ before); code that raised `requestTimeout` only to let long turns finish can dro
 Spring Boot, `spring.acp.client.prompt-timeout`; in Micronaut, `acp.client.prompt-timeout`; in
 Quarkus, `quarkus.acp.client.prompt-timeout` (unset by default on all three).
 
-### `sendUpdate` drops the session ID
+### `sendSessionUpdate` drops the session ID
 
-**Breaking:** `PromptContext.sendUpdate(update)` and `SyncPromptContext.sendUpdate(update)` replace
-the two-argument `sendUpdate(sessionId, update)`. The context already belongs to one prompt's
-session, so the ID was redundant (and a wrong one silently sent the update to another session).
-Migration: drop the first argument, `context.sendUpdate(sessionId, update)` becomes
-`context.sendUpdate(update)`; to update a *different* session from outside its own prompt handler,
-call `AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`)
-instead, which is unchanged. A custom `PromptContext`/`SyncPromptContext` implementation (a test
-double) implements the new one-argument method.
+**Breaking:** `PromptContext.sendSessionUpdate(update)` and `SyncPromptContext.sendSessionUpdate(update)`
+replace the two-argument `sendUpdate(sessionId, update)` (0.18.0's name for the method, before the
+[session-update vocabulary unified on `sendSessionUpdate`](#one-vocabulary-for-session-updates) below).
+The context already belongs to one prompt's session, so the ID was redundant (and a wrong one
+silently sent the update to another session). Migration: drop the first argument and use the new
+name, `context.sendUpdate(sessionId, update)` becomes `context.sendSessionUpdate(update)`; to update a
+*different* session from outside its own prompt handler, call
+`AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`) instead,
+which keeps the session-id parameter. A custom `PromptContext`/`SyncPromptContext` implementation (a
+test double) implements the new one-argument method.
 
 ### Builders reject a null handler and a duplicate registration
 
@@ -523,7 +526,7 @@ updating.
 `readTextFileHandler` called twice, `requestHandler`/`notificationHandler` for a method that already
 has one, a raw handler and the typed setter for the same method) throws `IllegalStateException`
 ("A handler for `<method>` is already registered on this builder; `<setter>` cannot register a second
-one"), instead of silently replacing the first; `sessionUpdateConsumer` stays additive. A raw
+one"), instead of silently replacing the first; `sessionUpdateHandler` stays additive. A raw
 `requestHandler(method, ...)`/`notificationHandler(method, ...)` for a method the SDK already models
 (`fs/read_text_file`, the five `terminal/*` methods, `session/request_permission`,
 `elicitation/create`, `session/update`, `elicitation/complete`) now throws `IllegalArgumentException`
@@ -554,11 +557,12 @@ builder, used to construct your own options, enforces it. Migration: pass at lea
   `quarkus.acp.client.request-timeout`, left unset, already followed the SDK default either way.
   Migration: none needed; to keep the old 30-second client bound, set
   `requestTimeout(Duration.ofSeconds(30))` (or the property to `30s`).
-- **`defaultSessionUpdateConsumer(..)` on `AcpClient.AsyncSpec`/`SyncSpec`**: a consumer that runs only
-  while no `sessionUpdateConsumer` has been added, so a framework can supply a default (logging each
-  update at DEBUG, say) that the application's own consumer replaces outright rather than running
+- **`defaultSessionUpdateHandler(..)` on `AcpClient.AsyncSpec`/`SyncSpec`**: a handler that runs only
+  while no `sessionUpdateHandler` has been added, so a framework can supply a default (logging each
+  update at DEBUG, say) that the application's own handler replaces outright rather than running
   beside. The Spring Boot, Micronaut, and Quarkus client beans now register their DEBUG logging this
-  way. `sessionUpdateConsumer` itself stays additive, as before.
+  way. `sessionUpdateHandler` itself stays additive, as before. (Named `defaultSessionUpdateConsumer`
+  and `sessionUpdateConsumer` before the rename below.)
 - **Shortcuts for the messages real code writes most**: `new NewSessionRequest(cwd)` (no MCP servers),
   `new NewSessionResponse(sessionId)` (no modes or config options), and `PromptRequest.text(sessionId,
   text)` (a prompt of one text block). Each equals, and writes the same JSON as, the long form; prefer
@@ -771,6 +775,103 @@ Verified against the CHANGELOG and the code at the commit that introduced it (`2
   already advertises `terminal` consistently; code that relied on these four methods reaching the wire
   without the capability advertised needs to register the capability instead.
 
+## The B-items batch: client cancellation, agent-aware handlers, context.client(), one vocabulary for session updates, and capability builders
+
+Verified against the CHANGELOG and the code at the commit that landed it (`513f0ac`, and the seven
+commits immediately before it on the same branch).
+
+### Client-side prompt cancellation: `prompt(request, CancellationSignal)`
+
+**New, not breaking.** `AcpAsyncClient.prompt(request, stop)` and `AcpSyncClient.prompt(request, stop)`
+take a new `com.agentclientprotocol.sdk.client.CancellationSignal`; calling `stop.cancel()`, from any
+thread, sends `session/cancel` for the prompt's session once, and the prompt still returns the agent's
+answer (stop reason `cancelled`) with the turn's updates. Cancelling after the answer sends nothing.
+Before 0.80.0, stopping a turn and keeping its answer took
+`contextWrite(RequestCancellation.cancelWhen(trigger))`, which no completion menu offered and the sync
+client couldn't use at all; `RequestCancellation`/`contextWrite` stays, for `$/cancel_request` on any
+other request. Migration: none; `prompt(request)` is unchanged. To stop a turn and keep its answer,
+replace `prompt(request).contextWrite(RequestCancellation.cancelWhen(trigger))` with
+`prompt(request, stop)` and call `stop.cancel()`. See [Cancellation](/docs/acp-java-sdk/cancellation).
+
+### Builder handlers receive their agent {#builder-handlers-receive-their-agent}
+
+**New, not breaking.** Every typed request setter of `AcpAgent.async(..)` and `AcpAgent.sync(..)`
+except `promptHandler` has an overload taking an `AgentAwareHandler<Request, Response>` (async,
+`(request, AcpAsyncAgent agent)`) or `SyncAgentAwareHandler<Request, Response>` (sync, `(request,
+AcpSyncAgent agent)`); a two-argument lambda picks it. The agent is the one `build()` returned, so a
+`session/load` replay or a `ConfigOptionUpdate` after `session/set_config_option` no longer needs an
+`AtomicReference` holding the built agent:
+`.setSessionConfigOptionHandler((request, agent) -> { agent.sendSessionUpdate(request.sessionId(), update); return response; })`.
+One-argument handlers are unchanged. The two interfaces are top-level types in
+`com.agentclientprotocol.sdk.agent`. Migration: none; a handler that read the built agent from an
+`AtomicReference` can take it as its second parameter instead:
+`.loadSessionHandler(request -> agentRef.get()...)` becomes
+`.loadSessionHandler((request, agent) -> agent...)`.
+
+**Breaking, incidentally:** `AcpAgent.AsyncAgentBuilder` and `AcpAgent.SyncAgentBuilder` are now
+`final`. Their constructors were already package-private, so no code outside the SDK could extend
+them; the modifier makes that explicit and lets the builders grow overloads safely. Migration: none;
+build agents with `AcpAgent.async(transport)` and `AcpAgent.sync(transport)`, and wrap a builder rather
+than subclass it.
+
+### The prompt context is split into its two layers: `context.client()` {#the-prompt-context-is-split-into-its-two-layers}
+
+**Breaking.** `PromptContext` and `SyncPromptContext` keep the convenience layer (`sendMessage`,
+`sendThought`, `sendSessionUpdate`, `readFile`, `tryReadFile` (sync), `writeFile`, `askPermission`,
+`askChoice`, `execute`, cancellation (`isCancelled`, `whenCancelled`/`onCancel`), `getSessionId`,
+`getClientCapabilities`, and `async()` (sync)) directly on it, and the raw ACP requests move one step
+down to the new `context.client()`: a `SessionClient` (async, `Mono`s) or `SyncSessionClient`
+(blocking) with `readTextFile`, `writeTextFile`, `requestPermission`, `createTerminal`,
+`getTerminalOutput`, `releaseTerminal`, `waitForTerminalExit`, `killTerminal`, `createElicitation` and
+`completeElicitation`. The calls themselves are unchanged (same request records, capability checks,
+timeouts and cancellation). `readFile` no longer sits beside `readTextFile`, nor `askPermission` beside
+`requestPermission`, in the completion menu. Migration: insert `.client()` before each raw call:
+`context.readTextFile(request)` becomes `context.client().readTextFile(request)`, likewise
+`writeTextFile`, `requestPermission`, the five terminal methods, `createElicitation`, and
+`completeElicitation`. A test double implementing `PromptContext` or `SyncPromptContext` drops those
+ten methods and implements `client()`. See [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls).
+
+### One vocabulary for session updates {#one-vocabulary-for-session-updates}
+
+**Breaking, no deprecated aliases.** The client builders' setters are handlers, like every other
+setter, and the prompt context sends session updates with the same verb as the agent and the test kit
+(`AcpAsyncAgent.sendSessionUpdate`, `AcpSyncAgent.sendSessionUpdate`, `MockAcpAgent.sendSessionUpdate`).
+Renamed outright: `AcpClient.AsyncSpec`/`SyncSpec.sessionUpdateConsumer(..)` becomes
+`sessionUpdateHandler(..)`, `defaultSessionUpdateConsumer(..)` becomes `defaultSessionUpdateHandler(..)`,
+and `PromptContext.sendUpdate(update)`/`SyncPromptContext.sendUpdate(update)` becomes
+`sendSessionUpdate(update)`. Behavior and parameter types are unchanged, and so is the registration
+error a raw `notificationHandler("session/update", ..)` gets, which now names the new setter.
+Migration: rename every occurrence; there's no bridging overload under either old name.
+
+### Client builders derive the advertised capabilities from the handlers {#client-builders-derive-capabilities-from-handlers}
+
+**New, not breaking by default.** A client builder without `clientCapabilities(..)` now advertises
+`fs.readTextFile` and `fs.writeTextFile` for their handlers, `terminal` once all five terminal handlers
+are registered (some but not all log a warning naming the missing ones and advertise no terminal), and
+form-mode elicitation for a `createElicitationHandler`. Before, it advertised nothing and only warned,
+so an SDK agent refused to call the handlers. Merge rule: **explicit wins**. Capabilities set with
+`clientCapabilities(..)` are sent as they are, nothing is derived, and the existing check applies (an
+advertised capability without its handler fails `build()`; a handler without its capability is a
+warning). Explicit capabilities are the one source of truth whenever they are given, so the
+frameworks, which always pass the capabilities their settings name, advertise exactly what the
+settings say, as before: a handler a customizer adds never widens them. Set capabilities explicitly
+for what handlers cannot express: URL-mode elicitation, boolean config options, terminal
+authentication, `_meta`. Migration: none for code that sets `clientCapabilities(..)`. A client that
+registered handlers without capabilities on purpose, so that agents would not call them, passes
+`clientCapabilities(new ClientCapabilities())`.
+
+### Capability builders that lead to each choice
+
+**New, not breaking.** `ClientCapabilities.builder()` gains `readTextFile()`, `writeTextFile()`,
+`terminal()`, `elicitationForm()` and `elicitationUrl()`; `AgentCapabilities.builder()` gains
+`loadSession()`, `promptImage()`, `promptAudio()`, `promptEmbeddedContext()`, `mcpHttp()` and
+`mcpSse()`. Each sets one flag and keeps the others (and the nested record's `_meta`), so
+`ClientCapabilities.builder().readTextFile().terminal().build()` replaces
+`fs(new FileSystemCapability(true, false)).terminal(true)` and its two adjacent booleans. The setters
+that take the nested records stay. Migration: none; optionally
+`.fs(new FileSystemCapability(true, true))` becomes `.readTextFile().writeTextFile()`, and
+`.loadSession(true)` becomes `.loadSession()`.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -903,68 +1004,96 @@ old behavior should be revisited.
     OR, so a handler's presence always advertises.
 18. Grep for `agent.await()` (rename to `agent.awaitTermination()`) and `awaitForExit()` (rename to
     `awaitProcessExit()`, and catch `CancellationException` instead of `RuntimeException` around it).
-19. Grep for `context.sendUpdate(sessionId,` on a `PromptContext`/`SyncPromptContext`, dropping the
-    first argument; leave `agent.sendSessionUpdate(sessionId, ...)` alone, it's unaffected.
-20. Grep for `catch (RuntimeException` (or `Exceptions.unwrap`) around a blocking SDK call checking
+19. Grep for `context.sendUpdate(sessionId,` on a `PromptContext`/`SyncPromptContext`; drop the first
+    argument and rename to `sendSessionUpdate`, so it becomes `context.sendSessionUpdate(update)`.
+    Leave `agent.sendSessionUpdate(sessionId, ...)` alone, it already took the session id and is
+    unaffected.
+20. Grep for `.sessionUpdateConsumer(`/`.defaultSessionUpdateConsumer(` on `AcpClient.AsyncSpec`/
+    `SyncSpec`; rename to `.sessionUpdateHandler(`/`.defaultSessionUpdateHandler(`. Behavior is
+    unchanged.
+21. Grep for raw `context.readTextFile(`/`.writeTextFile(`/`.requestPermission(`/`.createTerminal(`/
+    `.getTerminalOutput(`/`.releaseTerminal(`/`.waitForTerminalExit(`/`.killTerminal(`/
+    `.createElicitation(`/`.completeElicitation(` on a `PromptContext`/`SyncPromptContext`; insert
+    `.client()` before each: `context.client().readTextFile(...)`. Leave the convenience methods
+    (`readFile`, `tryReadFile`, `writeFile`, `askPermission`, `askChoice`, `execute`) and any call on
+    `AcpAsyncAgent`/`AcpSyncAgent` directly alone, neither moved.
+22. Grep for `.contextWrite(RequestCancellation.cancelWhen(` around a `client.prompt(request)` call:
+    replace with the two-argument `prompt(request, signal)` and call `signal.cancel()` instead. See
+    [Cancellation](/docs/acp-java-sdk/cancellation).
+23. If a builder handler reads the built agent from an `AtomicReference` (a `session/load` replay, or
+    sending a `ConfigOptionUpdate` from `setSessionConfigOptionHandler`), take the agent as the
+    handler's second parameter instead and drop the `AtomicReference`.
+24. If using Micronaut, grep for `acp.agent.transport.http.host`, `.port`, or
+    `.max-concurrent-streams-per-connection`: all three move under `...http.listener.*`.
+25. If a client registers `readTextFileHandler`, `writeTextFileHandler`, all five terminal handlers, or
+    `createElicitationHandler` and also sets `clientCapabilities(..)` purely to advertise that same
+    shape, the explicit call can be dropped; the matching capability is now derived from the handlers
+    automatically. Keep it if the client registers handlers on purpose without advertising them, by
+    passing `clientCapabilities(new ClientCapabilities())`.
+26. Where it covers the shape needed, prefer the one-flag capability builders
+    (`ClientCapabilities.builder().readTextFile().writeTextFile()`,
+    `AgentCapabilities.builder().loadSession()`) over the record's canonical constructor or the
+    builder setters that take a nested record directly; both still work.
+27. Grep for `catch (RuntimeException` (or `Exceptions.unwrap`) around a blocking SDK call checking
     for a `TimeoutException` cause; replace with `catch (AcpTimeoutException e)`.
-21. Grep for `AcpAgent.SYNC_HANDLER_SCHEDULER`, `AcpClient.SYNC_HANDLER_SCHEDULER`, and
+28. Grep for `AcpAgent.SYNC_HANDLER_SCHEDULER`, `AcpClient.SYNC_HANDLER_SCHEDULER`, and
     `AcpAgent.DEFAULT_REQUEST_TIMEOUT`; the first two have no replacement constant (use
     `handlerExecutor(...)` if you need a specific executor), the third becomes `Duration.ofSeconds(60)`.
-22. If any code relied on a long-running prompt being cut off by the client's request timeout, set
+29. If any code relied on a long-running prompt being cut off by the client's request timeout, set
     `.promptTimeout(...)` explicitly; the default is now unbounded.
-23. If any code constructs `CommandResult` via its canonical constructor (not the 3-argument
+30. If any code constructs `CommandResult` via its canonical constructor (not the 3-argument
     convenience one), add the new `truncated` component.
-24. Grep for `catch (AcpProtocolException` around a client or agent call (not inside a handler, where
+31. Grep for `catch (AcpProtocolException` around a client or agent call (not inside a handler, where
     throwing it is still correct): replace with `catch (AcpError e)`.
-25. Grep for `client.` calls made before `client.initialize()`: every call but `initialize` itself now
+32. Grep for `client.` calls made before `client.initialize()`: every call but `initialize` itself now
     fails locally with `IllegalStateException` until it has answered.
-26. If a client advertises `fs.readTextFile`, `fs.writeTextFile`, `terminal`, or an elicitation mode,
+33. If a client advertises `fs.readTextFile`, `fs.writeTextFile`, `terminal`, or an elicitation mode,
     confirm the matching handler is registered; `build()` now fails without it.
-27. Grep for a raw `requestHandler`/`notificationHandler` registered for a method the SDK models
+34. Grep for a raw `requestHandler`/`notificationHandler` registered for a method the SDK models
     (`fs/read_text_file`, a `terminal/*` method, `session/request_permission`, `elicitation/create`,
     `session/update`, `elicitation/complete`): switch to the named typed setter.
-28. If a `SyncSpec.notificationHandler` is registered, drop the `Mono` from its body; it's now a
+35. If a `SyncSpec.notificationHandler` is registered, drop the `Mono` from its body; it's now a
     blocking `Consumer<Object>`.
-29. If any code relied on the client's 30-second default request timeout specifically (for example, a
+36. If any code relied on the client's 30-second default request timeout specifically (for example, a
     test asserting how long a stub takes to time out), it's now 60 seconds; set `requestTimeout(...)`
     explicitly if the old number matters.
-30. If a `SessionConfigSelect.Builder` is ever built with no options, or a `currentValue` not among
+37. If a `SessionConfigSelect.Builder` is ever built with no options, or a `currentValue` not among
     them, fix the options before `build()`; it now throws instead of building.
-31. If a test specifically checked `MockAcpClient`'s `initialize()` response for a `terminal`
+38. If a test specifically checked `MockAcpClient`'s `initialize()` response for a `terminal`
     capability, update it: the mock no longer advertises `terminal`.
-32. Grep for `import com.agentclientprotocol.sdk.spring.boot.autoconfigure.client.AcpClientCustomizer`
+39. Grep for `import com.agentclientprotocol.sdk.spring.boot.autoconfigure.client.AcpClientCustomizer`
     (or the equivalent Micronaut/Quarkus package) and `TransportType`: both now come from
     `com.agentclientprotocol.sdk.integration`.
-33. If using Spring Boot, grep for `spring.acp.agent.transport.http.port` and
+40. If using Spring Boot, grep for `spring.acp.agent.transport.http.port` and
     `...max-concurrent-streams-per-connection`: both move under `...http.listener.*`.
-34. If using Spring Boot, set `spring.acp.client.transport.type`/`spring.acp.agent.transport.type`
+41. If using Spring Boot, set `spring.acp.client.transport.type`/`spring.acp.agent.transport.type`
     explicitly wherever more than one transport property is set; it now fails at startup instead of
     picking one silently. Quarkus and Micronaut clients need the same check.
-35. If a Spring `ArgumentResolver` or `ReturnValueHandler` was registered by hand (not as a `@Bean`),
+42. If a Spring `ArgumentResolver` or `ReturnValueHandler` was registered by hand (not as a `@Bean`),
     register it as one instead; it's now picked up automatically, the same as `AcpInterceptor`.
-36. Grep for `catch (AcpException | AcpError` (or any other multi-catch listing both): drop `AcpError`
+43. Grep for `catch (AcpException | AcpError` (or any other multi-catch listing both): drop `AcpError`
     and catch `AcpException` alone; check the order of any adjacent `catch (AcpError e)` /
     `catch (AcpException e)` blocks, `AcpError` first.
-37. Grep for `catch (RuntimeException` or `catch (IllegalStateException` around a call, used to mean
+44. Grep for `catch (RuntimeException` or `catch (IllegalStateException` around a call, used to mean
     "the connection is gone": replace with `catch (AcpConnectionException e)`.
-38. Grep for `.toProtocolException()` on an `AcpCapabilityException`: replace with
+45. Grep for `.toProtocolException()` on an `AcpCapabilityException`: replace with
     `new AcpProtocolException(AcpErrorCodes.INVALID_PARAMS, e.getMessage(), e.getCapability())`.
-39. If any `AcpInterceptor.afterCompletion` override exists, add the `Throwable` parameter and
+46. If any `AcpInterceptor.afterCompletion` override exists, add the `Throwable` parameter and
     `@Override`; without `@Override` it silently stops being called.
-40. If any handler relied on its own exception's message reaching the peer (other than through
+47. If any handler relied on its own exception's message reaching the peer (other than through
     `AcpProtocolException`), throw `AcpProtocolException` with that message explicitly; the message is
     no longer sent otherwise.
-41. If a client sends `additionalDirectories`, check `getAgentCapabilities().supportsAdditionalDirectories()`
+48. If a client sends `additionalDirectories`, check `getAgentCapabilities().supportsAdditionalDirectories()`
     first, or catch `AcpCapabilityException`; if an annotated agent reads them, add
     `additionalDirectories = true` to `@AcpAgent`.
-42. If a Micronaut client worked around missing `elicitation-form`/`elicitation-url`/
+49. If a Micronaut client worked around missing `elicitation-form`/`elicitation-url`/
     `boolean-config-options` properties with a customizer override, the properties now exist; the
     workaround can be dropped.
-43. If a `@Prompt` method (or prompt handler) has a `try`/`catch` whose only job is answering
+50. If a `@Prompt` method (or prompt handler) has a `try`/`catch` whose only job is answering
     `cancelled` after `session/cancel`, it can be dropped; the agent session does this regardless of
     what the handler returns or throws.
-44. If a builder agent relies on `build()` failing without a `newSessionHandler`, note that it now
+51. If a builder agent relies on `build()` failing without a `newSessionHandler`, note that it now
     answers `session/new` with a generated id by default instead.
-45. If any agent code calls `terminal/output`, `wait_for_exit`, `kill`, or `release` on a connection
+52. If any agent code calls `terminal/output`, `wait_for_exit`, `kill`, or `release` on a connection
     where the client might not advertise `terminal`, expect `AcpCapabilityException` now, not a sent
     request; these four now check the same as `create` already did.

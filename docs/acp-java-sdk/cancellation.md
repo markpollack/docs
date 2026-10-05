@@ -26,12 +26,30 @@ request's `Mono` (directly, via `.timeout(...)`, or the SDK's own request timeou
 default on both sides) sends `$/cancel_request` once, after the request was written; the caller's
 `Mono` ends immediately and a late answer from the peer is discarded. A prompt turn is the one
 exception: its answer isn't bounded by the request timeout at all, only by `promptTimeout` if one is
-set. A **graceful** variant keeps waiting for the real answer:
+set.
+
+On a client, stop a prompt turn and still get the agent's answer (stop reason `cancelled`, with the
+turn's updates) with a `CancellationSignal`, as of 0.80.0:
 
 ```java
-client.prompt(new PromptRequest(sessionId, List.of(new TextContent("..."))))
-    .contextWrite(RequestCancellation.cancelWhen(someTrigger));
+CancellationSignal stop = new CancellationSignal();
+Mono<PromptResponse> response = client.prompt(request, stop);
+// later, from any thread:
+stop.cancel();
 ```
+
+`AcpSyncClient.prompt(request, stop)` takes the same signal, blocking. Calling `stop.cancel()` after
+the answer already arrived sends nothing. This replaces the only other way to do this before 0.80.0,
+`contextWrite(RequestCancellation.cancelWhen(trigger))`, which no completion menu offered and the sync
+client couldn't use at all:
+
+```java
+// Before 0.80.0, async only
+client.prompt(request).contextWrite(RequestCancellation.cancelWhen(someTrigger));
+```
+
+`RequestCancellation`/`contextWrite` still exists, for `$/cancel_request` on any other request type
+(not a prompt), where a `CancellationSignal` parameter isn't offered.
 
 ```java
 client.cancel(new CancelNotification(sessionId));  // session/cancel, the prompt-turn cancel

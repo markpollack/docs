@@ -161,7 +161,7 @@ each:
 |---|---|---|
 | Plain Java (no framework) | One port, the SDK's own server | n/a |
 | Quarkus | Quarkus's own HTTP port, alongside the app's routes | Same port |
-| Micronaut | A second port (`acp.agent.transport.http.port`) | Micronaut's own port (`micronaut.server.port`) |
+| Micronaut | A second port (`acp.agent.transport.http.listener.port`) | Micronaut's own port (`micronaut.server.port`) |
 | Spring Boot, non-web application | One port, the SDK's own server | n/a |
 | Spring Boot, servlet web application | The app's own port, HTTP/SSE only (no WebSocket today) | Same port |
 
@@ -171,7 +171,7 @@ each:
   application's other routes. One server.
 - **Micronaut** keeps the application's own traffic on Micronaut's server
   (`micronaut.server.port`), while ACP over HTTP and WebSocket runs on a second port
-  (`acp.agent.transport.http.port`). Two servers in one JVM: two ports, and separate TLS, security and
+  (`acp.agent.transport.http.listener.port`). Two servers in one JVM: two ports, and separate TLS, security and
   metrics configuration for each.
 - **A Spring Boot web application** (a servlet container such as Tomcat) serves ACP over HTTP and SSE
   on the application's own port today, through the mounted servlet; there's no WebSocket upgrade in
@@ -194,7 +194,7 @@ wouldn't need a second port just for the WebSocket upgrade. Not available yet.
 **Safe by default.** The SDK's own listener binds `127.0.0.1` (and `::1` where available), not every
 interface, so only programs on the same machine can reach it unless you ask otherwise. To expose it,
 set the host explicitly: `spring.acp.agent.transport.http.listener.host` (Spring Boot), Micronaut's
-`acp.agent.transport.http.host`, or, in plain Java,
+`acp.agent.transport.http.listener.host`, or, in plain Java,
 `StreamableHttpAcpAgentTransportOptions.builder().host(...)`. Quarkus serves ACP on its own HTTP
 server, so it uses Quarkus's own `quarkus.http.host` instead.
 

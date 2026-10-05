@@ -354,16 +354,16 @@ rather than assume the session is already free.
 ### `$/cancel_request`, both directions
 
 Separately from `session/cancel`, a request whose caller gives up now tells the peer. Disposing a
-request's `Mono` before the response arrives, or its timeout firing (60s default on both sides as of
-api1; see below), sends `$/cancel_request {"requestId": ...}` to the peer once; a peer that honors it
+request's `Mono` before the response arrives, or its timeout firing (60s default on both sides), sends
+`$/cancel_request {"requestId": ...}` to the peer once; a peer that honors it
 answers `-32800` and the caller's `Mono` is cancelled at once regardless. Migration: raise
 `requestTimeout` for long prompts if the old behavior (agent keeps running after a client timeout)
 is load-bearing anywhere, since 0.80.0 now actually stops the work.
 
-## The fix4 batch: lifecycle renames, sync exceptions, timeouts, and more
+## Lifecycle renames, sync exceptions and timeouts
 
-A large, later batch of breaking changes, verified against the CHANGELOG at the exact commit that
-introduced them (`74fa003`), not just a relayed summary.
+Verified against the CHANGELOG at the exact commit that introduced these changes (`74fa003`), not
+just a relayed summary.
 
 ### Lifecycle names line up, and both sync facades close gracefully
 
@@ -398,9 +398,9 @@ you handled an interrupt. See [Errors](/docs/acp-java-sdk/errors) for the full e
 ### A client's prompt is no longer bounded by the request timeout {#prompt-no-longer-bounded-by-request-timeout}
 
 **Breaking (behavior):** a prompt's answer comes only at the end of its turn, so the request timeout
-(30 seconds by default on the client at the time this landed, in fix4; one default of 60 seconds
-everywhere came later, in api1, see below) used to cancel every turn that ran longer, sending the
-agent `$/cancel_request` and failing the call with a `TimeoutException`. `session/prompt` now waits for the
+(60 seconds by default, the same on every builder) used to cancel every turn that ran longer, sending
+the agent `$/cancel_request` and failing the call with a `TimeoutException`. `session/prompt` now
+waits for the
 end of the turn however long it takes; every other request keeps the request timeout. Migration: to
 keep a bound on turns, set `.promptTimeout(Duration.ofMinutes(10))` on the client builder (any
 positive duration; it fails the call with a `TimeoutException` and sends `$/cancel_request`, as
@@ -462,18 +462,17 @@ now see two more updates per call. `askPermission(action)` uses kind `other`; a 
 the old `edit` kind, call `askPermission(action, ToolKind.EDIT)`. Separately, `askChoice` used to parse
 the chosen option ID as an index and fail with `NumberFormatException` or
 `ArrayIndexOutOfBoundsException` on an unexpected answer; it now fails clearly, naming the ID (reason
-`unoffered-option`, as `AcpError` since api1, see below). Implementations of `PromptContext`/
-`SyncPromptContext` (test doubles) add the new `askPermission` overload.
+`unoffered-option`, as `AcpError`). Implementations of `PromptContext`/`SyncPromptContext` (test
+doubles) add the new `askPermission` overload.
 
-## The api1 batch: one error type, stricter client builders, and a few new conveniences
+## One error type and stricter client builders
 
-The next batch after fix4, verified against the CHANGELOG and the code at the commit that introduced
-it (`bc11736`).
+Verified against the CHANGELOG and the code at the commit that introduced these changes (`bc11736`).
 
 ### A caller catches one type, `AcpError`, for every failed request
 
-**Breaking:** the two-type split this guide and [Errors](/docs/acp-java-sdk/errors) described through
-fix4 (`AcpError` for a peer's own error; `AcpProtocolException` for the SDK's own local rejection of a
+**Breaking:** the two-type split this guide and [Errors](/docs/acp-java-sdk/errors) once described
+(`AcpError` for a peer's own error; `AcpProtocolException` for the SDK's own local rejection of a
 malformed response) collapses to one type a caller ever catches. A missing required field, a response
 with no result (reason `missing-result`), a result that can't be read as the method's type (reason
 `unreadable-result`), and `askChoice` answered with an option it never offered (reason
@@ -521,7 +520,7 @@ updating.
 
 ### Client builders reject a null, duplicate, or misdirected handler too
 
-**Breaking:** the same discipline fix4 added to the agent builders now applies to
+**Breaking:** the same discipline the agent builders already enforce now applies to
 `AcpClient.AsyncSpec`/`SyncSpec`. Registering a second handler for one method (a typed setter such as
 `readTextFileHandler` called twice, `requestHandler`/`notificationHandler` for a method that already
 has one, a raw handler and the typed setter for the same method) throws `IllegalStateException`
@@ -653,9 +652,10 @@ set.
 with the application's contexts propagated) instead of a second pool of the SDK's; nothing to
 configure. See [Quarkus: Where handlers run](/docs/acp-java-sdk/quarkus#where-handlers-run).
 
-## The fix5 batch: the errors page's final shape, interceptors, and a few more corrections
+## Errors, interceptors and build-time checks
 
-Verified against the CHANGELOG and the code at the commit that introduced it (`08732ad`). The caller
+Verified against the CHANGELOG and the code at the commit that introduced these changes (`08732ad`).
+The caller
 side of errors is now at its final shape, covered in full on [Errors](/docs/acp-java-sdk/errors); this
 section is the migration summary, not a restatement.
 
@@ -747,9 +747,9 @@ client configuration used to hard-code all three as not advertised. See
 Migration: a Micronaut client working around the gap with a customizer's
 `spec.clientCapabilities(...)` override can drop the workaround and use the properties instead.
 
-## The fix6 batch: cancellation no longer needs an explicit answer
+## Cancellation no longer needs an explicit answer
 
-Verified against the CHANGELOG and the code at the commit that introduced it (`2f75223`).
+Verified against the CHANGELOG and the code at the commit that introduced these changes (`2f75223`).
 
 - **A prompt answers `cancelled` once `session/cancel` was received, whatever the handler
   returns or throws.** Before, a handler that returned another stop reason within the grace period
@@ -775,10 +775,10 @@ Verified against the CHANGELOG and the code at the commit that introduced it (`2
   already advertises `terminal` consistently; code that relied on these four methods reaching the wire
   without the capability advertised needs to register the capability instead.
 
-## The B-items batch: client cancellation, agent-aware handlers, context.client(), one vocabulary for session updates, and capability builders
+## Client cancellation, agent-aware handlers, `context.client()` and capability builders
 
-Verified against the CHANGELOG and the code at the commit that landed it (`513f0ac`, and the seven
-commits immediately before it on the same branch).
+Verified against the CHANGELOG and the code at the commit that landed these changes (`513f0ac`, and
+the seven commits immediately before it on the same branch).
 
 ### Client-side prompt cancellation: `prompt(request, CancellationSignal)`
 

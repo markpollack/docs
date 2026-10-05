@@ -74,7 +74,7 @@ The prompt handler demonstrates each update type:
 ```
 
 <Note>
-As of the SDK's fix4 batch, `sendSessionUpdate(update)` takes no session ID: the context already belongs to
+As of 0.80.0, `sendSessionUpdate(update)` takes no session ID: the context already belongs to
 one prompt's session, so a separate ID was redundant (and a wrong one silently sent the update to
 another session). To update a *different* session from outside its own prompt handler, call
 `AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`) instead.

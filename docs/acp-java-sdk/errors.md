@@ -46,9 +46,9 @@ catch (AcpError e) {
 
 <Note>
 Some Javadoc on `AcpProtocolException` still shows it being caught after a client call, from before
-`AcpError` was split out as its own type ([CL 469]) and before api1 unified the SDK's own local
-rejections onto it too. A handler throwing `AcpProtocolException` is now the whole of that type's
-job: a caller never catches it, only the `AcpError` the SDK builds from it on the wire.
+0.80.0, when `AcpError` was split out as its own type and the SDK's own local rejections were unified
+onto it too. A handler throwing `AcpProtocolException` is now the whole of that type's job: a caller
+never catches it, only the `AcpError` the SDK builds from it on the wire.
 </Note>
 
 ## One base class for every one of these: `AcpException`
@@ -276,7 +276,7 @@ non-empty `additionalDirectories` when the agent doesn't advertise
 `sessionCapabilities.additionalDirectories`: check `getAgentCapabilities().supportsAdditionalDirectories()`
 before naming any. An agent call works the same way in the other direction for a client capability the
 client didn't advertise: `readTextFile`, `writeTextFile`, any of the five terminal methods (`create`,
-`output`, `waitForExit`, `kill`, and `release`, all checked as of 0.80.0's fix6, not only `create`), or
+`output`, `waitForExit`, `kill`, and `release`, all checked as of 0.80.0, not only `create`), or
 `createElicitation` for a mode the client didn't announce, covered on
 [Agent-to-Client Calls](/docs/acp-java-sdk/agent-to-client-calls) and
 [Elicitation](/docs/acp-java-sdk/elicitation).
@@ -296,8 +296,8 @@ client.newSession(new NewSessionRequest(cwd));   // fine
 ```
 
 Every `AcpAsyncClient`/`AcpSyncClient` call but `initialize` itself fails with `IllegalStateException`
-("Call initialize() first") until `initialize` has answered; before 0.80.0's api1 batch it was sent
-anyway, relying on the agent to reject it. The check runs when the call is subscribed, not when it's
+("Call initialize() first") until `initialize` has answered; before 0.80.0 it was sent anyway, relying
+on the agent to reject it. The check runs when the call is subscribed, not when it's
 built, so `client.initialize().then(client.newSession(request))` is fine without waiting for the
 first call to complete first. Extension calls (`sendExtRequest`, `sendExtNotification`) are outside
 ACP's lifecycle and skip both checks.

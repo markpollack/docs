@@ -66,7 +66,7 @@ wait-then-release flow.
 
 All five terminal methods check `NegotiatedCapabilities.supportsTerminal()` before calling, not only
 `createTerminal`: calling any of them without the capability throws `AcpCapabilityException` locally,
-before anything is sent. Before 0.80.0's fix6, only `createTerminal` was checked, so a terminal id from
+before anything is sent. Before 0.80.0, only `createTerminal` was checked, so a terminal id from
 a connection where the client *did* advertise `terminal` could reach `waitForTerminalExit`,
 `getTerminalOutput`, `releaseTerminal`, or `killTerminal` on a different connection that never
 advertised it.

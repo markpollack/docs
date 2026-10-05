@@ -176,6 +176,19 @@ was actually bound. `StreamableHttpAcpClientTransportOptions.maxSseStreams` defa
 open session, plus the connection stream); raise it if a single client holds many sessions open at
 once.
 
+An ACP WebSocket is a long-lived session, not an ordinary HTTP connection: it can legitimately sit
+quiet while a person thinks or an agent works, so ACP gives it its own idle timeout rather than
+reusing whatever a framework tunes for short-lived keep-alive connections, which would otherwise close
+real work mid-session. Every WebSocket host (the servlet, the standalone listener, WebFlux, and
+Quarkus) closes an idle connection after 30 minutes by default with code `1001`, set with
+`StreamableHttpAcpAgentTransportOptions.builder().webSocketIdleTimeout(Duration)`; the framework's own
+idle setting may also apply.
+
+A connection that never sends `initialize` is a different problem, not legitimate idling but an
+abandoned handshake, so it closes much sooner: 30 seconds by default, with code `1008`
+(`.initializeTimeout(Duration)`). The same timeout bounds a POST `initialize` the agent hasn't
+answered yet, which gets `500` instead.
+
 ### Running on your own executor
 
 `StreamableHttpAcpClientTransportOptions.builder().executor(Executor)`,
@@ -298,6 +311,11 @@ Two things still bypass this by design:
   past `maxPendingSseEvents`, and a WebSocket connection past `maxWebSocketPendingFrames` (1024
   each, by default). Bounded outbound queues on the stdio transports and the WebSocket client are
   planned for 0.81.0.
+- **Jetty as a WebFlux server closes idle ACP WebSockets early.** Jetty's own connection idle timeout
+  (30 seconds by default) overrides ACP's own `web-socket-idle-timeout` (30 minutes by default) when
+  Jetty is the WebFlux server. Set `server.jetty.connection-idle-timeout` at least as long as ACP's
+  own setting, or use Reactor Netty, the default and recommended server for WebFlux. A fix is planned
+  for 0.80.1.
 
 ## Related
 

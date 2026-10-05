@@ -117,7 +117,10 @@ implements ACP? See [ACP Resources](/docs/acp-java-sdk/resources).
 - **[Terminal authentication and logout](/docs/acp-java-sdk/terminal-auth-and-logout)**: an agent can
   ask the client to run an interactive login, and advertise that it supports logging out.
 - **[Streamable HTTP and WebSocket](/docs/acp-java-sdk/transports)**: a graceful shutdown window and
-  clearer connection/session routing, on top of the remote-agent support described above.
+  clearer connection/session routing, on top of the remote-agent support described above. A WebSocket
+  session gets its own idle timeout (30 minutes by default) and `initialize` deadline (30 seconds),
+  the same on every host and configurable from your framework, so a quiet session isn't cut off by
+  ordinary HTTP keep-alive tuning and an abandoned connection doesn't leak.
 - **[Forward compatibility and `_meta`](/docs/acp-java-sdk/forward-compatibility)**: former enums
   (`StopReason`, `ToolCallStatus`, and others) are open value types, several unions gained explicit
   `Unknown*` fallback variants, and every schema record carries `_meta`.

@@ -143,6 +143,8 @@ running alongside it.
 | `spring.acp.agent.transport.http.mailbox-capacity` | `1024` | Events kept per outbound stream while no subscriber is attached |
 | `spring.acp.agent.transport.http.max-pending-sse-events` | `1024` | Events queued for one SSE subscriber before it is closed |
 | `spring.acp.agent.transport.http.max-web-socket-pending-frames` | `1024` | Frames queued for one WebSocket connection before it is closed |
+| `spring.acp.agent.transport.http.web-socket-idle-timeout` | `30m` | How long a WebSocket may pass no frame in either direction before it's closed (`1001`) |
+| `spring.acp.agent.transport.http.initialize-timeout` | `30s` | How long a connection has to send `initialize`: a WebSocket that hasn't is closed (`1008`); a POST `initialize` the agent hasn't answered by then gets `500` |
 | `spring.acp.agent.transport.http.max-provisional-sessions` | `64` | Session streams a connection may open before the session is known |
 | `spring.acp.agent.transport.http.shutdown-timeout` | `5s` | How long closing the endpoint waits for connections to close gracefully |
 | `spring.acp.agent.transport.http.allowed-origins` | none | Browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake |
@@ -240,10 +242,17 @@ On Reactor Netty, an oversized WebSocket message is the endpoint's own limit to 
 first (8 KB on Tomcat, 64 KB on Jetty), so a larger message closes there instead. Use Reactor Netty, or
 a servlet application, for large WebSocket messages.
 
+Only ACP's own `web-socket-idle-timeout` applies in servlet mode, and in reactive mode on Reactor
+Netty (the default and recommended server for WebFlux): the framework's own idle-timeout setting
+doesn't reach the upgraded socket.
+
 <Note>
-**Known limit**: the servlet host closes an idle WebSocket connection after 30 minutes; the reactive
-host sets no idle timeout on a Netty WebSocket connection at all. A client that neither sends nor is
-sent anything can hold the connection open indefinitely in reactive mode.
+**Known issue (0.80.0): Jetty as a WebFlux server closes idle ACP WebSockets early.** Jetty's own
+connection idle timeout (30 seconds by default) closes an ACP WebSocket after 30 seconds of no
+traffic, overriding ACP's own `web-socket-idle-timeout` (30 minutes by default). Set
+`server.jetty.connection-idle-timeout` at least as long as
+`spring.acp.agent.transport.http.web-socket-idle-timeout` (for example `30m`), or use Reactor Netty,
+the default and recommended server for WebFlux. A fix is planned for 0.80.1.
 </Note>
 
 A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp` for

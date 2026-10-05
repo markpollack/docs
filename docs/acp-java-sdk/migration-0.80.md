@@ -985,11 +985,6 @@ endpoint; and the application's `http.server.requests` observations cover it. **
 a reactive (WebFlux) one adds `acp-http-webflux`; an application without a web server adds
 `acp-streamable-http-jetty`. The starter itself brings none of them.
 
-**Known limit: no idle timeout on a Netty WebSocket connection.** The servlet host closes an idle
-WebSocket connection after 30 minutes; the reactive host sets no idle timeout on the underlying
-WebSocket session at all, so a client that neither sends nor is sent anything can hold the connection
-open indefinitely.
-
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -1084,6 +1079,10 @@ old behavior should be revisited.
   identifies the problem (the field at fault; scheme, host, port and path; the error code and the
   SDK's description of it), with the peer's own text, where it's logged at all, at DEBUG. See
   [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data).
+- **A WebSocket that never sends `initialize` is now closed after 30 seconds (1008).** Nothing
+  enforced this before; the only thing that eventually caught a silent connection was the (also new)
+  idle timeout. A POST `initialize` the agent hasn't answered within the same window now gets `500`
+  too, replacing what used to be a fixed, unconfigurable 30 seconds.
 
 ## What you may have to change: a quick checklist
 

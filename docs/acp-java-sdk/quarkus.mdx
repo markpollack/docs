@@ -142,11 +142,8 @@ win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.ma
 `max-frame-size` to 16 MiB, and `quarkus.http.limits.max-concurrent-streams=1024` (each SSE stream is
 one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MiB.
 
-<Note>
-**Known limit.** Quarkus's own WebSocket connections have no idle timeout, the same gap as Spring
-Boot's reactive (WebFlux) host; a client that neither sends nor is sent anything can hold the
-connection open indefinitely.
-</Note>
+Quarkus's own `quarkus.http.idle-timeout` (30 minutes by default) also closes idle ACP WebSockets; the
+shorter of it and `quarkus.acp.agent.transport.http.web-socket-idle-timeout` wins.
 
 ## Native integration, not a bolt-on
 
@@ -220,6 +217,8 @@ Run time:
 | `quarkus.acp.agent.transport.http.mailbox-capacity` | `1024` | |
 | `quarkus.acp.agent.transport.http.max-pending-sse-events` | `1024` | |
 | `quarkus.acp.agent.transport.http.max-web-socket-pending-frames` | `1024` | |
+| `quarkus.acp.agent.transport.http.web-socket-idle-timeout` | `30m` | How long a WebSocket may pass no frame in either direction before it's closed (`1001`) |
+| `quarkus.acp.agent.transport.http.initialize-timeout` | `30s` | How long a connection has to send `initialize`: a WebSocket that hasn't is closed (`1008`); a POST `initialize` the agent hasn't answered by then gets `500` |
 | `quarkus.acp.agent.transport.http.max-provisional-sessions` | `64` | |
 | `quarkus.acp.agent.transport.http.shutdown-timeout` | `5s` | |
 | `quarkus.acp.client.request-timeout` | SDK default | |

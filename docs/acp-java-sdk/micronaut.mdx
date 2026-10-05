@@ -145,11 +145,16 @@ Micronaut's own server, so that configuration applies automatically, is planned 
 | `acp.agent.transport.http.mailbox-capacity` | SDK default | events kept per outbound stream while no subscriber is attached |
 | `acp.agent.transport.http.max-pending-sse-events` | SDK default | events queued for one SSE subscriber before it is closed |
 | `acp.agent.transport.http.max-web-socket-pending-frames` | SDK default | frames queued for one WebSocket connection before it is closed |
+| `acp.agent.transport.http.web-socket-idle-timeout` | SDK default (30m) | how long a WebSocket may pass no frame in either direction before it's closed (`1001`) |
+| `acp.agent.transport.http.initialize-timeout` | SDK default (30s) | how long a connection has to send `initialize`: a WebSocket that hasn't is closed (`1008`); a POST `initialize` the agent hasn't answered by then gets `500` |
 | `acp.agent.transport.http.max-provisional-sessions` | SDK default | session streams a connection may open before the session is known |
 | `acp.agent.transport.http.shutdown-timeout` | SDK default | how long closing the listener waits for connected agents, before closing the rest at once; not a stdio agent, which uses `acp.agent.shutdown-timeout` above instead |
 | `acp.agent.transport.http.listener.host` | unset (loopback only: `127.0.0.1` and `::1`) | address the listener binds; `0.0.0.0` exposes it on every interface, an explicit opt-in (the listener has no authentication of its own) |
 | `acp.agent.transport.http.listener.port` | `8080` | the listener's own port; `0` for an ephemeral one (read back with `AcpAgentRuntime.port()`) |
 | `acp.agent.transport.http.listener.max-concurrent-streams-per-connection` | SDK default (1024) | HTTP/2 streams one client connection may hold open |
+
+Only ACP's own `web-socket-idle-timeout` applies; the listener's own idle-timeout setting doesn't
+reach the upgraded socket.
 
 ## A client, from configuration
 

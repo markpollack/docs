@@ -133,7 +133,9 @@ handshake included.
 Each connection runs its own agent runtime over the one bean, so its handlers must be thread-safe,
 same as the other two integrations. On shutdown the endpoint drains first, within
 `quarkus.acp.agent.transport.http.shutdown-timeout`: each open SSE stream gets a closing comment and
-completes, and each WebSocket closes with `1001`.
+completes, and each WebSocket closes with `1001`, the drain waiting for the close frame to actually go
+out before reporting that connection closed. A client that never answers holds the shutdown no longer
+than the timeout, after which it's logged at WARN and closed at once.
 
 An HTTP build raises these Quarkus defaults to what the SDK's listener admits (your own settings
 win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.max-message-size` and

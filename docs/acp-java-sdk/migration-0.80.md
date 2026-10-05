@@ -920,6 +920,13 @@ treated `1000` as the server's shutdown signal should treat `1001` the same way.
 (`: shutting down`) before completing it, and closes each WebSocket with `1001`, so a framework's
 graceful shutdown phase never waits on them. **Migration**: none.
 
+**Fixed: a WebSocket client reliably sees `1001`, not a dropped connection (`1006`).** On Jetty (the
+standalone listener, and a servlet on Jetty), the close frame is sent asynchronously; shutdown used to
+complete once the agents had closed, and Jetty was then stopped before the frame went out. The drain
+now waits for each WebSocket's close to actually go out, on every host, bounded by the shutdown
+timeout: a client that never answers the close holds shutdown no longer than that, after which it's
+logged at WARN and closed at once. **Migration**: none.
+
 **SSE responses carry `X-Accel-Buffering: no`**, alongside the existing `Cache-Control: no-cache`, so
 nginx and similar reverse proxies don't buffer them. **Migration**: none.
 
@@ -927,7 +934,10 @@ nginx and similar reverse proxies don't buffer them. **Migration**: none.
 would implement (`AcpHttpExchange`, `AcpHttpReply`, `SseFrame`, `AcpWsHandshake`, `AcpWsOutbound`,
 `AcpWsHandler`), all in `acp-http-core`, may change in any minor release. Most applications use the
 hosts the SDK ships (the servlet, the listener, Spring MVC's auto-configuration) and never touch these
-types directly.
+types directly. `AcpWsOutbound.close` now returns `CompletionStage<Void>`, completing once the close
+frame has gone out or the socket has closed, instead of `void`: a custom host returns its container's
+own close signal (WebFlux's `session.close`, Vert.x's `ServerWebSocket.close`) or one that completes
+when the container reports the socket closed (Jakarta's `Endpoint.onClose`).
 
 ## Quarkus serves ACP on a Vert.x route, without a servlet
 
@@ -1239,3 +1249,9 @@ old behavior should be revisited.
 61. If any test or workaround relied on `spring.acp.agent.transport.type=http` failing the startup in
     a WebFlux application with "WebFlux is not supported," drop it: that failure is gone, replaced by
     the endpoint actually serving the agent (given the new module above).
+62. If a WebSocket client (or a test) saw close code `1006` instead of `1001` from a Jetty-hosted
+    agent's graceful shutdown (the standalone listener, or a servlet on Jetty), that was the bug: it
+    reliably gets `1001` now.
+63. If a custom host of `AcpHttpEndpoint` implements `AcpWsOutbound`, update `close` to return
+    `CompletionStage<Void>` instead of `void`, completing once the close frame has gone out or the
+    socket has closed.

@@ -154,7 +154,10 @@ Closing the servlet (`destroy()`, `closeGracefully()`) or the standalone listene
 finish, then closes everything else at once; an `initialize` still in flight when shutdown starts is
 answered `503` immediately. Every open stream is drained first: an SSE stream gets a closing comment
 (`: shutting down`) before it completes, and a WebSocket closes with code `1001` (going away), not
-`1000`, so a client distinguishing a normal close from a server shutdown sees the right one.
+`1000`, so a client distinguishing a normal close from a server shutdown sees the right one. The drain
+waits for each WebSocket's close frame to actually go out, on every host, not just for the agent to
+close: a client that never answers the close holds graceful shutdown no longer than the shutdown
+timeout, after which it's logged at WARN and closed at once.
 
 SSE responses also carry `Cache-Control: no-cache` and `X-Accel-Buffering: no`, so nginx and similar
 reverse proxies don't buffer them; `text/event-stream` is excluded from Spring Boot's own response

@@ -35,8 +35,8 @@ or DNS rebinding). Every host now checks the `Origin` header, on HTTP requests a
 handshake: a request with no `Origin` header (any non-browser client, including this SDK's own client
 and most IDEs) is served, and so is one from `http(s)://localhost`, `127.0.0.1`, or `[::1]` on any
 port; any other origin gets 403 unless it's explicitly listed. The rule is in the shared endpoint
-code, so the servlet, the SDK's own listener (HTTP and WebSocket), and Quarkus (its servlet and
-WebSocket route) all apply it. New:
+code, so the servlet, the SDK's own listener (HTTP and WebSocket), and Quarkus's own Vert.x route all
+apply it. New:
 `StreamableHttpAcpAgentTransportOptions.Builder.allowedOrigins(Collection<String>)` (`*` allows any
 origin, which disables the protection) and `isOriginAllowed(String)`;
 `spring.acp.agent.transport.http.allowed-origins`, `acp.agent.transport.http.allowed-origins`
@@ -924,6 +924,26 @@ would implement (`AcpHttpExchange`, `AcpHttpReply`, `SseFrame`, `AcpWsHandshake`
 hosts the SDK ships (the servlet, the listener, Spring MVC's auto-configuration) and never touch these
 types directly.
 
+## Quarkus serves ACP on a Vert.x route, without a servlet
+
+Verified against the CHANGELOG and the code at the commit that landed it (`ecedfd3`).
+
+**Breaking: the extension depends on `quarkus-vertx-http` instead of `quarkus-undertow`.** It mounts
+the SDK's `AcpHttpEndpoint` on the Quarkus router through a host of its own (`AcpVertxHost`); the
+servlet and the separate WebSocket route it used before (`AcpHttpServlet`, `AcpWebSocketRoute`,
+`VertxWebSocketConnection`, and the runtime bean named `AcpHttpEndpoint`) are gone. **Migration**: the
+endpoint's path is now under `quarkus.http.root-path`, no longer under
+`quarkus.servlet.context-path`; an application that relied on `acp-quarkus` to bring in
+`quarkus-undertow` transitively adds that dependency itself.
+
+**Security: HTTP security policies now apply to the WebSocket handshake too.** The extension's
+WebSocket route used to run ahead of Quarkus's own authentication and permission checks (registered
+at order `Integer.MIN_VALUE`), so an unauthenticated client could be upgraded (`101`) on a path
+`quarkus.http.auth.permission` protected, instead of being refused (`401`). The endpoint is now one
+Vert.x route in the router's ordinary order, behind those checks, for HTTP and WebSocket alike.
+**Migration**: none to keep working; an application relying on the old, mistaken behavior (a
+WebSocket client reaching a protected path without authenticating) now gets `401` instead, correctly.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -1160,3 +1180,10 @@ old behavior should be revisited.
 56. If a Spring MVC application's own client connected with `transport.websocket.uri` and relied on it
     failing against the servlet-mounted agent, note that it now succeeds: the servlet serves WebSocket
     too, as of this release.
+57. If a Quarkus application relied on `acp-quarkus` to pull in `quarkus-undertow` transitively, add
+    that dependency directly.
+58. If a Quarkus application's path assumed `quarkus.servlet.context-path`, use
+    `quarkus.http.root-path` instead.
+59. If a Quarkus application's own client (or test) connected to `/acp` over WebSocket without
+    authenticating and expected it to succeed on a path `quarkus.http.auth.permission` protects,
+    expect `401` now instead of a successful upgrade.

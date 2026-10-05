@@ -122,14 +122,18 @@ quarkus.acp.agent.transport.type=http
 quarkus.acp.agent.transport.http.path=/acp
 ```
 
-The agent is served directly on **Quarkus's own HTTP server**, on `quarkus.http.port`: Streamable HTTP
-and the WebSocket upgrade on the same path. There's no second server to run or port to open; unlike
+The agent is served directly on **Quarkus's own HTTP server**, on `quarkus.http.port` (under
+`quarkus.http.root-path`): Streamable HTTP, SSE and the WebSocket upgrade, all on one Vert.x route of
+the Quarkus router, with no servlet container and no second server to run or port to open; unlike
 [Micronaut](/docs/acp-java-sdk/micronaut) and [Spring Boot](/docs/acp-java-sdk/autoconfig) in their
-non-web mode, which each open a standalone listener of their own.
+non-web mode, which each open a standalone listener of their own. The route sits behind Quarkus's own
+authentication and permission checks, so HTTP security policies apply to `/acp`, the WebSocket
+handshake included.
 
 Each connection runs its own agent runtime over the one bean, so its handlers must be thread-safe,
-same as the other two integrations. On shutdown, every connection closes first, within
-`quarkus.acp.agent.transport.http.shutdown-timeout`.
+same as the other two integrations. On shutdown the endpoint drains first, within
+`quarkus.acp.agent.transport.http.shutdown-timeout`: each open SSE stream gets a closing comment and
+completes, and each WebSocket closes with `1001`.
 
 An HTTP build raises these Quarkus defaults to what the SDK's listener admits (your own settings
 win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.max-message-size` and
@@ -137,11 +141,6 @@ win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.ma
 one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MB.
 
 ## Native integration, not a bolt-on
-
-<Note>
-**Pending confirmation.** Expected to hold once the SDK's own hosts and tests land; not yet
-independently verified for this integration.
-</Note>
 
 The agent is served on Quarkus's own HTTP server: one server, one port, one TLS setup, one lifecycle
 that starts and stops with the application, one place for metrics and logs, and Quarkus's own threads.
@@ -152,7 +151,9 @@ There's nothing ACP-specific to configure alongside what the application already
 Most ACP use (an IDE talking stdio, a handful of local sessions) needs no security configuration at
 all. If you do expose the agent remotely, it's served behind Quarkus's own request handling, so
 ordinary Quarkus HTTP security policies and `@RolesAllowed` apply to `/acp` the same as any other
-endpoint. Restricting the ACP endpoint to a role, for example:
+endpoint, the WebSocket handshake included. Proven by the SDK's own test: an unauthenticated request
+gets 401 on HTTP and on the WebSocket handshake, an authenticated one gets 200/101, same as any other
+secured endpoint. Restricting the ACP endpoint to a role, for example:
 
 ```properties
 quarkus.http.auth.policy.acp-policy.roles-allowed=agent-client
@@ -194,7 +195,7 @@ Build time (fixed when the application is built):
 |---|---|---|
 | `quarkus.acp.agent.enabled` | `true` | serve the `@AcpAgent` bean; off, it's an ordinary CDI bean, no agent transport starts, and a second `@AcpAgent` class is no longer a build error |
 | `quarkus.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same: Streamable HTTP and WebSocket on the Quarkus HTTP server) |
-| `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket), relative to `quarkus.servlet.context-path` |
+| `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket), relative to `quarkus.http.root-path` |
 | `quarkus.acp.agent.transport.http.allowed-origins` | none | browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake. There's no separate host property: the agent is served on Quarkus's own HTTP server, so it keeps Quarkus's own `quarkus.http.host` |
 
 Run time:

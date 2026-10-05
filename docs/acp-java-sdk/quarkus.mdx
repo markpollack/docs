@@ -141,11 +141,9 @@ win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.ma
 one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MiB.
 
 <Note>
-**Known limits.** Quarkus's own WebSocket connections have no idle timeout, the same gap as Spring
+**Known limit.** Quarkus's own WebSocket connections have no idle timeout, the same gap as Spring
 Boot's reactive (WebFlux) host; a client that neither sends nor is sent anything can hold the
-connection open indefinitely. Quarkus/Vert.x's own WebSocket message limit can also apply before the
-raise above does, the same risk as Tomcat or Jetty hosting a WebFlux application; verify the limit
-that's actually in force for your build rather than assuming the raised value applies.
+connection open indefinitely.
 </Note>
 
 ## Native integration, not a bolt-on
@@ -261,6 +259,14 @@ later (it falls back to `managed` on earlier JDKs). Virtual threads keep the Ver
 submitting thread, but propagate no MicroProfile Context Propagation context: a handler gets no CDI
 request context of its own unless the method carries `@ActivateRequestContext`, and no security
 identity, transaction, or tracing context captured from the submitting thread.
+
+## Logging and sensitive data
+
+See [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data)
+for what the SDK logs at each level. Without a session-update handler of your own, session updates
+are logged at DEBUG, content included. A stdio agent's standard error is logged at INFO, unfiltered,
+on `com.agentclientprotocol.sdk.client.transport.agent-stderr`; silence it with
+`quarkus.log.category."com.agentclientprotocol.sdk.client.transport.agent-stderr".level=WARN`.
 
 ## Related
 

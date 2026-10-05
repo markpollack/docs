@@ -252,6 +252,27 @@ localhost origins are always allowed. To allow a browser application, list its o
 - Shutdown closes open streams promptly.
 </Tip>
 
+## Logging and sensitive data
+
+At INFO and above, the SDK logs no message content. A malformed message that fails validation is
+refused with an exception naming only the field at fault, never the message text; the WebSocket
+client logs its endpoint as scheme, host, port and path, never the query string (which can carry an
+access token) or user information (which can carry a password); and a peer's error answer is logged
+at WARN by its code and the SDK's own description of it (`-32603 Internal error`), with the peer's
+own message and data logged at DEBUG only, since that text is the peer's, not the SDK's.
+
+Two things still bypass this by design:
+
+- **The agent's standard error.** `StdioAcpClientTransport` logs every line a stdio agent writes to
+  standard error at INFO, unfiltered, on `com.agentclientprotocol.sdk.client.transport.agent-stderr`:
+  an agent's own diagnostics can carry sensitive data (paths, prompts, account details). Silence it
+  by setting that logger's level to `WARN` or `OFF`, or route the lines yourself with
+  `setStdErrorHandler`.
+- **DEBUG and TRACE.** Below INFO, loggers under `com.agentclientprotocol.sdk` log message payloads
+  in full: the stdio client's sent and received lines, session messages, and the session updates the
+  framework integrations log by default when no update handler of your own is registered. Don't
+  enable DEBUG or TRACE on this package where logs are shipped or retained.
+
 ## Not yet supported in 0.80.0
 
 - **WebSocket mounted on Micronaut's own server.** Still a second port; see

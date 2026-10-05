@@ -354,6 +354,14 @@ would cap the prompts served at once, so the SDK's own pool (see
 [Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)) stays the default
 instead; name the bean explicitly to use it anyway.
 
+## Logging and sensitive data
+
+See [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data)
+for what the SDK logs at each level. Without a session-update handler of your own, session updates
+are logged at DEBUG, content included. A stdio agent's standard error is logged at INFO, unfiltered,
+on `com.agentclientprotocol.sdk.client.transport.agent-stderr`; silence it with
+`logging.level.com.agentclientprotocol.sdk.client.transport.agent-stderr=WARN`.
+
 ## Overriding Beans
 
 All auto-configured beans back off when you provide your own. Define a custom `AcpClientTransport`, `AcpSyncClient`, `AcpAsyncClient`, `AcpAgentTransport`, `AcpAgentFactory`, `StreamableHttpAcpAgentTransport`, or `acpServletRegistration` bean and the autoconfiguration will use yours instead.

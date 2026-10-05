@@ -1067,6 +1067,13 @@ old behavior should be revisited.
   but not when the prompt was cancelled (the `session/cancel` grace period, `maxPromptDuration`, or
   `$/cancel_request`) while waiting in `terminal/wait_for_exit`, leaving the client holding a terminal
   the agent would never ask about again. It now sends `terminal/release` exactly once on every path.
+- **At INFO and above, the SDK logs no message content.** Three gaps closed: a malformed message
+  that failed validation used to be quoted in full by the exception every transport logs; the
+  WebSocket client used to log its endpoint's full URI, query string and user information included;
+  and a peer's error answer used to log its message and data at WARN. All three now log only what
+  identifies the problem (the field at fault; scheme, host, port and path; the error code and the
+  SDK's description of it), with the peer's own text, where it's logged at all, at DEBUG. See
+  [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data).
 
 ## What you may have to change: a quick checklist
 

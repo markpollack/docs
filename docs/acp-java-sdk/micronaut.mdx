@@ -213,6 +213,14 @@ automatic, not a property: there's no configuration to point handlers at a diffe
 particular not at Micronaut's `TaskExecutors.BLOCKING` (the I/O pool), whose non-daemon threads would
 keep a stdio application's process alive past the point its context closes.
 
+## Logging and sensitive data
+
+See [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data)
+for what the SDK logs at each level. Without a session-update handler of your own, session updates
+are logged at DEBUG, content included. A stdio agent's standard error is logged at INFO, unfiltered,
+on `com.agentclientprotocol.sdk.client.transport.agent-stderr`; set that logger to `WARN` in your
+`logback.xml` to silence it.
+
 ## Dependencies
 
 The Micronaut modules import the Micronaut 4.10 platform BOM; the SDK's own Reactor, Jackson, Jetty,

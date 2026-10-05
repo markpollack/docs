@@ -86,7 +86,7 @@ Setting `spring.acp.client.transport.http.uri` creates the SDK's `StreamableHttp
 @Bean
 AcpClientCustomizer printAndServeFiles() {
     return spec -> spec
-            .sessionUpdateConsumer(notification -> {
+            .sessionUpdateHandler(notification -> {
                 if (notification.update() instanceof AcpSchema.AgentMessageChunk msg
                         && msg.content() instanceof AcpSchema.TextContent text) {
                     System.out.println("agent: " + text.text());
@@ -104,7 +104,7 @@ AcpClientCustomizer printAndServeFiles() {
 }
 ```
 
-`AcpClientCustomizer` is a framework-neutral type, `com.agentclientprotocol.sdk.integration.AcpClientCustomizer`, the same one Micronaut and Quarkus build their own customizers against. Every bean of it is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. A `sessionUpdateConsumer` registered this way **replaces** the autoconfiguration's own default, which only logs each update at DEBUG; it doesn't run alongside it. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it; a handler registered for a capability the client doesn't advertise also logs one WARN at startup, since an SDK agent will never call it.
+`AcpClientCustomizer` is a framework-neutral type, `com.agentclientprotocol.sdk.integration.AcpClientCustomizer`, the same one Micronaut and Quarkus build their own customizers against. Every bean of it is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. A `sessionUpdateHandler` registered this way **replaces** the autoconfiguration's own default, which only logs each update at DEBUG; it doesn't run alongside it. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it; a handler registered for a capability the client doesn't advertise also logs one WARN at startup, since an SDK agent will never call it.
 
 ### A WebSocket client, the same way
 

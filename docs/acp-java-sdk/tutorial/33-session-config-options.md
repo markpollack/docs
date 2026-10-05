@@ -94,9 +94,9 @@ method's own job, the same as with the raw request.
 
 ```java
 AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
-    .newSessionHandler(req -> {
+    .newSessionHandler((req, self) -> {
         String sessionId = UUID.randomUUID().toString();
-        boolean booleans = self.get().getClientCapabilities().supportsBooleanConfigOptions();
+        boolean booleans = self.getClientCapabilities().supportsBooleanConfigOptions();
         List<AcpSchema.SessionConfigOption> options = settings.open(sessionId, booleans);
         // (sessionId, modes, configOptions): both, during the modes-to-config-options transition
         return new AcpSchema.NewSessionResponse(sessionId, settings.modes(sessionId), options);
@@ -113,7 +113,7 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
         List<AcpSchema.SessionConfigOption> changed = settings.fallBackIfRateLimited(ctx.getSessionId());
         if (changed != null) {
             // The agent changed a setting on its own: tell the client, with the full list.
-            ctx.sendUpdate(new AcpSchema.ConfigOptionUpdate(changed));
+            ctx.sendSessionUpdate(new AcpSchema.ConfigOptionUpdate(changed));
         }
         ctx.sendMessage(settings.answer(ctx.getSessionId(), "builder agent"));
         return AcpSchema.PromptResponse.endTurn();
@@ -121,7 +121,7 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
     .build();
 ```
 
-A builder handler other than the prompt handler receives only its request, so `session/new` reaches the client's capabilities through the built agent (`self.get().getClientCapabilities()`), instead of a parameter.
+As of 0.80.0, a builder handler other than the prompt handler can take the agent as a second parameter, `(req, self) -> ...`, so `session/new` reads the client's capabilities straight off `self.getClientCapabilities()`, with no `AtomicReference` needed to reach the agent `build()` is about to return.
 
 ### Rejecting a bad request
 
@@ -157,7 +157,7 @@ var capabilities = AcpSchema.ClientCapabilities.builder()
 
 AcpSyncClient client = AcpClient.sync(transport)
         .clientCapabilities(capabilities)
-        .sessionUpdateConsumer(ConfigOptionsDemo::printUpdate)
+        .sessionUpdateHandler(ConfigOptionsDemo::printUpdate)
         .build();
 
 client.initialize();

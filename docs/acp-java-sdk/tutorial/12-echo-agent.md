@@ -63,7 +63,7 @@ var params = AgentParameters.builder("java")
 var transport = new StdioAcpClientTransport(params);
 
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         if (notification.update() instanceof AgentMessageChunk msg) {
             System.out.println(((TextContent) msg.content()).text());
         }

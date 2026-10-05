@@ -23,12 +23,12 @@ AcpSyncAgent agent = AcpAgent.sync(pair.agentTransport())
     .promptHandler((req, ctx) -> {
         Object trace = req.meta() != null ? req.meta().get(TRACE_KEY) : null;
         // _meta on a session update: the record's last component.
-        ctx.sendUpdate(new AcpSchema.AgentMessageChunk("agent_message_chunk",
+        ctx.sendSessionUpdate(new AcpSchema.AgentMessageChunk("agent_message_chunk",
                 new AcpSchema.TextContent("the agent saw prompt _meta " + TRACE_KEY + "=" + trace), null,
                 Map.of(TRACE_KEY, trace)));
-        ctx.sendUpdate(new AcpSchema.UnknownSessionUpdate("usage_forecast",
+        ctx.sendSessionUpdate(new AcpSchema.UnknownSessionUpdate("usage_forecast",
                 Map.of("tokensLeft", 1200)));
-        ctx.sendUpdate(new AcpSchema.AgentMessageChunk(
+        ctx.sendSessionUpdate(new AcpSchema.AgentMessageChunk(
                 new AcpSchema.UnknownContentBlock("hologram", Map.of("frames", 3))));
         return new AcpSchema.PromptResponse(AcpSchema.StopReason.of("paused_for_review"),
                 Map.of(TRACE_KEY, trace));

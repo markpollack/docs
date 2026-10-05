@@ -76,11 +76,16 @@ A handler that ignores `session/cancel` entirely (`stubborn`, above) just keeps 
 
 ### Client: `session/cancel`
 
+As of 0.80.0, send the prompt with a `CancellationSignal` and call `stop.cancel()` from any thread:
+the client sends `session/cancel` for the prompt's session, once, and the prompt still returns the
+agent's answer.
+
 ```java
-CompletableFuture<PromptResponse> slow = client.prompt(prompt(sid, "#slow")).toFuture();
+CancellationSignal stop = new CancellationSignal();
+CompletableFuture<PromptResponse> slow = client.prompt(prompt(sid, "#slow"), stop).toFuture();
 // ...wait for a few ticks...
 
-client.cancel(new AcpSchema.CancelNotification(sid)).block();
+stop.cancel();
 
 try {
     client.prompt(prompt(sid, "ping")).block();  // sent before the cancelled turn answered

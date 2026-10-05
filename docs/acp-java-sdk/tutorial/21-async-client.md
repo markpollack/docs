@@ -14,7 +14,7 @@ The reactive, non-blocking version of Module 01.
 ```java
 // Build async client — note AcpAsyncClient return type
 AcpAsyncClient client = AcpClient.async(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         // Async consumer must return Mono<Void>
         var update = notification.update();
         if (update instanceof AgentMessageChunk msg) {

@@ -87,8 +87,8 @@ guarantees in-order dispatch, and TypeScript and Python make no connection-level
 assume it carries over to another SDK.
 
 The matching rule on the sending side: once a prompt has been answered, by its own handler or by the
-SDK itself (the cancel grace period or `maxPromptDuration` passed), a prompt context's `sendUpdate`
-(and the helpers built on it, such as `sendMessage`) silently drops anything sent afterward instead of
+SDK itself (the cancel grace period or `maxPromptDuration` passed), a prompt context's
+`sendSessionUpdate` (and the helpers built on it, such as `sendMessage`) silently drops anything sent afterward instead of
 sending it, since ACP requires every update to precede the answer. A handler racing its own return
 against a background task that also sends updates can no longer violate that ordering by accident.
 

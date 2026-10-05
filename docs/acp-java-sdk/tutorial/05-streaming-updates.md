@@ -4,7 +4,7 @@ Receive real-time updates from an agent while it processes your prompt.
 
 ## What You'll Learn
 
-- Registering a `sessionUpdateConsumer` on the client
+- Registering a `sessionUpdateHandler` on the client
 - Dispatching on `SessionUpdate` types with `instanceof`
 - Handling message chunks, thoughts, tool calls, and plans
 
@@ -14,7 +14,7 @@ The client registers an update consumer that receives each `SessionUpdate` as it
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         handleSessionUpdate(notification.update());
     })
     .build();

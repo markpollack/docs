@@ -5,7 +5,7 @@ Handle file read/write requests from agents on the client side.
 ## What You'll Learn
 
 - Registering `readTextFileHandler` and `writeTextFileHandler`
-- Advertising file system capabilities via `ClientCapabilities`
+- Advertising file system capabilities, derived from the handlers themselves
 - The inverted request flow: agents request, clients serve
 
 ## Inverted Request Flow
@@ -14,14 +14,14 @@ In ACP, the request direction is inverted for file operations compared to tradit
 
 ## The Code
 
-To enable this, the client registers file handlers on its builder and advertises file system capabilities on the same builder. When the agent calls `context.readFile()` or `context.writeFile()`, these handlers are invoked:
+To enable this, the client registers file handlers on its builder. As of 0.80.0, that's enough: the
+two handlers below are also what the client advertises, so `initialize()` sends `fs.readTextFile` and
+`fs.writeTextFile` because these handlers are registered, with no separate `clientCapabilities(..)`
+call needed. When the agent calls `context.readFile()` or `context.writeFile()`, these handlers are
+invoked:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read=true, write=true
-        false  // terminalExecution
-    ))
     .readTextFileHandler(req -> {
         Path path = Path.of(req.path());
         if (!Files.exists(path)) {
@@ -35,7 +35,7 @@ AcpSyncClient client = AcpClient.sync(transport)
         Files.writeString(Path.of(req.path()), req.content());
         return new WriteTextFileResponse();
     })
-    .sessionUpdateConsumer(notification -> { /* handle updates */ })
+    .sessionUpdateHandler(notification -> { /* handle updates */ })
     .build();
 
 client.initialize();

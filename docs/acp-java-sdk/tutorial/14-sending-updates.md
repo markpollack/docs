@@ -5,7 +5,7 @@ Send all types of session updates from an agent to its client.
 ## What You'll Learn
 
 - Convenience methods: `sendMessage()`, `sendThought()`
-- Full API: `sendUpdate()` for complex types (plans, tool calls, commands)
+- Full API: `sendSessionUpdate()` for complex types (plans, tool calls, commands)
 - All `SessionUpdate` types from the agent's perspective
 
 ## The Code
@@ -21,7 +21,7 @@ The prompt handler demonstrates each update type:
     // 2. Plan — show steps and progress (full API)
     // Short constructors drop the discriminator as of 0.80.0: it could only
     // ever be the variant's own name, so writing it was noise.
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new Plan(List.of(
             new PlanEntry("Analyze the prompt",
                 PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
@@ -32,7 +32,7 @@ The prompt handler demonstrates each update type:
         )));
 
     // 3. Tool Call — show tool execution starting
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new ToolCall("tool_call",
             "tool-1",
             "Analyzing prompt",   // title: what the user sees
@@ -42,14 +42,14 @@ The prompt handler demonstrates each update type:
             List.of(), null, null, null, null));
 
     // 4. Tool Call Update — show progress
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new ToolCallUpdateNotification("tool_call_update",
             "tool-1", "Analyzing prompt", "analyze_prompt", ToolKind.THINK,
             ToolCallStatus.COMPLETED,
             List.of(), null, null, null, null));
 
     // 5. Available Commands — advertise slash commands
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new AvailableCommandsUpdate(List.of(
             new AvailableCommand("help", "Show help",
                 new AvailableCommandInput("topic")),
@@ -57,11 +57,11 @@ The prompt handler demonstrates each update type:
         )));
 
     // 6. Mode Update — report current mode
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new CurrentModeUpdate("default"));
 
     // 7. Usage Update — report token usage and cost
-    context.sendUpdate(
+    context.sendSessionUpdate(
         new UsageUpdate(53000L, 200000L));
 
     // 8. Message chunks — the actual response (convenience method)
@@ -74,7 +74,7 @@ The prompt handler demonstrates each update type:
 ```
 
 <Note>
-As of the SDK's fix4 batch, `sendUpdate(update)` takes no session ID: the context already belongs to
+As of the SDK's fix4 batch, `sendSessionUpdate(update)` takes no session ID: the context already belongs to
 one prompt's session, so a separate ID was redundant (and a wrong one silently sent the update to
 another session). To update a *different* session from outside its own prompt handler, call
 `AcpAsyncAgent.sendSessionUpdate(sessionId, update)` (or `AcpSyncAgent.sendSessionUpdate`) instead.
@@ -88,9 +88,9 @@ another session). To update a *different* session from outside its own prompt ha
 |--------|-------|-------------|
 | `context.sendMessage(text)` | `AgentMessageChunk` | Response text |
 | `context.sendThought(text)` | `AgentThoughtChunk` | Thinking process |
-| `context.sendUpdate(update)` | Any `SessionUpdate` | Plans, tool calls, commands, modes |
+| `context.sendSessionUpdate(update)` | Any `SessionUpdate` | Plans, tool calls, commands, modes |
 
-Convenience methods handle wrapping in `TextContent` and setting the `type` field. Use `sendUpdate()` for complex types that need full control over their structure.
+Convenience methods handle wrapping in `TextContent` and setting the `type` field. Use `sendSessionUpdate()` for complex types that need full control over their structure.
 
 ## Source Code
 

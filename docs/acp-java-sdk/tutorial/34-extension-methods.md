@@ -101,7 +101,11 @@ AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, SyncPromptContext c
 }
 ```
 
-A builder agent reaches the built agent through an `AtomicReference` set right after `build()`; an annotated handler just takes `AcpSyncAgent` as a parameter, as shown here.
+A builder agent still reaches the built agent through an `AtomicReference` set right after `build()`
+for an extension method handler, even as of 0.80.0: the two-argument, agent-aware overload added for
+the typed builder setters (`.newSessionHandler((req, self) -> ...)`, and the rest) doesn't extend to
+`requestHandler`/`notificationHandler`, which is what a raw extension method registers through.
+An annotated handler just takes `AcpSyncAgent` as a parameter, as shown here, with no such gap.
 
 ### Client: serving the agent's calls, and calling back
 

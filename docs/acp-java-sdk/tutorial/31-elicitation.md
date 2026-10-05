@@ -4,21 +4,21 @@ An agent asks the user for structured input in the middle of a prompt, or sends 
 
 ## What You'll Learn
 
-- Sending an elicitation request from an agent with `createElicitation`
+- Sending an elicitation request from an agent through `context.client().createElicitation`
 - Building a form schema: text, single-select, multi-select, boolean, and integer fields
 - Handling accept, decline, and cancel responses in the agent
 - URL mode: no schema, no content in the answer, and a separate `elicitation/complete` notification when the out-of-band interaction finishes
-- Advertising elicitation support (`formOnly()`/`urlOnly()`/`formAndUrl()`) and answering requests on the client
+- Advertising elicitation support (`.elicitationForm()`/`.elicitationUrl()`) and answering requests on the client
 
 ## The Code
 
 ### Agent: ask for a form mid-prompt
 
-Elicitation is an agent-to-client request, so the prompt handler needs a reference to the agent. The async API makes the request-then-continue flow a `flatMap`:
+Elicitation is an agent-to-client request. As of 0.80.0 the prompt handler reaches it through
+`context.client()`, the raw ACP requests of the prompt's own session, so the agent needs no reference
+to itself. The async API makes the request-then-continue flow a `flatMap`:
 
 ```java
-AtomicReference<AcpAsyncAgent> agentRef = new AtomicReference<>();
-
 AcpAsyncAgent agent = AcpAgent.async(transport)
     .initializeHandler(req -> Mono.just(InitializeResponse.ok()))
     .newSessionHandler(req -> Mono.just(
@@ -44,7 +44,7 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
         // name and template are required
         var schema = new ElicitationSchema(fields, List.of("name", "template"));
 
-        return agentRef.get()
+        return context.client()
             .createElicitation(CreateElicitationRequest.form(
                 req.sessionId(), "Configure your new project:", schema))
             .flatMap(response -> {
@@ -65,7 +65,6 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
     })
     .build();
 
-agentRef.set(agent);
 agent.start().then(agent.awaitTermination()).block();
 ```
 
@@ -75,7 +74,7 @@ A form isn't the only kind of elicitation. In URL mode, the agent sends a link (
 
 ```java
 String elicitationId = "signin-" + UUID.randomUUID();
-return agentRef.get()
+return context.client()
     .createElicitation(CreateElicitationRequest.url(sessionId,
         "Sign in to the issue tracker to continue",
         elicitationId, "https://tracker.example.com/oauth/authorize?state=" + elicitationId))
@@ -86,7 +85,7 @@ return agentRef.get()
         }
         // ...the user signs in on that page (the agent learns of it out of band, e.g. an
         // OAuth callback). Then tell the client it is done:
-        return agentRef.get()
+        return context.client()
             .completeElicitation(new CompleteElicitationNotification(elicitationId))
             .then(context.sendMessage("Signed in; the sign-in page can be closed.\n"))
             .then(Mono.just(PromptResponse.endTurn()));
@@ -98,11 +97,13 @@ return agentRef.get()
 The client declares elicitation support in its capabilities and registers a handler. A real client shows the form to the user; the demo fills it in automatically:
 
 ```java
-// Advertise both elicitation modes this client handles: form and URL.
-// The agent may not request a mode the client did not advertise
-// (formOnly() / urlOnly() / formAndUrl()).
+// Advertise the elicitation modes this client handles: form and URL. The agent may not
+// request a mode the client did not advertise. A createElicitationHandler on its own
+// advertises form mode automatically (as of 0.80.0); URL mode has no handler of its own to
+// derive from, so it's set explicitly here, and explicit capabilities are sent as they are.
 var caps = ClientCapabilities.builder()
-    .elicitation(ElicitationCapabilities.formAndUrl())
+    .elicitationForm()
+    .elicitationUrl()
     .build();
 
 AcpSyncClient client = AcpClient.sync(transport)

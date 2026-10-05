@@ -47,7 +47,7 @@ agent.start().subscribe();
 AtomicReference<String> receivedMessage = new AtomicReference<>();
 
 AcpSyncClient client = AcpClient.sync(transportPair.clientTransport())
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         if (notification.update() instanceof AgentMessageChunk msg) {
             receivedMessage.set(((TextContent) msg.content()).text());
         }

@@ -12,7 +12,7 @@ Load and resume existing sessions.
 
 `loadSession()` tells the agent to resume a previously created session. The agent looks up its stored state for that session ID and restores the conversation context. Whether state actually persists depends on the agent implementation — the demo includes a `StatefulAgent` that stores session history in a `ConcurrentHashMap`.
 
-The client checks this locally before sending: calling `loadSession` on an agent whose `initialize` answer didn't advertise `loadSession` fails at once with `AcpCapabilityException`, without a request going out. `StatefulAgent` advertises it from its own `initializeHandler` (`new AgentCapabilities(true, new McpCapabilities(), new PromptCapabilities())`), which is why this example's call succeeds.
+The client checks this locally before sending: calling `loadSession` on an agent whose `initialize` answer didn't advertise `loadSession` fails at once with `AcpCapabilityException`, without a request going out. `StatefulAgent` advertises it from its own `initializeHandler` (`AgentCapabilities.builder().loadSession().build()`), which is why this example's call succeeds.
 
 ## The Code
 

@@ -4,36 +4,40 @@ Cancel an in-progress prompt from the client side.
 
 ## What You'll Learn
 
-- Sending `CancelNotification` to interrupt a running prompt
+- Stopping a prompt's turn with `prompt(request, CancellationSignal)` and `stop.cancel()`
 - Running prompts in background threads
 - How cancellation affects `StopReason`
 
 ## The Code
 
-```java
-// Run prompt in a background thread
-AtomicReference<PromptResponse> responseRef = new AtomicReference<>();
-CompletableFuture<Void> promptFuture = CompletableFuture.runAsync(() -> {
-    var response = client.prompt(new PromptRequest(
-        sessionId,
-        List.of(new TextContent("Do a long task"))));
-    responseRef.set(response);
-});
+As of 0.80.0, `prompt(request, stop)` takes a `CancellationSignal`: call `stop.cancel()`, from any
+thread, and the prompt still returns the agent's answer, so there's no `AtomicReference` needed to
+capture it from a background thread:
 
-// Wait, then cancel
+```java
+// Run prompt in a background thread, with a signal that can stop its turn
+CancellationSignal stop = new CancellationSignal();
+CompletableFuture<PromptResponse> answer = CompletableFuture.supplyAsync(() ->
+    client.prompt(new PromptRequest(
+        sessionId,
+        List.of(new TextContent("Do a long task"))), stop));
+
+// Wait, then cancel: the client sends session/cancel
 Thread.sleep(1500);
-client.cancel(new CancelNotification(sessionId));
+stop.cancel();
 
 // Wait for the cancelled prompt to answer: that ends the turn, and only
 // then may the client send another prompt on this session
-promptFuture.join();
-System.out.println("Stop reason: " + responseRef.get().stopReason());
+System.out.println("Stop reason: " + answer.join().stopReason());
 // Output: Stop reason: cancelled
 ```
 
+The raw `client.cancel(new CancelNotification(sessionId))` notification still exists underneath; the
+`CancellationSignal` above is the better way to reach it from `prompt(..)` directly.
+
 ## How It Works
 
-`client.cancel()` sends a one-way notification (not a request) to the agent. The agent's `cancelHandler` receives it and sets a flag. The prompt handler checks this flag between steps and stops early when cancelled.
+`stop.cancel()` sends the same one-way `session/cancel` notification to the agent as `client.cancel(..)` always did. The agent's `cancelHandler` receives it and sets a flag. The prompt handler checks this flag between steps and stops early when cancelled.
 
 **`session/cancel` does not end the prompt turn by itself.** The turn ends only when the agent answers the cancelled `session/prompt`, and ACP v1 requires that answer to carry stop reason `cancelled`. Until then the session is still busy: a new prompt sent on it is rejected with `-32600` (invalid request), the same as any prompt sent while another is already running. If a handler never answers, the SDK answers `cancelled` for it after a grace period (60 seconds by default, set with `cancelGracePeriod` on the agent builder).
 

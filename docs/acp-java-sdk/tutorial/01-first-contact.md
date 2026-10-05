@@ -6,7 +6,7 @@ Your first ACP client — launch an agent as a subprocess and send it a prompt.
 
 - How ACP communication works (subprocess + stdin/stdout JSON-RPC)
 - Configuring agent process parameters with `AgentParameters`
-- Registering a `sessionUpdateConsumer` to see the agent's response
+- Registering a `sessionUpdateHandler` to see the agent's response
 - The three-phase lifecycle: initialize → newSession → prompt
 
 ## Prerequisites
@@ -28,7 +28,7 @@ Your first ACP client — launch an agent as a subprocess and send it a prompt.
 
 The client launches `grok agent stdio` as a child process. `AgentParameters` builds the command line. `StdioAcpClientTransport` spawns the process and handles JSON-RPC message framing over its stdin/stdout.
 
-The `sessionUpdateConsumer` is how you see the agent's response. During `prompt()`, the agent streams back `AgentMessageChunk` updates containing the response text. Without a consumer, the prompt completes but you only get the stop reason — not the actual answer.
+The `sessionUpdateHandler` is how you see the agent's response. During `prompt()`, the agent streams back `AgentMessageChunk` updates containing the response text. Without a consumer, the prompt completes but you only get the stop reason — not the actual answer.
 
 From there, ACP follows a three-phase lifecycle: initialize the connection, create a session (with a working directory context), then send prompts.
 
@@ -49,7 +49,7 @@ var transport = new StdioAcpClientTransport(params);
 
 // 3. Build client with update consumer to print the agent's response
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         if (notification.update() instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
         }

@@ -18,20 +18,16 @@ The initialize handshake is the first message exchange in ACP — it must comple
 
 ## The Code
 
-Module 01 called `client.initialize()` with defaults. Here we set explicit capabilities on the client builder to control exactly what we advertise, then call `initialize()` the same way. The `InitializeResponse` tells us what the agent supports:
+Module 01 called `client.initialize()` with defaults. Here we register file handlers, and let the
+client advertise what they imply, then call `initialize()` the same way. The `InitializeResponse`
+tells us what the agent supports:
 
 ```java
-// Capabilities are set on the builder: what the client advertises here is
-// also what its handlers honor. build() fails for an advertised capability
-// without its handler, so file read/write comes with the two handlers that
-// serve it (Module 07 covers them).
-var clientCapabilities = new ClientCapabilities(
-    new FileSystemCapability(true, true),  // read, write
-    false  // terminalExecution
-);
-
+// As of 0.80.0, the client advertises the capabilities its handlers serve: registering the two
+// file handlers below advertises fs.readTextFile and fs.writeTextFile in the initialize request,
+// and no terminal, since no terminal handlers are registered (Module 17 sets capabilities
+// explicitly with clientCapabilities(..) instead).
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(clientCapabilities)
     .readTextFileHandler(req -> {
         try {
             return new AcpSchema.ReadTextFileResponse(Files.readString(Path.of(req.path())));
@@ -60,7 +56,7 @@ System.out.println("Existing sessions: " + initResponse.sessionIds().size());
 ```
 
 <Note>
-As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities come from the client builder, either derived from registered handlers (as above) or set explicitly with `clientCapabilities(..)` (Module 17), and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 </Note>
 
 ## Source Code

@@ -13,13 +13,11 @@ Execute shell commands on the client through the terminal API.
 ### Client: Implement terminal handlers
 
 ```java
-var clientCaps = new ClientCapabilities(
-    new FileSystemCapability(false, false),
-    true  // terminal enabled
-);
-
+// As of 0.80.0, the client advertises the terminal capability once all five handlers below are
+// registered (create, output, wait for exit, kill, release); with only some of them it logs a
+// warning naming the missing ones and advertises no terminal, with no clientCapabilities(..) call
+// needed either way.
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(clientCaps)
     .createTerminalHandler(req -> {
         List<String> cmd = new ArrayList<>();
         cmd.add(req.command());
@@ -60,16 +58,18 @@ client.initialize();
 ```
 
 <Note>
-As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder (`.clientCapabilities(...)`), and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+`initialize(InitializeRequest)` is removed as of 0.80.0: capabilities come from the client builder,
+either derived from registered handlers (as here) or set explicitly with `clientCapabilities(..)`.
+See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 </Note>
 
 <Note>
-Advertising `terminal` needs all five handlers registered: `build()` fails, naming the missing ones,
-for any advertised capability without its full set. `createTerminalHandler` starts a background
-thread that drains the process's output as it arrives, so `terminalOutputHandler` can answer with
-everything printed so far even while the command is still running; `waitForTerminalExitHandler`
-joins that thread before answering, so a `terminal/output` call right after exit still sees the
-command's last lines.
+Advertising `terminal` needs all five handlers registered; with only some of them, the client logs a
+warning naming the missing ones and advertises no terminal at all, rather than a partial one.
+`createTerminalHandler` starts a background thread that drains the process's output as it arrives, so
+`terminalOutputHandler` can answer with everything printed so far even while the command is still
+running; `waitForTerminalExitHandler` joins that thread before answering, so a `terminal/output` call
+right after exit still sees the command's last lines.
 </Note>
 
 ### Agent: Use terminal API
@@ -85,7 +85,7 @@ command's last lines.
     String terminalId = null;
     try {
         // Step 1: Create terminal
-        var createResp = context.createTerminal(
+        var createResp = context.client().createTerminal(
             new CreateTerminalRequest(
                 context.getSessionId(),
                 "sh", List.of("-c", command),
@@ -93,11 +93,11 @@ command's last lines.
         terminalId = createResp.terminalId();
 
         // Step 2: Wait for exit
-        var exitResp = context.waitForTerminalExit(
+        var exitResp = context.client().waitForTerminalExit(
             new WaitForTerminalExitRequest(context.getSessionId(), terminalId));
 
         // Step 3: Get output
-        var outputResp = context.getTerminalOutput(
+        var outputResp = context.client().getTerminalOutput(
             new TerminalOutputRequest(context.getSessionId(), terminalId));
 
         context.sendMessage("Exit: " + exitResp.exitCode() +
@@ -105,7 +105,7 @@ command's last lines.
     } finally {
         // Step 4: Always release
         if (terminalId != null) {
-            context.releaseTerminal(
+            context.client().releaseTerminal(
                 new ReleaseTerminalRequest(context.getSessionId(), terminalId));
         }
     }
@@ -117,12 +117,12 @@ command's last lines.
 
 | Step | Agent calls | Client handles | Purpose |
 |------|-------------|----------------|---------|
-| 1 | `createTerminal()` | `createTerminalHandler` | Spawn process |
-| 2 | `waitForTerminalExit()` | `waitForTerminalExitHandler` | Block until done |
-| 3 | `getTerminalOutput()` | `terminalOutputHandler` | Read stdout/stderr |
-| 4 | `releaseTerminal()` | `releaseTerminalHandler` | Clean up resources |
+| 1 | `client().createTerminal()` | `createTerminalHandler` | Spawn process |
+| 2 | `client().waitForTerminalExit()` | `waitForTerminalExitHandler` | Block until done |
+| 3 | `client().getTerminalOutput()` | `terminalOutputHandler` | Read stdout/stderr |
+| 4 | `client().releaseTerminal()` | `releaseTerminalHandler` | Clean up resources |
 
-`killTerminal()` / `killTerminalHandler` ends a still-running command early, outside this four-step
+`client().killTerminal()` / `killTerminalHandler` ends a still-running command early, outside this four-step
 sequence: the terminal stays valid afterward, so its output can still be read and it's released the
 same as any other terminal. All five handlers are required to advertise `terminal` at all, not only
 the four in the table above.

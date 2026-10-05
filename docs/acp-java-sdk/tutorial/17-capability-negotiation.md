@@ -13,11 +13,13 @@ Client and agent agree on what each supports during initialization.
 ### Client: Advertise capabilities
 
 ```java
-// Tell the agent what we support: set on the client builder, not on initialize()
-var clientCaps = new ClientCapabilities(
-    new FileSystemCapability(true, true),  // readTextFile, writeTextFile
-    false                                   // terminal: no terminal handlers here (see Module 18)
-);
+// Tell the agent what we support: set on the client builder, not on initialize(). As of 0.80.0,
+// a client without this call would advertise what its handlers serve instead (Module 02); setting
+// it explicitly here means it's sent exactly as given, which is this module's lesson.
+var clientCaps = ClientCapabilities.builder()
+    .readTextFile()
+    .writeTextFile()  // no .terminal(): no terminal handlers here (see Module 18)
+    .build();
 
 AcpSyncClient client = AcpClient.sync(transport)
     .clientCapabilities(clientCaps)
@@ -59,11 +61,10 @@ its handler, so this module keeps terminal out of its demo and leaves it to
     var clientCaps = req.clientCapabilities();
 
     // Advertise our own capabilities
-    var agentCaps = new AgentCapabilities(
-        true,                                    // loadSession
-        new McpCapabilities(false, false),        // no MCP
-        new PromptCapabilities(false, false, true) // embeddedContext only
-    );
+    var agentCaps = AgentCapabilities.builder()
+        .loadSession()            // we support session resume
+        .promptEmbeddedContext()  // only embeddedContext; no MCP, image or audio
+        .build();
 
     return InitializeResponse.ok(agentCaps);
 })

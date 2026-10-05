@@ -10,11 +10,11 @@ Comprehensive coverage of all `SessionUpdate` types in ACP.
 
 ## The Code
 
-The client registers a `sessionUpdateConsumer` and uses `instanceof` to handle each type:
+The client registers a `sessionUpdateHandler` and uses `instanceof` to handle each type:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         SessionUpdate update = notification.update();
         if (update instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());

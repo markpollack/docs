@@ -6,7 +6,7 @@ Agents can request file operations and permissions from the client.
 
 - Reading files from the client with `context.readFile()`
 - Writing files with `context.writeFile()`
-- Requesting permissions with `context.requestPermission()`
+- Requesting permissions with `context.client().requestPermission()`
 - The client-side handler pattern for responding to agent requests
 
 ## The Agent
@@ -40,7 +40,7 @@ The prompt handler uses `SyncPromptContext` convenience methods:
             PermissionOptionKind.REJECT_ONCE)
     );
 
-    var permissionResponse = context.requestPermission(
+    var permissionResponse = context.client().requestPermission(
         new RequestPermissionRequest(sessionId, toolCall, options));
 
     context.sendMessage("Permission: " + permissionResponse.outcome() + "\n");
@@ -60,10 +60,6 @@ The client registers handlers to respond to agent requests:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .clientCapabilities(new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read=true, write=true
-        false  // terminalExecution
-    ))
     .readTextFileHandler(req -> {
         String fileContent = Files.readString(Path.of(req.path()));
         return new ReadTextFileResponse(fileContent);
@@ -86,10 +82,15 @@ Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-R
 
 ## Client Capabilities
 
-The client advertises file system support on the builder, shown above (`.clientCapabilities(...)`), then just calls `client.initialize()`.
+As of 0.80.0, the client advertises file system support automatically: registering
+`readTextFileHandler` and `writeTextFileHandler`, shown above, is enough for `initialize()` to send
+`fs.readTextFile` and `fs.writeTextFile`, with no separate `clientCapabilities(...)` call needed.
 
 <Note>
-As of 0.80.0, `initialize(InitializeRequest)` is removed: capabilities are set only on the client builder, and `initialize()` sends them. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+`initialize(InitializeRequest)` is removed as of 0.80.0: capabilities come from the client builder,
+either derived from registered handlers (as here) or set explicitly with `clientCapabilities(..)`
+when a handler alone can't express what to advertise. See the
+[0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 </Note>
 
 Agents can check capabilities before using them:

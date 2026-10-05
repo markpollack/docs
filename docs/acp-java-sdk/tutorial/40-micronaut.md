@@ -161,7 +161,7 @@ autoconfigured client with an `AcpClientCustomizer` bean, guarded by
 public class PrintingCustomizer implements AcpClientCustomizer {
 
     public void customize(AcpClient.AsyncSpec spec) {
-        spec.sessionUpdateConsumer(notification -> {
+        spec.sessionUpdateHandler(notification -> {
             // ...
             return Mono.empty();
         });
@@ -175,10 +175,14 @@ interface.
 
 ### Over HTTP: one bean, many connections
 
+As of the listener-key rename, the port (and host) live under `acp.agent.transport.http.listener.*`,
+matching Spring Boot: the listener binds `127.0.0.1` by default unless
+`acp.agent.transport.http.listener.host` says otherwise.
+
 ```java
 try (ApplicationContext agent = context(Map.of(
         "acp.agent.transport.type", "http",
-        "acp.agent.transport.http.port", 0))) {
+        "acp.agent.transport.http.listener.port", 0))) {
     int port = agent.getBean(AcpAgentRuntime.class).port().orElseThrow();
     // ...
 }

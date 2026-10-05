@@ -23,14 +23,17 @@ demand) and locally via `integration-testing/scripts/run-all.sh`.
 | Python SDK | verified | verified | verified |
 | Kotlin SDK | verified | n/a: Kotlin has no HTTP transport | verified |
 | Spring Boot | verified | verified | verified |
-| Quarkus | coming | verified | verified |
-| Micronaut | verified | verified | coming |
+| Quarkus | verified | verified | verified |
+| Micronaut | verified | verified | verified |
+
+Each framework's own client is verified too, over HTTP (the one client transport the framework smoke
+matrix drives today).
 
 <Note>
-**"Coming" means a cell with no interop test yet, not a feature gap.** A framework smoke matrix
-(`integration-testing/smoke.json`, Spring Boot, Quarkus and Micronaut each hosting the SDK against the
-TypeScript SDK) is the release gate for the framework integrations; it's landing cell by cell as each
-framework's transports join it, not all at once.
+Every framework row above comes from the framework smoke matrix
+(`integration-testing/smoke.json`), the release gate for the framework integrations, landed at
+`ffc3b74` and green in CI on every `main` commit since (most recently run `37253250899`, on `ecedfd3`).
+It replaces the narrower, hand-written cells an earlier round of this page described.
 </Note>
 
 Each peer SDK is tested against its own `main` (`master` for Kotlin) branch, not a pinned release, so
@@ -45,8 +48,8 @@ extension methods; one further step (`session.fork`) runs separately, since sess
 The framework cells above are narrower than the peer-SDK cells: a TypeScript client against each
 framework's own sample agent, running the framework smoke matrix's own step list (initialization and
 capability negotiation, session lifecycle, a streamed message, permission requests, form-mode
-elicitation, cancellation, one extension method, and connection close, on whichever of a framework's
-transports are wired into the matrix today), not the full 75-step catalogue the peer-SDK cells run.
+elicitation, cancellation, one extension method, and connection close, on every transport each
+framework serves), not the full 75-step catalogue the peer-SDK cells run.
 
 ## Feature comparison across the ACP SDKs
 

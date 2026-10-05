@@ -197,7 +197,10 @@ AcpSyncAgent agent = AcpAgent.sync(transport)
 ```
 
 A one-argument handler (as shown everywhere else on this page) still works; only a handler that
-actually needs the agent takes the two-argument form.
+actually needs the agent takes the two-argument form. Name that second parameter something other than
+the local variable the built agent is assigned to, `self` in the example above: a lambda parameter
+can't shadow a local variable in scope, so `.newSessionHandler((req, agent) -> ...)` fails to compile
+when the enclosing code also has `AcpSyncAgent agent = AcpAgent.sync(transport)...`.
 
 `AcpAgentFactory.sync(transport -> AcpAgent.sync(transport)...build())` is the builder-API way to
 serve many connections, building a fresh agent instance (not a shared bean) from the lambda each

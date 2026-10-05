@@ -37,15 +37,31 @@ builder API, register handlers directly:
 ```java
 // Typed
 AcpAgent.async(transport)
-    .extRequestHandler("_example/ping", TypeRef.of(Ping.class), (ctx, ping) -> Mono.just(new Pong(...)))
-    .extNotificationHandler("_example/event", TypeRef.of(Event.class), (ctx, event) -> Mono.empty());
+    .extRequestHandler("_example/ping", TypeRef.of(Ping.class), ping -> Mono.just(new Pong(...)))
+    .extNotificationHandler("_example/event", TypeRef.of(Event.class), event -> Mono.empty());
 
 // Raw (Map, List, String, Number, or Boolean params)
 AcpClient.async(transport)
     .extRequestHandler("_interop/ping", params -> Mono.just(Map.of("pong", 1)));
 ```
 
+As of 0.80.0, both agent builders' `extRequestHandler` and `extNotificationHandler` also have
+agent-aware overloads: a two-argument lambda receives the params and the agent `build()` is about to
+return, for a handler that needs to call the client back or send a session update:
+
+```java
+AcpSyncAgent agent = AcpAgent.sync(transport)
+    .extRequestHandler("_example.com/ask", ASK, (ask, self) ->
+        self.sendExtRequest("_example.com/confirm", ask, ANSWER))
+    .build();
+```
+
+Name the second parameter something other than the local variable the built agent is assigned to
+(`self` above), since a lambda parameter can't shadow a local variable in scope.
+
 ## Sending, on either side
+
+From a client or agent directly:
 
 ```java
 client.sendExtRequest("_interop/ping", Map.of("n", 1));
@@ -53,8 +69,16 @@ client.sendExtRequest("_interop/ping", Map.of("n", 1), TypeRef.of(PingResult.cla
 client.sendExtNotification("_example/event", event);
 ```
 
-The same methods exist on the agent facades, for calling the client's extension methods from a
-handler.
+As of 0.80.0, a prompt handler reaches the same calls through `context.client()`, to send an extension
+request or notification to the client mid-prompt, without needing a reference to the agent:
+
+```java
+context.client().sendExtRequest("_example.com/ping", params, PONG);
+context.client().sendExtNotification("_example/event", event);
+```
+
+The same methods exist on `AcpAsyncAgent`/`AcpSyncAgent` directly, for calling the client's extension
+methods from outside a prompt handler.
 
 ## Behavior when nothing handles a method
 

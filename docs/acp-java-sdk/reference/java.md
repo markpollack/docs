@@ -624,6 +624,10 @@ var permResponse = context.client().requestPermission(new RequestPermissionReque
         new PermissionOption("always", "Always allow", PermissionOptionKind.ALLOW_ALWAYS),
         new PermissionOption("reject", "Reject", PermissionOptionKind.REJECT_ONCE)
     )));
+
+// Call a custom extension method on the client, from a prompt handler (0.80.0)
+context.client().sendExtRequest("_example.com/ping", params, PONG);
+context.client().sendExtNotification("_example/event", event);
 ```
 
 The convenience methods are wrappers around the full API — they call the same underlying protocol methods. You can mix and match freely within a single handler.

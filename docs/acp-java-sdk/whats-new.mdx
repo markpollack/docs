@@ -13,15 +13,19 @@ anything below as available until the [migration guide](/docs/acp-java-sdk/migra
 page say otherwise.
 </Warning>
 
-0.80.0 implements the full stable ACP schema (v1.9.1), end to end, and is the clearest sign yet that
-**0.80 marks the road to 1.0**. It's binary-incompatible with 0.18.0: recompile against it, don't just
-swap the jar. The full breaking-change list, with a quick-mapping table from the old API to the new
-one, is in the [migration guide](/docs/acp-java-sdk/migration-0.80).
+ACP Java SDK 0.80.0 is a big feature release on the road to 1.0. It implements the latest Agent Client
+Protocol specification, and a cross-SDK compatibility suite verifies it against the TypeScript, Rust,
+Python and Kotlin SDKs over every transport each one supports. Agents are no longer limited to
+subprocesses: they can now serve many clients over Streamable HTTP and WebSocket.
 
-**This SDK is checked against the protocol itself, not just its own tests.** The Java client and agent
-run a cross-SDK interop suite against the TypeScript, Rust, Python and Kotlin SDKs, over every
-transport each one supports. See [Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility) for
-exactly what's tested, what isn't yet, and how the feature set compares.
+The `@AcpAgent` annotation programming model now works the same way in Spring Boot, Quarkus and
+Micronaut, and in plain Java with no framework at all. Handlers run on your framework's executor, or
+on virtual threads. We put a great deal of effort into bug fixing, testing and reshaping the API to be
+as developer-friendly as possible. There are breaking changes, so if you're upgrading from 0.18, start
+with the [migration guide](/docs/acp-java-sdk/migration-0.80).
+
+See [Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility) for exactly what's tested, what isn't
+yet, and how the feature set compares.
 
 **One protocol core, mounted natively into your framework.** All of ACP's protocol rules live in a
 single framework-neutral core; each framework integration is a thin host that serves ACP on the
@@ -43,9 +47,9 @@ framework's own threads. And if you expose the agent remotely, your framework's 
 too. See [Spring Boot](/docs/acp-java-sdk/autoconfig#native-integration-not-a-bolt-on) and
 [Quarkus](/docs/acp-java-sdk/quarkus#native-integration-not-a-bolt-on) for a concrete example.
 
-**The same annotation model works everywhere: Spring Boot, Quarkus, Micronaut, or no framework at
-all.** `@AcpAgent`, `@Prompt`, `@NewSession`, and the rest carry the handlers; whatever serves the
-class discovers them the same way. Plain Java needs nothing but `acp-core` and `acp-agent-support`:
+Here's the shape of it: `@AcpAgent`, `@Prompt`, `@NewSession`, and the rest carry the handlers;
+whatever serves the class discovers them the same way. Plain Java needs nothing but `acp-core` and
+`acp-agent-support`:
 
 ```java
 @AcpAgent(name = "echo-agent", version = "1.0.0")
@@ -77,10 +81,9 @@ bean and wires its transport from configuration, nothing about the class itself 
 exact coordinate and package change); Quarkus and Micronaut support are new in 0.80.0. All three are
 required (non-preview) modules.
 
-**Remote agents, for real:** many clients per agent over Streamable HTTP and WebSocket, both served on
-the same `/acp` endpoint.
+Streamable HTTP and WebSocket are both served on the same `/acp` endpoint, not two separate ones.
 
-**Handlers run where they belong, not on a second pool the SDK bolts on:** Micronaut's virtual threads
+As for where those handlers actually run: Micronaut's virtual threads
 on JDK 21+, Quarkus's own worker pool, or an executor you choose yourself on Spring Boot and plain
 Java. See each framework's own "Where handlers run" section for specifics.
 

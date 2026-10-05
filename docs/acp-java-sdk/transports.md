@@ -288,6 +288,13 @@ Two things still bypass this by design:
   still arriving, and a client still sending can lose the 413 it already received to that reset. The
   request is refused either way; a valid request is unaffected. Tomcat as a servlet container
   (Spring MVC) and Reactor Netty aren't affected. A fix is planned for 0.81.0.
+- **Outbound queues on the stdio transports and the WebSocket client are unbounded.** A peer that
+  keeps sending requests without reading the responses can grow the sender's memory, roughly one
+  queued response per request still unread (an `fs/read_text_file` response, for one, can be large).
+  Server-side HTTP and WebSocket hosts are already bounded: a backpressured SSE subscriber is closed
+  past `maxPendingSseEvents`, and a WebSocket connection past `maxWebSocketPendingFrames` (1024
+  each, by default). Bounded outbound queues on the stdio transports and the WebSocket client are
+  planned for 0.81.0.
 
 ## Related
 

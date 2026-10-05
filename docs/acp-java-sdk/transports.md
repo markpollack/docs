@@ -126,19 +126,32 @@ with `maxConcurrentStreamsPerConnection` defaulting to 1024.
 
 ### The mountable servlet
 
-`StreamableHttpAcpServlet(mapper, factory)` works in any Servlet 6 container, with async support
-enabled; `init()`/`destroy()` drive its lifecycle. A mapper-less overload,
-`StreamableHttpAcpServlet(factory)`, defaults to `AcpJsonMapper.createDefault()`, the same convenience
-`StreamableHttpAcpClientTransport(URI)`, `WebSocketAcpClientTransport(URI)`, and
-`StreamableHttpAcpAgentTransport(int port, AcpAgentFactory)` all have, matching what the stdio
-transports already offered.
+`StreamableHttpAcpServlet` (module `acp-http-servlet`, no Jetty dependency) works in any Servlet 6
+container, with async support enabled; `init()`/`destroy()` drive its lifecycle.
+`StreamableHttpAcpServlet(mapper, factory)` and the mapper-less `StreamableHttpAcpServlet(factory)`
+(defaulting to `AcpJsonMapper.createDefault()`) both still exist, alongside the newer
+`StreamableHttpAcpServlet(AcpHttpEndpoint)`, which wraps a host contract you've built or customized
+yourself. Every protocol rule (routing, sessions, the Origin check, keep-alive) lives behind that
+`AcpHttpEndpoint` contract; the servlet's own `service()` method hands every request straight to it, so
+a subclass overriding `doGet`, `doPost` or `doDelete` no longer intercepts anything.
+
+The servlet upgrades WebSocket requests itself, through Jakarta WebSocket 2.1
+(`ServerContainer.upgradeHttpToWebSocket`), on any container that has an implementation (Tomcat, Jetty,
+Undertow); a container without one answers the upgrade `501`.
 
 ### Shutdown
 
 Closing the servlet (`destroy()`, `closeGracefully()`) or the standalone listener waits at most
 `StreamableHttpAcpAgentTransportOptions.shutdownTimeout` (default 5 seconds) for connected agents to
 finish, then closes everything else at once; an `initialize` still in flight when shutdown starts is
-answered `503` immediately.
+answered `503` immediately. Every open stream is drained first: an SSE stream gets a closing comment
+(`: shutting down`) before it completes, and a WebSocket closes with code `1001` (going away), not
+`1000`, so a client distinguishing a normal close from a server shutdown sees the right one.
+
+SSE responses also carry `Cache-Control: no-cache` and `X-Accel-Buffering: no`, so nginx and similar
+reverse proxies don't buffer them; `text/event-stream` is excluded from Spring Boot's own response
+compression automatically, since a compressed SSE stream would otherwise sit in the compressor's
+buffer instead of reaching the client as it's written.
 
 **Under Spring Boot specifically**, graceful shutdown waits for every open SSE stream
 (`spring.lifecycle.timeout-per-shutdown-phase`, 30 seconds by default) before `destroy()` even runs.
@@ -163,7 +176,7 @@ each:
 | Quarkus | Quarkus's own HTTP port, alongside the app's routes | Same port |
 | Micronaut | A second port (`acp.agent.transport.http.listener.port`) | Micronaut's own port (`micronaut.server.port`) |
 | Spring Boot, non-web application | One port, the SDK's own server | n/a |
-| Spring Boot, servlet web application | The app's own port, HTTP/SSE only (no WebSocket today) | Same port |
+| Spring Boot, servlet web application | The app's own port, HTTP, SSE and WebSocket together | Same port |
 
 - **Plain Java**, with no framework at all: the SDK's own server serves ACP over HTTP and WebSocket on
   one port.
@@ -173,10 +186,9 @@ each:
   (`micronaut.server.port`), while ACP over HTTP and WebSocket runs on a second port
   (`acp.agent.transport.http.listener.port`). Two servers in one JVM: two ports, and separate TLS, security and
   metrics configuration for each.
-- **A Spring Boot web application** (a servlet container such as Tomcat) serves ACP over HTTP and SSE
-  on the application's own port today, through the mounted servlet; there's no WebSocket upgrade in
-  this mode yet. A listener mode, serving ACP on a separate port the way Micronaut does, is coming for
-  0.80.0.
+- **A Spring Boot web application** (a servlet container such as Tomcat) serves ACP over HTTP, SSE and
+  WebSocket, all on the application's own port, through the mounted servlet and the application's own
+  filter chain: one server, no second port.
 - **A Spring Boot non-web application** has no servlet container, so the SDK's own server serves ACP
   over HTTP and WebSocket on its own port, the same shape as plain Java.
 
@@ -185,9 +197,9 @@ interface: plain Java, Micronaut's second port, and a Spring Boot non-web applic
 **Safe by default** below for how to expose it deliberately.
 
 <Note>
-**Planned**: WebSocket support on the application's own port in a servlet container (Tomcat, Jetty,
-Undertow) and in Micronaut, through a standard Jakarta WebSocket endpoint, so a web application
-wouldn't need a second port just for the WebSocket upgrade. Not available yet.
+**Planned**: the same one-port treatment for Micronaut, mounting ACP on Micronaut's own server
+instead of a second port. Not available yet. Spring Boot's servlet web application already serves
+WebSocket on its application port, alongside HTTP and SSE, as of this release.
 </Note>
 
 <Tip>
@@ -207,7 +219,8 @@ localhost origins are always allowed. To allow a browser application, list its o
 </Tip>
 
 <Tip>
-**Handled for you.** *(Pending confirmation before 0.80.0 ships.)*
+**Handled for you.** Proven by the SDK's own shared transport TCK, run against the servlet on Tomcat
+11 and Jetty 12.1, the embedded listener, and Spring MVC.
 
 - SSE responses aren't buffered by a reverse proxy such as nginx.
 - Long-lived streams aren't cut off by the servlet container's own timeouts.
@@ -217,10 +230,8 @@ localhost origins are always allowed. To allow a browser application, list its o
 
 ## Not yet supported in 0.80.0
 
-- **WebSocket inside a servlet container.** The servlet serves HTTP/SSE only; the WebSocket upgrade
-  needs the standalone Jetty listener (`StreamableHttpAcpAgentTransport`), not
-  `StreamableHttpAcpServlet`. See [Deployment topologies](#deployment-topologies) above for what's
-  planned here.
+- **WebSocket mounted on Micronaut's own server.** Still a second port; see
+  [Deployment topologies](#deployment-topologies) above for what's planned here.
 - **HTTP/2 configuration for the servlet.** That's the surrounding container's responsibility, not
   this SDK's.
 - **TLS on the built-in listener.** It opens a plain connector only; terminate TLS in front of it, or

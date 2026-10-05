@@ -179,32 +179,47 @@ The agent defaults to stdio transport. Set `spring.acp.agent.enabled=false` to d
 
 ## Remote Agents over Streamable HTTP
 
-Add `com.agentclientprotocol:acp-streamable-http-jetty` and set
-`spring.acp.agent.transport.type=http`. Every remote connection gets its own agent runtime, created
-from the SDK's `AcpAgentFactory`, all served by your one `@AcpAgent` bean, so that bean must be
-thread-safe.
-
-```xml
-<dependency>
-    <groupId>com.agentclientprotocol</groupId>
-    <artifactId>acp-streamable-http-jetty</artifactId>
-</dependency>
-```
+Set `spring.acp.agent.transport.type=http`, and add the module your kind of application needs. Every
+remote connection gets its own agent runtime, created from the SDK's `AcpAgentFactory`, all served by
+your one `@AcpAgent` bean, so that bean must be thread-safe.
 
 ```properties
 spring.acp.agent.transport.type=http
 spring.acp.agent.transport.http.listener.port=8080
 ```
 
-How the endpoint is served depends on what's already on the classpath:
+How the endpoint is served, and which module it needs, depends on what's already on the classpath:
 
-- **Servlet web application** (`spring-boot-starter-web` present): the agent mounts on the
+- **Servlet web application** (`spring-boot-starter-web` present): add
+  `com.agentclientprotocol:acp-http-servlet` (no Jetty dependency). The agent mounts on the
   application's own server, at `spring.acp.agent.transport.http.path` (default `/acp`), serving
-  Streamable HTTP (POST and SSE) on `server.port`. WebSocket upgrades are **not** served in this
-  mode; use the standalone listener if you need them.
-- **Non-web application** (no `spring-boot-starter-web` or `-webflux`): the SDK's own Jetty listener
-  opens `spring.acp.agent.transport.http.listener.port` and serves Streamable HTTP, a WebSocket
-  upgrade on the same path, and cleartext HTTP/2 (h2c).
+  Streamable HTTP, SSE, and WebSocket, all on `server.port`, through the application's own filter
+  chain: Spring Security rules on `/acp` apply to the WebSocket handshake too, and the authenticated
+  principal reaches the endpoint. The `listener.*` properties are ignored in this mode.
+- **Non-web application** (no `spring-boot-starter-web` or `-webflux`): add
+  `com.agentclientprotocol:acp-streamable-http-jetty`. The SDK's own Jetty listener opens
+  `spring.acp.agent.transport.http.listener.port` and serves Streamable HTTP, a WebSocket upgrade on
+  the same path, and cleartext HTTP/2 (h2c).
+
+```xml
+<!-- Servlet web application -->
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-http-servlet</artifactId>
+</dependency>
+<!-- Non-web application -->
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-streamable-http-jetty</artifactId>
+</dependency>
+```
+
+<Warning>
+**Don't add `acp-streamable-http-jetty` to a servlet web application.** Its Jakarta WebSocket 2.1 API
+jar shadows the one your servlet container already provides (Tomcat 11 ships 2.2), which fails with a
+`NoSuchMethodError` at runtime, not at startup. Depend on `acp-http-servlet` there instead, which has
+no Jetty dependency at all.
+</Warning>
 
 <Warning>
 **A reactive web application (`spring-boot-starter-webflux`) matches neither case.** It's not a
@@ -214,9 +229,10 @@ servlet web application or the standalone listener (acp-streamable-http-jetty); 
 supported." WebFlux isn't supported for the HTTP agent transport.
 </Warning>
 
-A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp`, which creates a
-`StreamableHttpAcpClientTransport` for you, or, against the standalone listener,
-`spring.acp.client.transport.websocket.uri=ws://host:port/acp` for `WebSocketAcpClientTransport`.
+A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp` for
+`StreamableHttpAcpClientTransport`, or `spring.acp.client.transport.websocket.uri=ws://host:port/acp`
+for `WebSocketAcpClientTransport`; both work against the servlet-mounted agent and the standalone
+listener alike.
 
 The client (its transport included) is closed exactly once, bounded by its request timeout plus 10
 seconds, by the autoconfiguration's own lifecycle, not left for Spring to infer a `close()` call;
@@ -224,9 +240,10 @@ WebSocket and Streamable HTTP are equally safe to use from a Boot application, i
 twice in a row (`closeGracefully()` then a context shutdown), which no longer sends a second close
 frame or throws.
 
-Override the `StreamableHttpAcpAgentTransport` bean (standalone listener) or the
-`acpServletRegistration` bean (servlet mode) the same way as any other auto-configured bean, to
-customize beyond what the properties expose.
+Override the `StreamableHttpAcpAgentTransport` bean (standalone listener) or the `AcpHttpEndpoint`
+bean (servlet mode) the same way as any other auto-configured bean, to customize beyond what the
+properties expose. `AcpHttpEndpoint` and the other host-contract types (`AcpHttpExchange`,
+`AcpHttpReply`, and the rest) are `@UnstableAcpApi`.
 
 ### Enabling file access over HTTP (or any transport)
 
@@ -257,31 +274,34 @@ the framework-neutral module Micronaut and Quarkus build on too; see
 
 ## Native integration, not a bolt-on
 
-<Note>
-**Pending confirmation.** Expected to hold once the SDK's own hosts and tests land; not yet
-independently verified for this integration.
-</Note>
-
-In servlet mode, the agent is mounted on the application's own server: one server, one port, one TLS
-setup, one lifecycle that starts and stops with the application, one place for metrics and logs, and
-Spring's own threads. There's nothing ACP-specific to configure alongside what the application already
-has.
+In servlet mode, the agent is mounted on the application's own server: one server, one port (HTTP,
+SSE, and WebSocket together), one TLS setup, one lifecycle that starts and stops with the application,
+one place for metrics and logs, and Spring's own threads. There's nothing ACP-specific to configure
+alongside what the application already has.
 
 ### If you need it: securing `/acp`
 
 Most ACP use (an IDE talking stdio, a handful of local sessions) needs no security configuration at
 all. If you do expose the agent remotely, it's mounted behind Spring's own request handling, so
-ordinary Spring Security applies to `/acp` the same as any other endpoint:
+ordinary Spring Security applies to `/acp` the same as any other endpoint, the WebSocket handshake
+included, and the authenticated principal reaches the endpoint
+(`AcpHttpExchange.principal()`). Proven by the SDK's own shared transport TCK running against Spring
+MVC: an unauthenticated request gets 401 on HTTP and on the WebSocket handshake, an authenticated one
+gets 200/101, same as any other secured endpoint.
 
 ```java
 @Bean
 SecurityFilterChain acpSecurity(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(auth -> auth
-        .requestMatchers("/acp/**").hasRole("AGENT_CLIENT")
-        .anyRequest().permitAll());
-    return http.build();
+    return http.authorizeHttpRequests(requests -> requests.requestMatchers("/acp").authenticated())
+        .httpBasic(Customizer.withDefaults())
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/acp"))
+        .build();
 }
 ```
+
+ACP clients aren't browsers, so exempt `/acp` from CSRF as shown above; the endpoint refuses a browser
+request from a foreign origin on its own, regardless (see
+[Transports](/docs/acp-java-sdk/transports#deployment-topologies)).
 
 ## Extension Beans
 

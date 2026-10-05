@@ -180,11 +180,31 @@ each:
 - **A Spring Boot non-web application** has no servlet container, so the SDK's own server serves ACP
   over HTTP and WebSocket on its own port, the same shape as plain Java.
 
+Wherever the SDK's own listener serves ACP, that port binds `127.0.0.1` by default, not every
+interface: plain Java, Micronaut's second port, and a Spring Boot non-web application. See
+**Safe by default** below for how to expose it deliberately.
+
 <Note>
 **Planned**: WebSocket support on the application's own port in a servlet container (Tomcat, Jetty,
 Undertow) and in Micronaut, through a standard Jakarta WebSocket endpoint, so a web application
 wouldn't need a second port just for the WebSocket upgrade. Not available yet.
 </Note>
+
+<Tip>
+**Safe by default.** The SDK's own listener binds `127.0.0.1` (and `::1` where available), not every
+interface, so only programs on the same machine can reach it unless you ask otherwise. To expose it,
+set the host explicitly: `spring.acp.agent.transport.http.listener.host` (Spring Boot), Micronaut's
+`acp.agent.transport.http.host`, or, in plain Java,
+`StreamableHttpAcpAgentTransportOptions.builder().host(...)`. Quarkus serves ACP on its own HTTP
+server, so it uses Quarkus's own `quarkus.http.host` instead.
+
+A browser page on another origin can't reach your agent either: it gets 403, over HTTP and on the
+WebSocket handshake. Requests with no `Origin` header (this SDK's own client, most IDEs) and
+localhost origins are always allowed. To allow a browser application, list its origin:
+`spring.acp.agent.transport.http.allowed-origins`, `acp.agent.transport.http.allowed-origins`
+(Micronaut), `quarkus.acp.agent.transport.http.allowed-origins`, or the builder's
+`allowedOrigins(...)`. `*` allows any origin, which disables the protection.
+</Tip>
 
 <Tip>
 **Handled for you.** *(Pending confirmation before 0.80.0 ships.)*

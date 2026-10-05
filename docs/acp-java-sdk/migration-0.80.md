@@ -12,6 +12,37 @@ three-argument overload still exists (its third parameter is now `List<SessionCo
 different type). The sections below name every breaking change; this page is the complete list, not
 a sample.
 
+## The SDK listener now binds localhost only, and checks browser origins
+
+Two security fixes, both breaking for a deployment that relied on the old, open-by-default behavior.
+
+**The listener binds the loopback interface by default.** `StreamableHttpAcpAgentTransport` set a
+port and no host on its Jetty connector, so it listened on every network interface; the endpoint has
+no authentication of its own, so anyone who could reach the machine could start an agent. It now binds
+`127.0.0.1`, and `::1` too where the machine has IPv6, unless told otherwise. Remote exposure is an
+explicit opt-in: `StreamableHttpAcpAgentTransportOptions.builder().host("0.0.0.0")` (or a specific
+address), `spring.acp.agent.transport.http.listener.host` (Spring Boot, non-web applications),
+`acp.agent.transport.http.host` (Micronaut), or `transport.http.listener.host` in `AcpAgentSettings`.
+Servers a framework already runs (a Spring MVC servlet container, Quarkus) keep that framework's own
+bind settings (`server.address`, `quarkus.http.host`); this change doesn't affect them. **Migration**:
+a deployment that reached the listener from another machine or a container sets the host to
+`0.0.0.0`, ideally behind a proxy that authenticates.
+
+**Browser requests from a foreign origin are refused (403).** Any web page the user had open could
+previously `POST` to, or open a WebSocket to, an agent listening on `localhost` (a cross-site request,
+or DNS rebinding). Every host now checks the `Origin` header, on HTTP requests and on the WebSocket
+handshake: a request with no `Origin` header (any non-browser client, including this SDK's own client
+and most IDEs) is served, and so is one from `http(s)://localhost`, `127.0.0.1`, or `[::1]` on any
+port; any other origin gets 403 unless it's explicitly listed. The rule is in the shared endpoint
+code, so the servlet, the SDK's own listener (HTTP and WebSocket), and Quarkus (its servlet and
+WebSocket route) all apply it. New:
+`StreamableHttpAcpAgentTransportOptions.Builder.allowedOrigins(Collection<String>)` (`*` allows any
+origin, which disables the protection) and `isOriginAllowed(String)`;
+`spring.acp.agent.transport.http.allowed-origins`, `acp.agent.transport.http.allowed-origins`
+(Micronaut), `quarkus.acp.agent.transport.http.allowed-origins`, and `transport.http.allowed-origins`
+in `AcpAgentSettings`. **Migration**: a browser application served from another origin that talks to
+the agent directly lists that origin.
+
 ## Spring Boot support moved into the SDK
 
 `acp-spring-boot-starter` and `acp-spring-boot-autoconfigure` are now modules of the ACP Java SDK
@@ -748,6 +779,7 @@ Verified against the CHANGELOG and the code at the commit that introduced it (`2
 | `SyncPromptContext.askChoice` | Returns `Optional<String>`, empty on client cancellation (was documented to return `null` and failed instead) |
 | `SyncPromptContext` | Gains abstract `async()`, `isCancelled()`, and `onCancel(Runnable)` methods; `PromptContext` gains abstract `isCancelled()` and `whenCancelled()`. A custom implementation (a test double, say) must implement all of them |
 | `StreamableHttpAcpAgentTransportOptions` | Gains `shutdownTimeout` (builder `shutdownTimeout(Duration)`, default 5 seconds): how long closing the servlet or listener waits for connected agents before closing the rest at once. Breaking only for code calling the record's canonical constructor directly; the builder is unaffected |
+| `StreamableHttpAcpAgentTransportOptions`, `AcpAgentSettings.Http` | Gain `host`/`allowedOrigins` and `allowedOrigins` respectively (see [The SDK listener now binds localhost only](#the-sdk-listener-now-binds-localhost-only-and-checks-browser-origins) above); `AcpAgentSettings.Listener` gains `host` as its *first* component, so a direct `new Listener(port, streams)` becomes `new Listener(null, port, streams)`. Breaking only for code calling these records' canonical constructors directly; the builders are unaffected |
 | `CommandResult` | Canonical constructor is now `(String output, @Nullable Integer exitCode, @Nullable String signal, boolean truncated)`; the old 3-argument form (`output`, `exitCode`, `signal`) still exists as a convenience constructor meaning complete (non-truncated) output. No `timedOut` flag; a signal-killed command has no exit code |
 | `Command.env()` | Never `null`; empty when no variables are set. Migration: test `.isEmpty()` instead of `== null` |
 | `AcpInvocationContext`, `AcpMethodParameter` | Moved to `com.agentclientprotocol.sdk.agent.support.invocation`: update imports in custom `ArgumentResolver`, `ReturnValueHandler`, and `AcpInterceptor` implementations |

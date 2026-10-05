@@ -145,6 +145,8 @@ running alongside it.
 | `spring.acp.agent.transport.http.max-web-socket-pending-frames` | `1024` | Frames queued for one WebSocket connection before it is closed |
 | `spring.acp.agent.transport.http.max-provisional-sessions` | `64` | Session streams a connection may open before the session is known |
 | `spring.acp.agent.transport.http.shutdown-timeout` | `5s` | How long closing the endpoint waits for connections to close gracefully |
+| `spring.acp.agent.transport.http.allowed-origins` | none | Browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake |
+| `spring.acp.agent.transport.http.listener.host` | unset (loopback only: `127.0.0.1` and `::1`) | Address the standalone listener binds; `0.0.0.0` exposes it on every interface. Not used in a servlet web app, which uses Spring's own `server.address` |
 | `spring.acp.agent.transport.http.listener.port` | `8080` | Port of the standalone listener (not used in a servlet web app, which uses `server.port`) |
 | `spring.acp.agent.transport.http.listener.max-concurrent-streams-per-connection` | `1024` | HTTP/2 streams per client connection (standalone listener only) |
 

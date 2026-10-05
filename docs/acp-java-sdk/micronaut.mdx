@@ -138,7 +138,9 @@ Micronaut's own server, so that configuration applies automatically, is planned 
 | `acp.agent.shutdown-on-transport-end` | `true` | close the context when the stdio input ends |
 | `acp.agent.shutdown-timeout` | `10s` | how long closing the context waits for a stdio agent (or an `AcpAgentTransport` bean of your own) to close gracefully, before closing it at once |
 | `acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket`, read in any case; an unrecognized value fails startup, naming it |
+| `acp.agent.transport.http.host` | unset (loopback only: `127.0.0.1` and `::1`) | address the listener binds; `0.0.0.0` exposes it on every interface, an explicit opt-in (the listener has no authentication of its own) |
 | `acp.agent.transport.http.port` | `8080` | the listener's own port; `0` for an ephemeral one (read back with `AcpAgentRuntime.port()`) |
+| `acp.agent.transport.http.allowed-origins` | none | browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake |
 | `acp.agent.transport.http.path` | `/acp` | |
 | `acp.agent.transport.http.max-post-body-size` | SDK default (16MB) | e.g. `4MB` |
 | `acp.agent.transport.http.keep-alive-interval`, `.mailbox-capacity`, `.max-pending-sse-events`, `.max-web-socket-pending-frames`, `.max-provisional-sessions`, `.max-concurrent-streams-per-connection`, `.shutdown-timeout` | SDK default | `StreamableHttpAcpAgentTransportOptions`; this `shutdown-timeout` bounds the HTTP listener only, not a stdio agent, which uses `acp.agent.shutdown-timeout` above instead |

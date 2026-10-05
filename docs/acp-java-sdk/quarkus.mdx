@@ -195,6 +195,7 @@ Build time (fixed when the application is built):
 | `quarkus.acp.agent.enabled` | `true` | serve the `@AcpAgent` bean; off, it's an ordinary CDI bean, no agent transport starts, and a second `@AcpAgent` class is no longer a build error |
 | `quarkus.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same: Streamable HTTP and WebSocket on the Quarkus HTTP server) |
 | `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket), relative to `quarkus.servlet.context-path` |
+| `quarkus.acp.agent.transport.http.allowed-origins` | none | browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake. There's no separate host property: the agent is served on Quarkus's own HTTP server, so it keeps Quarkus's own `quarkus.http.host` |
 
 Run time:
 

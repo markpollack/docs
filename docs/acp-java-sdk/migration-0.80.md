@@ -948,6 +948,36 @@ Vert.x route in the router's ordinary order, behind those checks, for HTTP and W
 **Migration**: none to keep working; an application relying on the old, mistaken behavior (a
 WebSocket client reaching a protected path without authenticating) now gets `401` instead, correctly.
 
+## Spring Boot serves ACP in a reactive (WebFlux) web application too
+
+Verified against the commit (`57e0b55` and the two commits immediately before it on the same branch,
+`10681f7` and `9b48128`), the CHANGELOG, and the Spring Boot starter's own README.
+
+**A reactive (WebFlux) web application no longer fails the startup.** With
+`spring.acp.agent.transport.type=http` (or `websocket`) and `com.agentclientprotocol:acp-http-webflux`
+on the classpath, a reactive application now routes `spring.acp.agent.transport.http.path` to the
+endpoint with a `RouterFunction` bean named `acpRouterFunction`, on its own server (`server.port`,
+Reactor Netty by default), instead of failing the startup with "The ACP HTTP transport needs a servlet
+web application or the standalone listener (acp-streamable-http-jetty); WebFlux is not supported." The
+same `spring.acp.agent.transport.*` properties apply; there are no new keys. **Migration**: a reactive
+application that serves ACP adds `com.agentclientprotocol:acp-http-webflux`; without it, the startup
+still fails, now naming that module instead of saying WebFlux isn't supported at all.
+
+As in a servlet application: the endpoint is an `AcpHttpEndpoint` bean (an application's own
+`acpRouterFunction` bean replaces the route); a `SmartLifecycle` in the default phase starts it and
+drains it before the server's graceful shutdown; `text/event-stream` is taken out of
+`server.compression`'s types; the application's `WebFilter`s (a `SecurityWebFilterChain` included)
+apply to `/acp`, the WebSocket handshake included, and the authenticated principal reaches the
+endpoint; and the application's `http.server.requests` observations cover it. **Migration**: none.
+
+**New module, one more entry in the module rule.** A servlet web application adds `acp-http-servlet`;
+a reactive (WebFlux) one adds `acp-http-webflux`; an application without a web server adds
+`acp-streamable-http-jetty`. The starter itself brings none of them.
+
+**Known limit: no idle timeout on a Netty WebSocket connection.** Unlike the servlet host, the reactive
+host sets no idle timeout on the underlying WebSocket session, so a client that neither sends nor is
+sent anything can hold the connection open indefinitely.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -1192,3 +1222,9 @@ old behavior should be revisited.
 59. If a Quarkus application's own client (or test) connected to `/acp` over WebSocket without
     authenticating and expected it to succeed on a path `quarkus.http.auth.permission` protects,
     expect `401` now instead of a successful upgrade.
+60. If a Spring Boot reactive (WebFlux) application serves ACP, add
+    `com.agentclientprotocol:acp-http-webflux`; without it, the startup fails naming it instead of
+    saying WebFlux isn't supported.
+61. If any test or workaround relied on `spring.acp.agent.transport.type=http` failing the startup in
+    a WebFlux application with "WebFlux is not supported," drop it: that failure is gone, replaced by
+    the endpoint actually serving the agent (given the new module above).

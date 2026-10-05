@@ -29,9 +29,9 @@ yet, and how the feature set compares.
 
 **One protocol core, mounted natively into your framework.** All of ACP's protocol rules live in a
 single framework-neutral core; each framework integration is a thin host that serves ACP on the
-framework's own server, port, TLS, security, metrics and threads. Spring Boot (MVC) and Quarkus do
-this today, one server for the whole application; Micronaut native hosting is next, after keeping ACP
-on a separate port in 0.80.0. See
+framework's own server, port, TLS, security, metrics and threads. Spring Boot (MVC and WebFlux) and
+Quarkus do this today, one server for the whole application; Micronaut native hosting is next, after
+keeping ACP on a separate port in 0.80.0. See
 [Deployment topologies](/docs/acp-java-sdk/transports#deployment-topologies) for exactly where ACP
 listens in each case.
 
@@ -40,7 +40,7 @@ three kinds of reply out (JSON, empty, or an SSE stream), and WebSocket text fra
 framework host is small and behaves the same; see
 [the full comparison](/docs/acp-java-sdk/transports#acp-over-http-needs-almost-nothing-from-a-web-framework).
 
-**Native integration, not a bolt-on.** On Spring Boot (MVC) and Quarkus, ACP runs inside your
+**Native integration, not a bolt-on.** On Spring Boot (MVC and WebFlux) and Quarkus, ACP runs inside your
 application: one server, one port for HTTP, SSE and WebSocket together, one TLS setup, one lifecycle
 that starts and stops with your app, one place for metrics and logs, and your framework's own threads.
 And if you expose the agent remotely, your framework's own security applies too, WebSocket handshake
@@ -153,7 +153,8 @@ Ten new or extended modules, in the tutorial's own order:
   | Kotlin | verified | n/a | verified |
   | Micronaut | verified | verified | verified |
   | Quarkus | verified | verified | verified |
-  | Spring Boot | verified | verified | verified |
+  | Spring Boot (MVC) | verified | verified | verified |
+  | Spring Boot (WebFlux) | n/a | verified | verified |
 
   See [Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility) for what each cell means and how
   this SDK's feature set compares: it's among the most complete ACP SDKs, by that comparison.

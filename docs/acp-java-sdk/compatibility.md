@@ -22,17 +22,19 @@ demand) and locally via `integration-testing/scripts/run-all.sh`.
 | Rust SDK | verified | verified | verified |
 | Python SDK | verified | verified | verified |
 | Kotlin SDK | verified | n/a: Kotlin has no HTTP transport | verified |
-| Spring Boot | verified | verified | verified |
+| Spring Boot (MVC) | verified | verified | verified |
+| Spring Boot (WebFlux) | n/a: always a web application | verified | verified |
 | Quarkus | verified | verified | verified |
 | Micronaut | verified | verified | verified |
 
 Each framework's own client is verified too, over HTTP (the one client transport the framework smoke
-matrix drives today).
+matrix drives today), except Spring Boot (WebFlux): its smoke cell is agent-only, no client leg yet.
 
 <Note>
 Every framework row above comes from the framework smoke matrix
 (`integration-testing/smoke.json`), the release gate for the framework integrations, landed at
-`ffc3b74` and green in CI on every `main` commit since (most recently run `37253250899`, on `ecedfd3`).
+`ffc3b74` and green in CI on every `main` commit since (most recently run `37263353533`, on `57e0b55`,
+the commit that added the Spring Boot (WebFlux) cells).
 It replaces the narrower, hand-written cells an earlier round of this page described.
 </Note>
 

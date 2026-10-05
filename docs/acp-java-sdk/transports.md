@@ -139,6 +139,14 @@ The servlet upgrades WebSocket requests itself, through Jakarta WebSocket 2.1
 (`ServerContainer.upgradeHttpToWebSocket`), on any container that has an implementation (Tomcat, Jetty,
 Undertow); a container without one answers the upgrade `501`.
 
+### A mountable WebFlux route
+
+`AcpWebFluxHost` (module `acp-http-webflux`) is the same idea for a plain Spring WebFlux application,
+with no Spring Boot autoconfiguration involved: `new AcpWebFluxHost(endpoint).routerFunction("/acp")`
+returns a `RouterFunction<ServerResponse>` you add to your own router, Streamable HTTP and WebSocket on
+that one path. It depends only on the host contract and `spring-webflux` (provided), so it works in any
+WebFlux application, Spring Boot or not.
+
 ### Shutdown
 
 Closing the servlet (`destroy()`, `closeGracefully()`) or the standalone listener waits at most
@@ -177,6 +185,7 @@ each:
 | Micronaut | A second port (`acp.agent.transport.http.listener.port`) | Micronaut's own port (`micronaut.server.port`) |
 | Spring Boot, non-web application | One port, the SDK's own server | n/a |
 | Spring Boot, servlet web application | The app's own port, HTTP, SSE and WebSocket together | Same port |
+| Spring Boot, reactive (WebFlux) web application | The app's own port, HTTP, SSE and WebSocket together | Same port |
 
 - **Plain Java**, with no framework at all: the SDK's own server serves ACP over HTTP and WebSocket on
   one port.
@@ -186,11 +195,14 @@ each:
   (`micronaut.server.port`), while ACP over HTTP and WebSocket runs on a second port
   (`acp.agent.transport.http.listener.port`). Two servers in one JVM: two ports, and separate TLS, security and
   metrics configuration for each.
-- **A Spring Boot web application** (a servlet container such as Tomcat) serves ACP over HTTP, SSE and
+- **A Spring Boot servlet web application** (a container such as Tomcat) serves ACP over HTTP, SSE and
   WebSocket, all on the application's own port, through the mounted servlet and the application's own
   filter chain: one server, no second port.
-- **A Spring Boot non-web application** has no servlet container, so the SDK's own server serves ACP
-  over HTTP and WebSocket on its own port, the same shape as plain Java.
+- **A Spring Boot reactive (WebFlux) web application** serves ACP the same way, on the application's
+  own port (Reactor Netty by default), as a `RouterFunction` routed through the application's own
+  `WebFilter`s: one server, no second port.
+- **A Spring Boot non-web application** has no servlet or reactive web container, so the SDK's own
+  server serves ACP over HTTP and WebSocket on its own port, the same shape as plain Java.
 
 Wherever the SDK's own listener serves ACP, that port binds `127.0.0.1` by default, not every
 interface: plain Java, Micronaut's second port, and a Spring Boot non-web application. See
@@ -198,8 +210,9 @@ interface: plain Java, Micronaut's second port, and a Spring Boot non-web applic
 
 <Note>
 **Planned**: the same one-port treatment for Micronaut, mounting ACP on Micronaut's own server
-instead of a second port. Not available yet. Spring Boot's servlet web application already serves
-WebSocket on its application port, alongside HTTP and SSE, as of this release.
+instead of a second port. Not available yet. Spring Boot's servlet and reactive (WebFlux) web
+applications both already serve WebSocket on their application port, alongside HTTP and SSE, as of
+this release.
 </Note>
 
 <Tip>

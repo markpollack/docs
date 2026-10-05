@@ -173,6 +173,17 @@ was actually bound. `StreamableHttpAcpClientTransportOptions.maxSseStreams` defa
 open session, plus the connection stream); raise it if a single client holds many sessions open at
 once.
 
+### Running on your own executor
+
+`StreamableHttpAcpClientTransportOptions.builder().executor(Executor)`,
+`new WebSocketAcpClientTransport(URI, AcpJsonMapper, Executor)`, and
+`StreamableHttpAcpAgentTransportOptions.builder().executor(Executor)` run the transport's own work (the
+`HttpClient`, SSE reads, frame writes, or, for the listener, every request on Jetty's
+`VirtualThreadPool`) on an executor you supply, instead of one the transport creates and owns; nothing
+shuts it down, since the application owns it. On JDK 21 and later, each of these defaults to virtual
+threads unless you pass your own executor; `virtualThreads(false)` on the same builders keeps
+platform-thread pools instead, for an application that hasn't opted into virtual threads.
+
 ## Deployment topologies
 
 Where ACP actually listens depends on how the agent is built and served. One table, one port column

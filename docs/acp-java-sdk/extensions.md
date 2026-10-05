@@ -85,7 +85,9 @@ methods from outside a prompt handler.
 - An unhandled extension **request** fails with `-32601` (method not found), same as any unhandled
   protocol method.
 - An unhandled extension **notification** is silently ignored, since notifications have no response
-  to fail.
+  to fail; it's logged at DEBUG, not WARN, since a peer can send many of these (`_auth/status_update`
+  from some agents) and none of them is an error. An unhandled protocol notification still logs a
+  warning.
 - A result of `"result": null` completes as an empty `Mono` (async) or `null` (sync).
 - A handler that produces genuinely nothing should still answer with an empty map; returning nothing
   at all from a request handler answers `-32603` (internal error), since a request always needs

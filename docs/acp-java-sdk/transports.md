@@ -39,8 +39,8 @@ closed") rather than silently dropping the message and leaving the caller to wai
 **The agent process inherits the client's whole environment by default.** Every environment variable
 the client process has, including secrets, reaches the agent subprocess unless you say otherwise.
 `AgentParameters.Builder.inheritEnvironment(false)` starts the process from an empty environment
-instead, with only the "safe" defaults (`HOME`, `PATH`, `USER`, and similar) and whatever
-`addEnvVar(...)` adds on the builder:
+instead, with only the "safe" defaults (`HOME`, `LOGNAME`, `PATH`, `SHELL`, `TERM` and `USER`; on
+Windows, a different, larger set) and whatever `addEnvVar(...)` adds on the builder:
 
 ```java
 var params = AgentParameters.builder("my-agent")

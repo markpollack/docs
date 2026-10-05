@@ -974,9 +974,10 @@ endpoint; and the application's `http.server.requests` observations cover it. **
 a reactive (WebFlux) one adds `acp-http-webflux`; an application without a web server adds
 `acp-streamable-http-jetty`. The starter itself brings none of them.
 
-**Known limit: no idle timeout on a Netty WebSocket connection.** Unlike the servlet host, the reactive
-host sets no idle timeout on the underlying WebSocket session, so a client that neither sends nor is
-sent anything can hold the connection open indefinitely.
+**Known limit: no idle timeout on a Netty WebSocket connection.** The servlet host closes an idle
+WebSocket connection after 30 minutes; the reactive host sets no idle timeout on the underlying
+WebSocket session at all, so a client that neither sends nor is sent anything can hold the connection
+open indefinitely.
 
 ## Smaller breaking changes
 

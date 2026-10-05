@@ -137,8 +137,16 @@ completes, and each WebSocket closes with `1001`.
 
 An HTTP build raises these Quarkus defaults to what the SDK's listener admits (your own settings
 win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.max-message-size` and
-`max-frame-size` to 16 MB, and `quarkus.http.limits.max-concurrent-streams=1024` (each SSE stream is
-one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MB.
+`max-frame-size` to 16 MiB, and `quarkus.http.limits.max-concurrent-streams=1024` (each SSE stream is
+one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MiB.
+
+<Note>
+**Known limits.** Quarkus's own WebSocket connections have no idle timeout, the same gap as Spring
+Boot's reactive (WebFlux) host; a client that neither sends nor is sent anything can hold the
+connection open indefinitely. Quarkus/Vert.x's own WebSocket message limit can also apply before the
+raise above does, the same risk as Tomcat or Jetty hosting a WebFlux application; verify the limit
+that's actually in force for your build rather than assuming the raised value applies.
+</Note>
 
 ## Native integration, not a bolt-on
 

@@ -241,9 +241,9 @@ first (8 KB on Tomcat, 64 KB on Jetty), so a larger message closes there instead
 a servlet application, for large WebSocket messages.
 
 <Note>
-**Known limit**: the reactive host sets no idle timeout on a Netty WebSocket connection, unlike the
-servlet host, which does. A client that neither sends nor is sent anything can hold the connection
-open indefinitely.
+**Known limit**: the servlet host closes an idle WebSocket connection after 30 minutes; the reactive
+host sets no idle timeout on a Netty WebSocket connection at all. A client that neither sends nor is
+sent anything can hold the connection open indefinitely in reactive mode.
 </Note>
 
 A client connects with `spring.acp.client.transport.http.uri=http://host:port/acp` for

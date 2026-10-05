@@ -872,6 +872,58 @@ that take the nested records stay. Migration: none; optionally
 `.fs(new FileSystemCapability(true, true))` becomes `.readTextFile().writeTextFile()`, and
 `.loadSession(true)` becomes `.loadSession()`.
 
+## One framework-neutral ACP endpoint, and Spring MVC serving WebSocket too
+
+Verified against the CHANGELOG and the code at the commit that landed it (`11273b5`).
+
+**The HTTP transport is split into three modules.** `acp-http-core` (the endpoint,
+`AcpHttpEndpoint`, and `StreamableHttpAcpAgentTransportOptions`), `acp-http-servlet`
+(`StreamableHttpAcpServlet`, no Jetty dependency), and `acp-streamable-http-jetty`
+(`StreamableHttpAcpAgentTransport`, now an embedded-Jetty launcher that runs the servlet host with
+Jetty's own Jakarta WebSocket implementation). Class names and packages of the public types are
+unchanged. **Migration**: an application mounting the servlet in its own container, a Spring MVC
+application included, depends on `acp-http-servlet` instead of `acp-streamable-http-jetty`, and no
+longer gets Jetty; an application using the SDK's own listener keeps `acp-streamable-http-jetty`.
+
+<Warning>
+**Do not add `acp-streamable-http-jetty` to a Spring Boot application on Tomcat (or any servlet
+container).** Its Jakarta WebSocket 2.1 API jar shadows the container's own (Tomcat 11 ships 2.2),
+which fails with a `NoSuchMethodError` at runtime, not at startup. Depend on `acp-http-servlet`
+instead, which has no Jetty dependency at all.
+</Warning>
+
+**Breaking: `StreamableHttpAcpServlet` is now a host of `AcpHttpEndpoint`.** It gained the
+constructor `StreamableHttpAcpServlet(AcpHttpEndpoint)` and `endpoint()`; the routing, connection and
+SSE classes it used internally moved to `acp-http-core`. A subclass overriding `doGet`, `doPost` or
+`doDelete` no longer intercepts anything: `service` hands every request to the endpoint. **Migration**:
+wrap the `AcpHttpEndpoint` instead of subclassing the servlet.
+
+**Spring MVC now serves Streamable HTTP, SSE, and WebSocket all on `server.port`.** A servlet web
+application's ACP endpoint used to serve HTTP and SSE only, with no WebSocket upgrade; it now upgrades
+WebSocket on the same path too, through the application's own filter chain, so Spring Security rules
+on `/acp` apply to the WebSocket handshake as well as HTTP, and the authenticated principal reaches
+the endpoint (`AcpHttpExchange.principal()`). With `server.compression.enabled`,
+`text/event-stream` is excluded from compression automatically. **Migration**: none to keep working;
+a client that connected over `websocket` specifically, expecting it to fail against a servlet-mounted
+agent, now succeeds instead.
+
+**Breaking: the WebSocket shutdown close code is `1001` (going away), not `1000`.** A client that
+treated `1000` as the server's shutdown signal should treat `1001` the same way.
+
+**Shutdown drains open streams.** Closing the endpoint (servlet, listener, or Spring's own
+`SmartLifecycle` before graceful shutdown) now gives each open SSE stream a closing comment
+(`: shutting down`) before completing it, and closes each WebSocket with `1001`, so a framework's
+graceful shutdown phase never waits on them. **Migration**: none.
+
+**SSE responses carry `X-Accel-Buffering: no`**, alongside the existing `Cache-Control: no-cache`, so
+nginx and similar reverse proxies don't buffer them. **Migration**: none.
+
+**The host contract is `@UnstableAcpApi`.** `AcpHttpEndpoint` and the I/O adapter types a custom host
+would implement (`AcpHttpExchange`, `AcpHttpReply`, `SseFrame`, `AcpWsHandshake`, `AcpWsOutbound`,
+`AcpWsHandler`), all in `acp-http-core`, may change in any minor release. Most applications use the
+hosts the SDK ships (the servlet, the listener, Spring MVC's auto-configuration) and never touch these
+types directly.
+
 ## Smaller breaking changes
 
 | Surface | Change |
@@ -1097,3 +1149,14 @@ old behavior should be revisited.
 52. If any agent code calls `terminal/output`, `wait_for_exit`, `kill`, or `release` on a connection
     where the client might not advertise `terminal`, expect `AcpCapabilityException` now, not a sent
     request; these four now check the same as `create` already did.
+53. If an application mounts `StreamableHttpAcpServlet` in its own servlet container (Spring MVC
+    included), switch its dependency from `acp-streamable-http-jetty` to `acp-http-servlet`; using the
+    former there now fails at runtime with `NoSuchMethodError`, not at startup.
+54. If any `StreamableHttpAcpServlet` subclass overrides `doGet`, `doPost`, or `doDelete`, note that
+    `service` now handles every request itself; wrap an `AcpHttpEndpoint` instead to customize
+    behavior.
+55. If a client treats WebSocket close code `1000` as meaning "the server is shutting down," treat
+    `1001` (going away) the same way instead.
+56. If a Spring MVC application's own client connected with `transport.websocket.uri` and relied on it
+    failing against the servlet-mounted agent, note that it now succeeds: the servlet serves WebSocket
+    too, as of this release.

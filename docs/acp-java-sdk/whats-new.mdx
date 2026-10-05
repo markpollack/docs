@@ -40,11 +40,11 @@ three kinds of reply out (JSON, empty, or an SSE stream), and WebSocket text fra
 framework host is small and behaves the same; see
 [the full comparison](/docs/acp-java-sdk/transports#acp-over-http-needs-almost-nothing-from-a-web-framework).
 
-**Native integration, not a bolt-on.** *(Pending confirmation once the SDK's own hosts and tests
-land.)* On Spring Boot (MVC) and Quarkus, ACP runs inside your application: one server, one port, one
-TLS setup, one lifecycle that starts and stops with your app, one place for metrics and logs, and your
-framework's own threads. And if you expose the agent remotely, your framework's own security applies
-too. See [Spring Boot](/docs/acp-java-sdk/autoconfig#native-integration-not-a-bolt-on) and
+**Native integration, not a bolt-on.** On Spring Boot (MVC) and Quarkus, ACP runs inside your
+application: one server, one port for HTTP, SSE and WebSocket together, one TLS setup, one lifecycle
+that starts and stops with your app, one place for metrics and logs, and your framework's own threads.
+And if you expose the agent remotely, your framework's own security applies too, WebSocket handshake
+included. See [Spring Boot](/docs/acp-java-sdk/autoconfig#native-integration-not-a-bolt-on) and
 [Quarkus](/docs/acp-java-sdk/quarkus#native-integration-not-a-bolt-on) for a concrete example.
 
 Here's the shape of it: `@AcpAgent`, `@Prompt`, `@NewSession`, and the rest carry the handlers;

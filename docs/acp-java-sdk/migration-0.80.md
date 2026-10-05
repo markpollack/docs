@@ -891,10 +891,11 @@ other servlet container) adds `acp-http-servlet`; an application without a web s
 `acp-streamable-http-jetty` (the SDK's own listener). The starter itself brings neither.
 </Warning>
 
-As of `0380b28`, a servlet web application whose classpath still puts an older Jakarta WebSocket API
-ahead of the container's own now fails at startup, naming the fix (`acp-http-servlet`, or managing
-`jakarta.websocket-api` to 2.2.0), instead of starting cleanly and failing every WebSocket send with
-`NoSuchMethodError` later, with clients hanging and nothing in the server's log.
+As of `0380b28`, a servlet web application on Tomcat whose classpath still puts an older Jakarta
+WebSocket API ahead of Tomcat's own now fails at startup, naming the fix (`acp-http-servlet`, or
+managing `jakarta.websocket-api` to 2.2.0), instead of starting cleanly and failing every WebSocket
+send with `NoSuchMethodError` later, with clients hanging and nothing in the server's log. The check
+only runs when Tomcat's own WebSocket support is on the classpath; Jetty and Undertow aren't affected.
 
 **Breaking: `StreamableHttpAcpServlet` is now a host of `AcpHttpEndpoint`.** It gained the
 constructor `StreamableHttpAcpServlet(AcpHttpEndpoint)` and `endpoint()`; the routing, connection and
@@ -1206,8 +1207,10 @@ old behavior should be revisited.
     request; these four now check the same as `create` already did.
 53. If an application mounts `StreamableHttpAcpServlet` in its own servlet container (Spring MVC
     included), switch its dependency from `acp-streamable-http-jetty` to `acp-http-servlet`. As of
-    `0380b28`, using the former there fails fast at startup, naming the fix, rather than starting
-    cleanly and failing every WebSocket send with `NoSuchMethodError` later.
+    `0380b28`, using the former on Tomcat fails fast at startup, naming the fix, rather than starting
+    cleanly and failing every WebSocket send with `NoSuchMethodError` later; on Jetty or Undertow as
+    the servlet container, the startup check doesn't run at all, so the failure stays silent until a
+    WebSocket send.
 54. If any `StreamableHttpAcpServlet` subclass overrides `doGet`, `doPost`, or `doDelete`, note that
     `service` now handles every request itself; wrap an `AcpHttpEndpoint` instead to customize
     behavior.

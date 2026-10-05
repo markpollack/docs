@@ -7,7 +7,7 @@ Serve a Spring Boot `@AcpAgent` over Streamable HTTP with acp-autoconfig, and ta
 ## What You'll Learn
 
 - `spring.acp.agent.transport.type=http`: serving an `@AcpAgent` bean remotely, with no code changes to the bean itself
-- Why a non-web application runs the SDK's own Jetty listener, and a servlet web application mounts a servlet instead
+- Why a non-web application runs the SDK's own Jetty listener (`acp-streamable-http-jetty`), and a servlet web application mounts a servlet instead (`acp-http-servlet`), both serving HTTP, SSE and WebSocket
 - `spring.acp.client.transport.http.uri` and `.websocket.uri`, the properties that create a client transport for you, no transport bean required
 - `AcpClientCustomizer`, and how registering a handler relates to the capability property that advertises it
 - Reading the bound port back from the listener bean when the port is `0`
@@ -31,6 +31,10 @@ spring.acp.agent.transport.http.path=/acp
     <artifactId>acp-streamable-http-jetty</artifactId>
 </dependency>
 ```
+
+<Note>
+Spring Boot 4.1's own BOM manages Jetty core at a different patch version than the one `acp-streamable-http-jetty` pulls in for its `jetty-ee10-servlet`/`jetty-ee10-websocket-jakarta-server` jars, since Spring Boot 4.1 manages Jetty's `ee11` profile for its own embedded server, not `ee10`. Harmless here: this module talks HTTP and WebSocket, not Jetty internals. Import `org.eclipse.jetty.ee10:jetty-ee10-bom` yourself if you want every Jetty jar on the classpath at one aligned version.
+</Note>
 
 The `@AcpAgent` bean itself is unchanged:
 
@@ -58,7 +62,7 @@ public class NotesAgent {
 }
 ```
 
-With `transport.type=http`, acp-autoconfig builds an `AcpAgentFactory` from this bean (`AcpAgentSupport...buildFactory()`: one agent runtime per connection, all dispatching to this one bean). Because this particular application has no servlet container on the classpath, it's a non-web application, so the autoconfiguration also runs the SDK's `StreamableHttpAcpAgentTransport` listener bean: Jetty with HTTP/1.1, h2c, and the WebSocket upgrade, on `spring.acp.agent.transport.http.listener.port`. In a servlet web application (`spring-boot-starter-web` present), it mounts `StreamableHttpAcpServlet` on the application's own server instead: HTTP/SSE only, no WebSocket upgrade.
+With `transport.type=http`, acp-autoconfig builds an `AcpAgentFactory` from this bean (`AcpAgentSupport...buildFactory()`: one agent runtime per connection, all dispatching to this one bean). Because this particular application has no servlet container on the classpath, it's a non-web application, so the autoconfiguration also runs the SDK's `StreamableHttpAcpAgentTransport` listener bean (`acp-streamable-http-jetty`): Jetty with HTTP/1.1, h2c, and the WebSocket upgrade, on `spring.acp.agent.transport.http.listener.port`. In a servlet web application (`spring-boot-starter-web` present), it instead mounts `StreamableHttpAcpServlet` from `acp-http-servlet` on the application's own server: Streamable HTTP, SSE and WebSocket together, on `server.port`.
 
 With port `0`, read the bound port back from the listener bean:
 

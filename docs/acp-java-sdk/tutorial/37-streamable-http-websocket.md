@@ -11,7 +11,7 @@ See [Transports](/docs/acp-java-sdk/transports) for the identity and routing tab
 - Starting `StreamableHttpAcpAgentTransport` on port `0` and reading the bound port with `getPort()`
 - Connecting with `StreamableHttpAcpClientTransport` and `WebSocketAcpClientTransport` to the same listener
 - Plain `http://` negotiating HTTP/2 (h2c) automatically
-- The built-in listener's limits in 0.80.0: no TLS, no WebSocket inside a servlet container
+- The built-in listener's limits in 0.80.0: no TLS of its own
 
 ## The Code
 
@@ -92,7 +92,7 @@ server.closeGracefully().block(Duration.ofSeconds(10)); // waits up to shutdownT
 ```
 
 <Note>
-**Limits of the built-in listener in 0.80.0**: a plain connector only (terminate TLS in front of it, or mount `StreamableHttpAcpServlet` in your own container instead, which serves HTTP/SSE but not the WebSocket upgrade). [Module 38](/docs/acp-java-sdk/tutorial/38-spring-boot-http) shows the Spring Boot setup for both the standalone listener and the servlet case.
+**Limits of the built-in listener in 0.80.0**: a plain connector only; terminate TLS in front of it, or mount `StreamableHttpAcpServlet` (from `acp-http-servlet`) in your own servlet container instead, which serves Streamable HTTP, SSE and the WebSocket upgrade together on that container's own port. [Module 38](/docs/acp-java-sdk/tutorial/38-spring-boot-http) shows the Spring Boot setup for both the standalone listener and the servlet case.
 </Note>
 
 ## Source Code

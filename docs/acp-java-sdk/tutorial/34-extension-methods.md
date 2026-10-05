@@ -72,9 +72,10 @@ AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
     .extRequestHandler(Extensions.ECHO, params -> Extensions.ordered(
             "echoed", params, "agentSawJavaType", params.getClass().getSimpleName()))
 
-    // Typed notification: no answer, so the agent acknowledges with a notification of its own.
+    // Typed notification: no answer, so the agent acknowledges with a notification of its own,
+    // through the agent-aware overload's second parameter.
     .extNotificationHandler(Extensions.LOG, new TypeRef<LogEvent>() {},
-            event -> self.get().sendExtNotification(Extensions.ACK,
+            (event, self) -> self.sendExtNotification(Extensions.ACK,
                     Extensions.ordered("received", event.level() + ": " + event.message(), "by", "builder agent")))
     .build();
 ```
@@ -101,11 +102,11 @@ AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, SyncPromptContext c
 }
 ```
 
-A builder agent still reaches the built agent through an `AtomicReference` set right after `build()`
-for an extension method handler, even as of 0.80.0: the two-argument, agent-aware overload added for
-the typed builder setters (`.newSessionHandler((req, self) -> ...)`, and the rest) doesn't extend to
-`requestHandler`/`notificationHandler`, which is what a raw extension method registers through.
-An annotated handler just takes `AcpSyncAgent` as a parameter, as shown here, with no such gap.
+A prompt handler can also reach the client through the prompt context, without a reference to the
+agent at all: `ctx.client().sendExtRequest(Extensions.SELECTION, new SelectionQuery("src/Main.java"),
+new TypeRef<Selection>() {})` calls the same way `agent.sendExtRequest(...)` does above. Useful in a
+builder prompt handler, which gets a `PromptContext`/`SyncPromptContext` either way, whether or not it
+also takes the agent as a parameter.
 
 ### Client: serving the agent's calls, and calling back
 

@@ -136,7 +136,9 @@ quarkus.acp.agent.transport.type=http
 ```
 
 A Streamable HTTP client and a WebSocket client both connect to the same `/acp` path on
-`quarkus.http.port`, the Quarkus application's own server, not a separate SDK listener. The CDI
+`quarkus.http.port`, the Quarkus application's own server, not a separate SDK listener. The path sits
+under `quarkus.http.root-path` (`/` by default) and is served by one Vert.x route (the extension
+depends on `quarkus-vertx-http`, not Undertow); no servlet container, no second server. The CDI
 interceptor's call count keeps climbing across both connections: one bean serves every connection
 Quarkus accepts.
 

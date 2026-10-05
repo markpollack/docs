@@ -282,6 +282,12 @@ Two things still bypass this by design:
 - **TLS on the built-in listener.** It opens a plain connector only; terminate TLS in front of it, or
   use the mountable servlet in a container that already handles TLS.
 - **A client-side listener.** Clients in this SDK only connect; they don't accept inbound connections.
+- **An oversized request can surface as a connection error instead of 413, on some hosts.** The
+  endpoint refuses a body over `maxPostBodyBytes` (16 MiB) by its `Content-Length`, before reading
+  it. On Tomcat as a WebFlux server, and on Jetty, the connection can then close while the body is
+  still arriving, and a client still sending can lose the 413 it already received to that reset. The
+  request is refused either way; a valid request is unaffected. Tomcat as a servlet container
+  (Spring MVC) and Reactor Netty aren't affected. A fix is planned for 0.81.0.
 
 ## Related
 

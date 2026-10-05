@@ -215,11 +215,15 @@ How the endpoint is served, and which module it needs, depends on what's already
 ```
 
 <Warning>
-**Don't add `acp-streamable-http-jetty` to a servlet web application.** Its Jakarta WebSocket 2.1 API
-jar shadows the one your servlet container already provides (Tomcat 11 ships 2.2), which fails with a
-`NoSuchMethodError` at runtime, not at startup. Depend on `acp-http-servlet` there instead, which has
-no Jetty dependency at all.
+**One HTTP module per application type.** A servlet web application adds `acp-http-servlet`; an
+application without a web server adds `acp-streamable-http-jetty` (the SDK's own listener). The
+starter itself brings neither.
 </Warning>
+
+A servlet web application on Tomcat whose classpath still puts an older Jakarta WebSocket API ahead of
+Tomcat's own now fails at startup, naming the fix (`acp-http-servlet`, or managing
+`jakarta.websocket-api` to 2.2.0), instead of starting cleanly and failing every WebSocket send with
+`NoSuchMethodError` later, with clients just hanging.
 
 <Warning>
 **A reactive web application (`spring-boot-starter-webflux`) matches neither case.** It's not a

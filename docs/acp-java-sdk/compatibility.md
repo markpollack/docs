@@ -22,15 +22,15 @@ demand) and locally via `integration-testing/scripts/run-all.sh`.
 | Rust SDK | verified | verified | verified |
 | Python SDK | verified | verified | verified |
 | Kotlin SDK | verified | n/a: Kotlin has no HTTP transport | verified |
-| Spring Boot | coming | coming | coming |
+| Spring Boot | verified | verified | verified |
 | Quarkus | coming | verified | verified |
 | Micronaut | verified | verified | coming |
 
 <Note>
-**"Coming" means a cell with no interop test yet, not a feature gap.** A framework smoke-test matrix
-(Spring Boot, Quarkus, Micronaut, each against the TypeScript SDK on every transport they support) is
-being built now and is expected to land before 0.80.0 ships; this table will be updated the moment it
-does, cell by cell, not all at once.
+**"Coming" means a cell with no interop test yet, not a feature gap.** A framework smoke matrix
+(`integration-testing/smoke.json`, Spring Boot, Quarkus and Micronaut each hosting the SDK against the
+TypeScript SDK) is the release gate for the framework integrations; it's landing cell by cell as each
+framework's transports join it, not all at once.
 </Note>
 
 Each peer SDK is tested against its own `main` (`master` for Kotlin) branch, not a pinned release, so
@@ -42,10 +42,11 @@ URL modes), session config options, cancellation (`session/cancel` and `$/cancel
 extension methods; one further step (`session.fork`) runs separately, since session fork is
 `@UnstableAcpApi`.
 
-The Quarkus and Micronaut cells above are narrower than the peer-SDK cells: they're a TypeScript client
-against that framework's own sample agent, running the steps a plain echo agent answers (initialize,
-sessions, echo chunks, stop reasons, `-32601`, large prompts and updates), not the full 75-step
-catalogue.
+The framework cells above are narrower than the peer-SDK cells: a TypeScript client against each
+framework's own sample agent, running the framework smoke matrix's own step list (initialization and
+capability negotiation, session lifecycle, a streamed message, permission requests, form-mode
+elicitation, cancellation, one extension method, and connection close, on whichever of a framework's
+transports are wired into the matrix today), not the full 75-step catalogue the peer-SDK cells run.
 
 ## Feature comparison across the ACP SDKs
 

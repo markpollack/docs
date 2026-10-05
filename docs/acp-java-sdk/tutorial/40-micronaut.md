@@ -177,7 +177,14 @@ interface.
 
 As of the listener-key rename, the port (and host) live under `acp.agent.transport.http.listener.*`,
 matching Spring Boot: the listener binds `127.0.0.1` by default unless
-`acp.agent.transport.http.listener.host` says otherwise.
+`acp.agent.transport.http.listener.host` says otherwise. An ACP WebSocket is a long-lived session, so
+ACP has its own idle timeout, separate from HTTP keep-alive tuning; the initialize deadline closes
+connections that never start. This module sets both explicitly, at their defaults:
+
+```properties
+acp.agent.transport.http.web-socket-idle-timeout=30m
+acp.agent.transport.http.initialize-timeout=30s
+```
 
 ```java
 try (ApplicationContext agent = context(Map.of(

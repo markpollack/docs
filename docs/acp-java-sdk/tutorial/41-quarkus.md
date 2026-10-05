@@ -133,6 +133,10 @@ System.out.println("promptCapabilities.image (from @Prompt(image = true)): "
 
 ```properties
 quarkus.acp.agent.transport.type=http
+
+# An ACP WebSocket is a long-lived session, so ACP has its own idle timeout, separate from HTTP keep-alive tuning; the initialize deadline closes connections that never start. These are the defaults.
+quarkus.acp.agent.transport.http.web-socket-idle-timeout=30m
+quarkus.acp.agent.transport.http.initialize-timeout=30s
 ```
 
 A Streamable HTTP client and a WebSocket client both connect to the same `/acp` path on

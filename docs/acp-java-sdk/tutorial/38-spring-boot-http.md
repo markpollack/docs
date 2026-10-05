@@ -23,6 +23,10 @@ Compared with a stdio Spring Boot agent (Module 23), only the transport property
 spring.acp.agent.transport.type=http
 spring.acp.agent.transport.http.listener.port=8080
 spring.acp.agent.transport.http.path=/acp
+
+# An ACP WebSocket is a long-lived session, so ACP has its own idle timeout, separate from HTTP keep-alive tuning; the initialize deadline closes connections that never start. These are the defaults.
+spring.acp.agent.transport.http.web-socket-idle-timeout=30m
+spring.acp.agent.transport.http.initialize-timeout=30s
 ```
 
 ```xml

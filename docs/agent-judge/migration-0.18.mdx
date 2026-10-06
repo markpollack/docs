@@ -1,0 +1,89 @@
+---
+title: "Migrating to Agent Eval 0.18"
+sidebarTitle: "Migrating to 0.18"
+description: "Intentional configured execution, module, policy, and stored-result changes from 0.17"
+---
+
+<Note>
+This guide describes the 0.18.0-SNAPSHOT source API, not a published release.
+Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts).
+Java 21, repository `agent-judge`, group `io.github.markpollack`, artifact prefix `agent-judge-`,
+and package prefix `io.github.markpollack.judge` remain unchanged.
+Recompile adopting callers against matching module versions; no binary/source compatibility is promised.
+</Note>
+
+## Configure before execution
+
+| Released 0.17 surface | Configured 0.18 replacement |
+|---|---|
+| `judge(context)` / `vote(context)` | Bind evidence and backend collaborators before `build()`; call `judge()` / `vote()` |
+| JudgeModel, JudgeModelRequest/Response | EvalModel, EvalModelRequest/Response/Options, EvalMessage and EvalRole |
+| `result` imports and voting/attempt types in `jury` | `judgment`, `verdict`, `voting` and `jury` packages |
+| Roster Judge returning a rollup | EarsJury/Rfc2119Jury returns the complete roster Verdict; native Judges assess one actual requirement |
+| Binary Check assumptions and score/label-only copies | Complete child Judgment statuses, optional findings, support and native facts |
+| Intrinsic exclusion metadata used as seat permission | Local immutable JudgeSeat exclusion permission; whole-Jury bounds derive from its description |
+| Reader-specific interpretation heuristics | Validated Verdict semantics and `conclusion()`, with separate application Policy |
+| JSON binding assumed from core | Explicit `agent-judge-json-jackson2` and strict codecs |
+
+A pure Requirement owns identity, revision, specification and source.
+Typed construction binds that actual requirement and evidence to a ready non-generic Judge or Jury.
+Construction acquires no evidence and invokes no backend.
+Each direct execution is fresh; suppliers acquire one snapshot per execution.
+`EvalRuntime<Q,A>` retains native answers and invocation facts; generated EvalModel specializes that port.
+SpringAiEvalModel and AgentClientEvalModel bridge generated runtimes.
+Tools, permissions, workspace, credentials and timeouts belong to the configured backend.
+
+The [requirements example](/docs/agent-judge/requirements-judges#run-a-prepared-example) supplies a complete caller POM and Java program.
+It exercises actual requirements, prepared evidence, cached AssertJ and retained V6 equality without inference.
+
+## Preserve coverage and reliance separately
+
+An ordinary panel reduces independently configured opinions.
+Explicit AllOf assignments validate required constituent coverage; a native roster declares its selected population.
+An uncertain required item cannot be filtered out to obtain PASS.
+Generated RFC/EARS rosters enter once per selected roster; a backend may make several internal model/tool calls.
+Structured runtimes, including Jev, execute per item.
+
+Keep the complete Verdict: originals, rejected returns and their separate treatments, children, attempted tiers,
+seat weights, captured voting-rule configuration, requirement associations and invocation owners.
+One declared usable member preserves its complete semantic identity.
+`conclusion()` derives PASS, FAIL, INCONCLUSIVE or NOT_APPLICABLE.
+
+Policy receives the whole original usable Verdict and decides RELY, ABSTAIN or ESCALATE.
+RELY may trust a negative conclusion; withholding does not rewrite it.
+EvaluationResult retains the original with NotRequested, Decided or Failed policy application and optional attribution.
+Live AssertJ stages cache their result or thrown failure across terminals.
+Retained assertions and reports execute no producer or policy; explicit `Evaluations.apply(verdict, policy)` requests a new decision.
+Cancellation, interruption, fatal errors and preservation-limit failures propagate.
+Unknown usage remains absent, not zero.
+
+## Migrate storage deliberately
+
+Results/evaluations use V6; descriptions remain V3.
+Add matching `agent-judge-json-jackson2` explicitly.
+Use VerdictCodec for text/AllOf and NativeRequirementCodecs.codec() for RFC/EARS specifications.
+Low-level Jackson callers explicitly register ResultJson.module() and trusted native/custom specification codecs.
+Ordinary POJO binding is not the storage contract.
+
+Current typed codecs refuse older result versions.
+Preserve original bytes and version tags instead of relabelling or automatically backfilling them.
+V5 archival reader: `c0ae61dda4a65e9278485cb528925d71f27a1007`.
+V4 archival reader: `7387aab1bf9d3bd56e4d9a932f2f40e2978d676d`, which refuses V2/V3.
+No verified typed V2/V3 reader pin is supplied.
+The [retained-results guide](/docs/agent-judge/interpreting-verdicts) explains strict limits, ownership and alternate byte custody.
+
+## Select modules and tutorial paths
+
+There are 14 JAR modules plus agent-judge-parent (POM packaging).
+The [installation inventory](/docs/agent-judge/getting-started#dependencies) names all fourteen.
+Add assertion, JSON and runtime modules explicitly; no AgentWorks BOM update or suite-wide migration is implied.
+
+The [configured PetClinic case](/docs/agent-judge/petclinic-case-study) retains RFC13 = 5 PASS/8 FAIL → FAIL,
+EARS6 → PASS and EARS52 = 51 PASS/1 ABSTAIN → INCONCLUSIVE.
+Archived replay and synthetic stubs prove caller behavior, not new inference or evaluator accuracy.
+The separate fundamentals and judge-junit reactor stays on released 0.17.0.
+The [0.17 migration page](/docs/agent-judge/migration-0.17) remains historical.
+
+Project-specific Business Source License terms remain in force.
+See the [source migration inventory](https://github.com/markpollack/agent-judge/blob/3203006a3a69787c84259b6644999c5f913a8a14/MIGRATION_0.18.md)
+and [current API reference](/docs/agent-judge/api-reference).

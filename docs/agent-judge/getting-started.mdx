@@ -23,8 +23,8 @@ These commands install locally; they do not publish artifacts or integrate produ
 export EVAL_M2="$PWD/eval-m2"
 git clone https://github.com/markpollack/agent-judge.git agent-eval-source
 cd agent-eval-source
-git checkout --detach 0d0abe47b34c0e638e68ed81c5a764d6b424bc86
-./mvnw -Dmaven.repo.local="$EVAL_M2" -pl agent-judge-ai-core,agent-judge-agent-client,agent-judge-exec,agent-judge-assertj -am -DskipTests clean install
+git checkout --detach 9ccddd31862cc79c7dc2b2d41f4fb1596a56972a
+./mvnw -nsu -Dmaven.repo.local="$EVAL_M2" -pl agent-judge-ai-core,agent-judge-agent-client,agent-judge-exec,agent-judge-assertj -am -DskipTests clean install
 ```
 
 The first build downloads dependencies. `-DskipTests` builds artifacts and is not an acceptance-gate result.
@@ -46,6 +46,8 @@ No live inference is needed.
 
 All source artifacts retain group `io.github.markpollack` and version `0.18.0-SNAPSHOT`.
 Declare the source version explicitly; no AgentWorks BOM change is implied.
+The inventory is 14 JAR modules plus `agent-judge-parent` (POM packaging).
+The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intentional API and wire breaks.
 
 | Artifact | Purpose |
 |---|---|
@@ -56,7 +58,8 @@ Declare the source version explicitly; no AgentWorks BOM change is implied.
 | `agent-judge-llm` / `agent-judge-agent-client` | Generated runtime adapters |
 | `agent-judge-jev` | Typed structured native execution |
 | `agent-judge-exec` / `agent-judge-file` | Build/command and file evaluation |
-| Other framework and RAG modules | Optional integrations; migrate their callers separately |
+| `agent-judge-rag` | Typed retrieval evidence and RAG judges |
+| `agent-judge-spring-ai` / `agent-judge-langchain4j` / `agent-judge-koog` | Evaluated response evidence bridges |
 
 The [fundamentals path](/docs/agent-judge/tutorial) still demonstrates released 0.17.0 in its separate reactor.
 The [PetClinic source path](/docs/agent-judge/petclinic-case-study) demonstrates configured 0.18 APIs.

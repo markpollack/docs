@@ -3,6 +3,12 @@ title: "Writing Custom Judges"
 description: "Design the oracle first, then pick the mechanism"
 ---
 
+<Note>
+This page's examples describe released Agent Judge 0.17.0 and the fundamentals reactor.
+For configured Agent Eval 0.18 execution, use the [requirements walkthrough](/docs/agent-judge/requirements-judges) and [current API reference](/docs/agent-judge/api-reference).
+</Note>
+
+
 > **A JUnit test *has* an oracle. A judge *is* the oracle.**
 
 You wrote `expected` in `assertEquals(expected, actual)` because you knew the answer, so the check was checked — by a human, at authoring time.

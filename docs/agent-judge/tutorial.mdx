@@ -4,8 +4,8 @@ description: "Eleven credential-free fundamentals modules and the PetClinic requ
 ---
 
 The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) is the canonical sample suite.
-Each module is a small executable Maven project compiled against Agent Judge 0.17.0.
-The commands and source links on these pages select the tested 0.17.0 tutorial revision.
+The eleven fundamentals modules are small executable Maven projects compiled against Agent Judge 0.17.0.
+The fundamentals commands below select the historical tested 0.17.0 revision. The migrated PetClinic path uses a separate source pin and reactor.
 
 ```bash
 git clone https://github.com/markpollack/agent-judge-tutorial.git
@@ -23,26 +23,30 @@ The first build downloads Maven dependencies; prepare the caches before attempti
 
 ## PetClinic case study
 
-The conference example, [Running the Spec You Already Wrote](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic), lives alongside the fundamentals in `case-studies/spec-driven-petclinic/`.
-It evaluates a generated Spring application against requirements written before the code existed.
-Read [PetClinic: running the specification](/docs/agent-judge/petclinic-case-study) for the learning sequence, the evidence behind each result, and the distinction between assessment, rollup, merge policy, and investigation.
-Its five modules have their own numbering and Maven reactor:
+The [configured PetClinic path](https://github.com/markpollack/agent-judge-tutorial/tree/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic)
+uses Agent Eval source `0d0abe47b34c0e638e68ed81c5a764d6b424bc86` at `0.18.0-SNAPSHOT`.
+Use its separate tutorial checkout at `3bb1d6ff898d861f34da6d9ffe10efc990425efd` and
+[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md)
+to build that exact producer in an isolated dependency repository. These artifacts are locally built;
+no published 0.18 snapshot or BOM update is assumed.
 
-| Module | What it checks |
+| Module | Configured evaluation |
 |---|---|
-| `module-01-build` | Build and existing tests, using `BuildSuccessJudge` |
-| `module-02-ears-slice` | Six acceptance criteria, using `EarsJudge` |
-| `module-03-ears-usecase` | All 52 criteria in one use case, using `EarsJudge` |
-| `module-04-rfc2119-rules` | Thirteen architectural constraints, using `Rfc2119Judge` |
-| `module-05-investigation` | The consequence and reachability of one failed constraint |
+| `module-01-build` | BuildSuccessJudge with materialized workspace evidence |
+| `module-02-ears-slice` | EarsJury with UC6-AC7 through UC6-AC12: PASS |
+| `module-03-ears-usecase` | EarsJury with all 52 criteria: INCONCLUSIVE; one ABSTAIN child |
+| `module-04-rfc2119-rules` | Rfc2119Jury with all 13 requirements: FAIL; eight FAIL children |
+| `module-05-investigation` | Separate investigation of the actual RULE-4 failure |
 
-The model-backed steps replay committed recordings without credentials.
-Module 01 runs a real build; download dependencies before attempting an offline run.
-Follow the case study's [README](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/README.md) to run it, or its [presenter walkthrough](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/DRY-RUN.md) for the IntelliJ merge gates.
-The regression tests assert recorded outcomes; the merge gates require `PASS`, so the behavior and architecture gates deliberately go red.
-Module 06, deterministic promotion, remains a discussion rather than an implemented module.
+Each generated roster invokes its configured backend once; an agent backend can internally call
+models and tools several times. Structured controls execute once per item. The model-backed demos
+replay unchanged archived answers. Module 01 runs a real build with prepared caches.
 
-For the judge contract and standalone examples using released Agent Judge 0.17.0, see [Requirements judges](/docs/agent-judge/requirements-judges).
+The [case-study guide](/docs/agent-judge/petclinic-case-study) explains requirements, runtime setup,
+evidence, complete retained results and separate application policy. Producer AssertJ regression
+tests assert the archived populations; explicit merge gates intentionally reject EARS52 and RFC13.
+Prepared Judge and Requirement-first AssertJ examples exercise the same public API.
+Module 06 remains unimplemented. The unchanged DRY-RUN.md is historical 0.17 evidence.
 
 ## The fundamentals subject
 

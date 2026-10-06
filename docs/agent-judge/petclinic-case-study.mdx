@@ -6,11 +6,11 @@ description: "Configured RFC13 and EARS6/52 evaluations with archived replay, fu
 An agent implemented appointment scheduling for PetClinic. Its build and existing tests pass.
 This path asks whether it meets the written requirements, then investigates one failed rule.
 The five modules share a fixed subject and a separate Maven reactor under
-[`case-studies/spec-driven-petclinic/`](https://github.com/markpollack/agent-judge-tutorial/tree/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic).
+[`case-studies/spec-driven-petclinic/`](https://github.com/markpollack/agent-judge-tutorial/tree/861231ccf96d650c14fa62a14ddb5bc1181ced19/case-studies/spec-driven-petclinic).
 
 The current caller uses Agent Eval `0.18.0-SNAPSHOT` built from exact source
 `9ccddd31862cc79c7dc2b2d41f4fb1596a56972a`. Follow
-[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md)
+[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/861231ccf96d650c14fa62a14ddb5bc1181ced19/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md)
 for the isolated dependency setup and commands. The root fundamentals reactor remains on 0.17.0.
 
 ## The specification supplies the roster
@@ -80,7 +80,7 @@ assertThat(jury).isPassed();
 ```
 
 The full class is
-[ShouldIMergeBehaviorDemo](https://github.com/markpollack/agent-judge-tutorial/blob/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java).
+[ShouldIMergeBehaviorDemo](https://github.com/markpollack/agent-judge-tutorial/blob/861231ccf96d650c14fa62a14ddb5bc1181ced19/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java).
 EARS6 passes. EARS52 intentionally fails this gate on INCONCLUSIVE; RFC13 fails it on FAIL.
 The `ShouldIMerge*Demo` classes are excluded from ordinary regression discovery and run separately
 with the commands in CONFIGURED-RUN.md. Regression tests pass by asserting these populations.

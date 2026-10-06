@@ -175,6 +175,10 @@ interface.
 
 ### Over HTTP: one bean, many connections
 
+Serving ACP over Streamable HTTP and WebSocket needs `com.agentclientprotocol:acp-streamable-http-jetty`
+on the classpath, an optional dependency of `acp-micronaut` this module adds explicitly in its own
+`pom.xml`; without it, stdio is the only transport available.
+
 As of the listener-key rename, the port (and host) live under `acp.agent.transport.http.listener.*`,
 matching Spring Boot: the listener binds `127.0.0.1` by default unless
 `acp.agent.transport.http.listener.host` says otherwise. An ACP WebSocket is a long-lived session, so

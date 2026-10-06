@@ -28,7 +28,8 @@ git checkout --detach 0d0abe47b34c0e638e68ed81c5a764d6b424bc86
 ```
 
 The first build downloads dependencies. `-DskipTests` builds artifacts and is not an acceptance-gate result.
-Keep that same `EVAL_M2` when compiling callers; use `-o` after preparation to avoid snapshot updates.
+Keep that same `EVAL_M2` when compiling callers.
+Each caller POM needs its own dependency/plugin preparation before using `-o`; installing the producer alone does not prepare them all.
 The [requirements guide](/docs/agent-judge/requirements-judges#run-a-prepared-example) has a complete caller POM and executable Java example with deterministic responses.
 No live inference is needed.
 

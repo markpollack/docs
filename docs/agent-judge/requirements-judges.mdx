@@ -117,7 +117,17 @@ public class RequirementsDemo {
 }
 ```
 
-With the exact-source artifacts installed in your isolated repository, run:
+Keep the exact producer revision `0d0abe47b34c0e638e68ed81c5a764d6b424bc86` installed in the same isolated `EVAL_M2`.
+Prepare this standalone caller's own dependencies and Maven plugins with a first run without `-o`.
+The producer build alone does not download everything in this caller POM.
+`-nsu` suppresses snapshot update checks while Maven downloads missing dependencies and plugins.
+The example uses deterministic responses and performs no live inference.
+
+```bash
+./mvnw -nsu -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
+```
+
+Once that preparation succeeds, subsequent runs can use the same isolated repository offline:
 
 ```bash
 ./mvnw -o -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo

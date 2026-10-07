@@ -132,9 +132,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-static CodexRollout rollout(Path dir, String file, String threadId, String parentThreadId) throws IOException {
+static CodexRollout rollout(Path dir, String file, String threadId, String parentThreadId)
+        throws IOException {
     Path path = dir.resolve(file);
-    return new CodexRollout(threadId, parentThreadId, path.toString(), Files.readAllLines(path));
+    return new CodexRollout(threadId, parentThreadId, path.toString(),
+            Files.readAllLines(path));
 }
 
 Path fixtures = Path.of("codex-subagents-synthetic");   // or the Codex sessions directory
@@ -186,22 +188,25 @@ for (RunData run : storage.listRuns("subagent-demo")) {
     LLMCallEvent llm = storage.loadEvents("subagent-demo", run.id()).stream()
             .filter(LLMCallEvent.class::isInstance).map(LLMCallEvent.class::cast)
             .findFirst().orElseThrow();
-    System.out.printf("%s status=%s track=%s parent=%s spawn=%s input=%d cacheRead=%d cost=%.2f%n",
+    System.out.printf("%s %s track=%s parent=%s spawn=%s input=%d cacheRead=%d cost=%.2f%n",
             run.id(), run.status(), run.tags().get("track"), run.parentRunId(),
             run.config().values().get("subagent.spawnToolUseId"),
-            llm.tokenUsage().inputTokens(), llm.tokenUsage().cacheReadTokens(), llm.totalCostUsd());
+            llm.tokenUsage().inputTokens(), llm.tokenUsage().cacheReadTokens(),
+            llm.totalCostUsd());
 }
 ```
 
 For the Claude fixture this lists five runs:
 
-| run | status | `tags.track` | `parentRunId` | `subagent.spawnToolUseId` | input | cache read | cost |
-|---|---|---|---|---|---|---|---|
-| main loop | FINISHED | (none) | (none) | (none) | 36 | 2,200 | 0.50 |
-| a | FINISHED | subagent | main loop | `toolu_spawn_a` | 11 | 500 | 0.00 |
-| b | FINISHED | subagent | main loop | `toolu_spawn_b` | 12 | 600 | 0.00 |
-| c | FAILED | subagent | **b** | `toolu_spawn_c` | 9 | 400 | 0.00 |
-| d | CRASHED | subagent | main loop | `toolu_spawn_d` | 3 | 0 | 0.00 |
+| run | status | parent | spawning tool call | input | cache read | cost |
+|---|---|---|---|---|---|---|
+| main loop | FINISHED | (none) | (none) | 36 | 2,200 | 0.50 |
+| a | FINISHED | main loop | `toolu_spawn_a` | 11 | 500 | 0.00 |
+| b | FINISHED | main loop | `toolu_spawn_b` | 12 | 600 | 0.00 |
+| c | FAILED | **b** | `toolu_spawn_c` | 9 | 400 | 0.00 |
+| d | CRASHED | main loop | `toolu_spawn_d` | 3 | 0 | 0.00 |
+
+Every row but the first has `tags.track = subagent`; "parent" is `parentRunId` and "spawning tool call" is `config["subagent.spawnToolUseId"]`.
 
 The join: a child's `subagent.spawnToolUseId` equals the `id` of a `tool_call` event in its parent's `events.jsonl`. Sub-agent `c` was started by sub-agent `b`, so its `parentRunId` is `b`'s run and its `subagent.depth` is 2. The parent's `llm_call` metadata lists the children under `subagents` (spawn id, run id, depth, status) and the spawns that produced no record under `subagentsWithoutTrack`.
 

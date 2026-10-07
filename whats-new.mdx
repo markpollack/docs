@@ -14,7 +14,7 @@ sidebarTitle: "What's New"
 - Complete Claude Code capture needs the CLI started with `--forward-subagent-text`; Codex capture takes the root and child rollout files as `CodexRollouts`. Input and cache tokens over a Claude call and its sub-agent runs reconcile exactly to the call's `modelUsage`
 - `RunRecorder.recordOnce` and `CodexRunRecorder.recordOnce` record an execution at most once per experiment and storage, across restarts
 - `SessionLogParser.withSessionBaseline` gives a later prompt of a multi-prompt Claude Code session its own cost instead of the session's running total
-- Token and turn counting corrected for Claude Code, a recorder closed without `finish()` now ends `CRASHED`, every file names the version that wrote it, and Jackson moves to 2.22.3 / 3.2.3 for four September advisories
+- Token and turn counting corrected for Claude Code, a recorder closed without `finish()` now ends `CRASHED`, the event and analysis streams name the version that wrote them, and Jackson moves to 2.22.3 / 3.2.3 for four September advisories
 
 [Sub-agent capture](/docs/agent-journal/subagent-capture) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
 

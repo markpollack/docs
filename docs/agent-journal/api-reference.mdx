@@ -12,11 +12,18 @@ This page describes the public API shipped in Agent Journal 1.11.0.
 | `journal-core` | `JsonFileStorage` header keys `producer` and `producerVersion`; `SourceRecordings` (`find`, `newRecording`, `requireComplete`, `Outcome`); `TokenUsage.cacheHitRatio()` with a new formula (cache reads over input plus cache reads, between 0 and 1) | `TokenUsage.total()` is input plus output and no longer adds thinking tokens on top of output; `effectiveInputTokens()` is deprecated and returns the input tokens; the schema-version rule is corrected (a stored enum gaining a value is a schema change) and a newer schema version is refused with an error naming both versions; `RunStatus.CRASHED` is documented as "ended without a successful end observed" |
 | `claude-code-capture` | `SubagentCapture`; `PhaseCapture.subagents()`, `subagentTracksAvailable()`, `reportedSubagentStats()`, `subagentsWithoutTrack()`, `sessionCost()`, `costBasis()`; `SessionCost`; `SessionLogParser.withSessionBaseline(current, previous)`; `RunRecorder.recordOnce(experimentId, capture, configure)`, `sourceKeyOf(capture)`, `SOURCE_KIND`; `BaseRunRecorder.META_*`, `CONFIG_SPAWN_TOOL_USE_ID`, `TAG_TRACK` | `RunRecorder.close()` without `finish()` ends the run `CRASHED`; `finish()` ends the run before throwing a lost-derived-events error; `PhaseCapture.totalTokens()` and `aggregateUsage()` take output tokens from the result message and count input and cache tokens once per message; one turn per message |
 | `codex-cli-capture` | `CodexRollout`, `CodexRollouts`, `CodexSubagentCapture`; `CodexSessionParser.parse(CodexRollouts, phaseName, promptText)`; `CodexPhaseCapture.subagents()`, `subagentTracksAvailable()`, `spawnedThreadIds()`, `subagentsWithoutTrack()`; `CodexRunRecorder.recordOnce(experimentId, capture, configure)`, `SOURCE_KIND`, `META_*`; `CodexJournalSteps.forSubagent` | `CodexPhaseCapture.tokenUsage()` input excludes cached input |
-| `grok-cli-capture`, `junie-cli-capture` | — | tool `durationMs` is -1 when unmeasured |
-| build | Jackson 2.22.3 and Jackson 3 3.2.3 (CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, CVE-2026-91777); published module POMs inline the licence and project metadata | — |
+| `grok-cli-capture`, `junie-cli-capture` | none | tool `durationMs` is -1 when unmeasured |
+| build | Jackson 2.22.3 and Jackson 3 3.2.3 (CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, CVE-2026-91777); published module POMs inline the licence and project metadata | none |
 
-Every earlier `PhaseCapture` and `CodexPhaseCapture` constructor remains; a record pattern over `PhaseCapture` needs three more components.
-Files written by 1.11.0 load in 1.10.1 readers (no new record field, no new enum value).
+### Migrating a caller from 1.10.1
+
+Three kinds of compatibility apply, and they differ:
+
+- **Constructors.** Every earlier `PhaseCapture` and `CodexPhaseCapture` constructor is kept, so code that builds a capture with positional arguments compiles unchanged. A kept constructor fills the new components with empty values (no sub-agents, tracks unavailable, no session cost).
+- **Record patterns.** A record pattern names every component. `PhaseCapture` grew from 22 to 26 components (`subagents`, `subagentTracksAvailable`, `reportedSubagentStats`, `sessionCost` appended), and `CodexPhaseCapture` from 14 to 17 (`subagents`, `subagentTracksAvailable`, `spawnedThreadIds`). A pattern written against 1.10.1 does not compile against 1.11.0 until the new components are added.
+- **JSON readers.** A `PhaseCapture` serialised with Jackson has four more properties and a `CodexPhaseCapture` three; readers that ignore unknown properties keep working. Journal files written by 1.11.0 load in 1.10.1 readers (no new record field, no new enum value), and 1.11.0 readers load older files.
+
+The released agent-client (0.31.0) pins Journal 1.10.0 and calls none of the 1.11.0 additions; see the [sub-agent capture guide](/docs/agent-journal/subagent-capture#requirements).
 
 ## Coordinates
 

@@ -30,15 +30,15 @@ description: "What changed in each Agent Journal release, and why it matters"
 ## 1.9.0 (2026-08-25)
 
 - Closes four capture gaps where a value the provider already reported was discarded at parse time. All changes are additive; every extended record keeps a back-compatible constructor
-- Per-step records now carry the full five-field token vector — input, output, thinking, cache creation, cache read — on `JournalStep`, `StepCostEvent` and the trace's `step_cost` line. Extended-thinking tokens are read from the wire (`usage.output_tokens_details.thinking_tokens`) instead of estimated from character counts
+- Per-step records now carry the full five-field token vector (input, output, thinking, cache creation, cache read) on `JournalStep`, `StepCostEvent` and the trace's `step_cost` line. Extended-thinking tokens are read from the wire (`usage.output_tokens_details.thinking_tokens`) instead of estimated from character counts
 - A vendor-neutral `StopReason` enum (`NATURAL_DONE`, `TOOL_USE`, `MAX_TURNS`, `MAX_TOKENS`, `REFUSAL`, `ERROR`, `CANCELLED`, `UNKNOWN`) with `isTruncatedRun()`, and `maxTurns` recorded alongside it, so a run cut off at its turn limit can be told from one that finished
 - See the [1.9.0 release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.9.0) for the full list
 
 ## 1.8.0 (2026-08-22)
 
-- Three new tool-trajectory capture adapters — `grok-cli-capture`, `codex-cli-capture`, and `antigravity-cli-capture` — turn each CLI's durable JSONL stream into ordered `ToolCallEvent` and `StepCostEvent` records with stable tool-call identities
+- Three new tool-trajectory capture adapters, `grok-cli-capture`, `codex-cli-capture` and `antigravity-cli-capture`, turn each CLI's durable JSONL stream into ordered `ToolCallEvent` and `StepCostEvent` records with stable tool-call identities
 - Grok capture parses the ACP-shaped `streaming-json` output, pairing `tool_call` and `tool_call_update` by `toolCallId` and preserving both the reported tool name and the ACP semantic kind. The stream has no durable turn-to-tool cost join, so the real session total from `end.total_cost_usd` is retained and attributed evenly across captured tool steps
-- Codex capture parses durable rollout JSONL and deliberately classifies the nested `payload.input` call rather than the outer `exec` function name that Codex records for most tool invocations, assigning semantic names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`. The classifier is conservative around shell syntax — aliases, shell functions, quoted operators, and work hidden behind an interpreter fall back to `Shell`, with raw input and command retained for later reclassification
+- Codex capture parses durable rollout JSONL and deliberately classifies the nested `payload.input` call rather than the outer `exec` function name that Codex records for most tool invocations, assigning semantic names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`. The classifier is conservative around shell syntax: aliases, shell functions, quoted operators, and work hidden behind an interpreter fall back to `Shell`, with raw input and command retained for later reclassification
 - Antigravity capture pairs active and terminal updates by `step_index`, handles both `DONE` and `ERROR` steps, records parameters, output or error text, duration, and terminal token usage, and derives stable identities from conversation and step positions
 - Codex and Antigravity report no monetary cost in these streams, so cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source
 - Gemini CLI capture remains turn-level and provides no tool trajectory, so Gemini is not part of this release's multi-CLI tool-trajectory claim
@@ -57,9 +57,9 @@ description: "What changed in each Agent Journal release, and why it matters"
 ## 1.6.0 (2026-07-01)
 
 - First-class journal-capture primitives (slice 1): `PhaseCapture.stepCosts()`, `JournalSteps.fromEvents()`, production fail-loud `RunRecorder`, `JournalStorage.persistsDerivedEvents()`, per-turn usage in the immutable log
-- A1: `AttributionMethod.EVEN_SPLIT` — coarse fallback when per-turn tokens are unavailable
+- A1: `AttributionMethod.EVEN_SPLIT`, a coarse fallback when per-turn tokens are unavailable
 - A5: per-file `{"@type":"header","schemaVersion":1}` line on `events.jsonl` and `analysis.jsonl` (loaders skip it)
-- Cost-metering fix: headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn-by-type aggregate (incl. cache) instead of the last-`ResultMessage` snapshot, which under-counted ~2× on long runs — same field, corrected value, no schema change
+- Cost-metering fix: headline `LLMCallEvent.tokenUsage` is now the cost-bearing Σ-per-turn-by-type aggregate (incl. cache) instead of the last-`ResultMessage` snapshot, which under-counted ~2× on long runs; same field, corrected value, no schema change
 - Designed as an additive change to the capture contract; 482 tests green. No cross-version reader test was run. Ships in agentworks-bom 1.13.0
 
 ## 1.5.0 (2026-06-17)
@@ -76,7 +76,7 @@ description: "What changed in each Agent Journal release, and why it matters"
 - Stage R2.3b: Per-step cost attribution + JournalStep
 - Stage R2.3a: Stable step identity for events (fixes subjectId fragility)
 - Stage R2.2: Per-turn usage capture (TurnUsage + ModelCost from rawJson)
-- Stage R2.1: Consume rawJson — verbatim raw trace line (rawMode=NONE|FULL)
+- Stage R2.1: Consume rawJson: verbatim raw trace line (rawMode=NONE|FULL)
 - Stage R2.0: Bump claude-code-sdk to 1.4.0 (unblocks rawJson consumption)
 - CI: enforce OWASP CVE gate via reusable security-scan workflow
 - Add OWASP dependency-check CVE gate (-Powasp) + Trivy security-scan script
@@ -98,7 +98,7 @@ description: "What changed in each Agent Journal release, and why it matters"
 ## 1.1.0 (2026-05-15)
 
 - Update claude-code-sdk dependency to released 1.1.0
-- Skip tests on snapshot publish — CI handles test validation
+- Skip tests on snapshot publish; CI handles test validation
 - Update the `claude-code-sdk` dependency and imports to its `io.github.markpollack` coordinates
 
 ## 1.0.1 (2026-04-30)

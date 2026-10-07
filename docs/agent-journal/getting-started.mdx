@@ -66,6 +66,7 @@ try (Run run = Journal.run("first-experiment")
 
 `Run` implements `AutoCloseable`.
 Normal closure produces `FINISHED`; call `run.fail(exception)` to record `FAILED` explicitly.
+The capture modules' `RunRecorder` behaves differently: it records `CRASHED` unless `finish()` was called, so a recording that threw is not mistaken for a complete one.
 
 ## 4. Inspect the files
 
@@ -84,11 +85,11 @@ The example produces this layout:
                     └── result.txt
 ```
 
-The first `events.jsonl` line is a schema header.
+The first `events.jsonl` line is a header that names the schema version and the library version that wrote the file.
 Each following line is one event and carries an `@type` discriminator.
 
 ```json
-{"@type":"header","schemaVersion":1,"stream":"events","runId":"..."}
+{"@type":"header","schemaVersion":1,"stream":"events","runId":"...","producer":"agent-journal","producerVersion":"1.11.0"}
 {"@type":"llm_call","timestamp":"...","provider":null,"model":"claude-opus-4-5","tokenUsage":{"inputTokens":1200,"outputTokens":450,"thinkingTokens":0,"cacheCreationTokens":0,"cacheReadTokens":0,"toolUseTokens":0},"cost":{"inputCostUsd":0.02475,"outputCostUsd":0.0,"thinkingCostUsd":0.0,"cacheSavingsUsd":0.0},"timing":null,"finishReason":null,"responseId":null,"metadata":{}}
 ```
 

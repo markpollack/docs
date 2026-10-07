@@ -14,17 +14,18 @@ All four produce an ordered tool trajectory; Gemini does not.
 Every module turns one agent call into the same journal shape: a run with a prompt event, one `llm_call` with the call's token usage and cost, one `tool_call` per tool use with the tool's own input map, and a `step_cost` per step in the analysis log.
 The differences are in what each CLI reports:
 
-| Provider | Source read | Tool trajectory | Cost | Sub-agents |
+| Provider | Source read | Tool trajectory | Monetary cost | Sub-agents |
 |---|---|---|---|---|
-| Claude Code | the CLI's `stream-json` output, through `claude-code-sdk` | yes, with per-turn usage and the stable `tool_use` id as step id | reported by the CLI, split per step | **captured as linked runs** (1.11.0) |
-| Codex | the durable rollout file(s) | yes; tool calls classified from their payload, `function_call` arguments kept verbatim | not reported by Codex (`costAvailable=false`) | **captured as linked runs** (1.11.0) |
+| Claude Code | the CLI's `stream-json` output, through `claude-code-sdk` | yes, with per-turn usage and the stable `tool_use` id as step id | reported by the CLI for the whole call, split per step | captured as linked runs (1.11.0) |
+| Codex | the durable rollout file(s) | yes; tool calls classified from their payload, `function_call` arguments kept verbatim | not reported (`costAvailable=false`); tokens per thread are recorded | captured as linked runs (1.11.0) |
 | Gemini CLI | the SDK's turn-level result | turn level only | reported | no |
-| Grok CLI | `streaming-json` output | yes | reported | no |
-| Antigravity | streaming JSON | yes | per step where reported | no (the stream carries pointers only) |
+| Grok CLI | `streaming-json` output | yes | reported as a session total, split evenly over steps | no |
+| Antigravity | streaming JSON | yes, with per-step duration and terminal token usage | not reported (`costAvailable=false`) | no (the stream carries pointers only) |
 | Junie | the session's `events.jsonl` | yes, with per-call cost reconciling to the session total | reported | no |
 
+A cost of 0 with `costAvailable=false` in the `llm_call` metadata means the CLI reported no cost, not that the call was free; see [Cost provenance](#cost-provenance).
 Sub-agent capture for Claude Code and Codex has its own guide: [Sub-agent Capture](/docs/agent-journal/subagent-capture).
-Each file written by the library carries a schema-version header and, since 1.11.0, the producer version, so a reader can tell which release wrote a record.
+`events.jsonl` and `analysis.jsonl` start with a header line that carries the schema version and, since 1.11.0, the producer version, so a reader can tell which release wrote a record; `feedback.jsonl` has no header, and a portable trace file has its own header with its own schema version.
 
 ## Claude Code
 
@@ -271,6 +272,7 @@ new AntigravityRunRecorder(run).recordPhase(phase);
 
 The parser pairs active and terminal updates by `step_index` and handles both `DONE` and `ERROR` steps, recording parameters, output or error text, duration, and terminal token usage.
 Stable identities are derived from the conversation and step positions.
+Antigravity's stream reports no monetary cost: the recorder writes a cost of 0 marked `costAvailable=false` with an `unreported` source, while each step's measured duration and the terminal token usage are recorded as reported.
 
 ## Junie CLI
 
@@ -315,6 +317,9 @@ It reports no thinking-token count, so the capture has no thinking-token field; 
 
 Neither Codex nor Antigravity reports monetary cost in these streams.
 Their cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source, so a downstream reader can distinguish "this run cost nothing" from "this CLI never said."
+Token counts and measured durations are recorded for both; only the dollar figure is unknown.
+A Claude Code sub-agent's `llm_call` is also zero-valued with `costAvailable=false`, but its source is `included_in_parent`: the parent's cost already contains it.
+Claude Code and Gemini report a cost for the call and their `llm_call` events carry it without a `costAvailable` key.
 Junie does report cost: its records are marked `costAvailable=true` with a `reported` source when the trace carries per-call costs.
 Like Grok, Junie reports a session total but no per-step cost, so its per-step `StepCostEvent` shares are an even split of that total.
 A Grok, Codex or Junie tool call whose duration was not measured records `durationMs` as -1 since 1.11.0 (earlier versions wrote 0).

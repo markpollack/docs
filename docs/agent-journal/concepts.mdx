@@ -64,9 +64,10 @@ Agent Journal 1.11.0 provides two derived event types:
 - `StepCostEvent` records a cost allocation and preserves the actual run cost separately from the attributed share.
 - `StepOutcomeEvent` records caller-supplied goal distance and outcome metrics for a step.
 
-Both streams begin with an independent schema header when the first event is appended.
+Both streams begin with an independent header line when the first event is appended, carrying `schemaVersion` (still 1), the stream name and the run id.
 Since 1.11.0 that header also carries `producer` and `producerVersion`, so a reader can tell which release wrote a file; a header without `producerVersion` was written by 1.10.1 or earlier.
-A file with a newer schema version than the reader knows is refused rather than half-read.
+`feedback.jsonl` has no header line. A portable trace file written by a capture has its own header line and its own schema version (2); it is not a journal stream.
+A journal file with a newer schema version than the reader knows is refused rather than half-read.
 `JsonFileStorage` skips header lines when loading events.
 `feedback.jsonl` has no header line; every line is a feedback record.
 The canonical stream schema version is independent from the portable trace schema version.

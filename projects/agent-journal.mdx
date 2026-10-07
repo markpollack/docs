@@ -12,7 +12,7 @@ Release **1.11.0** records Claude Code and Codex sub-agents as runs of their own
 and marked `track=subagent`, so a parent's files hold the main loop only and nothing is counted twice.
 It adds `recordOnce` for recording an execution at most once, `withSessionBaseline` for the cost of a later
 prompt in a multi-prompt Claude Code session, corrects Claude Code token and turn counting, ends a recorder
-closed without `finish()` as `CRASHED`, and stamps every file with the version that wrote it.
+closed without `finish()` as `CRASHED`, and stamps the event and analysis streams with the version that wrote them.
 Jackson moves to 2.22.3 and 3.2.3 for four September 2026 advisories. Several stored values change meaning;
 see the [sub-agent capture guide](/docs/agent-journal/subagent-capture) and the
 [release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.11.0).

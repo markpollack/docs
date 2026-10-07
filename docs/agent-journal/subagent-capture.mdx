@@ -1,0 +1,139 @@
+---
+title: "Sub-agent Capture"
+description: "How Agent Journal 1.11.0 records Claude Code and Codex sub-agents as linked runs, what it needs from the caller, and what it counts"
+---
+
+Since 1.11.0, a sub-agent started by Claude Code or by Codex becomes a **run of its own** in the same experiment, linked to the run of the agent that started it and marked with the tag `track=subagent`.
+The parent's files hold the parent's own activity only, so nothing is counted twice and a reader can analyse the main loop, one sub-agent, or the whole tree.
+
+Sub-agent capture is available for Claude Code and Codex. Gemini CLI, Grok, Antigravity and Junie capture is unchanged from 1.10.1 and records no sub-agents; Antigravity's stream carries pointers only.
+
+## Run layout
+
+| Where | What |
+|---|---|
+| `run.json` `parentRunId` | the run of the agent that started this sub-agent: the recorder's run, or the enclosing sub-agent's run for a nested one |
+| `run.json` `tags.track` | `subagent` |
+| `run.json` `config["subagent.spawnToolUseId"]` | the id of the spawning tool call. It is also the `id` of the `tool_call` event in the parent run, which is the join |
+| `run.json` `config["subagent.depth"]` | 1 for a sub-agent of the main loop, 2 for a sub-agent of a sub-agent, -1 when the spawning call was not seen |
+| the sub-agent's `events.jsonl` and `analysis.jsonl` | the same kinds of events as any run: a prompt, one `llm_call`, one `tool_call` per tool use, one `step_cost` per step |
+| the parent's `llm_call` metadata | `subagents` lists the sub-agent runs; `subagentsWithoutTrack` lists spawns for which no sub-agent record arrived |
+
+No record type gained a field for this and no enum gained a value; the schema version of both streams stays 1.
+The header line of each file now carries `producer` and `producerVersion`, so a reader can tell a 1.11.0 file from an earlier one.
+
+## Claude Code
+
+Claude Code sends a sub-agent's messages on the same stream as the main loop's, each marked with the id of the tool call that started it.
+`SessionLogParser.parse` keeps them apart; the sub-agents are in `PhaseCapture.subagents()`, one `SubagentCapture` each, and `RunRecorder` writes each as a run.
+
+**Configuration.** Complete capture needs Claude Code started with `--forward-subagent-text` (`CLIOptions.forwardSubagentText` in `claude-code-sdk` 1.6.0 and later).
+
+| | With `--forward-subagent-text` | Without it |
+|---|---|---|
+| Captured | the sub-agent's prompt, tool calls, tool results, text, thinking, and per-turn usage | the sub-agent's prompt, tool calls, tool results, and the usage of turns that called a tool |
+| Not captured | — | the sub-agent's text and thinking, and its text-only turns with their usage |
+| Token reconciliation | input and cache tokens over the parent and its sub-agent runs equal the call's `modelUsage` exactly | the parent's own totals are complete; the sub-agent runs are short by their text-only turns |
+
+A sub-agent's output-token count is a lower bound in both cases: the stream reports no final output figure per sub-agent.
+Sub-agent text goes to `SubagentCapture.textOutput` and to the trace file when one is written; no journal event stores text, for the main loop or for a sub-agent.
+
+**Cost.** Claude Code reports one cost for the call, sub-agents included, and none per sub-agent.
+That cost stays on the main loop's run, marked `costIncludesSubagents=true`, and is split over the main loop's steps.
+A sub-agent's `llm_call` has cost 0 with `costAvailable=false` and `costSource=included_in_parent`; its steps are zero-cost `EVEN_SPLIT` shares.
+Adding cost over a run and its sub-agent runs gives the reported total once.
+
+**Status.** The status Claude Code reported, never inferred; `subagent.statusSource` says where it was read.
+
+| Claude Code reported | Run status |
+|---|---|
+| `completed` | `FINISHED` |
+| `failed` or `killed` | `FAILED` |
+| another status, or none | `CRASHED`, meaning no successful end was seen |
+
+**What is missing is recorded as missing.** A spawning call with no sub-agent messages is listed in `subagentsWithoutTrack` next to Claude Code's own counts (`subagentStats`).
+If the messages came without their wire lines, the agents cannot be told apart: the metadata has `subagentTracksAvailable=false`, no sub-agent run is written, and the activity is merged into the run as before 1.11.0.
+
+Verified live with Claude Code **2.1.292** and `claude-code-sdk` **1.7.0**, in `--print` mode and in the SDK's bidirectional mode, to depth 2, through agent-client's Java path.
+Covered by a hand-written test session only: sub-agent thinking, a failed sub-agent, a refused start, a sub-agent whose end is not reported.
+Not observed and not claimed: other Claude Code versions, background sub-agents, nesting deeper than two, a resumed session.
+Not captured: sub-agents from Claude Code's transcript files, and permission decisions.
+
+## Codex
+
+Codex writes one rollout file per thread, and a sub-agent is its own thread.
+The journal does not search the filesystem: the caller collects the root rollout and the child rollouts and hands them to `CodexSessionParser.parse(CodexRollouts, …)`.
+agent-client's harvester is the supported collector; it follows each `SubAgentActivity{kind:"started"}.agent_thread_id` to the file named with that id.
+The single-file `parse` methods are unchanged.
+
+```java
+import io.github.markpollack.journal.codex.CodexPhaseCapture;
+import io.github.markpollack.journal.codex.CodexRollout;
+import io.github.markpollack.journal.codex.CodexRollouts;
+import io.github.markpollack.journal.codex.CodexSessionParser;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+CodexRollout root = new CodexRollout(rootThreadId, null, rootPath.toString(), Files.readAllLines(rootPath));
+CodexRollout child = new CodexRollout(childThreadId, rootThreadId, childPath.toString(), Files.readAllLines(childPath));
+
+CodexPhaseCapture phase = CodexSessionParser.parse(
+        new CodexRollouts(List.of(root, child)), "implement", promptText);
+```
+
+- **Identity and linkage.** A child is identified by the id in its first `session_meta` record and joined to the `spawn_agent` call whose `call_id` is the id of the parent's `started` activity for that thread. That `call_id` is the `id` of the parent's `tool_call` event and the child run's `subagent.spawnToolUseId`. The child run also records `subagent.threadId`, `subagent.agentPath`, `subagent.forked` and `subagent.sessionId` (the root thread id).
+- **Forked children.** A forked child's file replays its parent's history; the replayed records are skipped and counted in `subagent.replayedRecordsSkipped`.
+- **Status.** Codex writes no thread-terminal status. A child's status is the **last observed turn outcome**: the parent's last `completed` or `interrupted` activity for the child, else the child's last own `task_complete` or `turn_aborted`, else `unknown`. `subagent.statusSource` says which, and `subagent.statusMeaning=last_observed_turn`. `completed` → `FINISHED`, `interrupted` → `FAILED`, otherwise `CRASHED` (no end observed). A `spawn_agent` call with no `started` activity is a failed spawn (`spawn_failed`); a started child whose file was not supplied is `not_collected`; both are listed in the parent's `subagentsWithoutTrack`.
+- **Accounting.** Codex reports no cost for any thread, so every `llm_call` keeps cost 0 with `costAvailable=false`; there is no `costIncludesSubagents` key for Codex. Each run's tokens are its own file's last `token_count`; Codex's parent total excludes its children, so each track is counted once and the parent's `llm_call` is unchanged by its children. `inputTokens` excludes cached input, as for every other provider.
+
+Verified live with Codex CLI **0.160.1**, headless `codex exec`, non-forked children at depth 1; rollouts written by 0.147.0 and later parse.
+Forked children and depth 2 are parsed by the same rules but covered by the synthetic fixture only.
+Not supported: `codex exec resume` for sub-agent capture, `codex app-server`, importing historical sessions.
+A child's `durationMs` is its last turn's duration, not the thread's. Codex reasoning text is not in the rollout and is not captured.
+
+## Recording an execution once
+
+Recording the same capture twice writes a second parent run with a second set of sub-agent runs.
+`RunRecorder.recordOnce(experimentId, capture, configure)` and `CodexRunRecorder.recordOnce(experimentId, capture, configure)` record an execution at most once per experiment and storage root.
+
+```java
+import io.github.markpollack.journal.claude.RunRecorder;
+import io.github.markpollack.journal.storage.SourceRecordings;
+
+SourceRecordings.Outcome outcome = RunRecorder.recordOnce(
+        "capture-experiment", phase, builder -> builder.agent("claude-code"));
+
+outcome.runId();        // the run that records this execution
+outcome.recordedNow();  // false when an earlier, complete recording was found
+```
+
+The new run carries the execution's key in its config (`capture.sourceKind` and `capture.sourceKey`: for Claude Code the session id and the final assistant message id, for Codex the root thread id).
+The recorder looks for that key in the stored run records before writing, so the check holds across a restart.
+The same source processed again writes nothing and returns the earlier run; a different execution, including a later prompt of the same Claude Code session, records normally.
+An earlier recording that has not ended, or that ended with an error, is neither resumed nor duplicated: the call fails with an error naming it.
+The check is not a lock between concurrent writers, and `recordPhase` on a run you created yourself is unchanged and unguarded.
+A resumed Codex thread keeps its id and therefore counts as already recorded.
+
+## If you read the files yourself
+
+A sub-agent's run is a run directory like any other.
+A reader that treats every run directory as one item of an experiment will count each sub-agent as an item, at a cost of 0 and without the item's own configuration.
+
+**Exclude run directories whose `run.json` has `tags.track == "subagent"`, and only those.**
+Do not exclude on `parentRunId` alone: it is a general field, and an ordinary nested run that sets it is a legitimate item.
+Measured on a synthetic experiment, the tag rule restores the item count, pass rate and total cost exactly; the `parentRunId` rule loses an item and its cost.
+Use the header's `producerVersion` as the comparison boundary between files written before and after 1.11.0.
+
+The trace file is unchanged: it is still a flat record of every message, sub-agents' included.
+
+## Limits
+
+| | Claude Code | Codex |
+|---|---|---|
+| Needs from the caller | `--forward-subagent-text` for complete capture | the root and child rollout files |
+| Cost per sub-agent | none reported; the parent's cost includes its sub-agents | none reported for any thread |
+| Sub-agent output tokens | a lower bound | the file's own count |
+| Status | as reported; `CRASHED` when no end was seen | last observed turn outcome |
+| Observed live | `completed` sub-agents, depth 2 | `completed` non-forked children, depth 1 |
+| Not supported | transcript-file import, resume | `exec resume`, `app-server`, historical sessions |

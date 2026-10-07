@@ -1,6 +1,6 @@
 ---
 title: "Analyze Runs with DuckDB"
-description: "Query Agent Journal 1.10.1 event streams with executable DuckDB examples"
+description: "Query Agent Journal 1.11.0 event streams with executable DuckDB examples"
 ---
 
 `JsonFileStorage` writes one `events.jsonl` file per run.
@@ -105,6 +105,25 @@ ORDER BY transitions DESC, from_tool, to_tool;
 
 Transition counts describe recorded behavior; they do not establish a quality threshold by themselves.
 Interpret them with task outcomes, run configuration, and enough repeated trials for the comparison you intend to make.
+
+## Exclude sub-agent runs from item analysis
+
+Since Agent Journal 1.11.0 a Claude Code or Codex sub-agent is a run directory of its own, with `parentRunId` set and the tag `track=subagent` in its `run.json`.
+A query that treats every run directory as one item of an experiment would count each sub-agent as an item, at a cost of 0 and without the item's own configuration.
+Exclude those directories by the tag, and only by the tag:
+
+```sql
+WITH items AS (
+    SELECT id, experiment, parentRunId
+    FROM read_json_auto('.agent-journal/experiments/*/runs/*/run.json', union_by_name = true)
+    WHERE COALESCE(tags.track, '') <> 'subagent'
+)
+SELECT experiment, COUNT(*) AS items FROM items GROUP BY experiment;
+```
+
+Do not exclude on `parentRunId` alone: it is a general field, and an ordinary nested run that sets it is a legitimate item.
+To analyse one agent together with its sub-agents, join the sub-agent runs back through `parentRunId` and the parent's `tool_call` event whose `id` equals the child's `config."subagent.spawnToolUseId"`.
+The header's `producerVersion` tells a file written by 1.11.0 from an earlier one; several Claude Code and Codex token values changed meaning at that boundary, so do not compare them across it without the table in the [release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.11.0).
 
 ## Analyze derived events separately
 

@@ -3,12 +3,21 @@ title: "Agent Journal"
 description: "Structured execution events, portable agent traces, and derived analysis for Java agent research"
 ---
 
-**Current release: 1.10.1** · **[What's New →](/docs/agent-journal/whats-new)**
+**Current release: 1.11.0** · **[What's New →](/docs/agent-journal/whats-new)**
 
 Agent Journal is a Java library for recording agent runs as typed events and analyzing them after execution.
 It stores immutable execution facts separately from derived analysis, and it can project Claude Code, Gemini CLI,
 Grok, Codex, Antigravity, and Junie results into a shared journal model.
-Release 1.10.1 aligns `claude-code-capture` with Claude Agent SDK 1.7.0 and `gemini-cli-capture` with Gemini CLI SDK 0.30.0. No source or schema change from 1.10.0. [Release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.10.1).
+Release **1.11.0** records Claude Code and Codex sub-agents as runs of their own, linked to the spawning run
+and marked `track=subagent`, so a parent's files hold the main loop only and nothing is counted twice.
+It adds `recordOnce` for recording an execution at most once, `withSessionBaseline` for the cost of a later
+prompt in a multi-prompt Claude Code session, corrects Claude Code token and turn counting, ends a recorder
+closed without `finish()` as `CRASHED`, and stamps every file with the version that wrote it.
+Jackson moves to 2.22.3 and 3.2.3 for four September 2026 advisories. Several stored values change meaning;
+see the [sub-agent capture guide](/docs/agent-journal/subagent-capture) and the
+[release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.11.0).
+
+Release 1.10.1 aligns `claude-code-capture` with Claude Agent SDK 1.7.0 and `gemini-cli-capture` with Gemini CLI SDK 0.30.0.
 
 Release **1.10.0** adds `junie-cli-capture` for Junie session traces, bringing six CLI runtimes into the portable trace and cost schema.
 Agent Client's Junie provider is wired to this capture module from Client 0.30.0.
@@ -42,7 +51,7 @@ and run on Java 17. The change is additive on the existing event and trace contr
 | `antigravity-cli-capture` | Antigravity CLI trajectory parsing and recording | Java 17+ |
 | `junie-cli-capture` | Junie CLI session trace parsing and recording | Java 17+ |
 
-`journal-core` uses Jackson 2 and the SLF4J API.
+`journal-core` uses Jackson 2.22.3 and the SLF4J API; `claude-code-capture` also carries Jackson 3.2.3 through the Claude Agent SDK. Both versions clear CVE-2026-89407, CVE-2026-89425, CVE-2026-91776 and CVE-2026-91777.
 The Claude Code and Gemini CLI capture modules also depend on their respective Java SDKs, whose published bytecode requires Java 21.
 
 ## Install
@@ -51,7 +60,7 @@ The Claude Code and Gemini CLI capture modules also depend on their respective J
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-core</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -67,13 +76,16 @@ The seven released artifacts use the `io.github.markpollack` group ID and are av
     Understand experiments, runs, event streams, analysis streams, feedback, and storage.
   </Card>
   <Card title="Capture SDK sessions" icon="code" href="/docs/agent-journal/capture-sessions">
-    Project Claude Code and Gemini CLI results into Agent Journal.
+    Project Claude Code, Gemini CLI, Grok, Codex, Antigravity and Junie results into Agent Journal.
+  </Card>
+  <Card title="Sub-agent capture" icon="sitemap" href="/docs/agent-journal/subagent-capture">
+    Claude Code and Codex sub-agents as linked runs: configuration, accounting, status and limits.
   </Card>
   <Card title="Analyze runs" icon="chart-line" href="/docs/agent-journal/analyzing-runs">
     Query generated journals with DuckDB.
   </Card>
   <Card title="API reference" icon="brackets-curly" href="/docs/agent-journal/api-reference">
-    Stable 1.10.1 entry points, events, storage operations, and capture options.
+    Stable 1.11.0 entry points, events, storage operations, and capture options.
   </Card>
 </CardGroup>
 

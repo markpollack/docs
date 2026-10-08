@@ -6,6 +6,18 @@ sidebarTitle: "What's New"
 
 <Note>Entries before 0.13.0 describe the earlier legacy APIs. For the 0.13.0 typed executable DSL, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow).</Note>
 
+## 0.14.0 (2026-10-08)
+
+Fluent DSL consolidation with no scheduling or persistence-format change.
+
+- `Workflows.Sequence.build()` completes a parent ending in an always-failing/cancelling child. Returning paths still need explicit terminals; unreachable successors remain invalid.
+- Located diagnostics explain missing/duplicate decision arms, ambiguous or inaccessible typed values, invalid bounds and reused builder stages.
+- Six deterministic typed lessons and public Javadocs guide the authoring path. No provider calls are required.
+- Store format remains 9; incompatible deployments and older stores are refused without migration. Unresolved effects may repeat and terminal failed/cancelled runs stay terminal.
+- Loops, waits/timers, Workflow Journal projection and other deferred capabilities remain subsequent work.
+
+[Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.14.0) · [Tutorial](/docs/agent-workflow/tutorial)
+
 ## 0.13.0 (2026-10-08)
 
 Available on Maven Central.

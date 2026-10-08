@@ -3,9 +3,9 @@ title: "Typed Workflow Tutorial"
 description: "Six deterministic lessons using the executable Java DSL"
 ---
 
-This tutorial uses the **0.13.0 executable DSL** and deterministic Java Steps.
+This tutorial uses the **0.14.0 executable DSL** and deterministic Java Steps.
 It makes no provider calls and needs no API key.
-0.13.0 is available on Maven Central.
+0.14.0 is available on Maven Central.
 Durable loops, waits/timers and committed-event Journal projection are unavailable in this milestone.
 
 ## Run the progression
@@ -17,7 +17,7 @@ With Java 21, run the parentless module:
 ./mvnw -f executable-dsl/pom.xml compile exec:java -Dexec.args=/tmp/workflow-tutorial
 ```
 
-Maven resolves Agent Workflow 0.13.0 and Agent Judge 0.18.0 from Maven Central.
+Maven resolves Agent Workflow 0.14.0 and Agent Judge 0.18.0 from Maven Central.
 Run the command again with the same directory to reuse committed results.
 The program asserts every expected result, all four Verdict routes, and the thrown-evaluation failure.
 The eight older provider comparison modules stay separate from this build.
@@ -211,4 +211,4 @@ The map above holds registration or compatibility metadata, never business value
 The tutorial harness [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/ExampleRunner.java) asserts expected results without casting or choosing an execution path.
 For store compatibility and unresolved-effect limits, read [Durability](/docs/agent-workflow/durability).
 
-The unreleased `Sequence.build()` addition is not part of 0.13.0; see the [API reference](/docs/agent-workflow/api-reference#unreleased-sequence-build).
+`Sequence.build()` is available starting in 0.14.0 for a parent ending in an always-failing/cancelling child; see the [API reference](/docs/agent-workflow/api-reference#fluent-completion).

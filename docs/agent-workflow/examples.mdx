@@ -3,9 +3,9 @@ title: "Runnable Workflow Examples"
 description: "Six typed deterministic examples for the executable DSL"
 ---
 
-This tutorial uses the **0.13.0 executable DSL** and deterministic Java Steps.
+This tutorial uses the **0.14.0 executable DSL** and deterministic Java Steps.
 It makes no provider calls and needs no API key.
-0.13.0 is available on Maven Central.
+0.14.0 is available on Maven Central.
 Durable loops, waits/timers and committed-event Journal projection are unavailable in this milestone.
 
 The [existing tutorial repository](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/README.md) now has a standalone `executable-dsl` progression.
@@ -22,7 +22,7 @@ Every lesson contains concrete input/output records, ordinary Step objects, a fl
 
 Run the [tutorial](/docs/agent-workflow/tutorial) command once and then again with the same directory.
 The examples use the local JDBC runtime and no provider.
-The older root provider comparison reactor remains pinned to its legacy APIs and is not the 0.13.0 authoring path.
+The older root provider comparison reactor remains pinned to its legacy APIs and is not the 0.14.0 authoring path.
 
-The library also retains a [standalone changed-file review example](https://github.com/markpollack/agent-workflow/blob/v0.13.0/examples/review-files/README.md).
+The library also retains a [standalone changed-file review example](https://github.com/markpollack/agent-workflow/blob/v0.14.0/examples/review-files/README.md).
 The unreleased `Sequence.build()` addition is described separately in the [API reference](/docs/agent-workflow/api-reference#unreleased-sequence-build).

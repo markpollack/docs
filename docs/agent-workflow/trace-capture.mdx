@@ -4,7 +4,7 @@ description: "Capture per-step JSONL trace files and wire them through the workf
 sidebarTitle: "Trace Capture"
 ---
 
-<Note>This page describes the previously published legacy APIs. For the 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+<Note>This page describes the previously published legacy APIs. For the 0.14.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
 
 Workflow tracing records _which steps ran_ via `StepTransition`. Trace capture goes deeper — it records _what happened inside each step_: every tool call, thinking block, token count, and cost. The trace is written to a JSONL file during execution, and the file path flows through the workflow journal so analysis tools can find it.
 

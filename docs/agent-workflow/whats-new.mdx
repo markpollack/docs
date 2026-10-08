@@ -4,11 +4,22 @@ description: "Release highlights for Agent Workflow"
 sidebarTitle: "What's New"
 ---
 
-<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+<Note>Entries before 0.13.0 describe the earlier legacy APIs. For the 0.13.0 typed executable DSL, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow).</Note>
 
-## Prepared 0.13.0 executable-DSL milestone
+## 0.13.0 (2026-10-08)
 
-Unpublished candidate: typed Steps and derived bindings, nested reusable workflows, exhaustive enum/native Verdict routing, static parallel groups, bounded runtime fan-out and local JDBC recovery. Loops, timers, committed-event Journal projection and broader hardening remain subsequent work. Store format 9 refuses older formats without migration; unresolved effects can repeat and terminal failures cannot be reopened. [Candidate release notes](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/RELEASE_NOTES_0.13.0.md).
+Available on Maven Central.
+
+First executable-DSL milestone: typed Steps and derived bindings, nested reusable workflows, exhaustive enum/native Verdict routing, static parallel groups, bounded runtime fan-out and local JDBC recovery.
+
+- **Not implemented:** loops and durable waits/timers.
+- **Deferred:** Workflow Journal projection, first-class non-routing evaluation, visualization and AI authoring.
+- **Examples** are deterministic fixtures, not live provider demonstrations.
+- **Store format 9** refuses older stores; there is no migration.
+- **Uncommitted external effects may repeat** after a crash.
+- **Terminal runs stay terminal:** failed or cancelled runs cannot be restarted from saved progress.
+
+[Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.13.0) · [Tutorial](/docs/agent-workflow/tutorial)
 
 
 ## 0.10.0 (2026-06-15)

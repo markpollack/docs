@@ -5,24 +5,24 @@ description: "Six typed deterministic examples for the executable DSL"
 
 This tutorial uses the **0.13.0 executable DSL** and deterministic Java Steps.
 It makes no provider calls and needs no API key.
-0.13.0 is prepared for publication; use its staged artifacts until Maven Central publication is confirmed.
+0.13.0 is available on Maven Central.
 Durable loops, waits/timers and committed-event Journal projection are unavailable in this milestone.
 
-The [existing tutorial repository](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/README.md) now has a standalone `executable-dsl` progression.
+The [existing tutorial repository](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/README.md) now has a standalone `executable-dsl` progression.
 Every lesson contains concrete input/output records, ordinary Step objects, a fluent definition and asserted runtime results.
 
 | Lesson | Data flow | Source |
 | --- | --- | --- |
-| Two Steps | Request → Diff → ReportInput(Request, Diff) → Report | [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/Sequential.java) |
-| Reusable child | Request → Diff → child Assessment → ReportInput(Request, Assessment) | [Nested.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/Nested.java) |
-| Enum decision | Request → exhaustive QUICK/FULL routing → Report | [EnumDecision.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/EnumDecision.java) |
-| Native Verdict | Request → all four conclusions → full assessment available to branch; typed report; thrown evaluation fails distinctly | [NativeVerdict.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/NativeVerdict.java) |
-| Static parallel | Diff → Quality + Backport → typed ReportInput | [ParallelAssessments.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/ParallelAssessments.java) |
-| Runtime fan-out | `Request → List<FilePatch> → List<FileReview> → ordered Report` | [FanOut.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/FanOut.java) |
+| Two Steps | Request → Diff → ReportInput(Request, Diff) → Report | [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/Sequential.java) |
+| Reusable child | Request → Diff → child Assessment → ReportInput(Request, Assessment) | [Nested.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/Nested.java) |
+| Enum decision | Request → exhaustive QUICK/FULL routing → Report | [EnumDecision.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/EnumDecision.java) |
+| Native Verdict | Request → all four conclusions → full assessment available to branch; typed report; thrown evaluation fails distinctly | [NativeVerdict.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/NativeVerdict.java) |
+| Static parallel | Diff → Quality + Backport → typed ReportInput | [ParallelAssessments.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/ParallelAssessments.java) |
+| Runtime fan-out | `Request → List<FilePatch> → List<FileReview> → ordered Report` | [FanOut.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/FanOut.java) |
 
 Run the [tutorial](/docs/agent-workflow/tutorial) command once and then again with the same directory.
 The examples use the local JDBC runtime and no provider.
 The older root provider comparison reactor remains pinned to its legacy APIs and is not the 0.13.0 authoring path.
 
-The library also retains a [standalone changed-file review example](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/examples/review-files/README.md).
-The next-version terminal-child completion addition appears separately in the [API reference](/docs/agent-workflow/api-reference).
+The library also retains a [standalone changed-file review example](https://github.com/markpollack/agent-workflow/blob/v0.13.0/examples/review-files/README.md).
+The unreleased `Sequence.build()` addition is described separately in the [API reference](/docs/agent-workflow/api-reference#unreleased-sequence-build).

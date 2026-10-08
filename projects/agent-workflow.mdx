@@ -3,7 +3,7 @@ title: "Agent Workflow"
 description: "Typed Java workflow composition with bounded concurrency and local JDBC recovery."
 ---
 
-The latest published version remains **0.12.3**. **0.13.0 is a prepared release candidate**, the first executable-DSL milestone; it is not full R1 completion. Its Agent Judge 0.18.0 dependency is published on Maven Central.
+**0.13.0** (2026-10-08) is the first executable-DSL milestone, available on Maven Central; it is not full R1 completion. It depends on Agent Judge 0.18.0.
 
 ## Executable DSL milestone
 
@@ -11,7 +11,7 @@ Write ordinary constructor-injected `Step<I,O>` objects. `Workflows.define(...)`
 
 Supports typed sequences, nested same-run reusable workflows, exhaustive enum decisions, native Verdict routing, static parallel groups and bounded runtime fan-out. Fan-out accepts an immutable indexed manifest before item execution, isolates each occurrence (including equal values), applies item-count and logical in-flight bounds and collects results in input order. Logical whole-body occupancy is separate from physical Step capacity; nested coordination consumes no worker slots.
 
-[Six runnable typed lessons](/docs/agent-workflow/tutorial) · [Complete compiling deterministic example](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/examples/review-files/README.md) · [Release notes](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/RELEASE_NOTES_0.13.0.md)
+[Six runnable typed lessons](/docs/agent-workflow/tutorial) · [Complete compiling deterministic example](https://github.com/markpollack/agent-workflow/blob/v0.13.0/examples/review-files/README.md) · [Release notes](https://github.com/markpollack/agent-workflow/blob/v0.13.0/RELEASE_NOTES_0.13.0.md)
 
 ```xml
 <dependency>
@@ -21,7 +21,7 @@ Supports typed sequences, nested same-run reusable workflows, exhaustive enum de
 </dependency>
 ```
 
-These coordinates currently require staged artifacts. Native Verdict routing additionally needs `agent-judge-json-jackson2:0.18.0`. No real provider is required by the example.
+Native Verdict routing additionally needs `agent-judge-json-jackson2:0.18.0`. The examples are deterministic fixtures, not live provider demonstrations; they need no provider or API key.
 
 ## Recovery and limits
 

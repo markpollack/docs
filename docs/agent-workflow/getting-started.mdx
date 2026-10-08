@@ -5,7 +5,7 @@ description: "Define typed Steps, register their objects and run a durable workf
 
 This tutorial uses the **0.13.0 executable DSL** and deterministic Java Steps.
 It makes no provider calls and needs no API key.
-0.13.0 is prepared for publication; use its staged artifacts until Maven Central publication is confirmed.
+0.13.0 is available on Maven Central.
 Durable loops, waits/timers and committed-event Journal projection are unavailable in this milestone.
 
 ## Define business contracts
@@ -28,14 +28,13 @@ var workflow = Workflows.define("sequential-review")
 
 `Fetch` declares `Step<Request, Diff>` and `WriteReport` declares `Step<ReportInput, Report>`.
 The next Step's input record states which typed earlier values it needs.
-The complete implementations and runtime wiring are in [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/Sequential.java) and [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/ExampleRunner.java).
+The complete implementations and runtime wiring are in [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/Sequential.java) and [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/ExampleRunner.java).
 
 ## Dependencies and execution
 
 Use Java 21 and `io.github.markpollack:workflow-batch:0.13.0`.
 Native Verdict routing also needs `io.github.markpollack:agent-judge-json-jackson2:0.18.0`.
-Judge 0.18.0 is published; Workflow 0.13.0 remains a prepared candidate.
-Until publication is confirmed, use staged Workflow artifacts.
+Both resolve from Maven Central.
 
 Follow the [six-lesson tutorial](/docs/agent-workflow/tutorial) to compile and execute the example.
 Separate definition, Step registration and runtime configuration as shown there.

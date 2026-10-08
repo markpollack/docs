@@ -3,7 +3,7 @@ title: "Agent Workflow API Reference"
 description: "Public authoring, typed inputs and local execution entry points"
 ---
 
-This reference covers **0.13.0**, the prepared executable-DSL milestone.
+This reference covers **0.13.0**, the first executable-DSL milestone.
 The [tutorial](/docs/agent-workflow/tutorial) includes complete compiling examples.
 
 ## Definition
@@ -49,9 +49,11 @@ See [Parameterization](/docs/agent-workflow/parameterization).
 The application supplies compatible definitions and dependencies after recovery.
 See [Durability](/docs/agent-workflow/durability).
 
-## Consolidation addition: subsequent release only
+## Unreleased: `Sequence.build()`
 
-The consolidation branch adds `build()` to `Workflows.Sequence` for a final child that always fails or cancels.
+<Warning>Unreleased. Not in 0.13.0; planned for 0.14.0 after release approval.</Warning>
+
+A later version adds `build()` to `Workflows.Sequence` for a final child that always fails or cancels.
 This method is **not available on that stage in 0.13.0**.
 It adds no implicit terminal and does not permit dangling ordinary paths or unreachable successors.
-No new version is selected.
+0.14.0 preparation and publication remain subject to release approval.

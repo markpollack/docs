@@ -1,92 +1,26 @@
 ---
-title: "Design Philosophy"
-description: "Status-first results, portable evidence, small contracts, and cost-aware composition"
+title: "Agent Eval design"
+description: "Pure requirements, configured execution, faithful results, and independent application reliance"
 ---
 
-## Judges are executable acceptance criteria
+<Note>
+This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
+Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+</Note>
 
-A judge plays the role that an assertion plays in ordinary software.
-It receives the evidence from an agent run and produces an explicit outcome with reasoning.
+Choose the least intelligent practical evaluator that can establish the property at the required reliability.
+An available deterministic check is usually preferable; a property being deterministic in principle does not mean a complete bespoke checker is available or economical.
 
-Agent Judge keeps that contract small: `Judge` is a functional interface with one `judge(JudgmentContext)` method.
-Lambdas work directly, metadata can be added through composition, and richer implementations can extend `DeterministicJudge` or `LLMJudge`.
+A Requirement is a pure immutable value. Evidence belongs to the caller; tools and permissions belong to the configured runtime.
+A ready Judge or Jury owns execution, with one `judge()` or `vote()` operation.
+Native execution facts remain visible beside finding/support, without inventing unknown usage or universal calibration guarantees.
 
-## Status is the required outcome
+Producer outcomes describe what happened. Verdict conclusion describes the composed determination. Application policy describes whether to rely on it.
+These separate decisions let the same retained assessment support different application actions while preserving the original facts.
 
-A `Judgment` records three independent facts.
+Required coverage, opinion reduction, native roster audits and cascade routing answer different questions.
+Keep complete originals, refused returns, attempted stages and ownership in durable results, with explicit preservation limits rather than silent truncation.
+Reading a retained result executes nothing.
 
-| Fact | Presence | Meaning |
-|---|---|---|
-| `status` | Required | `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR` |
-| `score` | Optional | A completed measurement normalized to `[0.0, 1.0]` |
-| `label` | Optional | The exact category assigned by a classifier |
-
-A Boolean decision stores its status without also storing `1.0` or `0.0`.
-This avoids two fields representing the same fact and later disagreeing.
-`effectiveScore()` derives a numeric view when a voting strategy needs one.
-
-The constructor enforces the cross-field rules.
-`ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` cannot carry a score, and all three require non-blank reasoning.
-`ERROR` cannot carry a label.
-
-## Errors are outcomes, not exception transport
-
-`ERROR` means a judge did not complete its evaluation.
-The judgment carries human-readable reasoning but no `Throwable`.
-The original exception should be logged where it was caught.
-
-This keeps the result deterministic and portable while preserving framework-native diagnostics in the in-process `JudgmentContext` when a judge needs them.
-
-## Result metadata crosses boundaries
-
-Result metadata accepts only values that preserve their meaning across JSON and process boundaries.
-Supported values are strings, booleans, interoperable integers, finite numbers, arrays, and string-keyed objects, recursively.
-
-The result constructor normalizes, copies, and freezes this graph.
-SDK response objects, exceptions, enums, arbitrary-precision values, and Java time objects are rejected rather than failing later during serialization.
-
-Timing demonstrates the pattern.
-The portable result stores `elapsedMillis`, and `Judgment.elapsed()` derives a Java `Duration` view.
-
-## Framework-neutral does not mean dependency-free
-
-The core API has no dependency on an agent runtime such as Spring AI, LangChain4j, Koog, or AgentClient.
-It does use Jackson, SLF4J, and JSpecify to implement serialization, logging, and declared nullness.
-
-Framework-specific bridges sit in separate modules.
-Applications add only the bridge and judge families that they need.
-
-## Composition separates policy from evidence
-
-Judges produce individual evidence.
-Voting strategies decide how that evidence becomes a jury verdict.
-
-Status-counting policies such as majority and consensus reason directly about outcomes.
-Numeric policies such as weighted average and median use each eligible judgment's `effectiveScore()`.
-Abstentions and errors are not silently converted into zero measurements; the selected strategy and error policy decide how they participate.
-
-## Cascades make cost explicit
-
-A `CascadedJury` evaluates tiers in order.
-Cheap deterministic or structural checks can reject invalid work before an LLM-backed tier incurs latency and token use.
-
-| Tier | Typical work | Relative cost |
-|---|---|---|
-| Deterministic | File existence and content rules | Microseconds |
-| Structural | Java, Maven, and XML comparison | Milliseconds |
-| Execution | Builds, tests, and coverage | Seconds to minutes |
-| Semantic | LLM and RAG evaluation | Model latency and tokens |
-
-The final tier is explicit, and each earlier tier declares whether it can reject or accept without escalation.
-
-## Examples remain executable
-
-The separate [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) owns canonical examples.
-Its eleven fundamentals modules compile and run without credentials, so documentation can link to maintained source instead of carrying divergent sample programs.
-
-## Related
-
-- [Result and package reference](/docs/agent-judge/api-reference)
-- [Jury system](/docs/agent-judge/jury-system)
-- [Writing a custom judge](/docs/agent-judge/custom-judge)
-- [0.14 migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md)
+Learn the [public programming model](/docs/agent-judge/requirements-judges), [composition distinctions](/docs/agent-judge/jury-system), and [retention contract](/docs/agent-judge/interpreting-verdicts).

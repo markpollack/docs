@@ -1,161 +1,79 @@
 ---
-title: "Getting Started with Agent Judge"
-description: "Extend the testing discipline you already have to criteria that need judgment"
+title: "Getting started with Agent Eval"
+description: "Build the pinned source API and execute credential-free configured requirements"
 ---
 
-The agent says it is done. Should you merge?
+<Note>
+This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
+The commands below build the exact source artifacts locally.
+</Note>
 
-Part of that question already has an answer you know how to write down — it compiles, the tests pass, the file is there.
-Part of it does not.
+Use the least intelligent practical evaluator that establishes the property at the reliability you need.
+Keep the compiler, ordinary JUnit, and available deterministic analyzers for facts they can settle.
+Supply a bounded evidence bundle when a written requirement needs judgment.
 
-> **JUnit handles assertions where we know how to write the oracle. Agent Judge extends that testing discipline to criteria whose oracle requires richer evidence or judgment.**
+## Build the source artifacts
 
-Agent Judge is not a replacement for JUnit, AssertJ, ArchUnit, Checkstyle, JaCoCo, JApiCmp, or the compiler.
-The rule it is built around is the opposite one: *use the least interpretive instrument that can reliably answer the question.*
+You need Java 21 and the committed Maven wrapper. Use your existing Agent Judge checkout
+and the standard `~/.m2/repository`; no second producer clone or repository setting is needed.
+The reproducible source revision is `904c1983c3c919b873ca03beb7e321759580ee14`.
+Fetch current main and preserve any local changes before updating it. The check below refuses
+another revision; it does not reset or move your checkout.
 
-## Where the boundary falls
-
-An agent was asked to expose a sales report endpoint and produced a `ReportController`.
-It compiles, it is in the right package, it is named correctly, and it has the requested method.
-
-Those criteria have a **known oracle** — an exact answer exists and you can write it down in advance.
-Keep using the instrument that already owns them:
-
-```java
-@Test
-void theControllerExists() {
-    assertTrue(Files.exists(workspace.resolve(REPORT_CONTROLLER)));
-}
-```
-
-This one does not:
-
-> Does this controller fit the architectural conventions and idioms of this codebase, without introducing unnecessary complexity?
-
-There is no expected value to compare against.
-The oracle has to be *produced* rather than looked up, and that is the whole of what a judge is:
-
-```java
-Judgment judgment = architecturalFitJudge.judge(context);
-```
-
-`ReportController` opens its own JDBC connection, concatenates SQL from request parameters, builds JSON by hand, and swallows the exception.
-Every cheap check said yes.
-
-## Prerequisites
-
-- Java 21 or newer
-- Maven 3.9 or the Maven Wrapper
-- Credentials only when you choose a live model-backed judge
-
-The tutorial modules use deterministic inputs and require none.
-
-## Add the dependency
-
-```xml
-<dependency>
-  <groupId>io.github.markpollack</groupId>
-  <artifactId>agent-judge-core</artifactId>
-  <version>0.17.0</version>
-</dependency>
-```
-
-<Warning>
-Releases **0.11.0 through 0.15.1** could drop a judge from a parallel jury and still return a verdict naming every configured judge.
-If you have collected scores with a parallel jury on any of those, treat them as suspect and upgrade to **0.15.2** or later.
-</Warning>
-
-## Run one judge
-
-```java
-Path workspace = Path.of("test-workspace");
-
-JudgmentContext context = JudgmentContext.builder()
-    .goal("Expose a sales report endpoint")
-    .workspace(workspace)
-    .status(ExecutionStatus.SUCCESS)
-    .startedAt(Instant.now())
-    .executionTime(Duration.ofMinutes(2))
-    .build();
-
-Judgment result = new FileExistsJudge(
-    "src/main/java/com/example/ReportController.java").judge(context);
-```
-
-Read `result.status()` first.
-
-`result.score()` and `result.label()` may be `null` because a Boolean decision does not duplicate its outcome as a stored number or category.
-Use `result.effectiveScore()` only when an aggregation algorithm deliberately needs a numeric view of `PASS` or `FAIL`.
-
-## Five outcomes, not two
-
-| Status | Meaning |
-|---|---|
-| `PASS` | checked, satisfied |
-| `FAIL` | checked, not satisfied |
-| `ABSTAIN` | applied, undecided |
-| `NOT_APPLICABLE` | should not have been asked |
-| `ERROR` | could not complete — **not** a low score, and not a number at all |
-
-`pass()` is `false` for `FAIL`, `ABSTAIN`, `NOT_APPLICABLE` **and** `ERROR` alike.
-A consumer that branches on `!pass()` records a judge that never ran as a rejected subject.
-Assert `status()`.
-
-## Understand result portability
-
-A result can carry strings, booleans, interoperable integers, finite numbers, arrays, and string-keyed objects in metadata.
-Agent Judge recursively copies and freezes those values.
-Live exceptions, SDK responses, `Duration` objects, and enums do not belong in result metadata.
-
-`JudgmentContext` is an in-process input and may hold framework-native objects a judge needs.
-`Judgment` is the portable output boundary.
-
-## The artifacts
-
-| Artifact | Add it for |
-|---|---|
-| `agent-judge-core` | Core contracts, status-first results, file checks, and juries |
-| `agent-judge-ai-core` | Framework-neutral model-backed judges |
-| `agent-judge-exec` | Command, build, and coverage checks |
-| `agent-judge-file` | Semantic file comparison |
-| `agent-judge-llm` | Spring AI as a judging backend |
-| `agent-judge-rag` | RAG quality judges |
-| `agent-judge-spring-ai` | Evaluate Spring AI output |
-| `agent-judge-langchain4j` | Evaluate LangChain4j output |
-| `agent-judge-koog` | Evaluate Koog output |
-| `agent-judge-agent-client` | Evaluate or judge through AgentClient |
-
-All ten use the same group and version.
-The framework bridges are optional at the application boundary; your application supplies the framework runtime version it uses.
-
-## Run the tutorial
-
-Check out the tested tutorial revision for Agent Judge 0.17.0:
+From the Agent Judge checkout:
 
 ```bash
-git clone https://github.com/markpollack/agent-judge-tutorial.git
-cd agent-judge-tutorial
-git checkout 106ca35a74ebdd9995329cb0bde63d66a9e7e8ed
-./mvnw install
-./mvnw exec:java -pl module-01-oracle-boundary
+export EVAL_M2="$HOME/.m2/repository"
+test "$(git rev-parse HEAD)" = "904c1983c3c919b873ca03beb7e321759580ee14"
+./mvnw -B -ntp clean install
 ```
 
-Eleven modules, sequenced by the evaluation problem rather than by the API.
-No module needs an API key. The first build downloads Maven dependencies; see the [tutorial](/docs/agent-judge/tutorial) for the fundamentals and PetClinic learning paths.
+This installs the complete reactor, including the parent and every module, with tests enabled.
+It replaces artifacts at the same snapshot coordinates and preserves unrelated versions.
+Keep the selected repository when building callers; a producer build alone does not prepare
+caller dependencies and Maven plugins. The [requirements example](/docs/agent-judge/requirements-judges#run-a-prepared-example)
+has a complete caller POM and executable Java example with deterministic responses.
 
-## Next
+For an optional isolated installation, set `EVAL_M2` to an absolute task-owned directory and run
+`./mvnw -B -ntp -Dmaven.repo.local="$EVAL_M2" clean install` from a clean checkout at the same revision.
+Use that repository for subsequent caller and child builds. These commands install locally;
+they do not publish artifacts. Prepare dependencies online before using Maven's `-o` option.
 
-<CardGroup cols={2}>
-  <Card title="Tutorial" icon="graduation-cap" href="/docs/agent-judge/tutorial">
-    The executable sequence
-  </Card>
-  <Card title="Writing Custom Judges" icon="code" href="/docs/agent-judge/custom-judge">
-    Design an oracle you can trust
-  </Card>
-  <Card title="Jury System" icon="scale-balanced" href="/docs/agent-judge/jury-system">
-    When aggregation is justified
-  </Card>
-  <Card title="Built-in Judges" icon="gavel" href="/docs/agent-judge/built-in-judges">
-    Choose a judge family
-  </Card>
-</CardGroup>
+For the [PetClinic walkthrough](/docs/agent-judge/petclinic-case-study), open the ordinary tutorial
+checkout beside Agent Judge and run `./scripts/prepare-petclinic-demo.sh`. It prepares source
+artifacts, callers, plugins and the materialized subject together. Its configured run guide and
+presenter runbook cover IntelliJ, offline replay and the optional `--isolated` mode.
+No live inference is required.
+
+## Configure, execute, retain
+
+1. Define or read the actual Requirement and its immutable source/revision.
+2. Select prepared evidence, an acquisition supplier, or a native investigative runtime configured with workspace/tools.
+3. Construct a ready Judge or Jury using typed builders.
+4. Execute `judge()` or `vote()`, or one cached AssertJ stage.
+5. Keep the whole result and optionally request an application reliance policy.
+6. Store/reopen V6 results with the explicit Jackson support module.
+
+## Dependencies
+
+All source artifacts retain group `io.github.markpollack` and version `0.18.0-SNAPSHOT`.
+Declare the source version explicitly; no AgentWorks BOM change is implied.
+The inventory is 14 JAR modules plus `agent-judge-parent` (POM packaging).
+The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intentional API and wire breaks.
+
+| Artifact | Purpose |
+|---|---|
+| `agent-judge-core` | Pure requirements, Judge/Jury construction, results, voting, policy |
+| `agent-judge-ai-core` | EvalModel, native RFC2119/EARS requirements and producers |
+| `agent-judge-json-jackson2` | Explicit Jackson 2 converters and strict V6 codecs |
+| `agent-judge-assertj` / `agent-judge-assertions` | Fluent assertions / retained assertion checks |
+| `agent-judge-llm` / `agent-judge-agent-client` | Generated runtime adapters |
+| `agent-judge-jev` | Typed structured native execution |
+| `agent-judge-exec` / `agent-judge-file` | Build/command and file evaluation |
+| `agent-judge-rag` | Typed retrieval evidence and RAG judges |
+| `agent-judge-spring-ai` / `agent-judge-langchain4j` / `agent-judge-koog` | Evaluated response evidence bridges |
+
+The [fundamentals path](/docs/agent-judge/tutorial) still demonstrates released 0.17.0 in its separate reactor.
+The [PetClinic source path](/docs/agent-judge/petclinic-case-study) demonstrates configured 0.18 APIs.
+For historical consumer changes, keep the [0.17 migration guide](/docs/agent-judge/migration-0.17) at its original semantics.

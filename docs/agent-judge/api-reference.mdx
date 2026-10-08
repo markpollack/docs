@@ -1,115 +1,57 @@
 ---
-title: "API Reference"
-description: "Main public contracts and packages in Agent Judge 0.15"
+title: "Agent Eval API reference"
+description: "Public packages, configured producers, native execution, and retained V6 results"
 ---
 
-This page is a map of the 0.15 API.
-The generated aggregate Javadoc remains the detailed signature reference, and the [tutorial source](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) supplies compiled usage examples.
+<Note>
+This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
+Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+</Note>
 
-## Packages
-
-| Package | Main contents |
+| Package under `io.github.markpollack.judge` | Public responsibility |
 |---|---|
-| `io.github.markpollack.judge` | `Judge`, `AsyncJudge`, metadata, naming, and composition |
-| `io.github.markpollack.judge.context` | `JudgmentContext` and `ExecutionStatus` |
-| `io.github.markpollack.judge.result` | `Judgment`, `JudgmentStatus`, and `Check` |
-| `io.github.markpollack.judge.fs` | Core file-system judges |
-| `io.github.markpollack.judge.jury` | Juries, verdicts, voting strategies, and policies |
-| `io.github.markpollack.judge.ai` | Model-backed judge composition and classifiers |
-| `io.github.markpollack.judge.ai.model` | Framework-neutral model requests, responses, messages, and usage |
-| `io.github.markpollack.judge.ai.prompt` | Prompt templates, renderers, variables, and text sources |
-| `io.github.markpollack.judge.exec` | Build, command, and class-version judges |
-| `io.github.markpollack.judge.coverage` | JaCoCo coverage judges and parser |
-| `io.github.markpollack.judge.file` | Semantic file judges |
-| `io.github.markpollack.judge.file.comparator` | Java, Maven, and XML comparators |
-| `io.github.markpollack.judge.llm` | Spring AI judging adapter and correctness judge |
-| `io.github.markpollack.judge.rag` | RAG context helpers and judges |
-| `io.github.markpollack.judge.springai` | Spring AI evaluated-side bridge |
-| `io.github.markpollack.judge.langchain4j` | LangChain4j evaluated-side bridge |
-| `io.github.markpollack.judge.koog` | Koog evaluated-side bridge |
-| `io.github.markpollack.judge.agentclient` | AgentClient evaluated-side bridge and judging adapter |
+| root | `Judge`, metadata contracts and combinators |
+| `requirement` | `Requirement<S>`, source, general requirements, explicit `AllOf` specifications |
+| `construction` | Judge recipes/evidence steps, `NonEmptyJudge` |
+| `jury` | `Jury`, construction, `Assignments`, ready panels, meta and cascade execution |
+| `judgment` | `Judgment`, `Finding`, `Check`, complete `RefusedReturn` |
+| `verdict` | `Verdict`, `Seat`, attempts, provenance, `InvocationRecords`, derived semantics |
+| `voting` | `Ballot`, `Participation`, strategies, retained rule configuration and factories |
+| `execution` | `EvalRuntime<Q,A>`, `NativeExecution<A>`, `RequirementRequest<S,E>` |
+| `ai.model` | `EvalModel`, request/response/options, `EvalMessage`, generated input capability |
+| `ai.requirements` | Native requirements, RFC/EARS Judge/Jury, native codec registrations |
+| `policy`, `evaluation` | Reliance policy, optional attribution, complete `EvaluationResult` |
+| `portable`, `description` | Portable values/limits and pure pre-execution descriptions |
+| `json` | Thin `EvalJsonMapper` mechanics port |
+| `serialization` | Supported converters/codecs in `agent-judge-json-jackson2` |
+| `assertj`, `assertions` | Optional fluent/retained assertion modules |
 
-## Judge contracts
+```mermaid
+classDiagram
+    Requirement --> Judge : typed construction
+    EvalRuntime --> Judge : native execution
+    Judge --> Judgment : judge()
+    Jury --> Verdict : vote()
+    Verdict *-- Judgment : collective and originals
+    Verdict *-- Seat : separate treatment
+    Verdict *-- CompositeAttempt : complete child results
+    Verdict --> Invocation : root ownership
+    Judgment --> Requirement : actual association
+    Judgment --> RefusedReturn : complete original
+    Policy --> Verdict : decide once when requested
+    EvaluationResult *-- Verdict
+    EvaluationResult *-- PolicyResult
+```
 
-`Judge` is a functional interface whose single method maps `JudgmentContext` to `Judgment`.
-`AsyncJudge` supplies the `CompletableFuture` variant.
+`Judge.judge()` and `Jury.vote()` take no execution argument. Construction binds the actual requirement/roster, evidence and lower runtime.
+`EvalRuntime.execute(request)` returns the native answer and its Invocation; `EvalModel.generate(request)` supplies a generated answer.
+A Verdict retains collective and individual judgments, seats, children/attempts, roster or explicit parent, provenance, and invocation owners.
+`conclusion()` derives PASS, FAIL, INCONCLUSIVE, or NOT_APPLICABLE. `requireUsable()` validates and returns the unchanged object.
 
-`JudgeWithMetadata` marks a judge that exposes `JudgeMetadata`.
-`DeterministicJudge` is the reusable base for rule-based implementations, and `NamedJudge` attaches identity to another judge without changing its evaluation.
+Core owns no Jackson engine. Add the supported Jackson 2 module explicitly; use `NativeRequirementCodecs.codec()` for RFC/EARS values and `VerdictCodec` for text/AllOf.
+Descriptions stay V3; results/evaluations use V6.
 
-`Judges` contains logical composition and naming helpers.
-
-## JudgmentContext
-
-`JudgmentContext` is the immutable in-process input record.
-It carries goal, workspace, execution duration, start time, optional agent output, execution status, optional error, and arbitrary context metadata.
-
-The context metadata may contain framework-native objects because it does not cross the result boundary.
-Bridge modules use it to expose relevant runtime evidence to ordinary judges.
-
-`ExecutionStatus` values are `SUCCESS`, `FAILED`, `TIMEOUT`, `CANCELLED`, `REFUSED`, and `UNKNOWN`.
-
-## Judgment
-
-`Judgment` is the immutable portable output record.
-
-| Component | Contract |
-|---|---|
-| `status` | Required `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR` |
-| `score` | Optional finite `Double` normalized to `[0.0, 1.0]` |
-| `label` | Optional non-blank classification |
-| `reasonCode` | Optional; required on `ERROR` from the instrument family, optional on `FAIL` from the subject family, forbidden otherwise |
-| `reasoning` | Required text; non-blank for `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR`, and for a coded `FAIL` |
-| `checks` | Immutable granular Boolean checks |
-| `metadata` | Recursively portable and immutable evidence |
-
-Direct factories are `pass(reasoning)`, `fail(reasoning)`, `abstain(reasoning)`, `notApplicable(reasoning)`, and `error(reasoning)`.
-Returning `NOT_APPLICABLE` requires an [exclusion condition declared in advance](/docs/agent-judge/migration-0.17#exclusion-must-be-declared-in-advance).
-`verdict(boolean)` starts an enrichable Boolean result without storing a duplicate score.
-`scored(normalizedScore).passingAt(threshold)` builds a measured result whose status follows an explicit threshold.
-The raw-scale overload normalizes a bounded source measurement before the threshold is applied.
-
-`effectiveScore()` returns the explicit score when present, derives `1.0` or `0.0` for an unscored `PASS` or `FAIL`, and is empty for `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR`.
-`elapsed()` derives `Duration` from the portable `elapsedMillis` metadata value.
-
-## Check
-
-`Check` is a named Boolean sub-assertion with a message.
-Use its passing and failing factories to explain the evidence contributing to an overall result.
-
-## Jury contracts
-
-`Jury.vote(context)` returns a `Verdict` containing aggregate and individual evidence.
-`SimpleJury` runs peer judges, while `CascadedJury` evaluates ordered tiers.
-
-Voting strategies are `MajorityVotingStrategy`, `ConsensusStrategy`, `AverageVotingStrategy`, `WeightedAverageStrategy`, `MedianVotingStrategy`, `ConjunctiveStrategy`, and `AllMustPassStrategy`.
-`TiePolicy`, `ErrorPolicy`, `TierPolicy`, and `NotApplicablePolicy` make edge behavior explicit.
-
-`Verdict` carries seven components in 0.17, including `seats` and `decision`. See [Migrating to 0.17](/docs/agent-judge/migration-0.17) and [Interpreting verdicts](/docs/agent-judge/interpreting-verdicts).
-
-See [Jury System](/docs/agent-judge/jury-system) for their reduction rules.
-
-## AI composition
-
-`ModelBackedJudge` combines `JudgePromptTemplate`, `JudgeModel`, and `JudgmentClassifier`.
-`JudgmentClassifiers` supplies common classifiers, and `LabelJudgmentClassifier` maps explicit labels to outcomes and optional declared scores.
-
-`JudgeModelRequest` and `JudgeModelResponse` are framework-neutral.
-`Usage` records optional provider-reported input, output, reasoning, cache-creation, cache-read, and total token quantities, and projects them to portable metadata.
-It never derives price or assumes that the categories sum to the reported total.
-
-## Framework bridges
-
-| Evaluator | Context builder | Backend type |
-|---|---|---|
-| `SpringAiEvaluator` | `SpringAiJudgmentContextBuilder` | Spring AI `ChatResponse` |
-| `LangChain4jEvaluator` | `LangChain4jJudgmentContextBuilder` | LangChain4j `Result<T>` |
-| `KoogEvaluator` | `KoogJudgmentContextBuilder` | Koog `AIAgent` |
-| `AgentClientEvaluator` | `AgentClientJudgmentContextBuilder` | AgentClient |
-
-`SpringAiJudgeModel` and `AgentClientJudgeModel` adapt those backends to the judging-side `JudgeModel` interface.
-
-## Version and migration
-
-Use all Agent Judge artifacts at version `0.17.0`.
-Consumers migrating from the former score hierarchy should follow the [normalized Judgment migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md).
+Current source: [producer README](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/README.md), [writing judges](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/writing-judges.md), [describing juries](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/describing-juries.md), [V6 storage](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/portable-results-v6.md).
+These pinned sources are distinct from released 0.17 Javadoc.
+For source and stored-result changes, follow [Migrating to 0.18](/docs/agent-judge/migration-0.18).

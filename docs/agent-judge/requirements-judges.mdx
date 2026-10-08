@@ -1,289 +1,155 @@
 ---
-title: "Requirements judges"
-description: "Read written EARS acceptance criteria and RFC 2119 constraints back against an implementation, with runnable examples"
+title: "Requirements, evidence, and execution"
+description: "Configure native EARS and RFC2119 requirements, execute a Judge or whole-roster Jury, and keep the complete result"
 ---
 
-When we can write the oracle, we already have excellent machinery: javac, JUnit, and ArchUnit.
-The gap is a requirement that **is** written down but needs judgment to establish whether the implementation satisfies it.
+<Note>
+This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
+Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+</Note>
 
-`EarsJudge` reads EARS acceptance criteria; `Rfc2119Judge` reads RFC 2119 architectural constraints.
-Both run a **written requirements document back against the implementation it describes**.
-The input is something somebody wrote before the code existed.
-**The model assesses each requirement; the code decides the verdict.**
+A requirement owns identity, revision, specification, and source. It owns neither evidence nor execution.
+`EarsRequirement.from(path, revision)` and `Rfc2119Requirement.from(path, revision)` read the selected document during setup and retain its SHA-256 source reference and native item IDs.
+Select your roster before executing. The PetClinic path keeps `UC6-AC7` through `UC6-AC12` (six), the full UC6 document (52), and the architectural MUST roster (13).
 
-| Type | Purpose |
-|---|---|
-| `EarsCriterion` | One acceptance criterion, parsed from the specification |
-| `EarsJudge` | Answers every acceptance criterion |
-| `Rfc2119Constraint` | One architectural constraint, with its RFC 2119 keyword |
-| `Rfc2119Judge` | Answers every architectural constraint |
-| `Observation` | Non-binding evidence noticed while establishing a judgment |
+| Operation | Construction | Execution result |
+|---|---|---|
+| One native requirement | `EarsJudge` / `Rfc2119Judge`, `.requirement(actual)` | `judge()` returns `Judgment` |
+| Selected native roster | `EarsJury` / `Rfc2119Jury`, `.requirements(roster)` | `vote()` returns complete `Verdict` |
+| Prepared generated evidence | `.evidence(text).build()` | Uses supplied evidence; acquisition suppliers run at execution |
+| Integrated investigation | `.requirements(roster).build()` | Uses configured backend workspace/tools |
+| Structured native runtime | `.runtime(EvalRuntime<RequirementRequest<S,E>,Judgment>)` | Actual typed evidence and per-item native execution |
 
-## The document supplies the roster
+## Configure the runtime
 
-This is what separates these from the other judges, and it changes how they aggregate.
-General jury strategies can drop an `ABSTAIN` from the vote; since 0.17, that status means undecided, and `NOT_APPLICABLE` is a separate status for a question that does not apply.
-Here the roster is fixed: the document says the requirement applies, so *"could not be established"* is not *"does not apply."*
+`EvalModel` specializes `EvalRuntime<EvalModelRequest,EvalModelResponse>` for generated answers.
+`SpringAiEvalModel` adapts Spring AI; `AgentClientEvalModel` adapts a native agent client.
+Configure credentials, workspace, permissions, tools, deadlines, and native options on the backend before constructing the Judge or Jury.
+An investigative harness needs actual investigation capability. A prepared-only harness can declare `withInputs(GeneratedInput.PREPARED_EVIDENCE)`; requesting investigation then fails before calls.
+Request roles, options, and metadata must be transmitted honestly or refused before invocation. SDK capture does not promise raw HTTP bytes. Cancellation propagates.
 
-The rollup is therefore strict, and abstentions are **not** dropped:
+## Invocation counts
 
-```text
-any ERROR        -> ERROR
-else any FAIL    -> FAIL
-else any ABSTAIN -> ABSTAIN
-else             -> PASS
-```
+A generated investigative roster enters the configured backend **once for the selected whole roster**.
+That backend may make several internal model or tool calls. One Agent Eval invocation does not imply one HTTP request, turn, or tool operation.
+The root Verdict owns the shared Invocation; each requirement result references its ID rather than repeating its usage.
 
-<Warning>
-Fifty-one criteria established and one unsettled is `ABSTAIN`, not `PASS`. The specification has not
-been shown to hold — which is a different statement from it having been shown to fail, and both are
-different from success. Understand this before composing these judges with anything else, because a
-strategy that drops abstentions will silently convert "unverified" into "fine."
-</Warning>
+Structured roster runtimes execute separately for each item: EARS6 means six executions, EARS52 means 52, and RFC13 means 13.
+Jev uses this typed path; its per-item counts must not be described as one generated batch call.
+`InvocationRecords.of(verdict)` resolves retained owners and counts each ID once, including lower invocations on refused originals.
+Unknown usage or cost stays absent; an omitted field is not zero.
 
-`AllMustPassStrategy` drops abstentions when aggregating; it does not implement this strict roster rollup.
-Passing 51 `PASS` judgments and one `ABSTAIN` through it yields `PASS`.
+## Run a prepared example
 
-Since 0.17, a criterion or constraint can declare an optional applicability clause before assessment.
-Only those conditional items may receive `NOT_APPLICABLE`, with a mandatory reason; authorized exclusions are left out and counted separately.
-Excluding an unconditional item, or omitting the reason, is a protocol error.
-The examples below use unconditional requirements.
-
-Both judges were introduced in 0.16.0, which allowed an empty roster to return `PASS`.
-In 0.17, construction and rollup each refuse an empty roster: nothing was checked, so nothing can be claimed.
-
-## Run the examples
-
-You need Java 21 or newer and Maven 3.9 or newer.
-**These examples run with no credentials, no API key, and no network during execution.**
-Maven needs network access to download dependencies on the first build.
-`JudgeModel` is a functional interface, so each example supplies the model call as a fixture lambda.
-The answers and file-and-line citations are **fixtures**: these examples verify wiring, parsing, and rollup rather than independently assessing an implementation.
-Running either judge against a real model needs a backend, its credentials, and access to the implementation being assessed.
-
-Create a directory for the examples, with `src/main/java` beneath it.
-Save this complete `pom.xml` in that directory.
-The BOM supplies both Agent Judge module versions; the five requirements types above live in `agent-judge-ai-core`.
+This complete example uses synthetic answers and citations to test plumbing. It makes no model call and establishes no claim about the real application.
+Create `requirements-demo` beside the producer source checkout. Save the POM below there, and
+save the Java block as `requirements-demo/src/main/java/RequirementsDemo.java`. Run the command
+from the producer checkout so its committed Maven wrapper is available.
 
 ```xml
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>example</groupId>
-  <artifactId>requirements-judges-demo</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <properties>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>io.github.markpollack</groupId>
-        <artifactId>agentworks-bom</artifactId>
-        <version>1.21.0</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
+  <groupId>example</groupId><artifactId>requirements-demo</artifactId><version>1.0-SNAPSHOT</version>
+  <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
   <dependencies>
-    <dependency>
-      <groupId>io.github.markpollack</groupId>
-      <artifactId>agent-judge-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.github.markpollack</groupId>
-      <artifactId>agent-judge-ai-core</artifactId>
-    </dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-ai-core</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-json-jackson2</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-assertj</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.0</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.8.1</version>
-      </plugin>
-    </plugins>
-  </build>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
+    <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version></plugin>
+  </plugins></build>
 </project>
 ```
 
-### EARS: an unsettled requirement keeps the judgment open
-
-Save this input document as `criteria.md` beside `pom.xml`.
-The parser reads a numbered heading and the requirement sentence beneath it.
-
-```markdown
-### UC1-AC1: List owners
-When the user opens the owner list, the system shall display the registered owners.
-
-### UC1-AC2: Find an owner
-When the user searches by last name, the system shall display matching owners.
-
-### UC1-AC3: Handle an empty search
-If no owner matches the search, then the system shall display an empty result message.
-```
-
-Save this as `src/main/java/EarsExample.java`.
-The fixture establishes two criteria and leaves `UC1-AC3` unsettled.
-
 ```java
-import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import io.github.markpollack.judge.ai.model.*;
+import io.github.markpollack.judge.ai.requirements.*;
+import io.github.markpollack.judge.evaluation.*;
+import io.github.markpollack.judge.policy.*;
+import io.github.markpollack.judge.verdict.*;
+import static io.github.markpollack.judge.assertj.Assertions.assertThat;
 
-import io.github.markpollack.judge.ai.model.JudgeModel;
-import io.github.markpollack.judge.ai.model.JudgeModelResponse;
-import io.github.markpollack.judge.ai.requirements.EarsCriterion;
-import io.github.markpollack.judge.ai.requirements.EarsJudge;
-import io.github.markpollack.judge.context.ExecutionStatus;
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Judgment;
-
-public class EarsExample {
+public class RequirementsDemo {
     public static void main(String[] args) {
-        var criteria = EarsCriterion.from(Path.of("criteria.md"));
-        // Fixture answers, not findings from an inspection of real code.
-        String answers = """
-            UC1-AC1: PASS - OwnerController.java:30 lists owners
-            UC1-AC2: PASS - OwnerController.java:45 searches by last name
-            UC1-AC3: CANNOT_DETERMINE - the empty result path has not been established
-            """;
-        JudgeModel model = request ->
-            new JudgeModelResponse(answers, "fixture", null, Map.of());
-        JudgmentContext context = JudgmentContext.builder()
-            .goal("audit the owner search requirements")
-            .status(ExecutionStatus.SUCCESS)
-            .build();
+        var first = EarsRequirement.of("UC6-AC7", "fixture-v1", "Cancellation",
+            "When an owner cancels before start, the system shall cancel the appointment.", null);
+        var second = EarsRequirement.of("UC6-AC8", "fixture-v1", "Boundary",
+            "When cancellation is requested at start, the system shall reject it.", null);
+        var calls = new AtomicInteger();
+        EvalModel runtime = request -> {
+            calls.incrementAndGet();
+            if (!request.messages().getFirst().content().contains("captured source facts"))
+                throw new AssertionError("Evidence was not supplied");
+            return new EvalModelResponse("UC6-AC7: PASS - Fixture.java:1\n"
+                + "UC6-AC8: CANNOT_DETERMINE - boundary execution absent", "deterministic-fixture",
+                null, Map.of("fixture", "requirements-demo"));
+        };
+        var jury = EarsJury.builder().runtime(runtime).requirements(List.of(first, second))
+            .evidence("captured source facts").build();
+        var stage = assertThat(jury).withPolicy(whole ->
+            new PolicyDecision(PolicyAction.ESCALATE, "Obtain boundary evidence before relying"));
+        EvaluationResult result = stage.evaluate();
+        var codec = NativeRequirementCodecs.codec();
+        EvaluationResult retained = codec.readEvaluation(codec.write(result));
+        assertThat(retained).hasConclusion(Verdict.Conclusion.INCONCLUSIVE);
+        assertThat(stage.evaluate()).hasConclusion(Verdict.Conclusion.INCONCLUSIVE);
+        if (!retained.equals(result) || calls.get() != 1)
+            throw new AssertionError("Complete retention or cached execution failed");
+        System.out.println("INCONCLUSIVE; roster=" + retained.verdict().roster().size()
+            + "; invocations=" + InvocationRecords.of(retained.verdict()).size() + "; calls=" + calls.get());
 
-        Judgment judgment = EarsJudge.create("owner-search", criteria, model).judge(context);
-        System.out.println("status     = " + judgment.status());
-        System.out.println("reasoning  = " + judgment.reasoning());
-        System.out.println("unestablished = " + judgment.metadata().get("unestablished"));
-        System.out.println("checks     = " + judgment.checks().size());
+        EvalModel singleRuntime = request -> new EvalModelResponse("UC6-AC7: PASS - Fixture.java:1",
+            "deterministic-fixture", null, Map.of());
+        var judge = EarsJudge.builder().runtime(singleRuntime).requirement(first)
+            .evidence("captured source facts").build();
+        if (judge.judge().requirement() != first) throw new AssertionError("Requirement association lost");
+        assertThat(first).judgedBy(EarsJudge.builder().runtime(singleRuntime))
+            .withEvidence("captured source facts").isSatisfied();
+        System.out.println("Prepared Judge and requirement-first AssertJ: PASS");
     }
 }
 ```
 
-From the directory containing `pom.xml`, run these commands in a POSIX shell:
+Keep the exact producer revision `904c1983c3c919b873ca03beb7e321759580ee14` installed in the same selected `EVAL_M2` (the standard repository by default).
+Prepare this standalone caller's own dependencies and Maven plugins with a first run without `-o`.
+The producer build alone does not download everything in this caller POM.
+`-nsu` suppresses snapshot update checks while Maven downloads missing dependencies and plugins.
+The example uses deterministic responses and performs no live inference.
 
 ```bash
-mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-java -cp "target/classes:$(cat target/classpath.txt)" EarsExample
+./mvnw -nsu -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
 ```
 
-The judgment is `ABSTAIN`, and it names the open criterion in both the reasoning and metadata:
-
-```text
-status     = ABSTAIN
-reasoning  = 2 of 3 established, 1 could not be established: UC1-AC3
-unestablished = UC1-AC3
-checks     = 3
-```
-
-<Note>
-Each example also prints three SLF4J warning lines on stderr because no logging provider is declared:
-
-```text
-SLF4J(W): No SLF4J providers were found.
-SLF4J(W): Defaulting to no-operation (NOP) logger implementation
-SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
-```
-</Note>
-
-### RFC 2119: one violated constraint fails the judgment
-
-Save this input document as `rules.md` beside `pom.xml`.
-Each numbered rule carries its keyword, requirement, and reason.
-
-```markdown
-### RULE-1
-**MUST** keep transactions on the service boundary.
-**Reason:** Consistency across operations.
-
-### RULE-2
-**MUST NOT** expose entities from controllers.
-**Reason:** Keep persistence details out of the public API.
-
-### RULE-3
-**MUST** acquire the owner lock before the appointment lock on both paths.
-**Reason:** Keep lock ordering consistent.
-```
-
-Save this as `src/main/java/Rfc2119Example.java`.
-The fixture reports a violation of `RULE-2`; its citations are invented example evidence.
-
-```java
-import java.nio.file.Path;
-import java.util.Map;
-
-import io.github.markpollack.judge.ai.model.JudgeModel;
-import io.github.markpollack.judge.ai.model.JudgeModelResponse;
-import io.github.markpollack.judge.ai.requirements.Rfc2119Constraint;
-import io.github.markpollack.judge.ai.requirements.Rfc2119Judge;
-import io.github.markpollack.judge.context.ExecutionStatus;
-import io.github.markpollack.judge.context.JudgmentContext;
-import io.github.markpollack.judge.result.Judgment;
-
-public class Rfc2119Example {
-    public static void main(String[] args) {
-        var constraints = Rfc2119Constraint.from(Path.of("rules.md"));
-        // Fixture answers, not findings from an inspection of real code.
-        String answers = """
-            RULE-1: PASS - ClinicService.java:42 is annotated
-            RULE-2: FAIL - OwnerController.java:60 returns the entity directly
-            RULE-3: PASS - both paths take owner before appointment
-            """;
-        JudgeModel model = request ->
-            new JudgeModelResponse(answers, "fixture", null, Map.of());
-        JudgmentContext context = JudgmentContext.builder()
-            .goal("audit the architecture constraints")
-            .status(ExecutionStatus.SUCCESS)
-            .build();
-
-        Judgment judgment = Rfc2119Judge.create("architecture", constraints, model).judge(context);
-        System.out.println("status    = " + judgment.status());
-        System.out.println("reasoning = " + judgment.reasoning());
-        for (var check : judgment.checks()) {
-            System.out.println("  " + (check.passed() ? "PASS" : "not passed")
-                + "  " + check.message());
-        }
-    }
-}
-```
-
-Run it from the same directory:
+Once that preparation succeeds, subsequent runs can use the same selected repository offline:
 
 ```bash
-mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-java -cp "target/classes:$(cat target/classpath.txt)" Rfc2119Example
+./mvnw -o -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
 ```
 
-The judgment is `FAIL`, with the evidence for all three constraints retained:
+Expected output:
 
 ```text
-status    = FAIL
-reasoning = 2 of 3 hold, 1 violated
-  PASS  ClinicService.java:42 is annotated
-  not passed  OwnerController.java:60 returns the entity directly
-  PASS  both paths take owner before appointment
+INCONCLUSIVE; roster=2; invocations=1; calls=1
+Prepared Judge and requirement-first AssertJ: PASS
 ```
 
-## What happened on a real implementation
+The roster keeps both actual requirements and both complete item results in `compositeAttempts`.
+One ABSTAIN leaves this roster INCONCLUSIVE. A verified violation produces FAIL; omission, malformed identity, or unjustified N/A prevents a passing audit.
+Applicability must be declared before execution. An excluded original remains visible with its treatment.
+A native roster establishes required coverage; an ordinary voting panel combines opinions. `AllEligiblePassStrategy` is an opinion rule, not a substitute for roster coverage.
 
-A spec-driven PetClinic branch began with 438 requirements across fifteen documents, written before the code by the same pipeline that then wrote the code, wrote 290 passing tests, and reviewed its own work without finding anything wrong.
-The case study read two of those fifteen documents back against the implementation.
-Behaviour: 51 of 52 EARS criteria established, none failed, and `UC6-AC41` unsettled — **`ABSTAIN`, not a pass**.
-Architecture, on the same commit: 13 RFC 2119 constraints, five passed and eight failed.
+## Requirement-first assertions
 
-Those eight failures are **addresses for investigation, not eight bugs**.
-One was followed to its consequence: a lock-ordering violation between two paths that a scheduled sweeper causes to meet.
-The lock ordering and its reachability were verified by hand in the source.
+`assertThat(actualRequirement).judgedBy(recipe).withEvidence(actualEvidence).isSatisfied()` passes the actual Requirement into typed construction.
+Ready Judge/Jury assertions use `isPassed()`; `evaluate()` returns the complete reusable `EvaluationResult`.
+Repeated terminals on the same live stage cache the result or thrown failure. Calling `judge()` or `vote()` separately is a fresh execution.
+Retained assertions inspect Verdict/EvaluationResult and have no `withPolicy` terminal. Explicitly call `Evaluations.apply(retainedVerdict, policy)` only when requesting a new policy decision.
 
-Continue with the [PetClinic learning path](/docs/agent-judge/petclinic-case-study), the [conference talk](https://www.youtube.com/live/sTcx0EvILr4?t=3702), or the [runnable case study](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic).
+Continue with [retained results](/docs/agent-judge/interpreting-verdicts) and the [executable PetClinic path](/docs/agent-judge/petclinic-case-study).

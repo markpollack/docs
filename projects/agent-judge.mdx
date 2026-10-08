@@ -1,161 +1,80 @@
 ---
-title: "Agent Judge"
-description: "Evals for agent-generated work: bring written requirements, evidence, and judgment into the Java testing workflow you already use"
+title: "Agent Judge / Agent Eval"
+description: "Configured Java evaluations with requirements, evidence, native runtime results and separate application policy"
 ---
-
-**[What's New in 0.17 →](/docs/agent-judge/whats-new)**
 
 **The agent says it is done. Should you merge?**
 
-Agent Judge is a Java 21 library for evaluating whether an agent's work meets the requirements you set for it.
-An eval starts with a definition of good, gathers evidence from the result, and decides whether that bar was met.
-The criteria are set before the work is judged.
+Agent Eval (in the Agent Judge repository) is a Java 21 library for evaluating work against
+requirements set before execution. Configure a `Judge` with its requirement, runtime and evidence,
+then call `judge()`. Configure a `Jury` with the selected requirements and call `vote()`.
+Retain the complete result before deciding whether the application may rely on it.
 
-## Extend the testing discipline you already use
+These guides cover source revision
+[`904c1983c3c919b873ca03beb7e321759580ee14`](https://github.com/markpollack/agent-judge/tree/904c1983c3c919b873ca03beb7e321759580ee14),
+version `0.18.0-SNAPSHOT`. This is a source-build adoption path; it does not announce a published
+0.18 release. [Getting started](/docs/agent-judge/getting-started) installs that exact source into
+the standard Maven repository, with isolation optional. The separate fundamentals tutorial still uses released 0.17.0.
 
-JUnit handles assertions where you know how to write the oracle: an expected value for `assertEquals`, or a rule for `assertTrue`.
-Agent Judge extends that testing discipline to criteria whose answers need richer evidence or judgment.
+## Requirements, evidence and execution
 
-Keep using javac, JUnit, ArchUnit, and static analysis for questions they can settle.
-Use a model when establishing whether the implementation meets a written requirement needs interpretation.
-When that check can be expressed reliably with deterministic tooling, give it back to that tooling.
+Keep using javac, JUnit and static analysis for questions they can settle. Use a model or agent
+when checking a written requirement needs interpretation. Prepared evidence is supplied explicitly;
+workspace, tools and timeout are configured on an investigative backend.
 
-## Turn written requirements into a JUnit gate
+`EarsJudge` and `Rfc2119Judge` assess one actual requirement. `EarsJury` and `Rfc2119Jury` assess a
+selected roster. A generated investigative roster enters its backend once for the whole roster;
+that backend can make several internal model and tool calls. A structured runtime executes once
+per requirement and retains those individual invocation owners.
 
-`EarsJudge` checks written EARS acceptance criteria against an implementation.
-`Rfc2119Judge` checks architectural constraints written with RFC 2119 keywords such as `MUST` and `MUST NOT`.
-Both are available in `agent-judge-ai-core` in Agent Judge 0.17.0.
-**The model assesses each requirement; the code decides the verdict.**
+[The PetClinic case study](/docs/agent-judge/petclinic-case-study) uses the same unchanged subject:
 
-This is the JUnit test from the [PetClinic tutorial's behavioral merge gate](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java), with class setup and imports omitted:
+| Question | Retained answers | Verdict conclusion |
+|---|---|---|
+| Does the candidate build and pass its existing tests? | Real deterministic build | PASS Judgment |
+| Do the selected six EARS requirements hold? | 6 PASS | PASS |
+| Do all 52 EARS requirements hold? | 51 PASS; UC6-AC41 ABSTAIN | INCONCLUSIVE |
+| Do all 13 architectural requirements hold? | 5 PASS; 8 FAIL | FAIL |
 
-```java
-@Test
-@DisplayName("Should I merge? All 52 UC6 requirements must PASS")
-void shouldMergeUc6Behavior() {
-    var requirements = EarsCriterion.from(CRITERIA);
+The model-backed rows replay archived responses. Fresh replay verifies the configured public
+caller and retention, rather than establishing new model findings about the subject.
 
-    var judge = EarsJudge.create("appointment-lifecycle", requirements, model);
+## Keep the result and the reliance decision
 
-    assertPass(judge, context);
-}
-```
+A `Judgment` keeps PASS, FAIL, ABSTAIN, NOT_APPLICABLE and ERROR distinct. A `Verdict` additionally
+retains the roster, actual requirement associations, child attempts and original results.
+Native facts and invocation ownership stay attached; absent recorded usage remains unknown.
+A refused native result preserves its complete original, including its own Checks and invocations.
 
-`CRITERIA` points to the specification, `context` identifies the implementation under evaluation, and `model` replays a committed response from a real agent run.
-The tutorial's [`JudgeAssertions.assertPass`](https://github.com/markpollack/agent-judge-tutorial/blob/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/judge-junit/src/main/java/io/github/markpollack/judge/junit/JudgeAssertions.java) helper requires `PASS` and reports the actual status, reasoning, and checks that did not pass in the JUnit failure message.
-
-## Same code, different questions
-
-The conference case study evaluated a PetClinic implementation against requirements written before the code existed.
-The implementation stayed unchanged across these checks:
-
-| Evaluation | Result |
-|---|---|
-| Does it build and pass its existing tests? | `PASS` |
-| Does it satisfy all 52 acceptance criteria? | 51 established, `UC6-AC41` unsettled: `ABSTAIN` |
-| Does it satisfy the 13 architectural constraints? | 5 passed, 8 failed: `FAIL` |
-
-**The JUnit gate above goes red.** Every required criterion must be established to pass; the unresolved one remains named and visible.
-`ABSTAIN` means the question is still open, and that is enough to block this merge policy.
-The architectural failures identify places to investigate; establishing their consequences is a separate step.
-
-The tutorial also has regression tests that assert these recorded outcomes and pass when replay reproduces them.
-The merge gate asks whether the application met the bar; the regression test asks whether the evaluator reproduced the expected result.
+Application policy is a separate decision. Withholding reliance on a PASS Verdict does not rewrite
+its conclusion. Producer AssertJ stages evaluate once, cache the complete result or failure,
+and can apply policy once. V6 storage retains the corresponding EvaluationResult. Retained reads
+and assertions execute no producers or policies.
 
 <CardGroup cols={2}>
-  <Card title="Run the requirements judges" icon="list-check" href="/docs/agent-judge/requirements-judges">
-    Try complete EARS and RFC 2119 examples on 0.17.0, with fixture answers and no API key.
+  <Card title="Build the configured example" icon="rocket" href="/docs/agent-judge/getting-started">
+    Install exact source and provide requirements, evidence and runtime configuration.
   </Card>
-  <Card title="Explore the PetClinic case study" icon="code" href="/docs/agent-judge/petclinic-case-study">
-    Follow the conference example from a passing build to requirements checks and one investigation.
+  <Card title="Executable requirements" icon="list-check" href="/docs/agent-judge/requirements-judges">
+    Run prepared and whole-roster callers without inference.
   </Card>
-</CardGroup>
-
-## Read the outcome
-
-The central result is status-first.
-Every `Judgment` has a `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, or `ERROR` status, while a normalized score and classification label are independent optional facts.
-Result metadata is restricted to portable values so judgments can cross JSON and process boundaries reliably.
-
-## What you can verify
-
-<CardGroup cols={2}>
-  <Card title="Prove the code works" icon="terminal">
-    Run commands and builds, check bytecode versions, and preserve or improve test coverage.
+  <Card title="PetClinic case study" icon="code" href="/docs/agent-judge/petclinic-case-study">
+    Preserve RFC13, EARS6 and EARS52 while separating assessment from merge policy.
   </Card>
-  <Card title="Inspect the resulting workspace" icon="folder-open">
-    Check files and compare Java, Maven, XML, and text by structure or meaning rather than bytes alone.
-  </Card>
-  <Card title="Evaluate semantic quality" icon="brain">
-    Apply criteria-based model judges and RAG checks for correctness, faithfulness, relevance, and hallucination.
-  </Card>
-  <Card title="Combine independent evidence" icon="scale-balanced">
-    Use majority, consensus, average, weighted-average, or median policies while retaining every judge's reasoning.
-  </Card>
-  <Card title="Escalate only when needed" icon="layer-group">
-    Put cheap deterministic checks before slower execution or model-backed tiers with `CascadedJury`.
-  </Card>
-  <Card title="Keep uncertainty visible" icon="circle-question">
-    Keep undecided (`ABSTAIN`), inapplicable (`NOT_APPLICABLE`), and evaluator failure (`ERROR`) distinct from a negative finding (`FAIL`).
-  </Card>
-</CardGroup>
-
-## Bring the same evaluation policy to each runtime
-
-Spring AI, LangChain4j, Koog, and AgentClient each have their own execution model.
-Each Agent Judge bridge converts framework output into a `JudgmentContext`, after which the same judges and juries evaluate it.
-
-Adapters preserve native output, model identity, token usage, timing, and tool evidence in a shared `JudgmentContext`. The judges and jury policy above that boundary do not change when the producing runtime does.
-
-| Runtime | Evaluation entry point |
-|---|---|
-| Spring AI | `SpringAiEvaluator` |
-| LangChain4j | `LangChain4jEvaluator` |
-| Koog | `KoogEvaluator` |
-| CLI agents through AgentClient | `AgentClientEvaluator` |
-
-## Install 0.17
-
-```xml
-<dependency>
-  <groupId>io.github.markpollack</groupId>
-  <artifactId>agent-judge-core</artifactId>
-  <version>0.17.0</version>
-</dependency>
-```
-
-Add only the family and bridge modules that your application uses.
-For EARS and RFC 2119 judges, add `agent-judge-ai-core` as shown in the [requirements judges guide](/docs/agent-judge/requirements-judges#run-the-examples).
-
-## Learn with executable examples
-
-The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) progresses from one deterministic acceptance check to composed judges, voting and cascaded juries, custom and model-backed judges, and framework bridges. Every example runs without credentials.
-
-<CardGroup cols={2}>
-  <Card title="Getting Started" icon="rocket" href="/docs/agent-judge/getting-started">
-    Add Agent Judge 0.17 and run the first evaluation
-  </Card>
-  <Card title="Executable Tutorial" icon="graduation-cap" href="/docs/agent-judge/tutorial">
-    Run the evaluation patterns as maintained Java projects
-  </Card>
-  <Card title="Result and Jury Design" icon="scale-balanced" href="/docs/agent-judge/design-philosophy">
-    Understand status-first outcomes and aggregation
-  </Card>
-  <Card title="Research Foundations" icon="microscope" href="/docs/agent-judge/research-foundations">
-    See why evidence, requirements, cascades, and independent checks shape the design
+  <Card title="Read and retain results" icon="scale-balanced" href="/docs/agent-judge/interpreting-verdicts">
+    Understand conclusions, native evidence, refusals and V6 storage.
   </Card>
 </CardGroup>
 
 ## Resources
 
-- [Source](https://github.com/markpollack/agent-judge)
-- [Tutorial source](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed)
-- [0.17 release notes](https://github.com/markpollack/agent-judge/blob/v0.17.0/RELEASE_NOTES_0.17.0.md)
-- [GitHub release v0.17.0](https://github.com/markpollack/agent-judge/releases/tag/v0.17.0)
-- [Migrating to 0.17](/docs/agent-judge/migration-0.17)
-- [0.14 migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md)
+- [Accepted source](https://github.com/markpollack/agent-judge/tree/904c1983c3c919b873ca03beb7e321759580ee14)
+- [Tutorial](/docs/agent-judge/tutorial)
+- [Configured API reference](/docs/agent-judge/api-reference)
+- [Migrating to 0.18](/docs/agent-judge/migration-0.18)
+- [Historical 0.17 release guide](/docs/agent-judge/whats-new)
+- [Historical 0.17 migration](/docs/agent-judge/migration-0.17)
 
-## License
-
-The current Agent Judge source tree uses project-specific Business Source License 1.1 terms.
-Read the repository's [root `LICENSE`](https://github.com/markpollack/agent-judge/blob/main/LICENSE) for the exact grant, restrictions, change date, and change license; earlier published releases remain governed by the license distributed with those releases.
+The source tree uses project-specific Business Source License 1.1 terms. Read its
+[root LICENSE](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/LICENSE)
+for the exact grant and restrictions; earlier releases retain their distributed license.

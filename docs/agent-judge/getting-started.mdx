@@ -1,50 +1,61 @@
 ---
 title: "Getting started with Agent Eval"
-description: "Build the pinned source API and execute credential-free configured requirements"
+description: "Add Agent Eval 0.18.0 from Maven Central and execute credential-free configured requirements"
 ---
 
 <Note>
-This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
-0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
-The commands below build the exact source artifacts locally.
+Agent Eval 0.18.0 is on Maven Central. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 Use the least intelligent practical evaluator that establishes the property at the reliability you need.
 Keep the compiler, ordinary JUnit, and available deterministic analyzers for facts they can settle.
 Supply a bounded evidence bundle when a written requirement needs judgment.
 
-## Build the source artifacts
+## Add the dependencies
 
-You need Java 21 and the committed Maven wrapper. Use your existing Agent Judge checkout
-and the standard `~/.m2/repository`; no second producer clone or repository setting is needed.
-The reproducible source revision is `904c1983c3c919b873ca03beb7e321759580ee14`.
-Fetch current main and preserve any local changes before updating it. The check below refuses
-another revision; it does not reset or move your checkout.
+You need Java 21. Most callers need the core API, the explicit Jackson 2 codecs, the model-backed
+requirements, and the fluent assertions:
 
-From the Agent Judge checkout:
-
-```bash
-export EVAL_M2="$HOME/.m2/repository"
-test "$(git rev-parse HEAD)" = "904c1983c3c919b873ca03beb7e321759580ee14"
-./mvnw -B -ntp clean install
+```xml
+<dependencies>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-core</artifactId>
+    <version>0.18.0</version>
+  </dependency>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-json-jackson2</artifactId>
+    <version>0.18.0</version>
+  </dependency>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-ai-core</artifactId>
+    <version>0.18.0</version>
+  </dependency>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-assertj</artifactId>
+    <version>0.18.0</version>
+    <scope>test</scope>
+  </dependency>
+</dependencies>
 ```
 
-This installs the complete reactor, including the parent and every module, with tests enabled.
-It replaces artifacts at the same snapshot coordinates and preserves unrelated versions.
-Keep the selected repository when building callers; a producer build alone does not prepare
-caller dependencies and Maven plugins. The [requirements example](/docs/agent-judge/requirements-judges#run-a-prepared-example)
+Add the runtime, execution and bridge modules you use from the [inventory below](#dependencies).
+The [requirements example](/docs/agent-judge/requirements-judges#run-a-prepared-example)
 has a complete caller POM and executable Java example with deterministic responses.
 
-For an optional isolated installation, set `EVAL_M2` to an absolute task-owned directory and run
-`./mvnw -B -ntp -Dmaven.repo.local="$EVAL_M2" clean install` from a clean checkout at the same revision.
-Use that repository for subsequent caller and child builds. These commands install locally;
-they do not publish artifacts. Prepare dependencies online before using Maven's `-o` option.
-
-For the [PetClinic walkthrough](/docs/agent-judge/petclinic-case-study), open the ordinary tutorial
-checkout beside Agent Judge and run `./scripts/prepare-petclinic-demo.sh`. It prepares source
-artifacts, callers, plugins and the materialized subject together. Its configured run guide and
-presenter runbook cover IntelliJ, offline replay and the optional `--isolated` mode.
+For the [PetClinic walkthrough](/docs/agent-judge/petclinic-case-study), use the tutorial's
+case-study run guide and presenter runbook; they cover IntelliJ, offline replay and caching.
 No live inference is required.
+
+### Build from source
+
+To build the released source yourself, check out tag
+[`v0.18.0`](https://github.com/markpollack/agent-judge/tree/v0.18.0) of the Agent Judge repository
+and run `./mvnw -B -ntp clean install` with Java 21. This installs the complete reactor, including
+the parent and every module, into your local Maven repository with tests enabled.
 
 ## Configure, execute, retain
 
@@ -57,8 +68,8 @@ No live inference is required.
 
 ## Dependencies
 
-All source artifacts retain group `io.github.markpollack` and version `0.18.0-SNAPSHOT`.
-Declare the source version explicitly; no AgentWorks BOM change is implied.
+All artifacts retain group `io.github.markpollack` and are released at version `0.18.0`.
+The AgentWorks BOM does not yet manage 0.18.0, so declare the version explicitly.
 The inventory is 14 JAR modules plus `agent-judge-parent` (POM packaging).
 The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intentional API and wire breaks.
 
@@ -75,5 +86,5 @@ The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intent
 | `agent-judge-spring-ai` / `agent-judge-langchain4j` / `agent-judge-koog` | Evaluated response evidence bridges |
 
 The [fundamentals path](/docs/agent-judge/tutorial) still demonstrates released 0.17.0 in its separate reactor.
-The [PetClinic source path](/docs/agent-judge/petclinic-case-study) demonstrates configured 0.18 APIs.
+The [PetClinic path](/docs/agent-judge/petclinic-case-study) demonstrates configured 0.18 APIs.
 For historical consumer changes, keep the [0.17 migration guide](/docs/agent-judge/migration-0.17) at its original semantics.

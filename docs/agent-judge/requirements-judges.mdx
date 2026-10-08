@@ -4,9 +4,7 @@ description: "Configure native EARS and RFC2119 requirements, execute a Judge or
 ---
 
 <Note>
-This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
-0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
-Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+This guide describes the Agent Eval 0.18.0 API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 A requirement owns identity, revision, specification, and source. It owns neither evidence nor execution.
@@ -43,9 +41,8 @@ Unknown usage or cost stays absent; an omitted field is not zero.
 ## Run a prepared example
 
 This complete example uses synthetic answers and citations to test plumbing. It makes no model call and establishes no claim about the real application.
-Create `requirements-demo` beside the producer source checkout. Save the POM below there, and
-save the Java block as `requirements-demo/src/main/java/RequirementsDemo.java`. Run the command
-from the producer checkout so its committed Maven wrapper is available.
+Create a `requirements-demo` directory. Save the POM below there, and save the Java block as
+`requirements-demo/src/main/java/RequirementsDemo.java`. The dependencies resolve from Maven Central.
 
 ```xml
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -54,9 +51,9 @@ from the producer checkout so its committed Maven wrapper is available.
   <groupId>example</groupId><artifactId>requirements-demo</artifactId><version>1.0-SNAPSHOT</version>
   <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
   <dependencies>
-    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-ai-core</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
-    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-json-jackson2</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
-    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-assertj</artifactId><version>0.18.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-ai-core</artifactId><version>0.18.0</version></dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-json-jackson2</artifactId><version>0.18.0</version></dependency>
+    <dependency><groupId>io.github.markpollack</groupId><artifactId>agent-judge-assertj</artifactId><version>0.18.0</version></dependency>
   </dependencies>
   <build><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
@@ -117,21 +114,14 @@ public class RequirementsDemo {
 }
 ```
 
-Keep the exact producer revision `904c1983c3c919b873ca03beb7e321759580ee14` installed in the same selected `EVAL_M2` (the standard repository by default).
-Prepare this standalone caller's own dependencies and Maven plugins with a first run without `-o`.
-The producer build alone does not download everything in this caller POM.
-`-nsu` suppresses snapshot update checks while Maven downloads missing dependencies and plugins.
-The example uses deterministic responses and performs no live inference.
+Run it from the `requirements-demo` directory with Java 21 and Maven 3.9 or later.
+The first run downloads the dependencies and plugins; the example uses deterministic responses and performs no live inference.
 
 ```bash
-./mvnw -nsu -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
+mvn -q compile exec:java -Dexec.mainClass=RequirementsDemo
 ```
 
-Once that preparation succeeds, subsequent runs can use the same selected repository offline:
-
-```bash
-./mvnw -o -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
-```
+Once the dependencies are cached, later runs can add Maven's `-o` option to run offline.
 
 Expected output:
 

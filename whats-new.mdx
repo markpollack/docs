@@ -6,6 +6,20 @@ sidebarTitle: "What's New"
 
 ## Week of October 4, 2026
 
+### Agent Judge 0.18.0
+
+**Configure the evaluation first, then run it.** Released as Agent Eval under the unchanged
+`io.github.markpollack:agent-judge-*` coordinates. This is a breaking change for 0.17 callers.
+
+- A `Judge` or `Jury` is built with its actual requirement, evidence and runtime, then called with `judge()` or `vote()`; RFC 2119 and EARS requirements run natively
+- Results are kept whole — original opinions, refusals and invocation ownership — and whether the application may rely on a `Verdict` is a separate policy decision that never rewrites it
+- Stored results move to the durable V6 format, read and written through the explicit `agent-judge-json-jackson2` codecs
+- 14 modules on Maven Central for Java 21; the AgentWorks BOM does not yet manage 0.18.0
+
+[What's New](/docs/agent-judge/whats-new) | [Migrating to 0.18](/docs/agent-judge/migration-0.18) | [Source](https://github.com/markpollack/agent-judge)
+
+---
+
 ### Agent Journal 1.11.0
 
 **Sub-agents as runs of their own, for Claude Code and Codex.**

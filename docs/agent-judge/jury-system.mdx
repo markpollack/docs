@@ -4,9 +4,7 @@ description: "Distinguish opinion panels, required coverage, native rosters, rou
 ---
 
 <Note>
-This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
-0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
-Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+This guide describes the Agent Eval 0.18.0 API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 Construct a ready `Jury` before calling `vote()`.
@@ -43,4 +41,4 @@ A refused final tier terminates INCONCLUSIVE with its original retained.
 Application Policy runs separately against the final whole Verdict. It decides reliance and never rewrites routing or conclusion.
 
 The [requirements walkthrough](/docs/agent-judge/requirements-judges) constructs an executable native Jury and shows cached AssertJ execution.
-The [producer guide](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/describing-juries.md) explains guided builders and composition-specific invariants.
+The [producer guide](https://github.com/markpollack/agent-judge/blob/v0.18.0/describing-juries.md) explains guided builders and composition-specific invariants.

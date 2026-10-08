@@ -10,11 +10,21 @@ requirements set before execution. Configure a `Judge` with its requirement, run
 then call `judge()`. Configure a `Jury` with the selected requirements and call `vote()`.
 Retain the complete result before deciding whether the application may rely on it.
 
-These guides cover source revision
-[`904c1983c3c919b873ca03beb7e321759580ee14`](https://github.com/markpollack/agent-judge/tree/904c1983c3c919b873ca03beb7e321759580ee14),
-version `0.18.0-SNAPSHOT`. This is a source-build adoption path; it does not announce a published
-0.18 release. [Getting started](/docs/agent-judge/getting-started) installs that exact source into
-the standard Maven repository, with isolation optional. The separate fundamentals tutorial still uses released 0.17.0.
+**Current release: 0.18.0** (2026-10-08), on Maven Central under `io.github.markpollack:agent-judge-*`.
+
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-judge-core</artifactId>
+  <version>0.18.0</version>
+</dependency>
+```
+
+0.18 configures requirements and execution up front, returns complete results with a separate
+application reliance policy, runs native RFC 2119 and EARS requirements, and stores results as
+durable V6 records. It is a breaking release for 0.17 callers; see the
+[migration guide](/docs/agent-judge/migration-0.18). [Getting started](/docs/agent-judge/getting-started)
+lists the modules most callers need. The separate fundamentals tutorial still uses released 0.17.0.
 
 ## Requirements, evidence and execution
 
@@ -53,7 +63,7 @@ and assertions execute no producers or policies.
 
 <CardGroup cols={2}>
   <Card title="Build the configured example" icon="rocket" href="/docs/agent-judge/getting-started">
-    Install exact source and provide requirements, evidence and runtime configuration.
+    Add the 0.18.0 dependencies and provide requirements, evidence and runtime configuration.
   </Card>
   <Card title="Executable requirements" icon="list-check" href="/docs/agent-judge/requirements-judges">
     Run prepared and whole-roster callers without inference.
@@ -68,13 +78,14 @@ and assertions execute no producers or policies.
 
 ## Resources
 
-- [Accepted source](https://github.com/markpollack/agent-judge/tree/904c1983c3c919b873ca03beb7e321759580ee14)
+- [Source](https://github.com/markpollack/agent-judge/tree/v0.18.0)
+- [0.18.0 release notes](https://github.com/markpollack/agent-judge/releases/tag/v0.18.0)
 - [Tutorial](/docs/agent-judge/tutorial)
 - [Configured API reference](/docs/agent-judge/api-reference)
 - [Migrating to 0.18](/docs/agent-judge/migration-0.18)
-- [Historical 0.17 release guide](/docs/agent-judge/whats-new)
+- [What's New](/docs/agent-judge/whats-new)
 - [Historical 0.17 migration](/docs/agent-judge/migration-0.17)
 
 The source tree uses project-specific Business Source License 1.1 terms. Read its
-[root LICENSE](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/LICENSE)
+[root LICENSE](https://github.com/markpollack/agent-judge/blob/v0.18.0/LICENSE)
 for the exact grant and restrictions; earlier releases retain their distributed license.

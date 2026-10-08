@@ -288,9 +288,36 @@
                 "group": "ACP Java SDK",
                 "pages": [
                   "projects/acp-java-sdk",
-                  "docs/acp-java-sdk/whats-new",
                   "docs/acp-java-sdk/index",
-                  "docs/acp-java-sdk/autoconfig",
+                  "docs/acp-java-sdk/whats-new",
+                  "docs/acp-java-sdk/migration-0.80",
+                  {
+                    "group": "Framework Integrations",
+                    "pages": [
+                      "docs/acp-java-sdk/autoconfig",
+                      "docs/acp-java-sdk/micronaut",
+                      "docs/acp-java-sdk/quarkus"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "docs/acp-java-sdk/concepts",
+                      "docs/acp-java-sdk/clients-and-agents",
+                      "docs/acp-java-sdk/config-options",
+                      "docs/acp-java-sdk/cancellation",
+                      "docs/acp-java-sdk/extensions",
+                      "docs/acp-java-sdk/elicitation",
+                      "docs/acp-java-sdk/terminal-auth-and-logout",
+                      "docs/acp-java-sdk/transports",
+                      "docs/acp-java-sdk/agent-to-client-calls",
+                      "docs/acp-java-sdk/forward-compatibility",
+                      "docs/acp-java-sdk/errors",
+                      "docs/acp-java-sdk/json-mappers",
+                      "docs/acp-java-sdk/testing",
+                      "docs/acp-java-sdk/stability"
+                    ]
+                  },
                   {
                     "group": "Tutorial",
                     "pages": [
@@ -326,10 +353,26 @@
                       "docs/acp-java-sdk/tutorial/29-jetbrains-integration",
                       "docs/acp-java-sdk/tutorial/30-vscode-integration",
                       "docs/acp-java-sdk/tutorial/31-elicitation",
-                      "docs/acp-java-sdk/tutorial/32-agent-client"
+                      "docs/acp-java-sdk/tutorial/32-agent-client",
+                      {
+                        "group": "New in 0.80.0",
+                        "pages": [
+                          "docs/acp-java-sdk/tutorial/33-session-config-options",
+                          "docs/acp-java-sdk/tutorial/34-extension-methods",
+                          "docs/acp-java-sdk/tutorial/35-cancellation-timeouts",
+                          "docs/acp-java-sdk/tutorial/36-terminal-auth-logout",
+                          "docs/acp-java-sdk/tutorial/37-streamable-http-websocket",
+                          "docs/acp-java-sdk/tutorial/38-spring-boot-http",
+                          "docs/acp-java-sdk/tutorial/39-forward-compatibility",
+                          "docs/acp-java-sdk/tutorial/40-micronaut",
+                          "docs/acp-java-sdk/tutorial/41-quarkus"
+                        ]
+                      }
                     ]
                   },
-                  "docs/acp-java-sdk/reference/java"
+                  "docs/acp-java-sdk/reference/java",
+                  "docs/acp-java-sdk/compatibility",
+                  "docs/acp-java-sdk/resources"
                 ]
               }
             ]

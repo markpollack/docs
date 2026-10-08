@@ -4,21 +4,21 @@ Handle protocol errors from agents on the client side.
 
 ## What You'll Learn
 
-- Catching `AcpClientSession.AcpError`
+- Catching `AcpError` (`com.agentclientprotocol.sdk.spec.AcpError`)
 - Standard error codes in `AcpErrorCodes`
 - Throwing `AcpProtocolException` from agent handlers
 - Error recovery — continuing after errors
 
 ## The Code
 
-ACP uses structured errors based on JSON-RPC error codes. On the **client side**, protocol errors arrive as `AcpClientSession.AcpError` exceptions. You can inspect the error code to determine what went wrong:
+ACP uses structured errors based on JSON-RPC error codes. On the **client side**, protocol errors arrive as `AcpError` exceptions. `AcpError` is one type on both sides (`com.agentclientprotocol.sdk.spec.AcpError`), replacing the older `AcpClientSession.AcpError` and `AcpAgentSession.AcpError`. You can inspect the error code to determine what went wrong:
 
 ```java
 // Client: catch protocol errors
 try {
     client.prompt(new PromptRequest(sessionId,
         List.of(new TextContent("this is invalid input"))));
-} catch (AcpClientSession.AcpError e) {
+} catch (AcpError e) {
     System.out.println("Code: " + e.getCode());
     System.out.println("Message: " + e.getMessage());
     // Output: Code: -32602
@@ -52,14 +52,19 @@ On the **agent side**, throw `AcpProtocolException` with a standard error code. 
 
 ## Error Codes
 
+`AcpErrorCodes` keeps only the codes the ACP v1 schema defines:
+
 | Code | Constant | When to Use |
 |------|----------|-------------|
 | `-32602` | `INVALID_PARAMS` | Bad input from client |
-| `-32603` | `INTERNAL_ERROR` | Unexpected agent failure |
-| `-32001` | `SESSION_NOT_FOUND` | Unknown session ID |
-| `-32002` | `PERMISSION_DENIED` | Client lacks permission |
+| `-32603` | `INTERNAL_ERROR` | Unexpected agent failure; its own message reaches the client only when it's thrown as `AcpProtocolException` explicitly, as in the example above. Any other exception is answered with the generic message "Internal error," its own message withheld, and logged on the agent's own side |
+| `-32600` | `INVALID_REQUEST` | A request invalid in the session's current state, including a second prompt sent while one is already running |
+| `-32000` | `AUTHENTICATION_REQUIRED` | Client must authenticate before the agent will do this work |
+| `-32002` | `RESOURCE_NOT_FOUND` | Unknown session, file, or other resource |
 
-Agents throw `AcpProtocolException` with one of these codes. The SDK converts it to a JSON-RPC error response. Clients catch it as `AcpClientSession.AcpError`.
+See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80) if you're carrying forward code that used `SESSION_NOT_FOUND`, `PERMISSION_DENIED`, `CAPABILITY_NOT_SUPPORTED`, `NOT_INITIALIZED`, or `CONCURRENT_PROMPT`: those names and codes changed or were removed.
+
+Agents throw `AcpProtocolException` with one of these codes. The SDK converts it to a JSON-RPC error response. Clients catch it as `AcpError`.
 
 ## Error Recovery
 
@@ -69,7 +74,7 @@ Errors do not terminate the connection. After catching an error, the client can 
 // This works — errors don't break the connection
 try {
     client.prompt(/* bad input */);
-} catch (AcpClientSession.AcpError e) {
+} catch (AcpError e) {
     // handle error
 }
 

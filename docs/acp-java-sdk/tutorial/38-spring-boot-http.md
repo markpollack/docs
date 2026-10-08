@@ -1,0 +1,164 @@
+# Module 38: Spring Boot over HTTP
+
+Serve a Spring Boot `@AcpAgent` over Streamable HTTP with acp-autoconfig, and talk to it from a Spring Boot client whose `AcpClientCustomizer` adds a file handler: property-driven on both sides.
+
+**Requires Java 21+** (Spring Boot 4.x).
+
+## What You'll Learn
+
+- `spring.acp.agent.transport.type=http`: serving an `@AcpAgent` bean remotely, with no code changes to the bean itself
+- Why a non-web application runs the SDK's own Jetty listener (`acp-streamable-http-jetty`), and a servlet web application mounts a servlet instead (`acp-http-servlet`), both serving HTTP, SSE and WebSocket
+- `spring.acp.client.transport.http.uri` and `.websocket.uri`, the properties that create a client transport for you, no transport bean required
+- `AcpClientCustomizer`, and how registering a handler relates to the capability property that advertises it
+- Reading the bound port back from the listener bean when the port is `0`
+
+## The Code
+
+### The agent side: one property changes everything
+
+Compared with a stdio Spring Boot agent (Module 23), only the transport property changes:
+
+```properties
+# agent.properties
+spring.acp.agent.transport.type=http
+spring.acp.agent.transport.http.listener.port=8080
+spring.acp.agent.transport.http.path=/acp
+
+# An ACP WebSocket is a long-lived session, so ACP has its own idle timeout, separate from HTTP keep-alive tuning; the initialize deadline closes connections that never start. These are the defaults.
+spring.acp.agent.transport.http.web-socket-idle-timeout=30m
+spring.acp.agent.transport.http.initialize-timeout=30s
+```
+
+```xml
+<dependency>
+    <groupId>com.agentclientprotocol</groupId>
+    <artifactId>acp-streamable-http-jetty</artifactId>
+</dependency>
+```
+
+<Note>
+Spring Boot 4.1's own BOM manages Jetty core at a different patch version than the one `acp-streamable-http-jetty` pulls in for its `jetty-ee10-servlet`/`jetty-ee10-websocket-jakarta-server` jars, since Spring Boot 4.1 manages Jetty's `ee11` profile for its own embedded server, not `ee10`. Harmless here: this module talks HTTP and WebSocket, not Jetty internals. Import `org.eclipse.jetty.ee10:jetty-ee10-bom` yourself if you want every Jetty jar on the classpath at one aligned version.
+</Note>
+
+The `@AcpAgent` bean itself is unchanged:
+
+```java
+@Component
+@AcpAgent(name = "notes-agent", version = "1.0.0")
+public class NotesAgent {
+
+    @NewSession
+    AcpSchema.NewSessionResponse newSession(AcpSchema.NewSessionRequest req) {
+        return new AcpSchema.NewSessionResponse(UUID.randomUUID().toString(), null, null);
+    }
+
+    @Prompt
+    AcpSchema.PromptResponse prompt(AcpSchema.PromptRequest req, SyncPromptContext ctx, NegotiatedCapabilities client) {
+        if (!client.supportsReadTextFile()) {
+            ctx.sendMessage("This client did not advertise fs.readTextFile, so I will not ask for NOTES.md.");
+            return AcpSchema.PromptResponse.endTurn();
+        }
+        String notes = ctx.readFile("NOTES.md");
+        long todos = notes.lines().filter(line -> line.startsWith("- [ ]")).count();
+        ctx.sendMessage("NOTES.md has " + notes.lines().count() + " lines and " + todos + " open to-dos.");
+        return AcpSchema.PromptResponse.endTurn();
+    }
+}
+```
+
+With `transport.type=http`, acp-autoconfig builds an `AcpAgentFactory` from this bean (`AcpAgentSupport...buildFactory()`: one agent runtime per connection, all dispatching to this one bean). Because this particular application has no servlet container on the classpath, it's a non-web application, so the autoconfiguration also runs the SDK's `StreamableHttpAcpAgentTransport` listener bean (`acp-streamable-http-jetty`): Jetty with HTTP/1.1, h2c, and the WebSocket upgrade, on `spring.acp.agent.transport.http.listener.port`. In a servlet web application (`spring-boot-starter-web` present), it instead mounts `StreamableHttpAcpServlet` from `acp-http-servlet` on the application's own server: Streamable HTTP, SSE and WebSocket together, on `server.port`.
+
+With port `0`, read the bound port back from the listener bean:
+
+```java
+int port = context.getBean(StreamableHttpAcpAgentTransport.class).getPort();
+```
+
+Without `acp-streamable-http-jetty` on the classpath, `transport.type=http` now fails at startup with a message naming the missing module, rather than leaving the application with no agent and no explanation.
+
+### The client side: a property, not a hand-made transport bean
+
+```properties
+# client.properties
+spring.acp.client.transport.http.uri=http://localhost:8080/acp
+
+# A handler is registered below, but the capability still needs advertising:
+spring.acp.client.capabilities.read-text-file=true
+```
+
+Setting `spring.acp.client.transport.http.uri` creates the SDK's `StreamableHttpAcpClientTransport` for you: the same property, auto-detected, or set explicitly with `spring.acp.client.transport.type=http` (which fails at startup, naming the property, if the URI is missing). No transport bean to write by hand.
+
+### `AcpClientCustomizer`: adding to the autoconfigured client
+
+```java
+@Bean
+AcpClientCustomizer printAndServeFiles() {
+    return spec -> spec
+            .sessionUpdateHandler(notification -> {
+                if (notification.update() instanceof AcpSchema.AgentMessageChunk msg
+                        && msg.content() instanceof AcpSchema.TextContent text) {
+                    System.out.println("agent: " + text.text());
+                }
+                return Mono.empty();
+            })
+            .readTextFileHandler(req -> {
+                String content = WORKSPACE.get(req.path());
+                // An AcpProtocolException is the answer the agent sees; any other exception
+                // is answered -32603 "Internal error", its own message withheld.
+                return content != null ? Mono.just(new AcpSchema.ReadTextFileResponse(content))
+                        : Mono.error(new AcpProtocolException(AcpErrorCodes.RESOURCE_NOT_FOUND,
+                                "No such file: " + req.path()));
+            });
+}
+```
+
+`AcpClientCustomizer` is a framework-neutral type, `com.agentclientprotocol.sdk.integration.AcpClientCustomizer`, the same one Micronaut and Quarkus build their own customizers against. Every bean of it is applied, in order, to the one builder behind both `AcpAsyncClient` and `AcpSyncClient`. A `sessionUpdateHandler` registered this way **replaces** the autoconfiguration's own default, which only logs each update at DEBUG; it doesn't run alongside it. Registering a handler does **not** advertise it: the client's file capabilities come from `spring.acp.client.capabilities.read-text-file`/`write-text-file`, which default to `false`. A handler and its capability property go together, which is why `client.properties` turns `read-text-file` on next to registering the handler that serves it; a handler registered for a capability the client doesn't advertise also logs one WARN at startup, since an SDK agent will never call it.
+
+### A WebSocket client, the same way
+
+The listener also accepts a WebSocket upgrade on the same path, and
+`spring.acp.client.transport.websocket.uri=ws://host:port/acp` creates a WebSocket client from
+properties exactly the same way as the Streamable HTTP property: no code change, just which property
+is set. Only a property differs between the two runs; the client application's code is identical
+either way:
+
+```java
+HttpClientApplication.run("--spring.acp.client.transport.http.uri=" + http);
+HttpClientApplication.run("--spring.acp.client.transport.websocket.uri=" + ws);
+```
+
+<Note>
+Earlier candidates kept the client WebSocket path out of this module: closing a WebSocket client
+transport wasn't idempotent, and Spring's lifecycle could close a bean more than once. Both client,
+transport, and agent-transport beans are now closed exactly once by the autoconfiguration's own
+lifecycle, so the WebSocket run works the same as the Streamable HTTP one.
+</Note>
+
+## Source Code
+
+[View on GitHub](https://github.com/markpollack/acp-java-tutorial/tree/main/module-38-spring-boot-http)
+
+## Running the Example
+
+```bash
+./mvnw compile -pl module-38-spring-boot-http -q
+./mvnw exec:java -pl module-38-spring-boot-http
+
+# Or each side on its own: the agent on port 8080, then the client against it
+./mvnw exec:java -pl module-38-spring-boot-http \
+    -Dexec.mainClass=com.acptutorial.module38.agent.HttpAgentApplication
+./mvnw exec:java -pl module-38-spring-boot-http \
+    -Dexec.mainClass=com.acptutorial.module38.client.HttpClientApplication \
+    -Dexec.args=--spring.acp.client.transport.http.uri=http://localhost:8080/acp
+```
+
+The demo starts the agent application on a free port, then runs the client application against it
+three times: over Streamable HTTP with the file capability on (the agent reads `NOTES.md` through the
+handler), over WebSocket to the same listener and path (the same read, the same answer), then over
+Streamable HTTP again with the capability set to `false` on the command line (the handler stays
+registered, but the agent never asks, since the capability was never advertised). No API key
+required.
+
+## Next Module
+
+[Module 39: Forward Compatibility and _meta](/docs/acp-java-sdk/tutorial/39-forward-compatibility): what happens when the other side of a connection is newer than you.

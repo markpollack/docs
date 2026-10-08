@@ -4,8 +4,8 @@ Execute shell commands on the client through the terminal API.
 
 ## What You'll Learn
 
-- The four-step terminal lifecycle: create, wait, output, release
-- Implementing terminal handlers on the client
+- The four-step terminal lifecycle: create, wait, output, release, plus `kill` to end a command early
+- Implementing terminal handlers on the client, all five: advertising `terminal` needs every one
 - Using the terminal API from the agent side
 
 ## The Code
@@ -13,11 +13,10 @@ Execute shell commands on the client through the terminal API.
 ### Client: Implement terminal handlers
 
 ```java
-var clientCaps = new ClientCapabilities(
-    new FileSystemCapability(false, false),
-    true  // terminal enabled
-);
-
+// As of 0.80.0, the client advertises the terminal capability once all five handlers below are
+// registered (create, output, wait for exit, kill, release); with only some of them it logs a
+// warning naming the missing ones and advertises no terminal, with no clientCapabilities(..) call
+// needed either way.
 AcpSyncClient client = AcpClient.sync(transport)
     .createTerminalHandler(req -> {
         List<String> cmd = new ArrayList<>();
@@ -37,8 +36,16 @@ AcpSyncClient client = AcpClient.sync(transport)
         return new WaitForTerminalExitResponse(exitCode, null);
     })
     .terminalOutputHandler(req -> {
+        // Drained live by a reader thread as the process writes, not read only at the end,
+        // so a terminal/output call mid-run sees everything printed so far
         String output = capturedOutput.get(req.terminalId());
         return new TerminalOutputResponse(output, false, null);
+    })
+    .killTerminalHandler(req -> {
+        // Ends a still-running command early; the terminal stays valid, so its output can
+        // still be read and the agent releases it afterwards, same as a terminal that exited
+        terminals.get(req.terminalId()).process().destroyForcibly();
+        return new KillTerminalCommandResponse();
     })
     .releaseTerminalHandler(req -> {
         Process process = terminals.remove(req.terminalId()).process();
@@ -47,8 +54,23 @@ AcpSyncClient client = AcpClient.sync(transport)
     })
     .build();
 
-client.initialize(new InitializeRequest(1, clientCaps));
+client.initialize();
 ```
+
+<Note>
+`initialize(InitializeRequest)` is removed as of 0.80.0: capabilities come from the client builder,
+either derived from registered handlers (as here) or set explicitly with `clientCapabilities(..)`.
+See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
+
+<Note>
+Advertising `terminal` needs all five handlers registered; with only some of them, the client logs a
+warning naming the missing ones and advertises no terminal at all, rather than a partial one.
+`createTerminalHandler` starts a background thread that drains the process's output as it arrives, so
+`terminalOutputHandler` can answer with everything printed so far even while the command is still
+running; `waitForTerminalExitHandler` joins that thread before answering, so a `terminal/output` call
+right after exit still sees the command's last lines.
+</Note>
 
 ### Agent: Use terminal API
 
@@ -63,7 +85,7 @@ client.initialize(new InitializeRequest(1, clientCaps));
     String terminalId = null;
     try {
         // Step 1: Create terminal
-        var createResp = context.createTerminal(
+        var createResp = context.client().createTerminal(
             new CreateTerminalRequest(
                 context.getSessionId(),
                 "sh", List.of("-c", command),
@@ -71,11 +93,11 @@ client.initialize(new InitializeRequest(1, clientCaps));
         terminalId = createResp.terminalId();
 
         // Step 2: Wait for exit
-        var exitResp = context.waitForTerminalExit(
+        var exitResp = context.client().waitForTerminalExit(
             new WaitForTerminalExitRequest(context.getSessionId(), terminalId));
 
         // Step 3: Get output
-        var outputResp = context.getTerminalOutput(
+        var outputResp = context.client().getTerminalOutput(
             new TerminalOutputRequest(context.getSessionId(), terminalId));
 
         context.sendMessage("Exit: " + exitResp.exitCode() +
@@ -83,7 +105,7 @@ client.initialize(new InitializeRequest(1, clientCaps));
     } finally {
         // Step 4: Always release
         if (terminalId != null) {
-            context.releaseTerminal(
+            context.client().releaseTerminal(
                 new ReleaseTerminalRequest(context.getSessionId(), terminalId));
         }
     }
@@ -95,10 +117,15 @@ client.initialize(new InitializeRequest(1, clientCaps));
 
 | Step | Agent calls | Client handles | Purpose |
 |------|-------------|----------------|---------|
-| 1 | `createTerminal()` | `createTerminalHandler` | Spawn process |
-| 2 | `waitForTerminalExit()` | `waitForTerminalExitHandler` | Block until done |
-| 3 | `getTerminalOutput()` | `terminalOutputHandler` | Read stdout/stderr |
-| 4 | `releaseTerminal()` | `releaseTerminalHandler` | Clean up resources |
+| 1 | `client().createTerminal()` | `createTerminalHandler` | Spawn process |
+| 2 | `client().waitForTerminalExit()` | `waitForTerminalExitHandler` | Block until done |
+| 3 | `client().getTerminalOutput()` | `terminalOutputHandler` | Read stdout/stderr |
+| 4 | `client().releaseTerminal()` | `releaseTerminalHandler` | Clean up resources |
+
+`client().killTerminal()` / `killTerminalHandler` ends a still-running command early, outside this four-step
+sequence: the terminal stays valid afterward, so its output can still be read and it's released the
+same as any other terminal. All five handlers are required to advertise `terminal` at all, not only
+the four in the table above.
 
 The agent requests command execution, but the client controls what actually runs. This keeps command execution under the user's control — the client decides whether to allow, sandbox, or deny terminal requests.
 

@@ -1,0 +1,287 @@
+---
+title: "Quarkus Integration"
+sidebarTitle: "Quarkus"
+description: "A Quarkus extension: serve an @AcpAgent bean over stdio or the Quarkus HTTP server, with Mutiny Uni/Multi support, and build a client from configuration"
+---
+
+`acp-quarkus` is a required (non-preview) Quarkus extension for the ACP Java SDK as of 0.80.0, built
+against Quarkus 3.40.1. With it, all three JVM framework integrations the SDK ships are the same
+shape: annotate one class, let the framework serve it. JVM mode only for 0.80.0; there's no native
+image yet.
+
+## Quick Start
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <!-- Optional, before the Quarkus BOM: pins the Jackson the SDK is built with (2.22.3). -->
+        <dependency>
+            <groupId>com.fasterxml.jackson</groupId>
+            <artifactId>jackson-bom</artifactId>
+            <version>2.22.3</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus.platform</groupId>
+            <artifactId>quarkus-bom</artifactId>
+            <version>3.40.1</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>com.agentclientprotocol</groupId>
+        <artifactId>acp-quarkus</artifactId>
+        <version>0.80.0</version>
+    </dependency>
+</dependencies>
+```
+
+Without the `jackson-bom` import, Quarkus's own managed Jackson (2.21.7, as of Quarkus 3.40.1)
+applies instead; both lines are supported, and the extension's own tests run on the Quarkus-managed
+version. Reactor (3.8.7) is the same either way, and Netty is Quarkus's own.
+
+## An agent, annotated
+
+```java
+@AcpAgent
+public class GreeterAgent {
+
+    private final Greeting greeting;          // any bean: constructor injection works
+
+    GreeterAgent(Greeting greeting) {
+        this.greeting = greeting;
+    }
+
+    @Prompt
+    PromptResponse prompt(PromptRequest request, SyncPromptContext context) {
+        context.sendMessage(greeting.greet(request));
+        return PromptResponse.endTurn();
+    }
+}
+```
+
+`@AcpAgent` alone makes the class a CDI bean, a singleton unless it declares its own scope. It's
+discovered at **build time**: a second `@AcpAgent` class fails the build, naming both. With none, the
+application is a client only. Capabilities and `agentInfo` are derived from the annotations the same
+way as everywhere else; see [Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for the
+full derivation and `@Initialize`-merge rules, which apply unchanged here.
+
+### Intercepted beans work
+
+So when an interceptor (`@Transactional`, a custom `@Interceptor`, or anything else CDI wraps the bean
+in) applies to the agent, its advice still runs on every ACP call: discovery still finds `@Prompt` and
+friends on the class they're actually declared on, while invocation goes through the container's
+managed instance. No special wiring needed.
+
+### `AcpInterceptor`, `ArgumentResolver`, and `ReturnValueHandler` beans
+
+Beans of these three types are picked up and added to the agent automatically, the CDI-native way to
+extend the handler pipeline.
+
+### Mutiny return types
+
+A handler may return a Mutiny `Uni` of what it could return directly: a `Uni<String>` from `@Prompt`
+sends the text and ends the turn, a `Uni<Void>` just ends it. The handler's thread waits for the
+item, the same as it would for a `Mono`.
+
+`@Prompt` may also return a `Multi`, which no other handler method may: streaming `String` (sent as a
+message chunk), `SessionUpdate` (sent as that update), or `ContentBlock` (wrapped in a message chunk)
+items, each as it's emitted, ending the turn (`end_turn`) when the stream completes. **Cancelling the
+prompt cancels the `Multi`'s subscription** and ends the turn `cancelled`; a failed stream fails the
+prompt.
+
+```java
+@Prompt
+Multi<String> prompt(PromptRequest request) {
+    return Multi.createFrom().items("Thinking", "...", "Done: " + request.text());
+}
+```
+
+## Over stdio (the default)
+
+Standard output carries the protocol, so a stdio build sets these defaults, your own settings win:
+`quarkus.log.console.stderr=true`, `quarkus.banner.enabled=false`, `quarkus.http.host-enabled=false`.
+Never print to `System.out`. The application exits when the client closes standard input
+(`quarkus.acp.agent.shutdown-on-transport-end=false` keeps it running).
+
+<Warning>
+**`quarkus dev` can't run a stdio agent**, because dev mode owns the terminal's standard input for its
+own interactive commands. Develop a stdio agent in tests (an application bean of type
+`AcpAgentTransport`, such as `acp-test`'s in-memory one, replaces stdio) or over HTTP instead.
+</Warning>
+
+## Over HTTP and WebSocket: Quarkus's own server
+
+```properties
+quarkus.acp.agent.transport.type=http
+quarkus.acp.agent.transport.http.path=/acp
+```
+
+The agent is served directly on **Quarkus's own HTTP server**, on `quarkus.http.port` (under
+`quarkus.http.root-path`): Streamable HTTP, SSE and the WebSocket upgrade, all on one Vert.x route of
+the Quarkus router, with no servlet container and no second server to run or port to open; unlike
+[Micronaut](/docs/acp-java-sdk/micronaut) and [Spring Boot](/docs/acp-java-sdk/autoconfig) in their
+non-web mode, which each open a standalone listener of their own. The route sits behind Quarkus's own
+authentication and permission checks, so HTTP security policies apply to `/acp`, the WebSocket
+handshake included.
+
+Each connection runs its own agent runtime over the one bean, so its handlers must be thread-safe,
+same as the other two integrations. On shutdown the endpoint drains first, within
+`quarkus.acp.agent.transport.http.shutdown-timeout`: each open SSE stream gets a closing comment and
+completes, and each WebSocket closes with `1001`, the drain waiting for the close frame to actually go
+out before reporting that connection closed. A client that never answers holds the shutdown no longer
+than the timeout, after which it's logged at WARN and closed at once.
+
+An HTTP build raises these Quarkus defaults to what the SDK's listener admits (your own settings
+win): `quarkus.http.limits.max-body-size=16M`, `quarkus.http.websocket-server.max-message-size` and
+`max-frame-size` to 16 MiB, and `quarkus.http.limits.max-concurrent-streams=1024` (each SSE stream is
+one HTTP/2 stream). Raise them too if you raise `max-post-body-size` past 16 MiB.
+
+Quarkus's own `quarkus.http.idle-timeout` (30 minutes by default) also closes idle ACP WebSockets; the
+shorter of it and `quarkus.acp.agent.transport.http.web-socket-idle-timeout` wins.
+
+## Native integration, not a bolt-on
+
+The agent is served on Quarkus's own HTTP server: one server, one port, one TLS setup, one lifecycle
+that starts and stops with the application, one place for metrics and logs, and Quarkus's own threads.
+There's nothing ACP-specific to configure alongside what the application already has.
+
+### If you need it: securing `/acp`
+
+Most ACP use (an IDE talking stdio, a handful of local sessions) needs no security configuration at
+all. If you do expose the agent remotely, it's served behind Quarkus's own request handling, so
+ordinary Quarkus HTTP security policies and `@RolesAllowed` apply to `/acp` the same as any other
+endpoint, the WebSocket handshake included. Proven by the SDK's own test: an unauthenticated request
+gets 401 on HTTP and on the WebSocket handshake, an authenticated one gets 200/101, same as any other
+secured endpoint. Restricting the ACP endpoint to a role, for example:
+
+```properties
+quarkus.http.auth.policy.acp-policy.roles-allowed=agent-client
+quarkus.http.auth.permission.acp.paths=/acp
+quarkus.http.auth.permission.acp.policy=acp-policy
+```
+
+## A client, from configuration
+
+```properties
+quarkus.acp.client.transport.stdio.command=my-agent
+quarkus.acp.client.transport.stdio.args=--acp
+```
+
+```java
+@Inject AcpSyncClient client;
+
+@Singleton
+class Updates implements AcpClientCustomizer {        // optional; @Priority orders several
+    public void customize(AcpClient.AsyncSpec spec) {
+        spec.sessionUpdateHandler(notification -> { /* ... */ return Mono.empty(); });
+    }
+}
+```
+
+The client beans are created when first injected and closed when the application stops; a bean of
+your own of the same type replaces each.
+
+<Note>
+Client callbacks run on SDK threads, not on a Vert.x context. From a `Uni` built over a client call,
+hop back onto the Vert.x context with `emitOn` when you need it there.
+</Note>
+
+## Configuration (`quarkus.acp.*`)
+
+Build time (fixed when the application is built):
+
+| Property | Default | |
+|---|---|---|
+| `quarkus.acp.agent.enabled` | `true` | serve the `@AcpAgent` bean; off, it's an ordinary CDI bean, no agent transport starts, and a second `@AcpAgent` class is no longer a build error |
+| `quarkus.acp.agent.transport.type` | `stdio` | `stdio`, `http`, or `websocket` (the last two mean the same: Streamable HTTP and WebSocket on the Quarkus HTTP server) |
+| `quarkus.acp.agent.transport.http.path` | `/acp` | endpoint path (Streamable HTTP and WebSocket), relative to `quarkus.http.root-path` |
+| `quarkus.acp.agent.transport.http.allowed-origins` | none | browser origins accepted besides `localhost`/`127.0.0.1`/`[::1]`; `*` for any (disables the protection). Any other origin is answered 403, over HTTP and on the WebSocket handshake. There's no separate host property: the agent is served on Quarkus's own HTTP server, so it keeps Quarkus's own `quarkus.http.host` |
+
+Run time:
+
+| Property | Default | |
+|---|---|---|
+| `quarkus.acp.handler-executor` | `managed` | `managed` (Quarkus' `ManagedExecutor`) or `virtual` (Quarkus' virtual-thread executor, JDK 21+, else falls back to `managed`); see [Where handlers run](#where-handlers-run) |
+| `quarkus.acp.agent.request-timeout` | SDK default | agent requests to the client |
+| `quarkus.acp.agent.cancel-grace-period` | SDK default | |
+| `quarkus.acp.agent.max-prompt-duration` | none | |
+| `quarkus.acp.agent.shutdown-on-transport-end` | `true` | stdio: exit when input ends |
+| `quarkus.acp.agent.transport.http.max-post-body-size` | `16M` | POST body and WebSocket message |
+| `quarkus.acp.agent.transport.http.keep-alive-interval` | `15s` | |
+| `quarkus.acp.agent.transport.http.mailbox-capacity` | `1024` | |
+| `quarkus.acp.agent.transport.http.max-pending-sse-events` | `1024` | |
+| `quarkus.acp.agent.transport.http.max-web-socket-pending-frames` | `1024` | |
+| `quarkus.acp.agent.transport.http.web-socket-idle-timeout` | `30m` | How long a WebSocket may pass no frame in either direction before it's closed (`1001`) |
+| `quarkus.acp.agent.transport.http.initialize-timeout` | `30s` | How long a connection has to send `initialize`: a WebSocket that hasn't is closed (`1008`); a POST `initialize` the agent hasn't answered by then gets `500` |
+| `quarkus.acp.agent.transport.http.max-provisional-sessions` | `64` | |
+| `quarkus.acp.agent.transport.http.shutdown-timeout` | `5s` | |
+| `quarkus.acp.client.request-timeout` | SDK default | |
+| `quarkus.acp.client.prompt-timeout` | unset (unbounded) | Bound on a prompt turn's length; `session/prompt` is otherwise not cut off by `request-timeout` |
+| `quarkus.acp.client.transport.type` | inferred | `stdio`, `websocket`, or `http`; unset, the transport is whichever one of `stdio.command`/`websocket.uri`/`http.uri` is set; more than one with no `type` fails at startup, naming them |
+| `quarkus.acp.client.transport.stdio.command`, `.args`, `.env.<NAME>` | | the agent process |
+| `quarkus.acp.client.transport.websocket.uri`, `.connect-timeout` | `10s` | |
+| `quarkus.acp.client.transport.http.uri` | | |
+| `quarkus.acp.client.capabilities.read-text-file`, `.write-text-file`, `.terminal`, `.elicitation-form`, `.elicitation-url`, `.boolean-config-options` | `false` | advertise only what a customizer registers handlers for |
+
+<Note>
+"Only what a customizer registers handlers for" is enforced at startup: setting a capability `true`
+without its handler fails client creation, naming the property to turn off or the handler to add, for
+example "fs.readTextFile needs readTextFileHandler... The capabilities come from
+quarkus.acp.client.capabilities.read-text-file=true". A customizer's own `sessionUpdateHandler`
+replaces the client's DEBUG-logging one rather than running alongside it.
+</Note>
+
+Compared with Spring Boot's `spring.acp.*`: the HTTP port is `quarkus.http.port` (not an
+`acp.*`-namespaced property), and the listener's `max-concurrent-streams-per-connection` is
+`quarkus.http.limits.max-concurrent-streams`, Quarkus's own HTTP tuning, not the SDK's.
+
+`AcpClientCustomizer` and `AcpTransportType` (used above by `quarkus.acp.client.transport.type`) are
+not Quarkus-specific types: both live in `com.agentclientprotocol.sdk.integration`, the
+framework-neutral module Spring Boot and Micronaut build on too; see
+[Concepts: the framework-neutral layer](/docs/acp-java-sdk/concepts#the-framework-neutral-layer-acp-integration).
+The client (and its transport) is closed exactly once, bounded by its request timeout plus 10 seconds,
+by that same shared layer.
+
+## Where handlers run
+
+By default (`quarkus.acp.handler-executor=managed`), handler methods run on the `ManagedExecutor`
+(Quarkus' own worker pool, where blocking work belongs, never the Vert.x event loop), with the
+application's contexts propagated, instead of a second pool of the SDK's (see
+[Concepts: Where handlers run](/docs/acp-java-sdk/concepts#where-handlers-run)).
+
+Set `quarkus.acp.handler-executor=virtual` to opt into Quarkus' virtual-thread executor on JDK 21 and
+later (it falls back to `managed` on earlier JDKs). Virtual threads keep the Vert.x context of the
+submitting thread, but propagate no MicroProfile Context Propagation context: a handler gets no CDI
+request context of its own unless the method carries `@ActivateRequestContext`, and no security
+identity, transaction, or tracing context captured from the submitting thread.
+
+## Logging and sensitive data
+
+See [Transports: Logging and sensitive data](/docs/acp-java-sdk/transports#logging-and-sensitive-data)
+for what the SDK logs at each level. Without a session-update handler of your own, session updates
+are logged at DEBUG, content included. A stdio agent's standard error is logged at INFO, unfiltered,
+on `com.agentclientprotocol.sdk.client.transport.agent-stderr`; silence it with
+`quarkus.log.category."com.agentclientprotocol.sdk.client.transport.agent-stderr".level=WARN`.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Spring Boot Starter" icon="leaf" href="/docs/acp-java-sdk/autoconfig">
+    The equivalent integration for Spring Boot applications
+  </Card>
+  <Card title="Micronaut Integration" icon="bolt" href="/docs/acp-java-sdk/micronaut">
+    The equivalent integration for Micronaut applications
+  </Card>
+  <Card title="Clients and Agents in Java" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
+    The annotation model this module builds on
+  </Card>
+  <Card title="Transports" icon="plug" href="/docs/acp-java-sdk/transports#deployment-topologies">
+    Where ACP listens in every deployment shape, Quarkus included
+  </Card>
+</CardGroup>

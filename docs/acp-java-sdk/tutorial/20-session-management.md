@@ -47,7 +47,9 @@ The agent keeps its own session state. Each lifecycle method has its own handler
 
 ```java
 AcpSyncAgent agent = AcpAgent.sync(transport)
-    .initializeHandler(req -> InitializeResponse.ok())
+    // No initializeHandler: the default answer advertises what the registered handlers
+    // implement (session/list, session/close, session/resume below), the same rule an
+    // annotated agent without @Initialize follows for its own handler annotations.
 
     .newSessionHandler(req -> {
         String sessionId = "sess-" + UUID.randomUUID().toString().substring(0, 8);

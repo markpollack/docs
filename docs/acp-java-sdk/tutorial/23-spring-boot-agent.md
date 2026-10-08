@@ -11,6 +11,7 @@ Build an ACP agent as a Spring Boot application. No manual transport or lifecycl
 
 - Using `@AcpAgent` annotations with Spring Boot autoconfiguration
 - How the starter eliminates boilerplate transport and lifecycle code
+- Why no `@Initialize` method is needed: the SDK derives it from the class
 - Redirecting logging to stderr for stdio agents
 
 ## Dependencies
@@ -19,13 +20,21 @@ Add the ACP Spring Boot Starter:
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.12.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
-Starter 0.12.0 builds on ACP Java SDK 0.18.0 and brings the Jackson 3 JSON module, `acp-json-jackson3`, so you add no JSON dependency yourself.
+As of 0.80.0, the starter is a module of the ACP Java SDK itself (`com.agentclientprotocol`, replacing
+`org.springaicommunity`), versioned together with it; see the
+[0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80). It brings the Jackson 3 JSON module,
+`acp-json-jackson3`, so you add no JSON dependency yourself.
+
+<Note>
+The downloadable module builds against the released starter (`org.springaicommunity`, SDK 0.18.0) by
+default; build with `-Psdk-candidate` to use the SDK's own starter at the coordinates shown above.
+</Note>
 
 ## The Agent
 
@@ -35,11 +44,6 @@ Compare this with [Module 12's builder-based agent](/docs/acp-java-sdk/tutorial/
 @Component
 @AcpAgent(name = "echo-agent", version = "1.0")
 public class EchoAgentBean {
-
-    @Initialize
-    public InitializeResponse initialize(InitializeRequest request) {
-        return InitializeResponse.ok();
-    }
 
     @NewSession
     public NewSessionResponse newSession(NewSessionRequest request) {
@@ -53,6 +57,10 @@ public class EchoAgentBean {
     }
 }
 ```
+
+No `@Initialize` method: as of 0.80.0, the SDK derives the `initialize` answer from the class itself
+(`agentInfo` from `@AcpAgent(name, version)` here). See
+[Clients and Agents in Java](/docs/acp-java-sdk/clients-and-agents) for the full derivation rules.
 
 The application class is a standard `@SpringBootApplication`:
 
@@ -72,7 +80,7 @@ When Spring Boot starts, the ACP autoconfiguration:
 
 1. **Creates a `StdioAcpAgentTransport`** — the default for agents (reads stdin, writes stdout)
 2. **Discovers the `@AcpAgent` bean** — scans the application context for exactly one `@AcpAgent`-annotated bean
-3. **Wires through `AcpAgentSupport`** — resolves `@Initialize`, `@NewSession`, `@Prompt` handler methods
+3. **Wires through `AcpAgentSupport`**: resolves `@NewSession`, `@Prompt`, and any other handler methods; derives `initialize` from the class if there's no `@Initialize`
 4. **Starts via `SmartLifecycle`** — the agent starts after the application context refreshes and stops on shutdown
 
 No explicit `agent.run()` call. No manual transport creation. Spring manages it all.
@@ -135,7 +143,7 @@ The `keep-alive` setting is essential. Without it, the Spring Boot application s
 |----------|---------|-------------|
 | `spring.acp.agent.enabled` | `true` | Enable/disable agent autoconfiguration |
 | `spring.acp.agent.request-timeout` | `60s` | Request processing timeout |
-| `spring.acp.agent.transport.type` | `stdio` | Transport type (currently only `stdio`) |
+| `spring.acp.agent.transport.type` | `stdio` | `stdio` or `http` (remote agents; see [Remote Agents over Streamable HTTP](/docs/acp-java-sdk/autoconfig#remote-agents-over-streamable-http)) |
 
 ## Next
 

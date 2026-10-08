@@ -10,11 +10,11 @@ Comprehensive coverage of all `SessionUpdate` types in ACP.
 
 ## The Code
 
-The client registers a `sessionUpdateConsumer` and uses `instanceof` to handle each type:
+The client registers a `sessionUpdateHandler` and uses `instanceof` to handle each type:
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         SessionUpdate update = notification.update();
         if (update instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
@@ -69,8 +69,9 @@ This module extends Module 05 by handling every update type rather than just mes
 
 ## Running the Example
 
+Requires the Grok CLI on your `PATH`, signed in once with `grok login`. The module launches it as `grok agent stdio`; no API key is needed.
+
 ```bash
-export GEMINI_API_KEY=your-key-here
 ./mvnw exec:java -pl module-06-update-types
 ```
 

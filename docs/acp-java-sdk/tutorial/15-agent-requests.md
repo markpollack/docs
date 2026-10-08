@@ -6,7 +6,7 @@ Agents can request file operations and permissions from the client.
 
 - Reading files from the client with `context.readFile()`
 - Writing files with `context.writeFile()`
-- Requesting permissions with `context.requestPermission()`
+- Requesting permissions with `context.client().requestPermission()`
 - The client-side handler pattern for responding to agent requests
 
 ## The Agent
@@ -24,9 +24,11 @@ The prompt handler uses `SyncPromptContext` convenience methods:
 
     // 2. Request permission (full API for complex permissions)
     ToolCallUpdate toolCall = new ToolCallUpdate(
-        "tool-write-1", "Create summary.txt",
+        "tool-write-1",
+        "Create summary.txt",   // title: what the user sees
+        "write_file",           // name: the tool's own identifier (may be null)
         ToolKind.EDIT, ToolCallStatus.PENDING,
-        null, null, null, null
+        null, null, null, null, null   // content, locations, rawInput, rawOutput, _meta
     );
 
     List<PermissionOption> options = List.of(
@@ -38,7 +40,7 @@ The prompt handler uses `SyncPromptContext` convenience methods:
             PermissionOptionKind.REJECT_ONCE)
     );
 
-    var permissionResponse = context.requestPermission(
+    var permissionResponse = context.client().requestPermission(
         new RequestPermissionRequest(sessionId, toolCall, options));
 
     context.sendMessage("Permission: " + permissionResponse.outcome() + "\n");
@@ -80,15 +82,16 @@ Throw exceptions from handlers for errors. The SDK converts exceptions to JSON-R
 
 ## Client Capabilities
 
-The client must advertise file system support during initialization:
+As of 0.80.0, the client advertises file system support automatically: registering
+`readTextFileHandler` and `writeTextFileHandler`, shown above, is enough for `initialize()` to send
+`fs.readTextFile` and `fs.writeTextFile`, with no separate `clientCapabilities(...)` call needed.
 
-```java
-client.initialize(new InitializeRequest(1,
-    new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read=true, write=true
-        false  // terminalExecution
-    )));
-```
+<Note>
+`initialize(InitializeRequest)` is removed as of 0.80.0: capabilities come from the client builder,
+either derived from registered handlers (as here) or set explicitly with `clientCapabilities(..)`
+when a handler alone can't express what to advertise. See the
+[0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 Agents can check capabilities before using them:
 

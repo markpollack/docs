@@ -10,7 +10,7 @@ Complete API reference for the ACP Java SDK, covering client, agent (all three s
 
 ## Installation
 
-### Maven (0.18.0 — stable)
+### Maven (0.80.0 — stable)
 
 Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no JSON implementation; add one JSON module next to it:
 
@@ -18,13 +18,13 @@ Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no J
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 <!-- Jackson 2 (com.fasterxml.jackson.databind) -->
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson2</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -36,7 +36,7 @@ Annotation-based agent support (includes `acp-core` and `acp-json-jackson2` tran
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
@@ -46,7 +46,7 @@ Test utilities:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -57,37 +57,37 @@ Streamable HTTP and WebSocket server transport for remote agents:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-streamable-http-jetty</artifactId>
-    <version>0.18.0</version>
+    <version>0.80.0</version>
 </dependency>
 ```
 
-`acp-websocket-jetty` (single-client `WebSocketAcpAgentTransport`) is deprecated for removal in 0.18.0; use `acp-streamable-http-jetty`.
+`acp-websocket-jetty` (single-client `WebSocketAcpAgentTransport`) was deprecated for removal in 0.18.0 and is **removed in 0.80.0**; use `acp-streamable-http-jetty`. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 ### Gradle
 
 ```groovy
 // build.gradle
-implementation 'com.agentclientprotocol:acp-core:0.18.0'
-implementation 'com.agentclientprotocol:acp-json-jackson2:0.18.0' // or acp-json-jackson3
+implementation 'com.agentclientprotocol:acp-core:0.80.0'
+implementation 'com.agentclientprotocol:acp-json-jackson2:0.80.0' // or acp-json-jackson3
 
 // Optional modules
-implementation 'com.agentclientprotocol:acp-agent-support:0.18.0'
-implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.18.0'
-testImplementation 'com.agentclientprotocol:acp-test:0.18.0'
+implementation 'com.agentclientprotocol:acp-agent-support:0.80.0'
+implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.80.0'
+testImplementation 'com.agentclientprotocol:acp-test:0.80.0'
 ```
 
 ```kotlin
 // build.gradle.kts
-implementation("com.agentclientprotocol:acp-core:0.18.0")
-implementation("com.agentclientprotocol:acp-json-jackson2:0.18.0") // or acp-json-jackson3
+implementation("com.agentclientprotocol:acp-core:0.80.0")
+implementation("com.agentclientprotocol:acp-json-jackson2:0.80.0") // or acp-json-jackson3
 
 // Optional modules
-implementation("com.agentclientprotocol:acp-agent-support:0.18.0")
-implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.18.0")
-testImplementation("com.agentclientprotocol:acp-test:0.18.0")
+implementation("com.agentclientprotocol:acp-agent-support:0.80.0")
+implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.80.0")
+testImplementation("com.agentclientprotocol:acp-test:0.80.0")
 ```
 
-### Snapshot (0.19.0-SNAPSHOT)
+### Snapshot (0.81.0-SNAPSHOT)
 
 For unreleased features, add the snapshot repository and use the snapshot version:
 
@@ -102,7 +102,7 @@ For unreleased features, add the snapshot repository and use the snapshot versio
 </repositories>
 ```
 
-Then use `0.19.0-SNAPSHOT` in place of `0.18.0` in your dependencies.
+Then use `0.81.0-SNAPSHOT` in place of `0.80.0` in your dependencies.
 
 ---
 
@@ -166,7 +166,7 @@ All three produce identical protocol behavior and support the same capabilities.
 
 ```java
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         // Handle streaming updates during prompt()
     })
     .readTextFileHandler(req -> {
@@ -191,17 +191,18 @@ AcpSyncClient client = AcpClient.sync(transport)
 
 ### Example — Complete client lifecycle
 
-This launches Gemini CLI as an ACP agent subprocess and sends it a prompt. `AgentParameters` builds the command line; `StdioAcpClientTransport` spawns the process and handles JSON-RPC framing over stdin/stdout.
+This launches the Grok CLI as an ACP agent subprocess and sends it a prompt. `AgentParameters` builds the command line; `StdioAcpClientTransport` spawns the process and handles JSON-RPC framing over stdin/stdout.
 
 ```java
-// Launch "gemini --experimental-acp" as a subprocess
-var params = AgentParameters.builder("gemini")
-    .arg("--experimental-acp")
+// Launch "grok agent stdio" as a subprocess
+var params = AgentParameters.builder("grok")
+    .arg("agent")
+    .arg("stdio")
     .build();
 
 var transport = new StdioAcpClientTransport(params);
 AcpSyncClient client = AcpClient.sync(transport)
-    .sessionUpdateConsumer(notification -> {
+    .sessionUpdateHandler(notification -> {
         var update = notification.update();
         if (update instanceof AgentMessageChunk msg) {
             System.out.print(((TextContent) msg.content()).text());
@@ -254,24 +255,47 @@ The `acp-agent-support` module provides a declarative programming model using an
 | `@DisableProvider` | `providers/disable` | Disables a provider by id *(0.14.0, unstable)* |
 | `@Prompt` | `session/prompt` | Handles user prompts |
 | `@SetSessionMode` | `session/set_mode` | Changes operational mode |
-| `@SetSessionModel` | `session/set_model` | **Deprecated** — removed from the spec; use `@SetSessionConfigOption` with a `"model"` category option |
 | `@Cancel` | `session/cancel` | Cancellation notification (fire-and-forget) |
+| `@Authenticate` | `authenticate` | Runs an authentication attempt *(0.80.0; previously unconditionally "method not found")* |
+| `@ExtRequest("_name")` | a custom `_`-prefixed method | Handles an [extension](/docs/acp-java-sdk/extensions) request *(0.80.0)* |
+| `@ExtNotification("_name")` | a custom `_`-prefixed method | Handles an [extension](/docs/acp-java-sdk/extensions) notification *(0.80.0)* |
 
-> **Deprecated: the session-model API (0.14.0).** `session/set_model` and the related types
-> (`@SetSessionModel`, `SetSessionModelRequest`/`Response`, `SessionModelState`, `ModelInfo`, and the
-> `models` field on session responses) were removed from the ACP spec in June 2026 and are marked
-> `@Deprecated(forRemoval = true)`. They still work for now but will be removed in a future release.
-> Expose model selection through `session/set_config_option` instead: advertise a `select` config
-> option whose `category` is `"model"`, and switch models with `setSessionConfigOption(...)`. This is
-> the same mechanism used for session modes (`category: "mode"`) and reasoning level
-> (`category: "thought_level"`).
+> **Removed in 0.80.0: the session-model API.** `session/set_model` and the related types
+> (`@SetSessionModel`, `SetSessionModelRequestResolver`, `SetSessionModelRequest`/`Response`,
+> `SessionModelState`, `ModelInfo`, and the `models` field on session responses) were deprecated for
+> removal in 0.14.0 and are gone in 0.80.0. An agent built on 0.80.0 no longer answers
+> `session/set_model`; a peer that sends it gets "method not found". Expose model selection through
+> `session/set_config_option` instead: advertise a `select` config option whose `category` is
+> `"model"`, and switch models with `setSessionConfigOption(...)`. This is the same mechanism used
+> for session modes (`category: "mode"`) and reasoning level (`category: "thought_level"`). See the
+> [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 #### Parameter Annotations
 
 | Annotation | Description |
 |------------|-------------|
 | `@SessionId` | Injects the current session ID as `String` |
-| `@SessionState` | Injects session-specific state |
+
+#### Connection-Level Parameters *(0.80.0)*
+
+Any handler method, not only `@Prompt`, may also declare a parameter of type `AcpSyncAgent`/
+`AcpAsyncAgent` (the connection's own agent facade, to call back into the client) or
+`NegotiatedCapabilities` (what the connected client advertised). Resolution is by parameter type, so
+order and presence are both optional:
+
+```java
+@NewSession
+NewSessionResponse newSession(NewSessionRequest req, NegotiatedCapabilities caps) {
+    boolean canElicit = caps.supportsElicitation();
+    // ...
+}
+
+@ExtRequest("_example/status")
+StatusResult status(AcpSyncAgent agent, NegotiatedCapabilities caps) { ... }
+```
+
+Previously, a handler needing to call back into the client had to capture the agent from an
+enclosing scope; as of 0.80.0 it's an ordinary parameter like any other.
 
 ### Flexible Method Signatures
 
@@ -292,7 +316,7 @@ PromptResponse answer(PromptRequest req, SyncPromptContext ctx) { ... }
 
 // Auto-converted return types
 @Prompt
-String simpleAnswer(PromptRequest req) { ... }  // → PromptResponse.text(value)
+String simpleAnswer(PromptRequest req) { ... }  // sent as an agent message chunk, then endTurn()
 
 @Prompt
 void streaming(PromptRequest req, SyncPromptContext ctx) { ... }  // → endTurn()
@@ -303,9 +327,9 @@ void streaming(PromptRequest req, SyncPromptContext ctx) { ... }  // → endTurn
 | Return Type | Conversion |
 |-------------|------------|
 | Protocol response type | Passed through directly |
-| `String` | Converted to `PromptResponse.text(value)` |
+| `String` | Sent to the client as an agent message chunk, then `PromptResponse.endTurn()`; `null`/empty sends nothing |
 | `void` | Converted to `PromptResponse.endTurn()` |
-| `Mono<PromptResponse>` | Unwrapped and returned |
+| `Mono`/`CompletionStage`/single-value `Publisher` | Awaited on the handler's thread, then handled as its value means |
 
 ### `SyncPromptContext`
 
@@ -332,9 +356,11 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
     ctx.writeFile("/path/to/output.txt", "content");
     Optional<String> maybe = ctx.tryReadFile("/path/to/file.txt");
 
-    // Permissions
+    // Permissions (each announces a tool_call before asking, and settles it with a
+    // tool_call_update after; askPermission(action) alone uses kind "other")
     boolean allowed = ctx.askPermission("Delete files in /tmp?");
-    String choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");
+    boolean allowedEdit = ctx.askPermission("Rewrite config.yaml", ToolKind.EDIT);
+    Optional<String> choice = ctx.askChoice("Which format?", "JSON", "XML", "YAML");  // empty() if the client cancelled
 
     // Terminal execution (requires client capabilities)
     CommandResult result = ctx.execute("ls", "-la");
@@ -343,7 +369,14 @@ PromptResponse handle(PromptRequest req, SyncPromptContext ctx) {
 }
 ```
 
+`ctx.async()` *(0.80.0)* returns the same turn's `PromptContext` (the async, Reactor-based view),
+for the rare case where a sync handler needs to compose one of the async-only APIs. If you implement
+`SyncPromptContext` yourself, for a test double, `async()` is an abstract method you must provide
+too; it's not a default method.
+
 ### `AcpAgentSupport` — Bootstrap
+
+For a single stdio agent, `.run()` blocks until the client disconnects:
 
 ```java
 AcpAgentSupport.create(new MyAgent())
@@ -354,6 +387,23 @@ AcpAgentSupport.create(new MyAgent())
     .returnValueHandler(new FutureHandler())   // Optional
     .run();  // Blocks until client disconnects
 ```
+
+For Streamable HTTP or WebSocket, where one JVM serves many remote connections,
+`buildFactory()` *(0.80.0)* hands back an `AcpAgentFactory` instead of running one agent directly;
+the server creates a fresh agent per connection from it, sharing the same handler bean (which must be
+thread-safe) across all of them:
+
+```java
+AcpAgentFactory agents = AcpAgentSupport.create(new MyAgent())
+    .requestTimeout(Duration.ofSeconds(60))
+    .buildFactory();
+
+new StreamableHttpAcpAgentTransport(0, AcpJsonMapper.createDefault(), agents).start().block();
+```
+
+The builder is safely reusable across multiple `buildFactory()` calls, if you need more than one
+listener sharing the same configuration. See [Transports](/docs/acp-java-sdk/transports) for the
+full connection lifecycle.
 
 ### Interceptors
 
@@ -470,10 +520,11 @@ The `context` parameter in `promptHandler` provides:
 | `getSessionId()` | Current session ID |
 | `sendMessage(text)` | Send `AgentMessageChunk` |
 | `sendThought(text)` | Send `AgentThoughtChunk` |
-| `sendUpdate(sessionId, update)` | Send any `SessionUpdate` |
+| `sendSessionUpdate(update)` | Send any `SessionUpdate`, to this handler's own session |
 | `readFile(path, offset, limit)` | Read file from client |
 | `writeFile(path, content)` | Write file on client |
-| `requestPermission(request)` | Ask client for permission |
+| `askPermission(action)` / `askChoice(prompt, options)` | Ask client for permission, the convenience form |
+| `client().requestPermission(request)` | Ask client for permission, the full request/response form |
 | `getClientCapabilities()` | Check client capabilities |
 
 ---
@@ -501,7 +552,7 @@ AcpAsyncAgent agent = AcpAgent.async(transport)
 agent.start().then(agent.awaitTermination()).block();
 ```
 
-The async context's `sendMessage()`, `sendUpdate()`, etc. return `Mono<Void>`, composable with `.then()` and `.flatMap()`.
+The async context's `sendMessage()`, `sendSessionUpdate()`, etc. return `Mono<Void>`, composable with `.then()` and `.flatMap()`.
 
 ---
 
@@ -516,7 +567,7 @@ The SDK provides convenience methods that cover the most common operations. Use 
 InitializeResponse.ok()                        // default capabilities
 InitializeResponse.ok(customCapabilities)      // custom capabilities
 PromptResponse.endTurn()                       // stop reason END_TURN
-PromptResponse.text("response")                // message + endTurn in one call
+PromptResponse.cancelled()                     // stop reason CANCELLED
 
 // Sending updates (on SyncPromptContext or async equivalent)
 context.sendMessage("Hello");                  // AgentMessageChunk with TextContent
@@ -531,7 +582,7 @@ CommandResult result = context.execute("ls", "-la");
 
 // Permissions
 boolean ok = context.askPermission("Delete temp files?");
-String choice = context.askChoice("Format?", "JSON", "XML", "YAML");
+Optional<String> choice = context.askChoice("Format?", "JSON", "XML", "YAML");
 ```
 
 ### When to use the full API (~20% of cases)
@@ -540,34 +591,43 @@ Drop to the full API when you need control that convenience methods don't expose
 
 ```java
 // Custom AgentCapabilities with specific MCP and prompt settings
-var caps = new AgentCapabilities(
-    true,                                          // loadSession
-    new McpCapabilities(true, true),               // HTTP + SSE
-    new PromptCapabilities(true, false, true)       // audio, embeddedContext, image
-);
+var caps = AgentCapabilities.builder()
+    .loadSession()
+    .mcpHttp().mcpSse()
+    .promptAudio().promptImage()                  // promptEmbeddedContext left off
+    .build();
 return InitializeResponse.ok(caps);
 
 // Send non-text update types (Plan, ToolCall, AvailableCommandsUpdate, etc.)
-context.sendUpdate(sessionId, new Plan("plan", List.of(
+// Plan's short constructor no longer takes the discriminator (0.80.0): it can
+// only be the variant's own name, so writing it was noise.
+context.sendSessionUpdate(new Plan(List.of(
     new PlanEntry("Analyze code", PlanEntryPriority.HIGH, PlanEntryStatus.IN_PROGRESS),
     new PlanEntry("Generate tests", PlanEntryPriority.MEDIUM, PlanEntryStatus.PENDING)
 )));
 
-context.sendUpdate(sessionId, new ToolCall("tool_call",
-    "search-1", "code-search", ToolKind.SEARCH, ToolCallStatus.IN_PROGRESS,
+context.sendSessionUpdate(new ToolCall("tool_call",
+    "search-1",
+    "code-search",   // title: what the user sees
+    "code_search",   // name: the tool's own identifier (may be null)
+    ToolKind.SEARCH, ToolCallStatus.IN_PROGRESS,
     null, null, null, null, null));
 
 // Read file with offset and line limit
-var response = context.readTextFile(
+var response = context.client().readTextFile(
     new ReadTextFileRequest(sessionId, "large-file.txt", 100, 50));
 
 // Request permission with custom options
-var permResponse = context.requestPermission(new RequestPermissionRequest(
+var permResponse = context.client().requestPermission(new RequestPermissionRequest(
     sessionId, "Run deployment script?", List.of(
         new PermissionOption("allow-once", "Allow once", PermissionOptionKind.ALLOW_ONCE),
         new PermissionOption("always", "Always allow", PermissionOptionKind.ALLOW_ALWAYS),
         new PermissionOption("reject", "Reject", PermissionOptionKind.REJECT_ONCE)
     )));
+
+// Call a custom extension method on the client, from a prompt handler (0.80.0)
+context.client().sendExtRequest("_example.com/ping", params, PONG);
+context.client().sendExtNotification("_example/event", event);
 ```
 
 The convenience methods are wrappers around the full API — they call the same underlying protocol methods. You can mix and match freely within a single handler.
@@ -589,19 +649,19 @@ All protocol types are defined in `AcpSchema` as Java records.
 | `LogoutRequest` | *(empty)* *(0.14.0)* |
 | `LogoutResponse` | *(empty)* *(0.14.0)* |
 | `NewSessionRequest` | `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.14.0)* |
-| `NewSessionResponse` | `sessionId`, `modes`, ~~`models`~~ *(`models` deprecated — see below)* |
+| `NewSessionResponse` | `sessionId`, `modes`, `configOptions` *(`models` removed in 0.80.0; see migration guide)* |
 | `LoadSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(`additionalDirectories` 0.14.0)* |
-| `LoadSessionResponse` | `modes`, ~~`models`~~ *(deprecated)* |
+| `LoadSessionResponse` | `modes`, `configOptions` *(`models` removed in 0.80.0)* |
 | `ListSessionsRequest` | `cwd` (optional filter), `cursor` (pagination) *(0.12.0)* |
 | `ListSessionsResponse` | `sessions` (list of `SessionInfo`), `nextCursor` *(0.12.0)* |
 | `ResumeSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0; `additionalDirectories` 0.14.0)* |
-| `ResumeSessionResponse` | `modes`, ~~`models`~~ *(0.12.0; `models` deprecated)* |
+| `ResumeSessionResponse` | `modes`, `configOptions` *(0.12.0; `models` removed in 0.80.0)* |
 | `CloseSessionRequest` | `sessionId` *(0.12.0)* |
 | `CloseSessionResponse` | *(empty)* *(0.12.0)* |
 | `DeleteSessionRequest` | `sessionId` *(0.14.0)* |
 | `DeleteSessionResponse` | *(empty)* *(0.14.0)* |
 | `ForkSessionRequest` | `sessionId`, `cwd`, `mcpServers`, `additionalDirectories` *(0.12.0, unstable)* |
-| `ForkSessionResponse` | `sessionId`, `modes`, ~~`models`~~, `configOptions` *(0.12.0, unstable; `models` deprecated)* |
+| `ForkSessionResponse` | `sessionId`, `modes`, `configOptions` *(0.12.0, unstable; `models` removed in 0.80.0)* |
 | `SetSessionConfigOptionRequest` | `sessionId`, `configId`, `value`, `type` *(0.12.0)* |
 | `SetSessionConfigOptionResponse` | `configOptions` (full config state) *(0.12.0)* |
 | `ListProvidersRequest` | *(empty)* *(0.14.0, unstable)* |
@@ -698,7 +758,7 @@ Content chunks (`UserMessageChunk`, `AgentMessageChunk`, `AgentThoughtChunk`) ca
 // Static factory methods
 InitializeResponse.ok()
 PromptResponse.endTurn()
-PromptResponse.text("response")
+PromptResponse.cancelled()
 ```
 
 ---
@@ -707,15 +767,44 @@ PromptResponse.text("response")
 
 ### Client Capabilities
 
-Advertised during `initialize`:
+Advertised on the client builder, before `initialize()` is called. As of 0.80.0, `initialize(InitializeRequest)` is removed; capabilities are set only this way. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+
+A client built with the matching handlers (`readTextFileHandler`, `writeTextFileHandler`, the five
+terminal handlers) advertises these capabilities automatically as of 0.80.0; setting
+`clientCapabilities(..)` explicitly, as below, always wins over what the handlers would derive. See
+[Client builders derive capabilities from handlers](/docs/acp-java-sdk/migration-0.80#client-builders-derive-capabilities-from-handlers).
 
 ```java
-client.initialize(new InitializeRequest(1,
-    new ClientCapabilities(
-        new FileSystemCapability(true, true),  // read, write
-        true  // terminalExecution
-    )));
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(ClientCapabilities.builder()
+        .readTextFile().writeTextFile()
+        .terminal()
+        .build())
+    .clientInfo(new Implementation("my-client", "1.0.0"))  // optional; name and version sent to the agent
+    .build();
+
+client.initialize();
 ```
+
+For session, auth, and elicitation support too, add their builder calls; these aren't derived from
+handlers, so set them explicitly whenever you need them:
+
+```java
+.clientCapabilities(ClientCapabilities.builder()
+    .readTextFile().writeTextFile()
+    .terminal()
+    .session(ClientSessionCapabilities.withBooleanConfigOptions())
+    .auth(new AuthCapabilities(true))           // terminal auth
+    .elicitation(ElicitationCapabilities.formAndUrl())
+    .build())
+```
+
+The setters that take the nested records directly (`.fs(new FileSystemCapability(true, true))`,
+`.terminal(true)`) still work, for a capability shape the one-flag setters don't cover.
+
+`initialize(int protocolVersion, Map<String, Object> meta)` is still available for the rare case of
+pinning a specific protocol version or attaching `_meta` to the handshake; plain `initialize()` is
+what nearly every client should call.
 
 ### `NegotiatedCapabilities`
 
@@ -759,29 +848,43 @@ if (caps.supportsAdditionalDirectories()) {
 }
 ```
 
-### Elicitation Capabilities *(0.12.0, unstable)*
+### Elicitation Capabilities *(stable since 0.80.0; added 0.12.0 as unstable)*
 
-Clients advertise elicitation support during initialization:
+Clients advertise elicitation support during initialization. The capability's modes are typed (`ElicitationFormCapabilities`, `ElicitationUrlCapabilities`); the no-argument `ElicitationCapabilities()` constructor is removed in 0.80.0 in favor of `formOnly()`, `urlOnly()`, and `formAndUrl()`.
+
+A client built with a `createElicitationHandler` and no explicit `clientCapabilities(..)` advertises
+form-mode elicitation automatically (0.80.0):
 
 ```java
-// Client: advertise form-mode elicitation support
-var caps = new ClientCapabilities(
-    new FileSystemCapability(), false,
-    new ElicitationCapabilities(), null);
-client.initialize(new InitializeRequest(1, caps));
+// Client: a registered handler is enough; no capability call needed
+AcpSyncClient client = AcpClient.sync(transport)
+    .createElicitationHandler(req -> CreateElicitationResponse.accept(Map.of("choice", "option-a")))
+    .build();
+client.initialize();
+```
+
+Set it explicitly with the capability builder to advertise without a handler, or to combine with
+other capabilities:
+
+```java
+var caps = ClientCapabilities.builder().elicitationForm().readTextFile().build();
+AcpSyncClient client = AcpClient.sync(transport)
+    .clientCapabilities(caps)
+    .createElicitationHandler(req -> CreateElicitationResponse.accept(Map.of("choice", "option-a")))
+    .build();
 ```
 
 ```java
 // Agent: check before sending elicitation
 if (context.getClientCapabilities().supportsElicitation()) {
-    var response = context.createElicitation(
+    var response = context.client().createElicitation(
         CreateElicitationRequest.form(sessionId, "Pick one:", schema));
 }
 ```
 
 ### `@UnstableAcpApi`
 
-APIs marked `@UnstableAcpApi` correspond to protocol elements in `schema.unstable.json`. They are public and functional but may change in any minor release. When the protocol element stabilizes, the annotation is removed (compatible change). See [Versioning](#versioning) for the full policy.
+APIs marked `@UnstableAcpApi` correspond to protocol elements in `schema.unstable.json`. They are public and functional but may change in any minor release. When the protocol element stabilizes, the annotation is removed (compatible change). See [Stable vs Unstable](/docs/acp-java-sdk/stability) for the full policy.
 
 IntelliJ users can configure the *Unstable API Usage* inspection (*Settings > Inspections > JVM languages*) to flag usages.
 
@@ -800,10 +903,11 @@ IntelliJ users can configure the *Unstable API Usage* inspection (*Settings > In
 
 The default transport. The client launches the agent as a subprocess and communicates via JSON-RPC over stdin/stdout. This is the same mechanism Zed, JetBrains, and VS Code use to talk to agents.
 
-**Client side** — `AgentParameters` specifies the command to launch. Any executable that speaks ACP over stdin/stdout works (Gemini CLI, your own agent JAR, etc.):
+**Client side** — `AgentParameters` specifies the command to launch. Any executable that speaks ACP over stdin/stdout works (Grok CLI, your own agent JAR, etc.):
 ```java
-var params = AgentParameters.builder("gemini")
-    .arg("--experimental-acp")
+var params = AgentParameters.builder("grok")
+    .arg("agent")
+    .arg("stdio")
     .build();
 var transport = new StdioAcpClientTransport(params);
 ```
@@ -853,7 +957,7 @@ var transport = new WebSocketAcpClientTransport(
 ```
 
 <Note>
-`WebSocketAcpAgentTransport` (`acp-websocket-jetty`) is deprecated for removal in 0.18.0. It serves a single WebSocket client. `WebSocketAcpClientTransport` clients connect to `StreamableHttpAcpAgentTransport` unchanged.
+`WebSocketAcpAgentTransport` (`acp-websocket-jetty`) was deprecated for removal in 0.18.0 and is **removed in 0.80.0**. It served a single WebSocket client. `WebSocketAcpClientTransport` clients connect to `StreamableHttpAcpAgentTransport` unchanged.
 </Note>
 
 ### In-Memory Transport
@@ -885,8 +989,8 @@ var pair = InMemoryTransportPair.create();
 try {
     client.prompt(request);
 } catch (AcpProtocolException e) {
-    if (e.isConcurrentPrompt()) {
-        // Another prompt is already in progress
+    if (e.isAuthenticationRequired()) {
+        // Client must authenticate (session/authenticate) before this will work
     } else if (e.isMethodNotFound()) {
         // Agent doesn't support this method
     }
@@ -895,6 +999,10 @@ try {
     System.err.println("Not supported: " + e.getCapability());
 }
 ```
+
+<Note>
+`isConcurrentPrompt()` is removed in 0.80.0: a prompt sent while one is already running on the session is now a generic `INVALID_REQUEST` (`-32600`), not its own code. `isAuthenticationRequired()` is new. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
+</Note>
 
 ### Agent-Side Error Handling
 
@@ -967,7 +1075,8 @@ pair.closeGracefully().block();
 | `acp-agent-support` | Annotation-based agent runtime (includes acp-annotations + acp-core) |
 | `acp-test` | In-memory transport and test utilities |
 | `acp-streamable-http-jetty` | Jetty-based Streamable HTTP and WebSocket agent transport, and the mountable `StreamableHttpAcpServlet` |
-| `acp-websocket-jetty` | **Deprecated** single-client WebSocket agent transport; use `acp-streamable-http-jetty` |
+
+`acp-websocket-jetty` (single-client WebSocket agent transport) is **removed in 0.80.0**; it is not a dependable artifact as of this release. See the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).
 
 ---
 

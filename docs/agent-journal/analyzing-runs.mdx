@@ -1,6 +1,6 @@
 ---
 title: "Analyze Runs with DuckDB"
-description: "Query Agent Journal 1.10.1 event streams with executable DuckDB examples"
+description: "Query Agent Journal 1.11.0 event streams with executable DuckDB examples"
 ---
 
 `JsonFileStorage` writes one `events.jsonl` file per run.
@@ -22,7 +22,8 @@ Header rows have `@type = 'header'`, so event filters exclude them.
 SELECT
     toolName AS tool,
     COUNT(*) AS calls,
-    ROUND(AVG(durationMs), 0) AS average_ms,
+    ROUND(AVG(durationMs) FILTER (WHERE durationMs >= 0), 0) AS average_ms,
+    COUNT(*) FILTER (WHERE durationMs < 0) AS unmeasured,
     COUNT(*) FILTER (WHERE NOT success) AS failures
 FROM read_ndjson_auto(
     '.agent-journal/experiments/*/runs/*/events.jsonl',
@@ -32,29 +33,73 @@ GROUP BY toolName
 ORDER BY calls DESC, tool;
 ```
 
-## Summarize LLM usage and cost by run file
+A `durationMs` of -1 means the CLI did not measure the call (Grok, Codex and Junie since 1.11.0); the filter keeps it out of the average.
 
-Ask DuckDB to add the source filename explicitly:
+## Tokens by run
+
+Ask DuckDB to add the source filename, then join the run's `run.json` for its track and parent.
+Four token fields carry distinct quantities: `inputTokens` excludes cache reads, `cacheReadTokens` and `cacheCreationTokens` are the cache traffic, and `thinkingTokens` (Codex reasoning, Claude extended thinking) is a subset of `outputTokens`, so do not add it on top.
+
+```sql
+WITH runs AS (
+    SELECT id, experimentId, parentRunId, COALESCE(tags.track, 'root') AS track
+    FROM read_json_auto('.agent-journal/experiments/*/runs/*/run.json', union_by_name = true)
+),
+calls AS (
+    SELECT regexp_extract(filename, 'runs/([^/]+)/events', 1) AS run_id,
+           tokenUsage.inputTokens AS input_tokens,
+           tokenUsage.cacheReadTokens AS cache_read_tokens,
+           tokenUsage.cacheCreationTokens AS cache_creation_tokens,
+           tokenUsage.outputTokens AS output_tokens,
+           tokenUsage.thinkingTokens AS thinking_tokens
+    FROM read_ndjson_auto('.agent-journal/experiments/*/runs/*/events.jsonl',
+                          union_by_name = true, filename = true)
+    WHERE "@type" = 'llm_call'
+)
+SELECT r.experimentId AS experiment, r.track, r.id AS run_id, r.parentRunId AS parent_run_id,
+       c.input_tokens, c.cache_read_tokens, c.cache_creation_tokens, c.output_tokens, c.thinking_tokens
+FROM runs r JOIN calls c ON c.run_id = r.id
+ORDER BY experiment, r.track, run_id;
+```
+
+A Codex root and its children are separate rows with separate counts; Codex's root total does not include its children.
+A Claude Code main loop and its sub-agents are also separate rows, and the sum of their input and cache columns equals the call's `modelUsage` when the CLI ran with `--forward-subagent-text`.
+
+## Cost by run, with availability
+
+A cost of 0 is not evidence that a call was free.
+The `llm_call` metadata says whether the CLI reported a cost: `costAvailable=false` with `costSource=unreported` (Codex, Antigravity) means unknown, and `costSource=included_in_parent` (a Claude Code sub-agent) means the parent's figure already contains it.
+Calls that report a cost (Claude Code's main loop, Gemini, Grok, Junie) carry no `costAvailable` key, so treat a missing key as reported.
 
 ```sql
 SELECT
-    filename,
-    SUM(tokenUsage.inputTokens) AS input_tokens,
-    SUM(tokenUsage.outputTokens) AS output_tokens,
-    SUM(
-        cost.inputCostUsd
-        + cost.outputCostUsd
-        + cost.thinkingCostUsd
-        - cost.cacheSavingsUsd
-    ) AS total_cost_usd
-FROM read_ndjson_auto(
-    '.agent-journal/experiments/*/runs/*/events.jsonl',
-    union_by_name = true,
-    filename = true)
+    regexp_extract(filename, 'runs/([^/]+)/events', 1) AS run_id,
+    COALESCE(metadata.costAvailable, TRUE) AS cost_available,
+    metadata.costSource AS cost_source,
+    CASE WHEN COALESCE(metadata.costAvailable, TRUE)
+         THEN cost.inputCostUsd + cost.outputCostUsd + cost.thinkingCostUsd - cost.cacheSavingsUsd
+    END AS cost_usd,
+    metadata.costIncludesSubagents AS includes_subagents
+FROM read_ndjson_auto('.agent-journal/experiments/*/runs/*/events.jsonl',
+                      union_by_name = true, filename = true)
 WHERE "@type" = 'llm_call'
-GROUP BY filename
-ORDER BY filename;
+ORDER BY cost_available DESC, cost_source, run_id;
 ```
+
+`cost_usd` is `NULL` where the CLI reported nothing.
+A total over several runs is only a total of the reported part; keep the count of unreported calls next to it:
+
+```sql
+SELECT
+    COUNT(*) AS llm_calls,
+    COUNT(*) FILTER (WHERE NOT COALESCE(metadata.costAvailable, TRUE)) AS calls_without_cost,
+    SUM(cost.inputCostUsd + cost.outputCostUsd + cost.thinkingCostUsd - cost.cacheSavingsUsd)
+        FILTER (WHERE COALESCE(metadata.costAvailable, TRUE)) AS reported_cost_usd
+FROM read_ndjson_auto('.agent-journal/experiments/*/runs/*/events.jsonl', union_by_name = true)
+WHERE "@type" = 'llm_call';
+```
+
+On the synthetic Claude and Codex sub-agent journals from the [sub-agent capture guide](/docs/agent-journal/subagent-capture), this reports 9 calls, 8 without a cost of their own, and 0.50 USD reported: the Claude call's cost, once.
 
 ## Extract ordered tool sequences
 
@@ -105,6 +150,87 @@ ORDER BY transitions DESC, from_tool, to_tool;
 
 Transition counts describe recorded behavior; they do not establish a quality threshold by themselves.
 Interpret them with task outcomes, run configuration, and enough repeated trials for the comparison you intend to make.
+
+## Sub-agent runs: count items, or total an execution tree
+
+Since Agent Journal 1.11.0 a Claude Code or Codex sub-agent is a run directory of its own, with `parentRunId` set and the tag `track=subagent` in its `run.json`.
+Which runs to keep depends on the question.
+
+**Counting experiment items.** A query that treats every run directory as one item would count each sub-agent as an item, at a cost of 0 and without the item's own configuration.
+For item counts, pass rates and per-item cost, exclude the sub-agent runs by the tag, and only by the tag:
+
+```sql
+SELECT experimentId AS experiment, COUNT(*) AS items
+FROM read_json_auto('.agent-journal/experiments/*/runs/*/run.json', union_by_name = true)
+WHERE COALESCE(tags.track, '') <> 'subagent'
+GROUP BY experimentId ORDER BY experiment;
+```
+
+Do not exclude on `parentRunId` alone: it is a general field, and an ordinary nested run that sets it is a legitimate item.
+
+**Analysing sub-agents or whole executions.** Keep the sub-agent runs.
+To list the children of each root with their reported status:
+
+```sql
+SELECT id AS child_run_id, parentRunId AS parent_run_id,
+       config."subagent.spawnToolUseId" AS spawn_tool_use_id,
+       config."subagent.depth" AS depth, status,
+       summary."subagent.status" AS reported_status,
+       summary."subagent.statusSource" AS status_source,
+       summary."subagent.statusMeaning" AS status_meaning
+FROM read_json_auto('.agent-journal/experiments/*/runs/*/run.json', union_by_name = true)
+WHERE tags.track = 'subagent'
+ORDER BY experimentId, depth, spawn_tool_use_id;
+```
+
+`spawn_tool_use_id` equals the `id` of the spawning `tool_call` event in the parent's `events.jsonl`, which is the join between a parent's step and the child's run.
+For Codex children `status_meaning` is `last_observed_turn`: `FINISHED` means the last observed turn completed, not that a thread-terminal event was seen.
+
+To total an execution tree, walk `parentRunId` from each root with a recursive query.
+The cost rule: a tree's cost is known when every call either reported a cost or is a Claude Code sub-agent whose cost is inside its parent's; a Codex tree has no known cost.
+The tokens are partial when a spawn produced no record (`subagentsWithoutTrack` on the parent's `llm_call`).
+
+```sql
+WITH RECURSIVE runs AS (
+    SELECT id, parentRunId, COALESCE(tags.track, 'root') AS track
+    FROM read_json_auto('.agent-journal/experiments/*/runs/*/run.json', union_by_name = true)
+),
+tree AS (
+    SELECT id AS root_run_id, id AS run_id, 0 AS depth FROM runs WHERE track = 'root'
+    UNION ALL
+    SELECT t.root_run_id, r.id, t.depth + 1
+    FROM runs r JOIN tree t ON r.parentRunId = t.run_id
+    WHERE r.track = 'subagent'
+),
+calls AS (
+    SELECT regexp_extract(filename, 'runs/([^/]+)/events', 1) AS run_id,
+           tokenUsage.inputTokens AS input_tokens,
+           tokenUsage.cacheReadTokens AS cache_read_tokens,
+           tokenUsage.outputTokens AS output_tokens,
+           COALESCE(metadata.costAvailable, TRUE) AS cost_available,
+           metadata.costSource AS cost_source,
+           cost.inputCostUsd + cost.outputCostUsd + cost.thinkingCostUsd - cost.cacheSavingsUsd AS cost_usd,
+           COALESCE(len(metadata.subagentsWithoutTrack), 0) AS spawns_without_track
+    FROM read_ndjson_auto('.agent-journal/experiments/*/runs/*/events.jsonl',
+                          union_by_name = true, filename = true)
+    WHERE "@type" = 'llm_call'
+)
+SELECT t.root_run_id,
+       COUNT(*) AS runs_in_tree,
+       MAX(t.depth) AS max_depth,
+       SUM(c.input_tokens) AS input_tokens,
+       SUM(c.cache_read_tokens) AS cache_read_tokens,
+       SUM(c.output_tokens) AS output_tokens,
+       CASE WHEN bool_and(c.cost_available OR c.cost_source = 'included_in_parent')
+            THEN SUM(c.cost_usd) FILTER (WHERE c.cost_available) END AS tree_cost_usd,
+       bool_or(c.spawns_without_track > 0) AS tokens_partial
+FROM tree t JOIN calls c ON c.run_id = t.run_id
+GROUP BY t.root_run_id ORDER BY t.root_run_id;
+```
+
+On the two synthetic journals this gives the Claude tree (5 runs, depth 2) 71 input and 3,700 cache-read tokens with a tree cost of 0.50 USD, and the Codex tree (4 runs, depth 1) 1,250 input and 830 cache-read tokens with no cost; both are marked partial because one spawn in each produced no record.
+
+The header's `producerVersion` tells a file written by 1.11.0 from an earlier one; several Claude Code and Codex token values changed meaning at that boundary, so do not compare them across it without the table in the [release notes](https://github.com/markpollack/agent-journal/releases/tag/v1.11.0).
 
 ## Analyze derived events separately
 

@@ -15,23 +15,36 @@ Supply a bounded evidence bundle when a written requirement needs judgment.
 
 ## Build the source artifacts
 
-You need Java 21 and the committed Maven wrapper.
-Use an isolated Maven repository and the exact source revision below. Do not consume an arbitrary older snapshot from your normal local repository.
-These commands install locally; they do not publish artifacts or integrate producer branches.
+You need Java 21 and the committed Maven wrapper. Use your existing Agent Judge checkout
+and the standard `~/.m2/repository`; no second producer clone or repository setting is needed.
+The reproducible source revision is `904c1983c3c919b873ca03beb7e321759580ee14`.
+Fetch current main and preserve any local changes before updating it. The check below refuses
+another revision; it does not reset or move your checkout.
+
+From the Agent Judge checkout:
 
 ```bash
-export EVAL_M2="$PWD/eval-m2"
-git clone https://github.com/markpollack/agent-judge.git agent-eval-source
-cd agent-eval-source
-git checkout --detach 9ccddd31862cc79c7dc2b2d41f4fb1596a56972a
-./mvnw -nsu -Dmaven.repo.local="$EVAL_M2" -pl agent-judge-ai-core,agent-judge-agent-client,agent-judge-exec,agent-judge-assertj -am -DskipTests clean install
+export EVAL_M2="$HOME/.m2/repository"
+test "$(git rev-parse HEAD)" = "904c1983c3c919b873ca03beb7e321759580ee14"
+./mvnw -B -ntp clean install
 ```
 
-The first build downloads dependencies. `-DskipTests` builds artifacts and is not an acceptance-gate result.
-Keep that same `EVAL_M2` when compiling callers.
-Each caller POM needs its own dependency/plugin preparation before using `-o`; installing the producer alone does not prepare them all.
-The [requirements guide](/docs/agent-judge/requirements-judges#run-a-prepared-example) has a complete caller POM and executable Java example with deterministic responses.
-No live inference is needed.
+This installs the complete reactor, including the parent and every module, with tests enabled.
+It replaces artifacts at the same snapshot coordinates and preserves unrelated versions.
+Keep the selected repository when building callers; a producer build alone does not prepare
+caller dependencies and Maven plugins. The [requirements example](/docs/agent-judge/requirements-judges#run-a-prepared-example)
+has a complete caller POM and executable Java example with deterministic responses.
+
+For an optional isolated installation, set `EVAL_M2` to an absolute task-owned directory and run
+`./mvnw -B -ntp -Dmaven.repo.local="$EVAL_M2" clean install` from a clean checkout at the same revision.
+Use that repository for subsequent caller and child builds. These commands install locally;
+they do not publish artifacts. Prepare dependencies online before using Maven's `-o` option.
+
+For the [PetClinic walkthrough](/docs/agent-judge/petclinic-case-study), open the ordinary tutorial
+checkout beside Agent Judge and run `./scripts/prepare-petclinic-demo.sh`. It prepares source
+artifacts, callers, plugins and the materialized subject together. Its configured run guide and
+presenter runbook cover IntelliJ, offline replay and the optional `--isolated` mode.
+No live inference is required.
 
 ## Configure, execute, retain
 

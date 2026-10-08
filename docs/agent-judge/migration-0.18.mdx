@@ -17,7 +17,7 @@ Recompile adopting callers against matching module versions; no binary/source co
 | Released 0.17 surface | Configured 0.18 replacement |
 |---|---|
 | `judge(context)` / `vote(context)` | Bind evidence and backend collaborators before `build()`; call `judge()` / `vote()` |
-| JudgeModel, JudgeModelRequest/Response | EvalModel, EvalModelRequest/Response/Options, EvalMessage and EvalRole |
+| JudgeModel, JudgeModelRequest/Response | EvalModel, EvalModelRequest/Response/Options, EvalMessage and EvalMessageRole |
 | `result` imports and voting/attempt types in `jury` | `judgment`, `verdict`, `voting` and `jury` packages |
 | Roster Judge returning a rollup | EarsJury/Rfc2119Jury returns the complete roster Verdict; native Judges assess one actual requirement |
 | Binary Check assumptions and score/label-only copies | Complete child Judgment statuses, optional findings, support and native facts |
@@ -85,5 +85,5 @@ The separate fundamentals and judge-junit reactor stays on released 0.17.0.
 The [0.17 migration page](/docs/agent-judge/migration-0.17) remains historical.
 
 Project-specific Business Source License terms remain in force.
-See the [source migration inventory](https://github.com/markpollack/agent-judge/blob/79c6004197ffd72e8d00eca6c5306d4c577a9a3b/MIGRATION_0.18.md)
+See the [source migration inventory](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/MIGRATION_0.18.md)
 and [current API reference](/docs/agent-judge/api-reference).

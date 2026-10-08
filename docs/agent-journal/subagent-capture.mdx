@@ -1,0 +1,335 @@
+---
+title: "Sub-agent Capture"
+description: "Record Claude Code and Codex sub-agents as linked runs with Agent Journal 1.11.0: a fixture-backed walkthrough, the accounting rules and the limits"
+---
+
+Claude Code and Codex can delegate work to sub-agents. Since Agent Journal 1.11.0, each sub-agent is recorded as a run of its own, linked to the run of the agent that started it.
+The parent's files hold the parent's own activity only, so a reader can analyse the main loop, one sub-agent, or the whole execution tree, and no token or dollar is counted twice.
+
+This guide walks through the capture path for each provider with the fixtures shipped in the repository, then explains the accounting, the status semantics and the limits.
+The other four providers (Gemini CLI, Grok, Antigravity, Junie) are unchanged from 1.10.1 and record no sub-agents.
+
+## What the two providers expose
+
+| | Claude Code | Codex |
+|---|---|---|
+| Where a sub-agent's activity is | on the same `stream-json` stream as the main loop, each line marked with `parent_tool_use_id` | in its own rollout file, one file per thread |
+| What Journal needs from you | the stream, as the SDK or the CLI emits it | the root rollout and every child rollout, read by you and passed in |
+| Complete capture requires | the CLI started with `--forward-subagent-text` | collecting the child files |
+| Cost | one cost for the whole call, kept on the parent | none for any thread |
+| Verified live with | Claude Code 2.1.292, `claude-code-sdk` 1.7.0, to depth 2 | Codex CLI 0.160.1, headless `codex exec`, depth 1 |
+
+## Requirements
+
+**Dependencies.** `claude-code-capture` brings `claude-code-sdk` 1.7.0 and needs a Java 21 runtime. `codex-cli-capture` depends on `journal-core` only and runs on Java 17.
+
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>claude-code-capture</artifactId>
+    <version>1.11.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>codex-cli-capture</artifactId>
+    <version>1.11.0</version>
+</dependency>
+```
+
+**Fixture execution** (what this page runs) needs only the two dependencies and the fixture files from the repository at tag `v1.11.0`:
+
+- `claude-code-capture/src/test/resources/fixtures/claude-subagents-synthetic.jsonl`, a hand-written Claude Code session with four sub-agents and one refused spawn; its `README.md` next to it has the token arithmetic.
+- `codex-cli-capture/src/test/resources/fixtures/codex-subagents-synthetic/{root,child-a,child-b,child-c,orphan}.jsonl`, a hand-written Codex execution with three children; `fixtures/README.md` has the arithmetic.
+
+**Live execution** needs the CLI and an account. For Claude Code, start the CLI (or the SDK's `CLIOptions`) with `--forward-subagent-text`; `claude-code-sdk` 1.6.0 and later expose it as `CLIOptions.forwardSubagentText`. For Codex, run `codex exec` and locate the rollout files Codex writes under its sessions directory: the root file is named with the root thread id, and each child file with the child's thread id, which the root's `SubAgentActivity{kind:"started"}` records as `agent_thread_id`.
+
+**agent-client.** The released agent-client (0.31.0 on Maven Central) does not set `--forward-subagent-text`, harvests the root rollout only, calls the single-file `CodexSessionParser.parse`, and does not apply `withSessionBaseline`. Those four pieces exist on pushed proof branches of `markpollack/agent-client` (`proof/journal-1.11.0-subagent-capture`, `proof/codex-rollout-children`, `proof/codex-subagent-capture-journal-1.11.0`), none of them merged, and 0.31.0 pins Journal 1.10.0. Until an agent-client release adopts them, use the Journal APIs directly as shown here.
+
+## Claude Code: capture and record
+
+The parser takes the SDK's `Iterator<ParsedMessage>`. Live, that iterator comes from the SDK's query; from a saved stream file, build it with the SDK's `MessageParser`, one line at a time, which is also how the repository's tests read the fixture.
+
+```java
+import io.github.markpollack.claude.agent.sdk.parsing.MessageParser;
+import io.github.markpollack.claude.agent.sdk.parsing.ParsedMessage;
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.claude.PhaseCapture;
+import io.github.markpollack.journal.claude.RunRecorder;
+import io.github.markpollack.journal.claude.SessionLogParser;
+import io.github.markpollack.journal.claude.SubagentCapture;
+import io.github.markpollack.journal.storage.JsonFileStorage;
+import io.github.markpollack.journal.storage.SourceRecordings;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+Path streamFile = Path.of("claude-subagents-synthetic.jsonl"); // or a live stream-json capture
+Path journalDir = Path.of(".agent-journal");
+
+// 1. Typed messages from the stream lines.
+MessageParser parser = new MessageParser();
+List<ParsedMessage> messages = new ArrayList<>();
+for (String line : Files.readAllLines(streamFile)) {
+    if (!line.isBlank()) {
+        messages.add(ParsedMessage.RegularMessage.of(parser.parseMessage(line), line));
+    }
+}
+
+// 2. Parse. Sub-agents are separated out by their parent_tool_use_id.
+PhaseCapture capture = SessionLogParser.parse(messages.iterator(), "execute", "the prompt");
+for (SubagentCapture s : capture.subagents()) {
+    System.out.println(s.spawnToolUseId() + " depth=" + s.depth() + " status=" + s.status());
+}
+
+// 3. Record once: one run for the main loop, one per sub-agent.
+Journal.configure(new JsonFileStorage(journalDir));
+SourceRecordings.Outcome outcome = RunRecorder.recordOnce(
+        "subagent-demo", capture, builder -> builder.agent("claude-code"));
+System.out.println("recorded now: " + outcome.recordedNow() + ", main run: " + outcome.runId());
+```
+
+Running this against the fixture prints:
+
+```text
+toolu_spawn_a depth=1 status=completed
+toolu_spawn_b depth=1 status=completed
+toolu_spawn_c depth=2 status=failed
+toolu_spawn_d depth=1 status=null
+recorded now: true, main run: ad5fd853-...
+```
+
+A fifth spawn, `toolu_spawn_refused`, never started; it is not in `subagents()` but in `capture.subagentsWithoutTrack()`.
+
+`recordOnce` is the simplest path. The alternative is to open the run yourself, which is what callers did before 1.11.0; it records the same runs but is not guarded against being called twice:
+
+```java
+try (RunRecorder recorder = new RunRecorder(
+        Journal.run("subagent-demo").agent("claude-code").start())) {
+    recorder.recordPhase(capture);
+    recorder.finish();   // without finish(), close() records the run as CRASHED
+}
+```
+
+**Capture versus recording.** The capture holds more than the journal stores. A sub-agent's forwarded text and thinking are in `SubagentCapture.textOutput()` and `thinkingBlocks()`, and in the portable trace file when `parse` is given one. No journal event stores text, for the main loop or for a sub-agent.
+
+## Codex: parse the root with its children
+
+Codex writes one rollout file per thread. Journal does not search the filesystem: you read each file and tag it with its thread id and, for a child, its parent's thread id. The parent id is the `parent_thread_id` of the child's first `session_meta` record.
+
+```java
+import io.github.markpollack.journal.Journal;
+import io.github.markpollack.journal.codex.CodexPhaseCapture;
+import io.github.markpollack.journal.codex.CodexRollout;
+import io.github.markpollack.journal.codex.CodexRollouts;
+import io.github.markpollack.journal.codex.CodexRunRecorder;
+import io.github.markpollack.journal.codex.CodexSessionParser;
+import io.github.markpollack.journal.codex.CodexSubagentCapture;
+import io.github.markpollack.journal.storage.JsonFileStorage;
+import io.github.markpollack.journal.storage.SourceRecordings;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+static CodexRollout rollout(Path dir, String file, String threadId, String parentThreadId)
+        throws IOException {
+    Path path = dir.resolve(file);
+    return new CodexRollout(threadId, parentThreadId, path.toString(),
+            Files.readAllLines(path));
+}
+
+Path fixtures = Path.of("codex-subagents-synthetic");   // or the Codex sessions directory
+Path journalDir = Path.of(".agent-journal");
+
+// 1. Every rollout, root first or in any order. The root is the one without a parent.
+CodexRollouts rollouts = new CodexRollouts(List.of(
+        rollout(fixtures, "root.jsonl", "thread-root-0001", null),
+        rollout(fixtures, "child-a.jsonl", "thread-child-a-0002", "thread-root-0001"),
+        rollout(fixtures, "child-b.jsonl", "thread-child-b-0003", "thread-root-0001"),
+        rollout(fixtures, "child-c.jsonl", "thread-child-c-0005", "thread-root-0001")));
+
+// 2. Parse the execution.
+CodexPhaseCapture capture = CodexSessionParser.parse(rollouts, "implement", "Root prompt");
+for (CodexSubagentCapture s : capture.subagents()) {
+    System.out.println(s.threadId() + " spawn=" + s.spawnCallId() + " status=" + s.status()
+            + " (" + s.statusSource() + ") forked=" + s.forked());
+}
+System.out.println("without track: " + capture.subagentsWithoutTrack());
+
+// 3. Record once, keyed by the root thread id.
+Journal.configure(new JsonFileStorage(journalDir));
+SourceRecordings.Outcome outcome = CodexRunRecorder.recordOnce(
+        "codex-demo", capture, builder -> builder.agent("codex"));
+```
+
+Output for the fixture:
+
+```text
+thread-child-a-0002 spawn=call_spawn_a status=completed (parent_sub_agent_activity_last) forked=false
+thread-child-b-0003 spawn=call_spawn_b status=interrupted (parent_sub_agent_activity_last) forked=true
+thread-child-c-0005 spawn=call_spawn_c status=unknown (none) forked=false
+without track: [SpawnWithoutTrack[callId=call_spawn_d, reason=spawn_failed]]
+```
+
+The single-file `CodexSessionParser.parse(Path, …)` and `parse(BufferedReader, …)` are unchanged; a capture parsed from the root file alone has `subagentTracksAvailable() == false` and no sub-agent runs.
+
+## Read the runs back and check the linkage
+
+Open a fresh storage instance on the same directory. Each sub-agent run carries the tag `track=subagent` and the join keys in its `run.json`:
+
+```java
+import io.github.markpollack.journal.event.LLMCallEvent;
+import io.github.markpollack.journal.storage.JsonFileStorage;
+import io.github.markpollack.journal.storage.RunData;
+
+JsonFileStorage storage = new JsonFileStorage(journalDir);
+for (RunData run : storage.listRuns("subagent-demo")) {
+    LLMCallEvent llm = storage.loadEvents("subagent-demo", run.id()).stream()
+            .filter(LLMCallEvent.class::isInstance).map(LLMCallEvent.class::cast)
+            .findFirst().orElseThrow();
+    System.out.printf("%s %s track=%s parent=%s spawn=%s input=%d cacheRead=%d cost=%.2f%n",
+            run.id(), run.status(), run.tags().get("track"), run.parentRunId(),
+            run.config().values().get("subagent.spawnToolUseId"),
+            llm.tokenUsage().inputTokens(), llm.tokenUsage().cacheReadTokens(),
+            llm.totalCostUsd());
+}
+```
+
+For the Claude fixture this lists five runs:
+
+| run | status | parent | spawning tool call | input | cache read | cost |
+|---|---|---|---|---|---|---|
+| main loop | FINISHED | (none) | (none) | 36 | 2,200 | 0.50 |
+| a | FINISHED | main loop | `toolu_spawn_a` | 11 | 500 | 0.00 |
+| b | FINISHED | main loop | `toolu_spawn_b` | 12 | 600 | 0.00 |
+| c | FAILED | **b** | `toolu_spawn_c` | 9 | 400 | 0.00 |
+| d | CRASHED | main loop | `toolu_spawn_d` | 3 | 0 | 0.00 |
+
+Every row but the first has `tags.track = subagent`; "parent" is `parentRunId` and "spawning tool call" is `config["subagent.spawnToolUseId"]`.
+
+The join: a child's `subagent.spawnToolUseId` equals the `id` of a `tool_call` event in its parent's `events.jsonl`. Sub-agent `c` was started by sub-agent `b`, so its `parentRunId` is `b`'s run and its `subagent.depth` is 2. The parent's `llm_call` metadata lists the children under `subagents` (spawn id, run id, depth, status) and the spawns that produced no record under `subagentsWithoutTrack`.
+
+The keys in a sub-agent's `run.json`:
+
+| Key | Claude Code | Codex |
+|---|---|---|
+| `tags.track` | `subagent` | `subagent` |
+| `parentRunId` | the run of the agent that started it | the run of the root (depth 1) |
+| `config["subagent.spawnToolUseId"]` | the spawning `tool_use` id | the spawning `spawn_agent` `call_id` |
+| `config["subagent.depth"]` | 1 or 2 as observed; -1 when the spawning call was not seen | 1; -1 for a file whose parent was not supplied |
+| other `config` keys | `subagent.type`, `subagent.description`, `subagent.sessionId` | `subagent.threadId`, `subagent.agentPath`, `subagent.forked`, `subagent.sessionId` (the root thread id) |
+| `summary["subagent.status"]`, `subagent.statusSource` | as reported, and where it was read | the last observed turn outcome, and where it was read |
+| `summary["subagent.statusMeaning"]` | (absent) | `last_observed_turn` |
+
+## Accounting
+
+### Claude Code
+
+Claude Code reports one cost and one `modelUsage` for the whole call, sub-agents included, and per-message `usage` for each agent's own turns. Journal records:
+
+- the call's cost on the main loop's `llm_call`, marked `costIncludesSubagents=true`, and split over the main loop's steps in `analysis.jsonl`;
+- each sub-agent's `llm_call` with cost 0, `costAvailable=false` and `costSource=included_in_parent`;
+- each agent's own tokens on its own run. Input tokens exclude cache reads; cache reads and cache creation are separate fields.
+
+Worked example, the fixture (every message counted once):
+
+| Run | input | cache creation | cache read |
+|---|---|---|---|
+| main loop | 36 | 1,300 | 2,200 |
+| a | 11 | 550 | 500 |
+| b | 12 | 660 | 600 |
+| c | 9 | 440 | 400 |
+| d | 3 | 300 | 0 |
+| **all five runs** | **71** | **3,250** | **3,700** |
+
+The last row equals the result line's `modelUsage`, and the main-loop row equals its `usage`. Live, with `--forward-subagent-text`, the same reconciliation held exactly (12 / 41,544 / 151,728 against `modelUsage` on Claude Code 2.1.292). Two figures are not exact:
+
+- A sub-agent's output tokens are a lower bound, because the stream reports no final output figure per sub-agent (536 recorded against 672 reported in the live run).
+- Without `--forward-subagent-text`, a sub-agent's text-only turns are not on the stream, so its recorded usage is short by those turns (about 58,000 cache-read tokens across two sub-agents in the live check). The main loop's own figures and the call's cost are complete either way.
+
+Adding cost over a run and its sub-agent runs gives the reported total once; adding `costAvailable=false` calls as zero is correct for Claude sub-agents because their cost is inside the parent's figure.
+
+### Codex
+
+Codex reports no dollar cost for any thread, so every `llm_call` has cost 0 with `costAvailable=false` and `costSource=unreported`. Treat that as unknown, not free. Each run's tokens are its own file's last `token_count`; Codex's root total excludes its children, so each thread is counted once and the root's `llm_call` is unchanged by its children. `inputTokens` excludes cached input (`cachedInputTokens` is separate), and `thinkingTokens` holds the reasoning count, which is a subset of `outputTokens`.
+
+Worked example, the fixture:
+
+| Run | input (cache excluded) | cache read | output | of which reasoning |
+|---|---|---|---|---|
+| root | 700 | 500 | 300 | 80 |
+| child A | 200 | 100 | 40 | 10 |
+| child B | 300 | 200 | 60 | 20 |
+| child C | 50 | 30 | 5 | 1 |
+| **execution** | **1,250** | **830** | **405** | **111** |
+
+An execution total is partial when a spawn produced no record (`subagentsWithoutTrack` non-empty) or a child's end was not observed; the fixture's fourth spawn failed, so its row is missing from the sum.
+
+## Missing evidence and status
+
+**What is missing is recorded as missing.** A spawn that produced no sub-agent record is listed in the parent's `subagentsWithoutTrack`: for Claude Code a refused or never-started spawn, next to Claude Code's own counts in `subagentStats`; for Codex a `spawn_failed` spawn or a started child whose file you did not supply (`not_collected`). If Claude Code's messages arrive without their wire lines, the agents cannot be told apart: the metadata has `subagentTracksAvailable=false`, no sub-agent run is written, and the activity is merged into the parent's run as before 1.11.0.
+
+**Claude Code status** is what the CLI reported, never inferred; `subagent.statusSource` names where it was read (`task_notification`, `tool_use_result`, or `none`).
+
+| Reported | Run status |
+|---|---|
+| `completed` | `FINISHED` |
+| `failed` or `killed` | `FAILED` |
+| another value, or none | `CRASHED` (no successful end was seen) |
+
+**Codex status** is the last observed turn outcome, because Codex writes no thread-terminal record. Journal takes the parent's last `completed` or `interrupted` activity for the child; failing that, the child's last own `task_complete` or `turn_aborted`; failing that, `unknown`. `completed` maps to `FINISHED`, `interrupted` to `FAILED`, anything else to `CRASHED`, and every Codex child carries `subagent.statusMeaning=last_observed_turn` so a reader does not mistake `FINISHED` for a terminal event. A forked child (`subagent.forked=true`) replays its parent's history at the start of its file; those records are skipped and counted in `subagent.replayedRecordsSkipped`, so the child's text, duration and tokens are its own.
+
+**Run end for the recorder itself.** A Claude Code `RunRecorder` closed without `finish()` records `CRASHED`; `recordOnce` calls `finish()` for you, or ends the run `FAILED` when the capture reports an error.
+
+## Record an execution once
+
+Recording the same capture twice writes a second parent run with a second set of sub-agent runs. `RunRecorder.recordOnce` and `CodexRunRecorder.recordOnce` guard against that within one experiment and one storage root:
+
+- The parent run carries the execution's key in its config, `capture.sourceKind` and `capture.sourceKey`: for Claude Code the session id plus the final assistant message id, for Codex the root thread id.
+- Before writing, the recorder looks for that key in the stored run records, so the check holds across a restart.
+- The same source again writes nothing and returns the earlier run with `recordedNow() == false`. A different execution, including a later prompt of the same Claude Code session, records normally.
+- An earlier recording that has not ended, or that ended `FAILED` with an error recorded, is neither resumed nor duplicated: the call throws `IllegalStateException` naming the run. Remove that run, then record again.
+
+Two limits. The check is not a lock: two processes recording the same source at the same time can both miss the other's run. And `recordPhase` on a run you created yourself is unchanged and unguarded. A resumed Codex thread keeps its id, so `codex exec resume` turns are found as already recorded and are not captured; resume is not supported for sub-agent capture.
+
+## Consecutive prompts in one Claude Code session
+
+Claude Code reports `total_cost_usd`, `modelUsage` and `duration_api_ms` as the session's running totals, while `usage`, `duration_ms` and `num_turns` cover the query alone. A caller that records one capture per prompt in one session passes the previous capture to `SessionLogParser.withSessionBaseline(current, previous)`:
+
+```java
+PhaseCapture first = SessionLogParser.parse(firstResponse, "plan", planPrompt);
+PhaseCapture secondRaw = SessionLogParser.parse(secondResponse, "implement", implementPrompt);
+PhaseCapture second = SessionLogParser.withSessionBaseline(secondRaw, first);
+// second.totalCostUsd() is the second query's own cost; second.costBasis() is SESSION_DELTA;
+// second.sessionCost().cumulativeCostUsd() keeps the running total.
+```
+
+The recorder writes `costBasis=session_delta` and `sessionCumulativeCostUsd` in the `llm_call` metadata of a rebased capture. The method never subtracts across session ids and returns `current` unchanged when the counters restarted. `parse` itself is unchanged: a record without `costBasis` from a later prompt carries the running total. You apply the rebase; agent-client 0.31.0 does not.
+
+## Capabilities and limits
+
+| | Claude Code | Codex |
+|---|---|---|
+| Verified live | CLI 2.1.292, `claude-code-sdk` 1.7.0, `--print` and bidirectional modes, depth 2, `completed` sub-agents | CLI 0.160.1, headless `codex exec`, depth 1, `completed` children; rollouts from 0.147.0 parse |
+| Covered by the fixture only | thinking, a `failed` sub-agent, a refused spawn, a sub-agent whose end is not reported | `interrupted` and unknown statuses, a failed spawn, an uncollected child |
+| Forked children | not applicable | parsed by the replay rule; observed in two of three live runs (8 and 9 replayed records skipped, status and tokens correct), not exhaustively validated |
+| Nesting | depth 2 observed live | depth 2 parsed by the fixture rules only |
+| Needed from the caller | `--forward-subagent-text` for text, thinking and text-only turns | the child rollout files |
+| Cost per sub-agent | none; inside the parent's cost (`included_in_parent`) | none (`unreported`) |
+| Sub-agent output tokens | a lower bound | the file's own count |
+| Not supported | background sub-agents, a resumed session, transcript-file import, permission decisions | `codex exec resume`, `codex app-server`, historical sessions, reasoning text |
+| agent-client | nothing wired as of 0.31.0 | nothing wired as of 0.31.0 |
+
+## Troubleshooting
+
+| Symptom | Cause | What to do |
+|---|---|---|
+| `subagents()` is empty and `subagentTracksAvailable()` is `false` for a Claude session that used sub-agents | the messages arrived without wire lines, so `parent_tool_use_id` was not available | pass the wire line with each message (`ParsedMessage.RegularMessage.of(message, line)`), as the SDK does |
+| sub-agent runs have tool calls but no text and few tokens | Claude Code ran without `--forward-subagent-text` | start the CLI with the flag; the parent's figures are complete either way |
+| `recordOnce` throws `IllegalArgumentException` | the capture has no session id or no message ids (not a wire capture) | parse the live stream or a stream file; a hand-built `PhaseCapture` cannot be keyed |
+| `recordOnce` throws `IllegalStateException` naming a run | an earlier recording of the same execution has not ended or ended with an error | remove that run directory, then record again |
+| a Codex capture has `subagentsWithoutTrack` entries with `not_collected` | a child started but its rollout file was not supplied | locate the file named with that thread id and add it to `CodexRollouts` |
+| `CodexRollouts` throws "needs exactly one rollout without parentThreadId" | no root, or two files without a parent | give every child its `parent_thread_id`; exactly one file is the root |
+| a Codex child is `CRASHED` although it ran | neither the parent nor the child recorded a turn outcome for it | the status means "no end observed"; check `subagent.statusSource` |
+| every run directory is counted as an experiment item | sub-agent runs included in an item count | exclude `tags.track == "subagent"` for item counts only; see [Analyze runs](/docs/agent-journal/analyzing-runs) |

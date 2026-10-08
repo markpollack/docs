@@ -4,6 +4,22 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of October 4, 2026
+
+### Agent Journal 1.11.0
+
+**Sub-agents as runs of their own, for Claude Code and Codex.**
+
+- A Claude Code or Codex sub-agent is recorded as a linked run: `parentRunId` points at the spawning run, the tag `track=subagent` marks it, and `subagent.spawnToolUseId` joins it to the parent's `tool_call` event. The parent's files hold the main loop only
+- Complete Claude Code capture needs the CLI started with `--forward-subagent-text`; Codex capture takes the root and child rollout files as `CodexRollouts`. Input and cache tokens over a Claude call and its sub-agent runs reconcile exactly to the call's `modelUsage`
+- `RunRecorder.recordOnce` and `CodexRunRecorder.recordOnce` record an execution at most once per experiment and storage, across restarts
+- `SessionLogParser.withSessionBaseline` gives a later prompt of a multi-prompt Claude Code session its own cost instead of the session's running total
+- Token and turn counting corrected for Claude Code, a recorder closed without `finish()` now ends `CRASHED`, the event and analysis streams name the version that wrote them, and Jackson moves to 2.22.3 / 3.2.3 for four September advisories
+
+[Sub-agent capture](/docs/agent-journal/subagent-capture) | [What's New](/docs/agent-journal/whats-new) | [Source](https://github.com/markpollack/agent-journal)
+
+---
+
 ## Week of September 20, 2026
 
 ### ACP Java SDK 0.18.0

@@ -1,6 +1,6 @@
 ---
 title: "Capture SDK Sessions"
-description: "Record Claude Code, Gemini CLI, Grok, Codex, Antigravity, and Junie results with Agent Journal 1.10.1"
+description: "Record Claude Code, Gemini CLI, Grok, Codex, Antigravity, and Junie results with Agent Journal 1.11.0"
 ---
 
 Agent Journal provides six vendor adapters that write compatible core events and portable traces.
@@ -11,6 +11,22 @@ Both require a Java 21 runtime, because those SDK dependencies are published as 
 The Grok, Codex, Antigravity, and Junie adapters parse their CLI's durable JSONL directly and carry no vendor SDK dependency, so they run on Java 17 like `journal-core`.
 All four produce an ordered tool trajectory; Gemini does not.
 
+Every module turns one agent call into the same journal shape: a run with a prompt event, one `llm_call` with the call's token usage and cost, one `tool_call` per tool use with the tool's own input map, and a `step_cost` per step in the analysis log.
+The differences are in what each CLI reports:
+
+| Provider | Source read | Tool trajectory | Monetary cost | Sub-agents |
+|---|---|---|---|---|
+| Claude Code | the CLI's `stream-json` output, through `claude-code-sdk` | yes, with per-turn usage and the stable `tool_use` id as step id | reported by the CLI for the whole call, split per step | captured as linked runs (1.11.0) |
+| Codex | the durable rollout file(s) | yes; tool calls classified from their payload, `function_call` arguments kept verbatim | not reported (`costAvailable=false`); tokens per thread are recorded | captured as linked runs (1.11.0) |
+| Gemini CLI | the SDK's turn-level result | turn level only | reported | no |
+| Grok CLI | `streaming-json` output | yes | reported as a session total, split evenly over steps | no |
+| Antigravity | streaming JSON | yes, with per-step duration and terminal token usage | not reported (`costAvailable=false`) | no (the stream carries pointers only) |
+| Junie | the session's `events.jsonl` | yes, with per-call cost reconciling to the session total | reported | no |
+
+A cost of 0 with `costAvailable=false` in the `llm_call` metadata means the CLI reported no cost, not that the call was free; see [Cost provenance](#cost-provenance).
+Sub-agent capture for Claude Code and Codex has its own guide: [Sub-agent Capture](/docs/agent-journal/subagent-capture).
+`events.jsonl` and `analysis.jsonl` start with a header line that carries the schema version and, since 1.11.0, the producer version, so a reader can tell which release wrote a record; `feedback.jsonl` has no header, and a portable trace file has its own header with its own schema version.
+
 ## Claude Code
 
 Add the adapter:
@@ -19,7 +35,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -60,12 +76,48 @@ Journal.configure(new JsonFileStorage(Path.of(".agent-journal")));
 try (RunRecorder recorder = new RunRecorder(
         Journal.run("capture-experiment").agent("claude-code").start())) {
     recorder.recordPhase(phase);
+    recorder.finish();
 }
 ```
 
+Call `finish()` on the success path.
+Since 1.11.0 only `finish()` records a completed run: `close()` cannot tell a normal exit from an exception leaving the block, so a recorder closed without `finish()` ends its run `CRASHED`.
+A plain `Run` is unchanged; its `close()` still ends it `FINISHED`.
+
 The recorder writes execution events to `events.jsonl` and per-step cost attribution to `analysis.jsonl`.
-It fails at finish when it produced derived events but the configured backend does not persist them durably.
+It fails at finish when it produced derived events but the configured backend does not persist them durably, and it ends the run before throwing.
 Call `lenient()` only when losing the derived stream after process exit is intentional.
+
+### Record once
+
+To record an execution at most once per experiment and storage root, even across a restart, use `recordOnce` instead of creating the run yourself:
+
+```java
+import io.github.markpollack.journal.claude.RunRecorder;
+import io.github.markpollack.journal.storage.SourceRecordings;
+
+SourceRecordings.Outcome outcome = RunRecorder.recordOnce(
+        "capture-experiment", phase, builder -> builder.agent("claude-code"));
+```
+
+`outcome.runId()` is the run that records the execution and `outcome.recordedNow()` is `false` when an earlier, complete recording was found.
+The run carries the execution's key (`capture.sourceKind`, `capture.sourceKey`); the same source processed again writes nothing, a later prompt of the same session records normally, and an earlier recording that has not ended or ended with an error fails explicitly.
+`recordOnce` needs a capture with a session id and per-turn message ids, which `parse` over the live SDK stream provides.
+
+### Multi-prompt sessions
+
+Claude Code reports `total_cost_usd`, `modelUsage` and `duration_api_ms` on every result line as the **session's running total**, while `usage`, `duration_ms` and `num_turns` cover the query alone.
+A caller that records one phase per prompt in one session rebases each later capture onto the previous one:
+
+```java
+PhaseCapture first = SessionLogParser.parse(firstResponse, "plan", planPrompt);
+PhaseCapture secondRaw = SessionLogParser.parse(secondResponse, "implement", implementPrompt);
+PhaseCapture second = SessionLogParser.withSessionBaseline(secondRaw, first);
+```
+
+The returned capture carries the query's own cost, per-model costs and API time as the difference from the previous capture of the same session id, keeps the running totals in `sessionCost()`, and is recorded with `costBasis=session_delta` and `sessionCumulativeCostUsd` in the LLM call's metadata.
+It never subtracts across session ids and leaves a capture unchanged when the counters restarted.
+`parse` itself is unchanged, so a record without `costBasis` from a later prompt carries the running total.
 
 ## Gemini CLI
 
@@ -75,7 +127,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>gemini-cli-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -109,7 +161,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>grok-cli-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -139,11 +191,11 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>codex-cli-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
-`CodexSessionParser` reads a durable Codex rollout JSONL file:
+`CodexSessionParser` reads a durable Codex rollout JSONL file, or, since 1.11.0, the root rollout together with the child rollouts of the sub-agents it started:
 
 ```java
 import io.github.markpollack.journal.Run;
@@ -158,6 +210,26 @@ CodexPhaseCapture phase = CodexSessionParser.parse(
 new CodexRunRecorder(run).recordPhase(phase);
 ```
 
+When the session started sub-agents, collect the root and child rollout files and pass them as one `CodexRollouts`; each child becomes a linked run.
+`CodexRunRecorder.recordOnce` records the execution at most once, keyed by the root thread id.
+See [Sub-agent Capture](/docs/agent-journal/subagent-capture) for the collection, linkage, status and accounting rules.
+
+```java
+import io.github.markpollack.journal.codex.CodexRollout;
+import io.github.markpollack.journal.codex.CodexRollouts;
+import java.nio.file.Files;
+import java.util.List;
+
+CodexRollout root = new CodexRollout(rootThreadId, null, rootPath.toString(), Files.readAllLines(rootPath));
+CodexRollout child = new CodexRollout(childThreadId, rootThreadId, childPath.toString(), Files.readAllLines(childPath));
+
+CodexPhaseCapture tree = CodexSessionParser.parse(
+        new CodexRollouts(List.of(root, child)), "implement", promptText);
+
+SourceRecordings.Outcome outcome = CodexRunRecorder.recordOnce(
+        "capture-experiment", tree, builder -> builder.agent("codex"));
+```
+
 Codex records most tool invocations under the outer function name `exec`, which would collapse every step into one undifferentiated name.
 The parser deliberately classifies the nested `payload.input` call instead, extracting `exec_command` arguments without evaluating them and assigning semantic names such as `Search`, `Read`, `Inspect`, `Test`, `Build`, and `Git`.
 
@@ -168,6 +240,8 @@ The raw input and command are retained on the record, so callers can reclassify 
 </Note>
 
 Codex rollout token counts, including cached and reasoning tokens, are preserved.
+Since 1.11.0 `inputTokens` excludes cached input, as for every other provider; an older value converts exactly by subtracting `cacheReadTokens`.
+A `function_call` tool call is recorded under its own name with its arguments kept verbatim, and a tool call that exited with code 0 is not marked failed.
 
 ## Antigravity CLI
 
@@ -177,7 +251,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>antigravity-cli-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -198,6 +272,7 @@ new AntigravityRunRecorder(run).recordPhase(phase);
 
 The parser pairs active and terminal updates by `step_index` and handles both `DONE` and `ERROR` steps, recording parameters, output or error text, duration, and terminal token usage.
 Stable identities are derived from the conversation and step positions.
+Antigravity's stream reports no monetary cost: the recorder writes a cost of 0 marked `costAvailable=false` with an `unreported` source, while each step's measured duration and the terminal token usage are recorded as reported.
 
 ## Junie CLI
 
@@ -207,7 +282,7 @@ Add the adapter:
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>junie-cli-capture</artifactId>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 
@@ -242,8 +317,12 @@ It reports no thinking-token count, so the capture has no thinking-token field; 
 
 Neither Codex nor Antigravity reports monetary cost in these streams.
 Their cost records are zero-valued and explicitly marked `costAvailable=false` with an `unreported` source, so a downstream reader can distinguish "this run cost nothing" from "this CLI never said."
+Token counts and measured durations are recorded for both; only the dollar figure is unknown.
+A Claude Code sub-agent's `llm_call` is also zero-valued with `costAvailable=false`, but its source is `included_in_parent`: the parent's cost already contains it.
+Claude Code and Gemini report a cost for the call and their `llm_call` events carry it without a `costAvailable` key.
 Junie does report cost: its records are marked `costAvailable=true` with a `reported` source when the trace carries per-call costs.
 Like Grok, Junie reports a session total but no per-step cost, so its per-step `StepCostEvent` shares are an even split of that total.
+A Grok, Codex or Junie tool call whose duration was not measured records `durationMs` as -1 since 1.11.0 (earlier versions wrote 0).
 
 ## Portable trace modes
 

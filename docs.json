@@ -259,6 +259,7 @@
                     "group": "Guides",
                     "pages": [
                       "docs/agent-journal/capture-sessions",
+                      "docs/agent-journal/subagent-capture",
                       "docs/agent-journal/analyzing-runs"
                     ]
                   },

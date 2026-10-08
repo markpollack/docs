@@ -117,7 +117,7 @@ public class RequirementsDemo {
 }
 ```
 
-Keep the exact producer revision `9ccddd31862cc79c7dc2b2d41f4fb1596a56972a` installed in the same isolated `EVAL_M2`.
+Keep the exact producer revision `904c1983c3c919b873ca03beb7e321759580ee14` installed in the same selected `EVAL_M2` (the standard repository by default).
 Prepare this standalone caller's own dependencies and Maven plugins with a first run without `-o`.
 The producer build alone does not download everything in this caller POM.
 `-nsu` suppresses snapshot update checks while Maven downloads missing dependencies and plugins.
@@ -127,7 +127,7 @@ The example uses deterministic responses and performs no live inference.
 ./mvnw -nsu -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo
 ```
 
-Once that preparation succeeds, subsequent runs can use the same isolated repository offline:
+Once that preparation succeeds, subsequent runs can use the same selected repository offline:
 
 ```bash
 ./mvnw -o -f ../requirements-demo/pom.xml -Dmaven.repo.local="$EVAL_M2" compile exec:java -Dexec.mainClass=RequirementsDemo

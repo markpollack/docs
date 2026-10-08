@@ -1,163 +1,50 @@
 ---
 title: "Getting Started with Agent Workflow"
-description: "Compose steps into workflows with typed context, portable runtimes, and quality gates"
+description: "Define typed Steps, register their objects and run a durable workflow"
 ---
 
-<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+This tutorial uses the **0.13.0 executable DSL** and deterministic Java Steps.
+It makes no provider calls and needs no API key.
+0.13.0 is prepared for publication; use its staged artifacts until Maven Central publication is confirmed.
+Durable loops, waits/timers and committed-event Journal projection are unavailable in this milestone.
 
-## What is Agent Workflow?
+## Define business contracts
 
-A workflow is a sequence of **steps**. Each step does one thing — calls an LLM, runs a function, invokes an external agent. Steps pass data through a shared **context** (typed key-value pairs). The workflow compiles to a **graph IR** — a pure data structure that decouples definition from execution. Three runtimes are available: `LocalStepRunner` (in-process, zero overhead), `CheckpointingStepRunner` (JDBC crash recovery), and `TemporalStepRunner` (distributed durable execution) — same workflow code, swap a single `@Bean`.
-
-```java
-Workflow.define("pr-review")
-    .step(fetchDiff)
-    .then(analyzeDiff)
-    .gate(new JudgeGate(jury, 0.8))
-        .onPass(postComment)
-        .onFail(revise)
-    .end()
-    .run(event);
-```
-
-## Steps
-
-Steps are the building blocks. Each takes input, does work, produces output.
-
-### Deterministic steps
-
-Pure Java — no LLM, no cost:
+Use concrete classes implementing `Step<I,O>`.
+Pass services and settings through their constructors.
+Return business values from `execute`; use `StepContext` only for execution metadata.
 
 ```java
-Step<Object, Object> fetchDiff = Step.named("fetch-diff", (ctx, in) -> {
-    // Call GitHub API, return the diff as a string
-    return gitHub.getPullRequest(in).getDiff();
-});
+public record Request(String repository, int number) {}
+public record Diff(String revision, String text) {}
+public record ReportInput(Request request, Diff diff) {}
+public record Report(String text) {}
+
+var fetch = new Fetch("revision-17");
+var report = new WriteReport();
+var workflow = Workflows.define("sequential-review")
+    .then(fetch).then(report).terminate(SUCCEEDED).build();
 ```
 
-### LLM steps
+`Fetch` declares `Step<Request, Diff>` and `WriteReport` declares `Step<ReportInput, Report>`.
+The next Step's input record states which typed earlier values it needs.
+The complete implementations and runtime wiring are in [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/Sequential.java) and [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/tutorial/workflow-dsl-consolidation-20261008/executable-dsl/src/main/java/example/ExampleRunner.java).
 
-Several flavors depending on what you're calling:
+## Dependencies and execution
 
-| Step type | What it wraps | Typical duration |
-|-----------|-------------|-----------------|
-| `ChatClientStep` | Single Spring AI `ChatClient` call | Seconds |
-| `ClaudeStep` | Full Claude CLI agent session (quick scripts, no trace capture) | Minutes |
-| `AgentClientStep` | External agent runtime with [trace capture](/docs/agent-workflow/trace-capture) (Claude, Gemini, etc.) | Minutes |
-| `A2AStep` | Remote agent via Agent-to-Agent protocol | Minutes |
+Use Java 21 and `io.github.markpollack:workflow-batch:0.13.0`.
+Native Verdict routing also needs `io.github.markpollack:agent-judge-json-jackson2:0.18.0`.
+Judge 0.18.0 is published; Workflow 0.13.0 remains a prepared candidate.
+Until publication is confirmed, use staged Workflow artifacts.
 
-A `ClaudeStep` isn't a single API call — it runs a complete agentic loop internally. The workflow sees it as one step:
+Follow the [six-lesson tutorial](/docs/agent-workflow/tutorial) to compile and execute the example.
+Separate definition, Step registration and runtime configuration as shown there.
+No Spring container or provider is needed.
 
-```
-Workflow
-  └── Step: FetchPR          [deterministic — GitHub API call]
-  └── Step: AnalyzeDiff      [ClaudeStep — full agent loop internally]
-                                  ├── LLM turn 1 → tool call → result
-                                  ├── LLM turn 2 → tool call → result
-                                  └── LLM turn N → finish
-  └── Step: AssembleReport   [deterministic — string formatting]
-```
+## Supported composition
 
-### Creating steps with ChatClientStep
-
-For a single LLM call, `ChatClientStep` wraps a Spring AI `ChatClient`:
-
-```java
-ChatClient chat = ChatClient.builder(chatModel).build();
-
-Step<Object, Object> write = Step.named("write", (ctx, in) ->
-        chat.prompt()
-                .user("Write a 3-sentence story about: " + in)
-                .call().content());
-```
-
-## Context
-
-Steps communicate through `AgentContext` — a typed key-value store that flows through the workflow:
-
-```java
-// Define typed keys
-static final ContextKey<String> DIFF = ContextKey.of("diff", String.class);
-static final ContextKey<Double> RISK_SCORE = ContextKey.of("risk-score", Double.class);
-
-// Step reads from context and writes back
-Step<Object, Object> assessRisk = Step.named("assess-risk", (ctx, in) -> {
-    String diff = ctx.require(DIFF);          // read upstream output
-    double score = evaluateRisk(diff);
-    // score becomes this step's output, available to downstream steps
-    return score;
-});
-```
-
-The context is immutable — each step gets a snapshot, mutations produce a new instance. Parallel branches receive independent snapshots and merge at join points.
-
-The framework auto-populates `Steps.outputOf("step-name")` after each step, so any downstream step can read any prior step's output by name.
-
-**Sub-workflow context propagation**: when a `Workflow` is used as a step inside another `Workflow`, its internal context mutations propagate back to the parent automatically. All `updateContext()` writes from nested steps are visible to downstream steps in the parent — no workarounds needed.
-
-## Your First Workflow
-
-```java
-Step<Object, Object> write = Step.named("write", (ctx, in) ->
-        chat.prompt()
-                .user("Write a 3-sentence story about: " + in)
-                .call().content());
-
-Step<Object, Object> editForAudience = Step.named("edit-audience", (ctx, in) ->
-        chat.prompt()
-                .user("Rewrite for young adults. Return only the story: " + in)
-                .call().content());
-
-Step<Object, Object> editForStyle = Step.named("edit-style", (ctx, in) ->
-        chat.prompt()
-                .user("Rewrite in a humorous style. Return only the story: " + in)
-                .call().content());
-
-String result = (String) Workflow.<String, Object>define("novel-creator")
-        .step(write)
-        .then(editForAudience)
-        .then(editForStyle)
-        .run("dragons and wizards");
-```
-
-Output flows forward: `write` → `editForAudience` → `editForStyle`. Each step's output is the next step's input.
-
-## The Graph IR
-
-The DSL doesn't execute directly — it builds a `WorkflowGraph`. This separation enables:
-
-- **Portable runtimes** — the IR decouples workflow definition from execution. Three runners ship today: `LocalStepRunner`, `CheckpointingStepRunner` (JDBC), and `TemporalStepRunner` (distributed)
-- **Tracing** — every step transition is recorded (`TraceRecorder`)
-- **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
-
-Control flow compiles to real graph structure: a branch is 4 nodes + 4 edges; a loop has a back-edge; parallel has fork/join nodes. All visible in traces.
-
-## Prerequisites
-
-- Java 21+
-- Spring AI 2.0
-
-```xml
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>workflow-flows</artifactId>
-    <version>0.10.0</version>
-</dependency>
-```
-
-## What's Next
-
-<CardGroup cols={2}>
-  <Card title="Step Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
-    Constructor injection, input chaining, context keys — 4 patterns for getting data into steps
-  </Card>
-  <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
-    10+ composable patterns — branch, loop, parallel, decision, gate, supervisor
-  </Card>
-  <Card title="Durability" icon="database" href="/docs/agent-workflow/durability">
-    Crash recovery, checkpointing, and distributed execution
-  </Card>
-  <Card title="Complete Examples" icon="flask" href="/docs/agent-workflow/examples">
-    9 runnable integration tests validated against GPT-4.1
-  </Card>
-</CardGroup>
+Sequences, reusable nested workflows, exhaustive enum decisions, native Verdict routing, static parallel groups and bounded runtime fan-out compose through the same compiler and durable runtime.
+`end()` closes the innermost lexical block; explicit terminals declare execution completion.
+Durable loops and timers are deferred.
+There is no supported durable Temporal or interchangeable-runner contract for this milestone.
+See [Durability](/docs/agent-workflow/durability) before using a saved store.

@@ -1,239 +1,55 @@
 ---
-title: "Durability"
-description: "Crash recovery, checkpointing, and distributed execution for agent workflows"
+title: "Local Durability and Recovery"
+description: "Committed-result reuse, bounded concurrency and explicit recovery limits"
 ---
 
-<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
-
-## The Graduation Path
-
-Agent Workflow separates workflow definition from execution. The `StepRunner` interface is the seam — swap the bean, not the workflow:
-
-| Level | Runner | What it adds |
-|-------|--------|-------------|
-| 0 | `LocalStepRunner` | In-process, zero overhead. Default. |
-| 1 | `CheckpointingStepRunner` | JDBC crash recovery — resume from last completed step |
-| 2 | `TemporalStepRunner` | Distributed durable execution via Temporal activities |
-
-Same workflow code at every level:
-
-```java
-// Level 0 — default, no persistence
-@Bean StepRunner stepRunner() {
-    return new LocalStepRunner();
-}
-
-// Level 1 — JDBC crash recovery
-@Bean StepRunner stepRunner(AgentStepExecutionReadRepository readRepo,
-                            AgentStepExecutionWriteRepository writeRepo) {
-    return new CheckpointingStepRunner(readRepo, writeRepo);
-}
-
-// Level 2 — Temporal durable execution
-@Bean StepRunner stepRunner() {
-    return new TemporalStepRunner("agent-tasks");
-}
-```
-
-## CheckpointingStepRunner
-
-Persists step outputs to a JDBC database. On restart with the same `runId`, completed steps are skipped — their cached output is returned directly.
-
-### How it works
-
-1. Before executing a step, queries by `(runId, stepName)` — the **checkpoint key**
-2. If a `COMPLETED` record exists, returns the cached `outputPayload` (skip)
-3. Otherwise, creates a `STARTED` record, executes the step, upgrades to `COMPLETED` with the serialized output
-4. On exception, records `FAILED` with the error message
-
-### Maven coordinates
-
-```xml
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>workflow-batch</artifactId>
-    <version>0.10.0</version>
-</dependency>
-```
-
-Requires Spring Data JPA and a JDBC `DataSource` on the classpath. H2 works for development; Postgres or MySQL for production.
-
-### Restart semantics
-
-`runId` is the stable identity for a workflow instance. **COMPLETED steps are skipped permanently for that `runId`.** FAILED steps are not automatically retried — the system leaves them in place until an operator explicitly decides to retry.
-
-This is intentional. Not all failures are transient: a bad prompt, a schema mismatch, or a programming error will fail again without a fix. Automatic retry would mask the real problem.
-
-### Crash-and-resume with CheckpointManager
-
-When a step fails, call `CheckpointManager.getRunState()` to inspect what happened, then `resetFailedSteps()` only after confirming the failure was transient:
-
-```java
-var manager = new CheckpointManager(readRepo, writeRepo);
-var ctx = AgentContext.withRunId("run-1");
-var executor = new WorkflowExecutor(checkpointRunner, TraceRecorder.noop());
-
-// First attempt — crashes at step-c
-try {
-    executor.execute(workflow.graph(), ctx, "start");
-} catch (RuntimeException e) {
-    // step-a and step-b: COMPLETED; step-c: FAILED
-}
-
-// Operator inspects state
-List<AgentStepExecution> state = manager.getRunState("run-1");
-// diagnose: was this a transient network blip? a permanent config error?
-
-// Only reset if the failure was transient
-int reset = manager.resetFailedSteps("run-1");  // deletes the FAILED record(s)
-// reset == 1 (step-c)
-
-// Retry with same runId — step-a and step-b skipped, step-c retried
-String result = executor.execute(workflow.graph(), ctx, "start");
-```
-
-`resetFailedSteps` deletes FAILED records; COMPLETED records are untouched. The next execution creates a fresh STARTED record for each reset step and re-runs it.
-
-### Basic crash-and-resume example
-
-A 4-step workflow crashes at step 3. After operator reset, steps 1-2 are skipped (cached), step 3 retried:
-
-```java
-Step<String, String> step1 = Step.named("step-1", (ctx, in) -> in + "→1");
-Step<String, String> step2 = Step.named("step-2", (ctx, in) -> in + "→2");
-Step<String, String> step3 = Step.named("step-3", (ctx, in) -> {
-    if (shouldCrash()) throw new RuntimeException("crash!");
-    return in + "→3";
-});
-Step<String, String> step4 = Step.named("step-4", (ctx, in) -> in + "→4");
-
-var workflow = Workflow.<String, String>define("crash-resume")
-        .step(step1).step(step2).step(step3).step(step4)
-        .build();
-
-// First attempt — step-3 fails
-var ctx = AgentContext.withRunId("run-1");
-var executor = new WorkflowExecutor(checkpointRunner, TraceRecorder.noop());
-executor.execute(workflow.graph(), ctx, "start"); // throws
-
-// Operator diagnoses, decides it was transient, resets
-new CheckpointManager(readRepo, writeRepo).resetFailedSteps("run-1");
-
-// Retry — steps 1-2 SKIPPED (cached), steps 3-4 execute
-String result = executor.execute(workflow.graph(), ctx, "start");
-// result: "start→1→2→3→4"
-```
-
-<Note>
-A complete runnable example is in [`workflow-dsl-examples/CrashRecoveryIT`](https://github.com/markpollack/workflow-dsl-examples) — `@DataJpaTest` + H2, no LLM needed.
-</Note>
-
-### JPA entities
-
-Two JPA entities back the checkpoint system:
-
-| Entity | Table | Purpose |
-|--------|-------|---------|
-| `AgentStepExecution` | `agent_step_executions` | Per-step checkpoint. Key: `(runId, stepName)` unique constraint. Tracks status, output, tokens, cost. |
-| `AgentFlowExecution` | `agent_flow_executions` | Per-run envelope. Tracks workflow name, steps total/completed, total cost. |
-
-Both use `BatchStatus` (severity-ordered enum) and `ExitStatus` (embeddable record with severity-based composition via `and()`).
-
-### Typed output deserialization
-
-Each checkpoint stores the step's output type alongside its serialized payload. On restore, `CheckpointingStepRunner` uses `Class.forName(outputType)` to deserialize back to the original type rather than raw `Object`. This means that when a step is skipped and its cached output is returned to the next step, the type is preserved:
-
-```java
-// Step produces a typed result
-Step<String, SummaryReport> summarize = new SummarizeStep(chat);
-
-// First run — step executes, checkpoint stores SummaryReport.class + JSON payload
-// Second run (restart) — checkpoint restores SummaryReport, not Map or String
-```
-
-Steps that declare `outputType()` participate fully. `Step.named()` lambdas return `Object.class` by default — deserialization falls back to Jackson's type inference for those.
-
-## JdbcTraceRecorder
-
-Records every step transition to a `step_transitions` table. Auto-creates the table on first use.
-
-```java
-// From DataSource
-TraceRecorder recorder = new JdbcTraceRecorder(dataSource);
-
-// Or from JdbcTemplate
-TraceRecorder recorder = new JdbcTraceRecorder(jdbcTemplate);
-
-// Wire into executor
-var executor = new WorkflowExecutor(stepRunner, recorder);
-```
-
-Each `StepTransition` record includes: `run_id`, `workflow_name`, `from_step`, `to_step`, `timestamp`, `duration_ms`, `tokens_used`, `cost_usd`, `node_type`, `label`, `trace_path`. The `trace_path` column stores the absolute path to the step's JSONL trace file when using a trace-aware `AgentClientStep` — see [Trace Capture](/docs/agent-workflow/trace-capture).
-
-Query traces for a run:
-
-```java
-JdbcTraceRecorder recorder = new JdbcTraceRecorder(dataSource);
-List<StepTransition> trace = recorder.getTrace("run-1");
-```
-
-## TemporalStepRunner
-
-Dispatches each step as a Temporal Activity. Steps must be registered with `StepActivityImpl` on the worker side.
-
-### Maven coordinates
-
-```xml
-<dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>workflow-temporal</artifactId>
-    <version>0.10.0</version>
-</dependency>
-```
-
-### Activity dispatch
-
-```java
-// Workflow side — configure the runner
-StepRunner runner = new TemporalStepRunner("agent-tasks");
-// Default timeouts: 10min start-to-close, 30s heartbeat
-
-// Custom timeouts
-StepRunner runner = new TemporalStepRunner("agent-tasks",
-        Duration.ofMinutes(30),   // start-to-close
-        Duration.ofMinutes(1));   // heartbeat
-```
-
-### Worker-side step registration
-
-```java
-// Register steps with the activity implementation
-StepActivityImpl activity = new StepActivityImpl();
-activity.registerStep(step1);
-activity.registerStep(step2);
-
-// Wire into Temporal worker
-Worker worker = factory.newWorker("agent-tasks");
-worker.registerActivitiesImplementations(activity);
-```
-
-Steps are resolved by name from a `ConcurrentHashMap` registry. The activity creates a fresh `AgentContext` with the `runId` for each execution.
-
-<Note>
-Steps dispatched via Temporal must be **idempotent** — Temporal may retry activities on timeout or failure.
-</Note>
-
-<Note>
-**Sub-workflows run inline, not as activities.** A `Workflow` used as a step inside another `Workflow` bypasses the `TemporalStepRunner` and executes in-process. Only leaf steps are dispatched as Temporal activities. This is required for correct context propagation — the activity worker receives only the `runId`, not the full parent context.
-</Note>
-
-## Related
-
-<CardGroup cols={2}>
-  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    StepRunner interface, TraceRecorder, WorkflowExecutor
-  </Card>
-  <Card title="DSL Primitives" icon="sitemap" href="/docs/agent-workflow/choosing-a-pattern">
-    Sequential, parallel, gate, loop, branch, and more
-  </Card>
-</CardGroup>
+The 0.13.0 milestone executes its validated graph through one local JDBC runtime.
+One local JVM owns a store.
+The application supplies its constructor-injected Steps, compatible definition and deployment dependencies; recovery does not reconstruct the deployment.
+
+## Commit and recover
+
+Admission saves the root input, compatibility and finite execution policy.
+Before each Step, the runtime saves the exact typed invocation input and provenance.
+Accepted results and their continuation commit before successors execute.
+A native Verdict commits its complete assessment, conclusion, selected route and initial executable branch input together.
+Recovery reuses that route and never repeats an accepted jury evaluation.
+
+Fan-out saves an immutable ordered manifest before item execution.
+Equal values at different indexes have distinct invocation identities.
+Recovery retains committed item results and repeats only unresolved work within saved attempt/deadline allowances.
+It does not rediscover membership or reorder results.
+Reopen the compatible store and explicitly call `resume`; no background distributed worker service is implied.
+
+## Bounds and settlement
+
+| Bound | Effect |
+| --- | --- |
+| Fan-out `maxItems` | Refuses oversized input before item effects; never truncates. |
+| Fan-out `maxInFlight` | Limits admitted, unsettled item workflows; waits for descendants retain occupancy. |
+| Runtime `maximumConcurrency` | Limits physically executing Steps; coordinating scopes consume no worker slot. |
+| Attempts, invocations, depth, duration | Finite saved execution allowances; recovery does not renew the deadline. |
+
+Nested supported composition can progress at physical capacity one.
+Parallel and fan-out `allSuccessful` joins require every declared result.
+Negative business outcomes are values; execution failures prevent a successful partial join.
+Admitted work settles before failure is reported.
+Empty fan-out returns an empty typed list.
+Cancellation or expiry revokes acceptance authority; it does not interrupt or roll back external application calls.
+
+## Limits
+
+A crash after an external effect but before accepted result commit can repeat that effect.
+There is no exactly-once external-effect or power-loss guarantee.
+Use stable invocation identity for external idempotency where supported.
+Known execution failures are terminal, without an engine retry/backoff policy.
+Terminal failed/cancelled runs cannot be reopened; a fresh run can repeat completed effects.
+
+Store format **9** refuses earlier formats, with no migration or automatic conversion.
+Keep earlier stores with their compatible deployment.
+Rolling binaries back does not downgrade store bytes.
+Undeclared service/configuration behavior and external responses are not made reproducible by a build identifier.
+
+Durable loops, waits/timers, committed-event Journal projection, non-routing evaluation and broader hardening remain deferred.
+Companion leaf-agent and in-memory graph facilities do not acquire this durable contract.
+See the [tutorial](/docs/agent-workflow/tutorial) for actual application wiring.

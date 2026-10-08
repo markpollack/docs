@@ -87,7 +87,7 @@ implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.80.0")
 testImplementation("com.agentclientprotocol:acp-test:0.80.0")
 ```
 
-### Snapshot (0.19.0-SNAPSHOT)
+### Snapshot (0.81.0-SNAPSHOT)
 
 For unreleased features, add the snapshot repository and use the snapshot version:
 
@@ -102,7 +102,7 @@ For unreleased features, add the snapshot repository and use the snapshot versio
 </repositories>
 ```
 
-Then use `0.19.0-SNAPSHOT` in place of `0.18.0` in your dependencies.
+Then use `0.81.0-SNAPSHOT` in place of `0.80.0` in your dependencies.
 
 ---
 

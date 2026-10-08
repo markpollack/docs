@@ -3,6 +3,8 @@ title: "Durability"
 description: "Crash recovery, checkpointing, and distributed execution for agent workflows"
 ---
 
+<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+
 ## The Graduation Path
 
 Agent Workflow separates workflow definition from execution. The `StepRunner` interface is the seam — swap the bean, not the workflow:

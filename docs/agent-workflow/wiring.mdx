@@ -3,6 +3,8 @@ title: "Wiring Complex Pipelines"
 description: "How to structure the constructor and Spring configuration for workflows with many collaborating steps"
 ---
 
+<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+
 ## The Problem
 
 A real pipeline has many steps — fetch context, rebase, run tests, run AI assessments, judge output, generate a report. Passing every leaf step to a single top-level constructor produces an argument list that's hard to read, hard to test, and hard to explain:

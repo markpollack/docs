@@ -4,9 +4,7 @@ description: "Public packages, configured producers, native execution, and retai
 ---
 
 <Note>
-This guide describes the Agent Eval 0.18 source API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
-0.18.0-SNAPSHOT is a source build, not a released or BOM-managed version.
-Use the [exact-source setup](/docs/agent-judge/getting-started#build-the-source-artifacts) before running these examples.
+This guide describes the Agent Eval 0.18.0 API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 | Package under `io.github.markpollack.judge` | Public responsibility |
@@ -52,6 +50,6 @@ A Verdict retains collective and individual judgments, seats, children/attempts,
 Core owns no Jackson engine. Add the supported Jackson 2 module explicitly; use `NativeRequirementCodecs.codec()` for RFC/EARS values and `VerdictCodec` for text/AllOf.
 Descriptions stay V3; results/evaluations use V6.
 
-Current source: [producer README](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/README.md), [writing judges](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/writing-judges.md), [describing juries](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/describing-juries.md), [V6 storage](https://github.com/markpollack/agent-judge/blob/904c1983c3c919b873ca03beb7e321759580ee14/portable-results-v6.md).
+Source at v0.18.0: [producer README](https://github.com/markpollack/agent-judge/blob/v0.18.0/README.md), [writing judges](https://github.com/markpollack/agent-judge/blob/v0.18.0/writing-judges.md), [describing juries](https://github.com/markpollack/agent-judge/blob/v0.18.0/describing-juries.md), [V6 storage](https://github.com/markpollack/agent-judge/blob/v0.18.0/portable-results-v6.md).
 These pinned sources are distinct from released 0.17 Javadoc.
 For source and stored-result changes, follow [Migrating to 0.18](/docs/agent-judge/migration-0.18).

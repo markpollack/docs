@@ -5,7 +5,7 @@ description: "Eleven credential-free fundamentals modules and the PetClinic requ
 
 The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) is the canonical sample suite.
 The eleven fundamentals modules are small executable Maven projects compiled against Agent Judge 0.17.0.
-The fundamentals commands below select the historical tested 0.17.0 revision. The migrated PetClinic path uses a separate source pin and reactor.
+The fundamentals commands below select the historical tested 0.17.0 revision. The migrated PetClinic path uses Agent Eval 0.18.0 in a separate reactor.
 
 ```bash
 git clone https://github.com/markpollack/agent-judge-tutorial.git
@@ -23,13 +23,12 @@ The first build downloads Maven dependencies; prepare the caches before attempti
 
 ## PetClinic case study
 
-The [configured PetClinic path](https://github.com/markpollack/agent-judge-tutorial/tree/d60b68a4b8352179b6c8e057060e644f156b8de4/case-studies/spec-driven-petclinic)
-uses Agent Eval source `904c1983c3c919b873ca03beb7e321759580ee14` at `0.18.0-SNAPSHOT`.
-Open the normal tutorial checkout at `d60b68a4b8352179b6c8e057060e644f156b8de4` and
-[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/d60b68a4b8352179b6c8e057060e644f156b8de4/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md) and
-[the presenter runbook](https://github.com/markpollack/agent-judge-tutorial/blob/d60b68a4b8352179b6c8e057060e644f156b8de4/case-studies/spec-driven-petclinic/PRESENTER-RUNBOOK.md)
-to install the complete sibling producer reactor in `~/.m2/repository`; `--isolated` is optional. These artifacts are locally built;
-no published 0.18 snapshot or BOM update is assumed.
+The [configured PetClinic path](https://github.com/markpollack/agent-judge-tutorial/tree/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic)
+uses Agent Eval 0.18.0 from Maven Central.
+Open the normal tutorial checkout at `2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f` and
+[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md) and
+[the presenter runbook](https://github.com/markpollack/agent-judge-tutorial/blob/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic/PRESENTER-RUNBOOK.md)
+for setup and commands; `--isolated` is optional.
 
 | Module | Configured evaluation |
 |---|---|

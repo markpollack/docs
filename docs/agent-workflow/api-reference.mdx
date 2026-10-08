@@ -54,6 +54,5 @@ See [Durability](/docs/agent-workflow/durability).
 <Note>Available since 0.14.0. This method is not available on the Sequence stage in 0.13.0.</Note>
 
 0.14.0 adds `build()` to `Workflows.Sequence` for a final child that always fails or cancels.
-This method is **not available on that stage in 0.13.0**.
 It adds no implicit terminal and does not permit dangling ordinary paths or unreachable successors.
 The final child’s explicit terminal closes the parent path; `build()` adds no implicit successful completion.

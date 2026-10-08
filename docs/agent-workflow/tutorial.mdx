@@ -57,7 +57,7 @@ public static final class WriteReport implements Step<ReportInput, Report> {
 
 The compiler assembles `ReportInput` from legally visible typed values.
 You do not write bindings, casts, context keys or explicit builder type arguments.
-See the complete [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/Sequential.java).
+See the complete [Sequential.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/Sequential.java).
 
 ## 2. Reuse a nested workflow
 
@@ -81,7 +81,7 @@ var workflow = Workflows.define("nested-review")
 
 Register the same `assess` instance used to define the child.
 The definition reuses composition; constructor injection supplies the implementation.
-See [Nested.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/Nested.java).
+See [Nested.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/Nested.java).
 
 ## 3. Route exhaustively on an enum
 
@@ -103,7 +103,7 @@ var workflow = Workflows.define("enum-review")
 
 Every enum constant needs exactly one arm.
 `end()` closes the choice; `terminate(SUCCEEDED)` declares execution completion.
-See [EnumDecision.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/EnumDecision.java).
+See [EnumDecision.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/EnumDecision.java).
 
 ## 4. Route a native Verdict
 
@@ -130,7 +130,7 @@ The fixture's `INCONCLUSIVE` assessment retains both `ERROR: Scanner unavailable
 A thrown evaluation ends with `ASSESSMENT_FAILED`; an unusable Verdict ends with `ASSESSMENT_INVALID`.
 Neither failure invents an `INCONCLUSIVE` assessment.
 The accepted assessment, selected route and exact first executable branch input commit together.
-See [NativeVerdict.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/NativeVerdict.java).
+See [NativeVerdict.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/NativeVerdict.java).
 
 ## 5. Parallel assessments and a typed report
 
@@ -158,7 +158,7 @@ They cannot read sibling-private values.
 The join publishes completed branch results for the report's typed input.
 A returned `Quality(false)` is a value; an execution failure prevents the successful join.
 Admitted work settles before failure is reported.
-See [ParallelAssessments.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/ParallelAssessments.java).
+See [ParallelAssessments.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/ParallelAssessments.java).
 
 ## 6. Discover files and fan out at runtime
 
@@ -187,7 +187,7 @@ Each occurrence has a distinct index identity, even when two values are equal.
 Physical Step capacity is a separate runtime setting.
 Completion order never changes the returned list order; empty input returns an empty list.
 No successful join can omit a failed item's result.
-See [FanOut.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/FanOut.java).
+See [FanOut.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/FanOut.java).
 
 ## Register objects and configure execution
 
@@ -208,7 +208,7 @@ try (var runtime = DurableWorkflows.open(directory, registry, deployment, policy
 
 The map above holds registration or compatibility metadata, never business values.
 `StepContext` supplies run, invocation and attempt metadata.
-The tutorial harness [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/cef32725376eec7e41ac33b4e25f9e11c9fc15ef/executable-dsl/src/main/java/example/ExampleRunner.java) asserts expected results without casting or choosing an execution path.
+The tutorial harness [ExampleRunner.java](https://github.com/markpollack/workflow-dsl-examples/blob/d5664f3aac5deb87241c6d63925309b9d8552446/executable-dsl/src/main/java/example/ExampleRunner.java) asserts expected results without casting or choosing an execution path.
 For store compatibility and unresolved-effect limits, read [Durability](/docs/agent-workflow/durability).
 
 `Sequence.build()` is available starting in 0.14.0 for a parent ending in an always-failing/cancelling child; see the [API reference](/docs/agent-workflow/api-reference#fluent-completion).

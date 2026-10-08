@@ -3,6 +3,8 @@ title: "AgentLoop"
 description: "Ready-to-use SWE agent — tools, session memory, observability, and a simple run/chat API backed by Spring AI's agent loop"
 ---
 
+<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+
 ## What is AgentLoop?
 
 `AgentLoop` is a ready-to-use agent that packages everything you need to run an autonomous coding task: tools, system prompt, turn limits, cost limits, session memory, and observability. Under the hood it delegates to Spring AI's `ChatClient` + `AgentLoopAdvisor` for the actual tool-calling loop.

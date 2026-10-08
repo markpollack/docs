@@ -4,6 +4,13 @@ description: "Release highlights for Agent Workflow"
 sidebarTitle: "What's New"
 ---
 
+<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+
+## Prepared 0.13.0 executable-DSL milestone
+
+Unpublished candidate: typed Steps and derived bindings, nested reusable workflows, exhaustive enum/native Verdict routing, static parallel groups, bounded runtime fan-out and local JDBC recovery. Loops, timers, committed-event Journal projection and broader hardening remain subsequent work. Store format 9 refuses older formats without migration; unresolved effects can repeat and terminal failures cannot be reopened. [Candidate release notes](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/RELEASE_NOTES_0.13.0.md).
+
+
 ## 0.10.0 (2026-06-15)
 
 - Spring AI 2.0.0 GA (clears CVE-2026-41712; spring-ai-client-chat 2.0.0)

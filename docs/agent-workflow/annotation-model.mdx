@@ -3,6 +3,8 @@ title: "Annotation Model"
 description: "Declare agents with @Agent, compose workflows inside AgentHandler, and wire exception handling with @ExceptionHandler and @AgentAdvice"
 ---
 
+<Note>This page describes the previously published legacy APIs. For the prepared 0.13.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+
 ## Why an Annotation Model?
 
 Steps and workflows are the plumbing. Agents are the product — the thing you expose to HTTP endpoints, MCP servers, message listeners, and other agents. The annotation model gives you a programming model for declaring agents, naming them, describing them, handling their errors, and looking them up by name at runtime.

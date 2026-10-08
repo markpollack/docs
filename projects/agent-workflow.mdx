@@ -1,145 +1,36 @@
 ---
 title: "Agent Workflow"
-description: "Build agents that work — and measure why they work. Multi-step pipelines with typed context, quality gates, and portable runtimes."
+description: "Typed Java workflow composition with bounded concurrency and local JDBC recovery."
 ---
 
-**[What's New →](/docs/agent-workflow/whats-new)**
+The latest published version remains **0.12.3**. **0.13.0 is a prepared release candidate**, the first executable-DSL milestone; it is not full R1 completion. Its stable Agent Judge 0.18.0 dependency must publish before Workflow can release.
 
-> **Current release: 0.12.3.**
->
-> **What's new in 0.12.3:** Compatibility with Agent Judge 0.17.0. `JudgeGate` and `TieredGate` treat a `NOT_APPLICABLE` aggregate as inconclusive, preserve the verdict, and route it through the existing error handler. [Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.12.3).
->
-> **What's new in 0.10.0:** Upgraded to Spring AI 2.0.0 GA, which clears CVE-2026-41712. Builds on 0.9.0 — `AgentCallback.onQuestion` now takes a tool-agnostic Question/Option callback record (no longer leaking a tool-library type), and judge integration moved to the `io.github.markpollack` namespace — plus 0.8.0 trace capture (`AgentClientStep` propagates trace file paths into the workflow journal) and 0.7.0 `ManagedAgentStep` (run steps in Anthropic's hosted sandbox).
+## Executable DSL milestone
 
-## Overview
+Write ordinary constructor-injected `Step<I,O>` objects. `Workflows.define(...)` builds a `ValidatedWorkflow`; `DurableWorkflows` executes its validated graph. Concrete Java types derive inputs, earlier-value captures and combined record inputs. Ambiguity refuses at build time. `StepContext` holds execution metadata, while business data travels through arguments and results.
 
-Agent Workflow helps you build agents that really work — understand *why* they work, then improve them in a controlled, experimental manner. You compose **steps** into **workflows**, each step doing one thing: call an LLM, run a function, invoke an external agent. Quality gates evaluate output at each stage. Every step transition is traced, feeding [Agent Journal](/projects/agent-journal) for behavioral analysis — so you can answer: *does the agent need better real-time steering? What knowledge is it missing to achieve its goal? Which steps should be deterministic instead of LLM-driven? What new tools should be built?*
+Supports typed sequences, nested same-run reusable workflows, exhaustive enum decisions, native Verdict routing, static parallel groups and bounded runtime fan-out. Fan-out accepts an immutable indexed manifest before item execution, isolates each occurrence (including equal values), applies item-count and logical in-flight bounds and collects results in input order. Logical whole-body occupancy is separate from physical Step capacity; nested coordination consumes no worker slots.
 
-The philosophy follows what Stripe learned building [Minions](https://arxiv.org/abs/2402.15678) at scale: *"The model does not run the system. The system runs the model."*
-
-A fluent DSL makes workflows easy to define — branching, loops, parallel execution, LLM-driven routing, error recovery. Steps exchange data through typed **context**. The workflow compiles to a **graph intermediate representation** that separates definition from execution, enabling portable runtimes without changing workflow code.
-
-```java
-Workflow.define("pr-review")
-    .step(fetchDiff)
-    .then(analyzeDiff)
-    .gate(new JudgeGate(jury, 0.8))
-        .onPass(postComment)
-        .onFail(revise)
-    .end()
-    .run(event);
-```
-
-## Core Concepts
-
-**Steps** are the building blocks. Each step takes input, does work, and produces output. Steps can be:
-
-- **Deterministic** — a Java function (GitHub API call, string formatting, file parsing)
-- **Single LLM call** — `ChatClientStep` wraps a [Spring AI](https://spring.io/projects/spring-ai) `ChatClient` call
-- **Agentic CLI tools** — `ClaudeStep` uses the [Claude Agent SDK](/projects/claude-agent-sdk) for full multi-turn agent sessions with deep tracing. `AgentClientStep` wraps other agentic CLI tools — Google Gemini, OpenAI Codex, Amazon Q — via [Agent Client](/projects/agent-client), giving you a unified interface
-- **Hosted agents** — `ManagedAgentStep` delegates to [Anthropic Managed Agents](https://docs.anthropic.com/en/api/overview), running steps in Anthropic's cloud sandbox with full tool access. `A2AStep` delegates via the A2A protocol to any remote agent
-
-A `ClaudeStep` or `AgentClientStep` isn't a single API call — it runs a complete agentic loop internally (dozens of tool calls, minutes of execution) and returns a typed result. The workflow sees it as one step.
-
-**Context** threads through every step. Steps read input parameters by key, do their work, and write output parameters back. Downstream steps pick up what upstream steps produced — all type-safe via `ContextKey<T>`.
-
-**The graph** means the workflow definition is pure data — nodes and edges, not opaque lambdas. This enables:
-- **Portable runtimes** — the graph decouples definition from execution. Ships with `LocalStepRunner` (in-process, zero overhead), `CheckpointingStepRunner` (JDBC crash recovery via `workflow-batch`), and `TemporalStepRunner` (distributed durable execution via `workflow-temporal`) — same workflow code, swap a single `@Bean`
-- **Tracing** — every step transition is recorded for observability and behavioral analysis via [Agent Journal](/projects/agent-journal)
-- **Steering** (planned) — runtime hooks that intercept before/after steps to enforce constraints, redirect behavior, or inject guidance. Deterministic or LLM-powered. Integrates with [Spring AI](https://spring.io/projects/spring-ai) advisors and the [Claude Agent SDK](/projects/claude-agent-sdk) hook system
-- **Inspection** — the graph is pure data (nodes + edges), not opaque lambdas
-
-## Hosted execution with ManagedAgentStep
-
-`ManagedAgentStep` runs a workflow step in Anthropic's hosted sandbox, with bash, file operations, and web tools.
-The workflow graph still controls the sequence; the hosted agent performs the work inside that step and returns its text result.
-Each execution creates a new session for the agent.
-
-Use `workflow-flows`, set `ANTHROPIC_API_KEY` for an account with Managed Agents access, and create an agent and environment in Anthropic's API first.
-In this example from the [0.7.0 release notes](/docs/agent-workflow/whats-new#managedagentstep), `agentId` and `envId` are those existing IDs, and `analyzeStep` and `validateStep` are steps you have already defined:
-
-```java
-var workflow = WorkflowGraph.builder()
-    .step("analyze", analyzeStep)
-    .step("remediate", ManagedAgentStep.of(agentId, envId).name("fix"))
-    .step("validate", validateStep)
-    .build();
-```
-
-Add the official Anthropic SDK dependency alongside `workflow-flows`.
-It is optional and needed only when you use `ManagedAgentStep`:
+[Complete compiling deterministic example](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/examples/review-files/README.md) · [Release notes](https://github.com/markpollack/agent-workflow/blob/r1/executable-dsl-release-20261008/RELEASE_NOTES_0.13.0.md)
 
 ```xml
 <dependency>
-    <groupId>com.anthropic</groupId>
-    <artifactId>anthropic-java</artifactId>
-    <version>2.34.0</version>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>workflow-batch</artifactId>
+    <version>0.13.0</version>
 </dependency>
 ```
 
-The [ManagedAgentStep release notes](/docs/agent-workflow/whats-new#managedagentstep) also show timeouts, direct execution, and provisioning an agent inline with `ManagedAgentStep.create(...)`.
+These coordinates currently require staged artifacts. Native Verdict routing additionally needs `agent-judge-json-jackson2:0.18.0`. No real provider is required by the example.
 
-## Start Here
+## Recovery and limits
 
-<CardGroup cols={2}>
-  <Card title="Tutorial: Build a Workflow" icon="graduation-cap" href="/docs/agent-workflow/tutorial">
-    From a single step to a supervised agent pipeline — 8 progressive examples
-  </Card>
-  <Card title="Tutorial Code" icon="github" href="https://github.com/markpollack/workflow-dsl-examples">
-    Clone and run all 13 examples with real LLM calls
-  </Card>
-</CardGroup>
+Local JDBC durability reuses committed results, assessments, selected routes and exact inputs after process death. The application reopens the compatible deployment and explicitly resumes unfinished runs. Unresolved external effects can repeat within saved attempt/deadline limits; there is no exactly-once external-effect guarantee. One local JVM owns a store. Cancellation and expiry prevent late result acceptance but do not stop application calls.
 
-## Documentation
+Store/run format **9** refuses older formats; no migration or automatic conversion. Keep earlier data with its matching deployment. Terminal failed/cancelled runs cannot be reopened; fresh reruns can repeat effects. Rolling back binaries does not downgrade stores.
 
-<CardGroup cols={2}>
-  <Card title="Getting Started" icon="play" href="/docs/agent-workflow/getting-started">
-    Steps, context, portable runtimes, first workflow
-  </Card>
-  <Card title="DSL Primitives" icon="code-branch" href="/docs/agent-workflow/choosing-a-pattern">
-    10+ composable patterns with code
-  </Card>
-  <Card title="Annotation Model" icon="at" href="/docs/agent-workflow/annotation-model">
-    @Agent, AgentHandler, exception handling, registry
-  </Card>
-  <Card title="Durability" icon="shield-halved" href="/docs/agent-workflow/durability">
-    Crash recovery, checkpointing, Temporal integration
-  </Card>
-  <Card title="Parameterization" icon="sliders" href="/docs/agent-workflow/parameterization">
-    4 patterns for getting data into steps
-  </Card>
-  <Card title="API Reference" icon="code" href="/docs/agent-workflow/api-reference">
-    Step, AgentContext, Gate, WorkflowGraph, StepRunner
-  </Card>
-</CardGroup>
+## Subsequent work
 
-## Why Deterministic Steps Matter
+Durable loops, waits/timers, Workflow committed-event Journal projection, non-routing evaluation, visualization/AI authoring and broader hardening remain deferred. Unsupported constructs refuse runtime admission. Legacy in-memory composition and agent-loop APIs remain companion APIs without this durable contract; their retirement and consumer migrations are subsequent work. Existing versioned tutorials and trace guides describe their earlier APIs, not this candidate's recovery contract.
 
-The biggest insight from running real agent experiments: the AI shouldn't do everything. This is the pattern Stripe describes in their [Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents) system, now shipping 1,300 PRs a week: *the model does not run the system — the system runs the model.*
-
-A real [PR merge workflow](https://github.com/markpollack/agentworks-pr-review) illustrates the point. The pipeline has 8 steps:
-
-```
-checkoutPR → formatCode → collectContext → compile → squash → rebase → resolveConflicts → review
-```
-
-Six steps are deterministic — git operations, Java formatting, GitHub API calls, Maven compile. Only two need LLM reasoning: resolving merge conflicts and reviewing the diff. The deterministic steps are free, fast, and perfectly reliable. The LLM steps are expensive and variable. By minimizing what the LLM needs to do, you reduce cost, increase reliability, and make the whole pipeline easier to debug.
-
-This isn't obvious until you measure it. In our [code coverage experiments](/experiments/code-coverage-v2), adding a deterministic pre-analysis step cut agent steps by 27%. The agent still explored the codebase — but it read source files instead of decompiling JARs. Same attention budget, better allocation.
-
-## Resources
-
-<CardGroup cols={2}>
-  <Card title="Source Code" icon="github" href="https://github.com/markpollack/agent-workflow">
-    Source code (0.12.3 on Maven Central)
-  </Card>
-  <Card title="Tutorial Code" icon="graduation-cap" href="https://github.com/markpollack/workflow-dsl-examples">
-    13 runnable examples — validated with real LLM calls
-  </Card>
-</CardGroup>
-
-## Used In
-
-- [Code Coverage v1](/experiments/code-coverage-v1) — Agent execution engine for all 9 variants
-- [Code Coverage v2](/experiments/code-coverage-v2) — Agent execution with skills injection
-- [Issue Classification](/experiments/issue-classification) — SWE-bench agent runner
+[Source](https://github.com/markpollack/agent-workflow) · [Business Source License 1.1](https://github.com/markpollack/agent-workflow/blob/main/LICENSE)

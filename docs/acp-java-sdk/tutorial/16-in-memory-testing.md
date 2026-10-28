@@ -56,7 +56,8 @@ AcpSyncClient client = AcpClient.sync(transportPair.clientTransport())
 
 // 4. Run test
 client.initialize();
-var session = client.newSession(new NewSessionRequest(".", List.of()));
+var cwd = java.nio.file.Path.of(".").toAbsolutePath().toString();
+var session = client.newSession(new NewSessionRequest(cwd, List.of()));
 client.prompt(new PromptRequest(
     session.sessionId(),
     List.of(new TextContent("Hello from in-memory test!"))

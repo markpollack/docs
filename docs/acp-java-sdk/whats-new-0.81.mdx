@@ -1,0 +1,66 @@
+---
+title: "What's New 0.81.0"
+description: "Protocol conformance fixes, stricter client checks, and the whole-spec audit"
+---
+
+<Note>
+0.81.0 is being prepared for release.
+Use `0.81.0-SNAPSHOT` to try these changes before publication.
+</Note>
+
+ACP Java SDK 0.81.0 closes six protocol conformance gaps and checks absolute paths on session requests.
+Calls that 0.80.0 forwarded despite missing capabilities or invalid session paths now fail before sending.
+The [whole-spec audit](https://github.com/agentclientprotocol/java-sdk/blob/18a7a6baf82169029765a4618b24c15a41ca5829/protocol-conformance/AUDIT-REPORT.md) explains the findings and links every recorded judgment.
+
+## What changes for clients
+
+| When you call | Behavior in 0.81.0 |
+| --- | --- |
+| `initialize()` | An unsupported protocol version fails with `AcpVersionException` and closes the connection. |
+| `authenticate()` | A terminal authentication method id is refused. Terminal authentication runs through the client's terminal support. |
+| Session new, load, resume, or fork with HTTP/SSE MCP servers | The agent must advertise the matching MCP transport capability. Otherwise the call fails with `AcpCapabilityException`. |
+| `prompt()` with image, audio, or embedded resource content | The agent must advertise the matching prompt capability. Otherwise the call fails with `AcpCapabilityException`. |
+| Session new, load, resume, or fork with `cwd` or `additionalDirectories` | Each path must be absolute. A relative or missing path fails with `IllegalArgumentException`. |
+| `session/cancel` while permission requests are pending | The client answers pending permission requests for that session with `cancelled` and stops their handlers. |
+
+Use an absolute working directory when the agent runs on the same machine:
+
+```java
+var cwd = java.nio.file.Path.of(".").toAbsolutePath().toString();
+var session = client.newSession(new NewSessionRequest(cwd, List.of()));
+```
+
+For a remote agent, pass an absolute path on the agent's machine.
+The SDK accepts POSIX and Windows absolute path forms; it does not check whether the directory exists.
+`additionalDirectories` still requires the agent's corresponding session capability.
+
+The capability API adds `requireMcpHttp()`, `requireMcpSse()`, and `requireEmbeddedContext()` to `NegotiatedCapabilities`.
+The client send paths now enforce these checks for you.
+
+## What changes for agents
+
+Boolean session config options are omitted, with a warning, when the client has not advertised boolean option support.
+This applies to session responses, config option responses, and config option updates.
+Other option kinds remain available.
+
+Your application still chooses URL elicitation ids and must keep outstanding ids unique.
+The SDK does not yet track their lifetime.
+
+## The audit and its limits
+
+The audit covers a frozen roster of 240 requirements from stable ACP v1.
+Run 001 reported six failures; each was reproduced with a failing test and fixed.
+Run 002 judged all six fixes PASS and raised two session-path findings that are also fixed in this release.
+It also raised elicitation id uniqueness, which remains an application responsibility.
+
+The audit is model-assisted evidence, not official ACP certification or a claim that every requirement passes.
+Run 002 contains abstentions and one unanswered item.
+The general requirement for absolute file paths remains open beyond session `cwd` and `additionalDirectories`, including file-system requests, terminal working directories, and tool-call locations.
+See the report for the complete results and dispositions.
+
+## Still open
+
+The WebFlux-on-Jetty WebSocket idle-timeout fix, bounded outbound queues for stdio and the WebSocket client, and native Micronaut Netty hosting remain planned for a later release.
+The [deployment topologies](/docs/acp-java-sdk/transports#deployment-topologies) describe the current framework hosts.
+
+For the earlier API migration and Spring Boot coordinate changes, see the [0.80.0 migration guide](/docs/acp-java-sdk/migration-0.80).

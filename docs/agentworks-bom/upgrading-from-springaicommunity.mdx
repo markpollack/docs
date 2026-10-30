@@ -1,0 +1,30 @@
+---
+title: "Upgrading from org.springaicommunity coordinates"
+description: "GroupId and package changes for builds that still use org.springaicommunity coordinates"
+---
+
+If your build still uses an `org.springaicommunity` groupId for one of these libraries, change the groupId to
+`io.github.markpollack`, move to the current version, and update your imports.
+
+## Maven coordinates
+
+| Project | Old groupId | New groupId | Current version |
+|---|---|---|---|
+| claude-agent-sdk-java | `org.springaicommunity` | `io.github.markpollack` | 1.7.0 |
+| agent-client | `org.springaicommunity.agents` | `io.github.markpollack` | 0.31.0 |
+| agent-sandbox | `org.springaicommunity` | `io.github.markpollack` | 0.10.2 |
+| agent-bench | `org.springaicommunity` | `io.github.markpollack` | 0.6.3 |
+| agent-judge | `org.springaicommunity` | `io.github.markpollack` | 0.18.0 |
+
+Artifact IDs are unchanged. To keep these versions aligned, import the [AgentWorks BOM](/projects/agentworks-bom)
+instead of pinning each one.
+
+## Package roots
+
+| Project | Old package root | New package root |
+|---|---|---|
+| claude-agent-sdk-java | `org.springaicommunity.claude.*` | `io.github.markpollack.claude.*` |
+| agent-client | `org.springaicommunity.agents.*` | `io.github.markpollack.agents.*` |
+| agent-sandbox | `org.springaicommunity.sandbox.*` | `io.github.markpollack.sandbox.*` |
+| agent-bench | `org.springaicommunity.bench.*` | `io.github.markpollack.bench.*` |
+| agent-judge | `org.springaicommunity.judge.*` | `io.github.markpollack.judge.*` |

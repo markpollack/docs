@@ -5,12 +5,6 @@ description: "Portable Java API for autonomous CLI agents — actively verified 
 
 **[What's New →](/docs/agent-client/whats-new)**
 
-<Info>
-This project has moved from `spring-ai-community/agent-client` to
-`markpollack/agent-client`. The Maven groupId changed from
-`org.springaicommunity.agents` to `io.github.markpollack`.
-</Info>
-
 Portable Java API for autonomous CLI agents. No Spring Boot required — build a model, create a client, run a goal. Optional Spring Boot starters for auto-configuration.
 
 Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/claude-agent-sdk)) and higher-level orchestration ([Agent Workflow](/projects/agent-workflow)).
@@ -27,7 +21,7 @@ Agent Client is the bridge between raw SDK calls ([Claude Agent SDK](/projects/c
 
 **0.26.0:** Breaking diligence cleanup. Removes the abandoned Vendir context advisor and Git-repository DSL, retires the stale `agents-runtime` container build and Docker TCK, and pins release automation. Claude Code, Codex, and Gemini CLI are the actively verified provider set; other adapters remain experimental. Its immutable Maven Central child POMs do not preserve all reviewed dependency floors; use 0.27.0 for the published-consumer correction.
 
-**0.25.0:** Fixes Spring Boot auto-configuration for all providers — the org migration had left the auto-config registration files pointing at the old `org.springaicommunity` package, so the starters failed to auto-configure (`ClassNotFoundException`) at boot. No public API changes.
+**0.25.0:** Fixes Spring Boot auto-configuration for all providers — the auto-config registration files named a stale package, so the starters failed to auto-configure (`ClassNotFoundException`) at boot. No public API changes.
 
 **0.24.0:** Compatibility fix — `agent-claude` now builds against agent-journal 1.6.0, restoring Claude trace-wiring for Spring Boot consumers on agentworks-bom 1.12.0+ (journal 1.5.0 had relocated `TraceContentMode`). No public API changes.
 

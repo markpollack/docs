@@ -47,7 +47,7 @@ description: "What changed in each AgentWorks BOM release, and why it matters"
 
 ## 1.15.0 (2026-07-01)
 
-- Repin agent-client family 0.24.0 → 0.25.0 — fixes Spring Boot auto-configuration for all providers (org migration had left the registration files at the old org.springaicommunity package → ClassNotFoundException at boot); all other members unchanged; gate 9/9
+- Repin agent-client family 0.24.0 → 0.25.0 — fixes Spring Boot auto-configuration for all providers (registration files named a stale package → ClassNotFoundException at boot); all other members unchanged; gate 9/9
 
 ## 1.14.0 (2026-07-01)
 
@@ -119,7 +119,7 @@ description: "What changed in each AgentWorks BOM release, and why it matters"
 
 ## 1.0.12 (2026-05-16)
 
-- Migrate BOM from org.springaicommunity to io.github.markpollack
+- First release under `io.github.markpollack`
 - Update .gitignore
 - Prepare for next development iteration 1.0.12-SNAPSHOT
 

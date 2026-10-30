@@ -4,6 +4,10 @@
   "name": "Pollack AI Lab",
   "redirects": [
     {
+      "source": "/docs/migration/spring-ai-community-to-markpollack",
+      "destination": "/docs/agentworks-bom/upgrading-from-springaicommunity"
+    },
+    {
       "source": "/docs/experiment-driver/getting-started",
       "destination": "/docs/agent-experiment/getting-started"
     },
@@ -125,7 +129,8 @@
                 "group": "AgentWorks BOM",
                 "pages": [
                   "projects/agentworks-bom",
-                  "docs/agentworks-bom/whats-new"
+                  "docs/agentworks-bom/whats-new",
+                  "docs/agentworks-bom/upgrading-from-springaicommunity"
                 ]
               },
               {
@@ -376,12 +381,6 @@
                   "docs/acp-java-sdk/resources"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Migration",
-            "pages": [
-              "docs/migration/spring-ai-community-to-markpollack"
             ]
           },
           {

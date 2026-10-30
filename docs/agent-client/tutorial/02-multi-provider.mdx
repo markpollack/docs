@@ -1,6 +1,6 @@
 ---
 title: "Lesson 2: Multi-Provider"
-description: "Run the same task with Claude, Codex, and Gemini — the client code stays the same"
+description: "Run the same task with Claude Code and Codex — the client code stays the same"
 sidebarTitle: "02 - Multi-Provider"
 ---
 
@@ -10,7 +10,7 @@ sidebarTitle: "02 - Multi-Provider"
 
 ## What You'll Learn
 
-How to run the exact same goal with three different providers. The model construction changes, but `AgentClient` usage is identical.
+How to run the exact same goal with two different providers. The model construction changes, but `AgentClient` usage is identical.
 
 ## The Pattern
 
@@ -49,7 +49,7 @@ Swap the model — the client code is identical:
 CodexAgentModel model = new CodexAgentModel(
     CodexClient.create(),
     CodexAgentOptions.builder()
-        .model("gpt-5-codex")
+        .model("gpt-5.4-mini")
         .skipGitCheck(true)
         .build(),
     null
@@ -65,27 +65,9 @@ AgentClientResponse response = client.run(
 `skipGitCheck(true)` lets Codex work in any directory. Without it, Codex requires a git repository. See [Codex Reference](/docs/agent-client/reference/codex-reference#skipgitcheck-and-mode-interaction) for details.
 </Note>
 
-## Step 3: Run with Gemini
-
-```java
-GeminiAgentModel model = new GeminiAgentModel(
-    GeminiClient.create(),
-    GeminiAgentOptions.builder()
-        .model("gemini-2.5-flash")
-        .yolo(true)
-        .build(),
-    null
-);
-
-AgentClient client = AgentClient.create(model);
-AgentClientResponse response = client.run(
-    "Create a file named hello.txt with 'Hello from Gemini!'"
-);
-```
-
 ## What Stayed the Same
 
-Across all three providers, these two lines are identical:
+Across both providers, these two lines are identical:
 
 ```java
 AgentClient client = AgentClient.create(model);
@@ -98,12 +80,12 @@ The only difference is *which model you construct*. That's the portable API — 
 
 While the client API is portable, providers have different capabilities:
 
-| Capability | Claude | Codex | Gemini |
-|-----------|--------|-------|--------|
-| Non-git directory | Works | Works (`skipGitCheck=true`) | Works |
-| Structured output | JSON Schema | Not supported | Not supported |
-| Session resume | Supported | Not supported | Not supported |
-| Permission modes | Multiple | full-auto only | yolo only |
+| Capability | Claude | Codex |
+|-----------|--------|-------|
+| Non-git directory | Works | Works (`skipGitCheck=true`) |
+| Structured output | JSON Schema | Not supported |
+| Session resume | Supported | Not supported |
+| Permission modes | Multiple | full-auto only |
 
 ## With Spring Boot
 

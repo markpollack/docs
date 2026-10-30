@@ -4,6 +4,10 @@
   "name": "Pollack AI Lab",
   "redirects": [
     {
+      "source": "/projects/spring-ai-a2a",
+      "destination": "/projects/index"
+    },
+    {
       "source": "/docs/migration/spring-ai-community-to-markpollack",
       "destination": "/docs/agentworks-bom/upgrading-from-springaicommunity"
     },
@@ -113,7 +117,6 @@
               "index",
               "whats-new",
               "projects/index",
-              "projects/agent-skills",
               {
                 "group": "Bud",
                 "pages": [
@@ -381,6 +384,13 @@
                   "docs/acp-java-sdk/resources"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Related Projects",
+            "pages": [
+              "projects/agent-tools",
+              "projects/agent-skills"
             ]
           },
           {

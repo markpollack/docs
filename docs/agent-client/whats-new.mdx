@@ -4,6 +4,33 @@ sidebarTitle: "What's New"
 description: "What changed in each Agent Client release, and why it matters"
 ---
 
+## 0.32.0 (2026-10-30)
+
+**Fixed**
+
+- The Codex, Gemini, Grok, Junie and Qwen Code starters now provide an `AgentClient.Builder`. `AgentClientAutoConfiguration` runs only when an agent bean exists but declared no ordering, so it could be evaluated before these providers registered their agent; it now runs after every provider auto-configuration
+- The Amazon Q starter now declares `agent-client-spring-boot-autoconfigure`, like the other starters, so it provides an `AgentClient.Builder`; this adds `agent-client-core` and `agent-client-spring-boot-autoconfigure` to its dependencies
+
+**Changed**
+
+- One-shot Claude calls merge the request's environment variables over the model's configured defaults, without modifying the defaults
+- `codex-cli-sdk` adds `CodexClient.stream(...)`, `CLITransport.stream(...)` and `ExecuteOptions` `environment(Map)` / `configOverrides(Map)`: stream one turn, new or resumed, delivering each JSON line as it arrives
+- `DeprecatedPropertyMigrator` implements Spring Boot's `org.springframework.boot.EnvironmentPostProcessor` and its `spring.factories` key changed to match; this matters only to applications that refer to the migrator by type or replace its registration
+- The deprecated `AgentModel` interface and the provider models that implement it are unchanged; it will be removed in a later release
+- `./mvnw verify` enforces JaCoCo coverage floors, SpotBugs, Error Prone (`-Werror` on main sources), PMD/CPD and ArchUnit package-cycle rules; the gates add nothing to any published module's dependencies
+
+## 0.31.0 (2026-09-17)
+
+- `ClaudeAgentModel.interrupt()` closes the in-flight clients of `call()`, iteration and streaming, so a cancel stops a Claude call that is already running; `close()` delegates to it
+- Built on Claude Agent SDK 1.7.0, which destroys the CLI process tree before closing its streams
+- `AgentModel` is unchanged; a cancelled `call()` still returns an error response rather than throwing
+
+## 0.30.0 (2026-08-28)
+
+- Add Junie (`agent-junie`, `agent-starter-junie`) and Grok over ACP; extract a shared `AcpAgentModel`
+- **Breaking, `agent-tck` only:** `Provider` changes from an enum to `String` constants and `@ProviderCapability` takes `String[]`; references such as `Provider.CLAUDE` compile unchanged, but a variable typed `Provider` becomes `String`
+- Claude traces record the turn ceiling
+
 ## 0.29.0 (2026-08-22)
 
 - Grok, Codex, and Antigravity now publish their parsed run trajectory through `AgentClientResponse.getPhaseCapture()`, matching the Claude facade contract; live facade integration gates verify that all three return a capture containing tool uses

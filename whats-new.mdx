@@ -4,6 +4,21 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of October 25, 2026
+
+### Agent Client 0.32.0
+
+**Every provider's Spring Boot starter now provides an AgentClient.Builder.**
+
+- Fixed: the Codex, Gemini, Grok, Junie and Qwen Code starters started without an AgentClient.Builder, and the Amazon Q starter lacked the AgentClient auto-configuration
+- One-shot Claude calls take per-request environment variables, and codex-cli-sdk gains a streaming transport with thread resume
+- The build now enforces JaCoCo, SpotBugs, Error Prone, PMD/CPD and ArchUnit gates
+- DeprecatedPropertyMigrator registers as Spring Boot's org.springframework.boot.EnvironmentPostProcessor; the deprecated AgentModel is unchanged
+
+[Release notes](https://github.com/markpollack/agent-client/releases/tag/v0.32.0) | [What's New](/docs/agent-client/whats-new) | [Tutorial](/docs/agent-client/tutorial)
+
+---
+
 ## Week of October 4, 2026
 
 ### Agent Workflow 0.14.0

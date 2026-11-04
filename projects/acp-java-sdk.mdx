@@ -1,45 +1,255 @@
 ---
 title: "ACP Java SDK"
-description: "Agent Client Protocol — build agents, consume agents, integrate with IDEs using a standard protocol"
+description: "Build Agent Client Protocol agents in Java with a few annotations, and run the same agent on Spring Boot, Micronaut, Quarkus, or plain Java"
 ---
 
-**[What's New →](/docs/acp-java-sdk/whats-new)**
+**Current release: 0.80.0** · [What's New](/docs/acp-java-sdk/whats-new) · [Maven Central](https://central.sonatype.com/artifact/com.agentclientprotocol/acp-core) · [GitHub](https://github.com/agentclientprotocol/java-sdk)
 
-Pure Java implementation of the Agent Client Protocol (ACP) — a standard for agent-to-agent and agent-to-IDE communication. Build agents that any ACP-compatible IDE can connect to, or consume agents from any ACP-compatible runtime. Three-phase lifecycle: Initialize → Session → Prompt. Three agent API styles: sync, async, and annotation-driven.
+A pure Java implementation of the [Agent Client Protocol](https://agentclientprotocol.com/) (ACP), the
+standard that lets editors such as Zed, JetBrains IDEs and VS Code talk to coding agents. Build agents
+that any ACP client can connect to, or build clients that drive any ACP agent. Java 17+.
 
-ACP is the planned wire protocol for `A2AStep` in [Agent Workflow](/projects/agent-workflow) — wrapping a remote agent as a local `Step<I,O>`.
+## An agent is one annotated class
 
-**Current release: 0.80.0.**
+```java
+import com.agentclientprotocol.sdk.annotation.AcpAgent;
+import com.agentclientprotocol.sdk.annotation.Prompt;
+import com.agentclientprotocol.sdk.spec.AcpSchema.PromptRequest;
 
-**0.18.0:** remote agents over the ACP Streamable HTTP and WebSocket transport, one agent per connection, with a servlet you can mount in Spring Boot or any Servlet 6 container; a choice of Jackson 2 or Jackson 3. `acp-core` alone no longer carries a JSON implementation, so add `acp-json-jackson2` or `acp-json-jackson3` if you depend on it directly. See [Remote agents](/docs/acp-java-sdk/index#remote-agents-over-streamable-http).
+@AcpAgent(name = "echo-agent", version = "1.0.0")
+public class EchoAgent {
+
+    @Prompt
+    public String prompt(PromptRequest request) {
+        return "Echo: " + request.text();
+    }
+}
+```
+
+That is a complete ACP agent. Everything else is derived from the class:
+
+- **`initialize` is answered for you.** `agentInfo` comes from `@AcpAgent`, and each handler method
+  advertises the capability it implements. There is no `@Initialize` method to write.
+- **`session/new` is answered for you** with a generated session id, until you add a `@NewSession`
+  method of your own.
+- **A `String` return is the reply.** It is streamed to the client as an agent message, and the turn
+  ends. Return a `PromptResponse`, a `Mono` or a `CompletionStage` when you need more control.
+
+Add a method, gain a capability: `@LoadSession`, `@ListSessions`, `@ResumeSession`, `@CloseSession`
+and `@Logout` each advertise theirs automatically, and `@Prompt(image = true)` declares the prompt
+content you accept. Everything else in the protocol is one annotation away too: `@Cancel`,
+`@Authenticate`, `@SetSessionConfigOption`, and `@ExtRequest` for methods of your own. Take a
+`SyncPromptContext` parameter to stream progress, ask the client for permission, or check for
+cancellation. Mistakes, such as two `@Prompt` methods or a parameter nothing can supply, fail when the
+agent is built, naming the class, the method and the fix. See
+[Clients and Agents](/docs/acp-java-sdk/clients-and-agents) for the full model.
+
+### The lower-level APIs are still there
+
+When you want to wire every handler yourself, write the same agent with the sync or async builder. All
+three styles speak the same protocol.
+
+<Tabs>
+  <Tab title="Sync builder">
+    ```java
+    AcpSyncAgent agent = AcpAgent.sync(new StdioAcpAgentTransport())
+        .initializeHandler(req -> InitializeResponse.ok())
+        .newSessionHandler(req -> new NewSessionResponse(UUID.randomUUID().toString()))
+        .promptHandler((req, context) -> {
+            context.sendMessage("Echo: " + req.text());
+            return PromptResponse.endTurn();
+        })
+        .build();
+
+    agent.run();
+    ```
+  </Tab>
+  <Tab title="Async builder (Reactor)">
+    ```java
+    AcpAsyncAgent agent = AcpAgent.async(new StdioAcpAgentTransport())
+        .initializeHandler(req -> Mono.just(InitializeResponse.ok()))
+        .newSessionHandler(req -> Mono.just(new NewSessionResponse(UUID.randomUUID().toString())))
+        .promptHandler((req, context) -> context.sendMessage("Echo: " + req.text())
+            .then(Mono.just(PromptResponse.endTurn())))
+        .build();
+
+    agent.start().then(agent.awaitTermination()).block();
+    ```
+  </Tab>
+</Tabs>
+
+## One agent, every Java framework
+
+**The same `EchoAgent` runs on Spring Boot, Micronaut and Quarkus, and in plain Java with no framework
+at all.** The handler class doesn't change. Only the startup differs: how the framework learns that the
+class is a bean, and how the application starts. On Quarkus the class is used exactly as written.
+
+<Tabs>
+  <Tab title="Plain Java">
+    No framework and no container: one dependency and a three-line `main`.
+
+    ```xml
+    <dependency>
+        <groupId>com.agentclientprotocol</groupId>
+        <artifactId>acp-agent-support</artifactId>
+        <version>0.80.0</version>
+    </dependency>
+    ```
+
+    ```java
+    public static void main(String[] args) {
+        AcpAgentSupport.create(new EchoAgent())
+            .transport(new StdioAcpAgentTransport())
+            .run();
+    }
+    ```
+
+    [Clients and Agents →](/docs/acp-java-sdk/clients-and-agents)
+  </Tab>
+  <Tab title="Spring Boot">
+    Spring Boot 4.1. Make the agent a bean with `@Component`, and the starter finds it and serves it.
+
+    ```xml
+    <dependency>
+        <groupId>com.agentclientprotocol</groupId>
+        <artifactId>acp-spring-boot-starter</artifactId>
+        <version>0.80.0</version>
+    </dependency>
+    ```
+
+    ```java
+    @Component
+    @AcpAgent(name = "echo-agent", version = "1.0.0")
+    public class EchoAgent { /* unchanged */ }
+
+    @SpringBootApplication
+    public class Application {
+        public static void main(String[] args) {
+            SpringApplication.run(Application.class, args);
+        }
+    }
+    ```
+
+    Over stdio, standard output carries the protocol, so keep everything else off it:
+
+    ```properties
+    spring.main.keep-alive=true
+    spring.main.banner-mode=off
+    logging.console.enabled=false
+    ```
+
+    [Spring Boot Starter →](/docs/acp-java-sdk/autoconfig)
+  </Tab>
+  <Tab title="Micronaut">
+    Micronaut 4. Make the agent a bean with `@Singleton`. It is discovered at compile time, with no
+    classpath scan.
+
+    ```xml
+    <dependency>
+        <groupId>com.agentclientprotocol</groupId>
+        <artifactId>acp-micronaut</artifactId>
+        <version>0.80.0</version>
+    </dependency>
+    ```
+
+    With `micronaut-inject-java` on the annotation processor path, as in any Micronaut application:
+
+    ```java
+    @Singleton
+    @AcpAgent(name = "echo-agent", version = "1.0.0")
+    public class EchoAgent { /* unchanged */ }
+
+    public class Application {
+        public static void main(String[] args) {
+            Micronaut.build(args).mainClass(Application.class).banner(false).start();
+        }
+    }
+    ```
+
+    Over stdio, send logging to standard error (in `logback.xml`), since standard output carries the
+    protocol.
+
+    [Micronaut →](/docs/acp-java-sdk/micronaut)
+  </Tab>
+  <Tab title="Quarkus">
+    Quarkus 3.40, JVM mode. `@AcpAgent` is itself a bean-defining annotation, so the class needs no
+    other annotation, and there is no `main` method to write.
+
+    ```xml
+    <dependency>
+        <groupId>com.agentclientprotocol</groupId>
+        <artifactId>acp-quarkus</artifactId>
+        <version>0.80.0</version>
+    </dependency>
+    ```
+
+    ```java
+    @AcpAgent(name = "echo-agent", version = "1.0.0")
+    public class EchoAgent { /* unchanged */ }
+    ```
+
+    Build it with `quarkus-maven-plugin` like any Quarkus application, and run
+    `target/quarkus-app/quarkus-run.jar`. Over stdio, the extension sends logging to standard error
+    for you.
+
+    [Quarkus →](/docs/acp-java-sdk/quarkus)
+  </Tab>
+</Tabs>
+
+Each of these starts as a stdio agent, the way an editor launches one. To serve the same agent to
+remote clients over Streamable HTTP and WebSocket, set one property:
+`spring.acp.agent.transport.type=http`, `acp.agent.transport.type=http` or
+`quarkus.acp.agent.transport.type=http`. Spring Boot and Micronaut also need the HTTP module their page
+names. In a Spring Boot web application, and in Quarkus, the agent is mounted on the application's own
+server, behind its own security. See [Transports](/docs/acp-java-sdk/transports#deployment-topologies)
+for every deployment shape, plain Java included.
+
+<Note>
+This is tested, not just documented. Every release is gated on a framework smoke matrix: one shared
+handler class, hosted by Spring Boot (servlet and WebFlux), Micronaut and Quarkus, is driven by the
+TypeScript SDK over stdio, Streamable HTTP and WebSocket. See
+[Cross-SDK Compatibility](/docs/acp-java-sdk/compatibility).
+</Note>
 
 ## Getting Started
 
 <CardGroup cols={2}>
   <Card title="Overview" icon="play" href="/docs/acp-java-sdk/index">
-    Client SDK, agent SDK, test utilities — three-phase lifecycle, three API styles
+    How ACP works, client and agent quick starts, adding the SDK to your build
+  </Card>
+  <Card title="Clients and Agents" icon="compass" href="/docs/acp-java-sdk/clients-and-agents">
+    The annotation model in full, and when to choose sync or async
   </Card>
   <Card title="First Contact" icon="rocket" href="/docs/acp-java-sdk/tutorial/01-first-contact">
-    Launch an agent subprocess, create a session, send your first prompt
+    Launch an agent, create a session, send your first prompt
+  </Card>
+  <Card title="Upgrading from 0.18" icon="arrow-up" href="/docs/acp-java-sdk/migration-0.80">
+    Every breaking change in 0.80.0, and how to migrate
   </Card>
 </CardGroup>
 
 ## Tutorials
 
-Progressive modules across multiple parts:
+Progressive, runnable modules, each with integration tests:
 
 <CardGroup cols={2}>
   <Card title="Client Basics" icon="graduation-cap" href="/docs/acp-java-sdk/tutorial/02-protocol-basics">
-    Protocol basics, sessions, prompts, streaming updates, agent requests, permissions, error handling
+    Sessions, prompts, streaming updates, permissions, cancellation, errors
   </Card>
   <Card title="Building Agents" icon="robot" href="/docs/acp-java-sdk/tutorial/12-echo-agent">
-    Echo agent (25 lines), handlers, sending updates, agent requests, in-memory testing, capability negotiation, MCP servers
+    A first agent, handlers, sending updates, in-memory testing, capabilities, MCP servers
   </Card>
-  <Card title="Advanced" icon="bolt" href="/docs/acp-java-sdk/tutorial/21-async-client">
-    Async client with Project Reactor, async agent, reactive patterns
+  <Card title="Frameworks" icon="layer-group" href="/docs/acp-java-sdk/tutorial/23-spring-boot-agent">
+    The annotated agent on Spring Boot, Micronaut and Quarkus
+  </Card>
+  <Card title="Remote Agents" icon="globe" href="/docs/acp-java-sdk/tutorial/37-streamable-http-websocket">
+    Serve an agent over Streamable HTTP and WebSocket, one runtime per connection
+  </Card>
+  <Card title="Reactive" icon="bolt" href="/docs/acp-java-sdk/tutorial/21-async-client">
+    Async client and agent with Project Reactor
   </Card>
   <Card title="IDE Integration" icon="window" href="/docs/acp-java-sdk/tutorial/28-zed-integration">
-    Zed, JetBrains, and VS Code integration guides
+    Run your agent in Zed, JetBrains IDEs and VS Code
   </Card>
 </CardGroup>
 
@@ -47,18 +257,15 @@ Progressive modules across multiple parts:
 
 <CardGroup cols={2}>
   <Card title="Java API Reference" icon="code" href="/docs/acp-java-sdk/reference/java">
-    Client classes, agent classes, protocol types, transports, error codes
+    Client and agent classes, protocol types, transports, error codes
+  </Card>
+  <Card title="Concepts" icon="book" href="/docs/acp-java-sdk/concepts">
+    Sessions, capabilities, the framework-neutral layer, where handlers run
   </Card>
   <Card title="Source Code" icon="github" href="https://github.com/agentclientprotocol/java-sdk">
-    SDK implementation — client and server support
+    The SDK, including the Spring Boot, Micronaut and Quarkus integrations
   </Card>
   <Card title="Tutorial Code" icon="github" href="https://github.com/markpollack/acp-java-tutorial">
-    Runnable tutorial modules with integration tests
+    Every tutorial module, runnable
   </Card>
 </CardGroup>
-
-## Role in the Lab
-
-- **[Agent Workflow](/projects/agent-workflow)** — planned `A2AStep` will wrap remote ACP agents as local `Step<I,O>` in workflows
-- ACP standardizes how agents discover, connect, and delegate — the communication backbone for multi-agent architectures
-- IDE integration enables agents built with Agent Workflow to run inside Zed, JetBrains, and VS Code

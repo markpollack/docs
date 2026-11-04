@@ -33,10 +33,7 @@ The executable starting point is [tutorial module 01](https://github.com/markpol
 absolute path outside the workspace, and a parent traversal are each refused rather than treated as
 a satisfied check. Previously some of these returned `PASS` without examining anything.
 
-This is the failure mode judges are most prone to: **a broken judge fails open with a plausible
-result.** A test that cannot run reports a failure, but a judge that examines nothing still returns
-a status, and `PASS` on an unexamined thing is indistinguishable from `PASS` on a verified one. If
-you have suites that were quietly passing on a mistyped or empty path, they will start failing —
+If you have suites that were quietly passing on a mistyped or empty path, they will start failing:
 that is the fix working, not a regression.
 </Warning>
 

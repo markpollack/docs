@@ -166,6 +166,15 @@ facts support that, and what an older record cannot say.
 
 [Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
 
+### Claude Agent SDK 1.7.0
+
+**Closing or cancelling a session no longer hangs.**
+
+- The transport destroys the Claude CLI process tree before closing its streams, in both `close()` and `closeGracefully()`; no API or dependency change
+- 1.7.0 ships Jackson 2.22.2 / 3.2.2, affected by CVE-2026-89407, -89425, -91776 and -91777. The fix is on main, not yet released; see [What's New](/docs/claude-agent-sdk/whats-new)
+
+[Project](/projects/claude-agent-sdk) | [What's New](/docs/claude-agent-sdk/whats-new) | [Source](https://github.com/markpollack/claude-agent-sdk-java)
+
 ---
 
 ## Week of August 23, 2026
@@ -245,6 +254,16 @@ facts support that, and what an older record cannot say.
 - 0.6.1 aligned dependencies and published an SBOM for every artifact
 
 [Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
+
+### Claude Agent SDK 1.6.0 (with 1.5.1)
+
+**Four more CLI flags modelled.**
+
+- `CLIOptions` gains `forwardSubagentText`, `includeHookEvents`, `autocompact` and `safeMode`; five other flags are recorded as declined and stay reachable through `extraArgs`
+- Live Claude integration tests no longer run in credential-free CI
+- 1.5.1 refreshed dependencies (MCP SDK 2.0.1) and published an SBOM for every artifact
+
+[Project](/projects/claude-agent-sdk) | [What's New](/docs/claude-agent-sdk/whats-new) | [Source](https://github.com/markpollack/claude-agent-sdk-java)
 
 ---
 

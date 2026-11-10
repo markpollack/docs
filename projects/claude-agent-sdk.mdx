@@ -7,13 +7,17 @@ description: "Java SDK for Claude Code CLI integration — three-API architectur
 
 Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies, and no Spring dependency either: the SDK module depends only on zt-exec, Jackson, Reactor, SLF4J and the MCP Java SDK. Spring Boot auto-configuration for Claude lives in [Agent Client](/projects/agent-client), not here.
 
-This is the SDK that powers `ClaudeStep` in [Agent Workflow](/projects/agent-workflow) — each step runs a full multi-turn Claude session internally.
+Underneath [Agent Client](/projects/agent-client): its Claude provider, `agent-claude`, is built on this SDK.
 
 **Current release: 1.7.0.**
 
+<Warning>
+**1.7.0 ships vulnerable Jackson.** Published 1.7.0 declares Jackson 2.22.2 and 3.2.2 at compile scope, which carry CVE-2026-89407 and CVE-2026-89425 (jackson-core) and CVE-2026-91776 and CVE-2026-91777 (jackson-databind), all CVSS 7.5; the Jackson 3 line carries the latter three. A consumer without its own Jackson BOM inherits them; 1.5.1 and 1.6.0 declare the same Jackson versions. The fix, Jackson 2.22.3 and 3.2.3 (`bc89a1da`), is **on main, not yet released**: no 1.8.0 is on Maven Central. Either manage Jackson at 2.22.3 / 3.2.3 or later in your own build, or use `1.8.0-SNAPSHOT` from main; see [Using development snapshots from main](/docs/development-snapshots).
+</Warning>
+
 **1.7.0:** Closing or cancelling a session destroys the Claude CLI process tree before closing streams, unblocking readers and preventing the CLI from surviving cancellation. Both `close()` and `closeGracefully()` use the corrected order; there is no API change. [Release notes](https://github.com/markpollack/claude-agent-sdk-java/releases/tag/v1.7.0).
 
-**1.5.0:** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568. See [What's New →](/docs/claude-agent-sdk/whats-new).
+**1.5.0:** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568; 1.7.0 uses MCP SDK 2.0.1. See [What's New →](/docs/claude-agent-sdk/whats-new).
 
 ## Using it
 
@@ -52,6 +56,21 @@ shapes what you need to know:
   `query(...)`. Before 1.5.0 it substituted a literal `"Hello"` and billed that turn.
 - The child process, and its descendants, are terminated on close.
 
+## MCP servers
+
+`McpServerConfig` is a sealed interface with four server types (1.7.0, unchanged on main):
+
+| Type | Record | Configured with | How it runs |
+|---|---|---|---|
+| stdio | `McpStdioServerConfig(command, args, env)` | a command line | External process, passed to the Claude CLI with `--mcp-config` |
+| SSE | `McpSseServerConfig(url, headers)` | a URL and optional headers | External server, passed with `--mcp-config` |
+| HTTP | `McpHttpServerConfig(url, headers)` | a URL and optional headers | External server, passed with `--mcp-config` |
+| In-process | `McpSdkServerConfig(name, McpSyncServer instance)` | an MCP Java SDK server object in your JVM | Managed by the SDK and served over the `mcp_message` control protocol; no external process |
+
+Register a server by name with `CLIOptions.Builder.mcpServer(name, config)`, or on a client spec with `ClaudeClient` `SyncSpec`/`AsyncSpec` `.mcpServer(name, config)` and `.mcpServers(Map)`. Its tools are named `mcp__{name}__{tool}`, for example `mcp__fs__read_file`, which is the name to use in an allowed-tools list. The in-process type lets you expose Java tools to Claude Code with no separate server process.
+
+**On main, not yet released (1.8.0-SNAPSHOT):** a requested `--mcp-config` that cannot be written fails before the CLI is launched, with `TransportException("Failed to prepare required MCP configuration")` (`f555e72b`). In 1.7.0 the SDK logs a warning and launches the CLI without the MCP servers.
+
 ## Licence
 
 Apache License 2.0 — see [the repository LICENSE](https://github.com/markpollack/claude-agent-sdk-java/blob/main/LICENSE). This SDK is a supporting public project and is not part of the AgentWorks BSL set.
@@ -74,7 +93,7 @@ Apache License 2.0 — see [the repository LICENSE](https://github.com/markpolla
     Permission callbacks, pre/post tool-use hooks, interrupt handling
   </Card>
   <Card title="MCP Integration" icon="plug" href="https://github.com/markpollack/claude-agent-sdk-java-tutorial/tree/main/module-18-mcp-external">
-    External MCP servers, multiple servers, MCP with hooks
+    External MCP servers, multiple servers, MCP with hooks (stdio servers only; see MCP servers above for SSE, HTTP and in-process)
   </Card>
   <Card title="Multi-Agent" icon="users" href="https://github.com/markpollack/claude-agent-sdk-java-tutorial/tree/main/module-21-subagents-intro">
     Subagent definitions, parallel subagents, orchestrator pattern
@@ -94,6 +113,6 @@ Apache License 2.0 — see [the repository LICENSE](https://github.com/markpolla
 
 ## Role in the Lab
 
-- **[Agent Workflow](/projects/agent-workflow)** uses `ClaudeStep` which wraps `ClaudeSyncClient` — each workflow step runs a full multi-turn Claude session
-- **[Agent Client](/projects/agent-client)** uses the SDK for Claude Code integration with Spring Boot lifecycle and sandbox isolation
-- All [experiments](/experiments/index) invoke Claude through this SDK via the experiment driver's `ClaudeSdkInvoker`
+- **[Agent Client](/projects/agent-client)** uses the SDK for Claude Code integration (`agent-claude`), with Spring Boot lifecycle and sandbox isolation
+- **[Agent Workflow](/projects/agent-workflow)** does not depend on this SDK. Its `ClaudeStep` calls Workflow's own `ClaudeSyncClient` interface, which the application implements
+- **[Agent Experiment](/projects/agent-experiment)** 0.9.0 invokes Claude through `ClaudeSdkInvoker` (`experiment-claude`). On main it is replaced by `AgentClientInvoker`, which reaches this SDK through Agent Client

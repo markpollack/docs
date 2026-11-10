@@ -4,6 +4,39 @@ sidebarTitle: "What's New"
 description: "Release notes for Claude Agent SDK"
 ---
 
+## On main (1.8.0-SNAPSHOT, not yet released)
+
+<Warning>
+**Published 1.7.0 ships vulnerable Jackson.** It declares Jackson 2.22.2 and 3.2.2 at compile scope, which carry CVE-2026-89407, CVE-2026-89425, CVE-2026-91776 and CVE-2026-91777 (CVSS 7.5); 1.5.1 and 1.6.0 declare the same versions. The fix is on main only. Until 1.8.0 is released, manage Jackson at 2.22.3 / 3.2.3 or later yourself, or use `1.8.0-SNAPSHOT`; see [Using development snapshots from main](/docs/development-snapshots).
+</Warning>
+
+Checked against `markpollack/claude-agent-sdk-java@2f31aff8`. None of this is in 1.7.0.
+
+- **Jackson 2.22.2 → 2.22.3 and 3.2.2 → 3.2.3** for the four CVEs above (`bc89a1da`); the standalone-consumer gate's floors are raised to match
+- **Verbatim lines.** `CLIOptions.Builder.rawLineListener(Consumer<String>)` receives each standard-output line exactly as read, before the SDK trims, skips or parses it; `ParsedMessage.rawJson()` returns the original JSON line for every message kind (`762a4854`, `79df7a4a`). Source change: code that calls `new CLIOptions(...)` directly passes the new component
+- **MCP: fail before launch.** A requested `--mcp-config` that cannot be written fails before the CLI is launched, with `TransportException("Failed to prepare required MCP configuration")`. In 1.7.0 the SDK logged a warning and launched without the MCP servers (`f555e72b`)
+- An optional transport observer exposes the original process bytes (`a706fc72`); observed process cessation is bounded and transport resource receipts are exposed (`a9a318bd`, `bd033eba`)
+- Native hook output fields are preserved in both client responses (`2f31aff8`), and each control-response subtype is serialized once (`f1d68751`)
+
+## 1.7.0 (2026-09-17)
+
+- **Close no longer hangs.** Transport `close()` and `closeGracefully()` destroy the Claude CLI process tree before closing its streams, so a blocked reader gets EOF: one measured close went from 3 minutes 20 seconds to 34 ms, and a cancelled CLI no longer survives into the next turn
+- No API change and no dependency change since 1.6.0. Agent Client 0.31.0 builds on this release for run cancellation
+- Ships Jackson 2.22.2 / 3.2.2; see the warning above
+
+[Release notes](https://github.com/markpollack/claude-agent-sdk-java/releases/tag/v1.7.0)
+
+## 1.6.0 (2026-08-28)
+
+- Four CLI flags gain first-class `CLIOptions` builder methods: `forwardSubagentText(boolean)` (`--forward-subagent-text`), `includeHookEvents(boolean)` (`--include-hook-events`), `autocompact(String)` (`--autocompact`) and `safeMode(boolean)` (`--safe-mode`) (`a55f831d`)
+- Five flags are recorded as declined, with the reason (`--cloud`, `--environment`, `--teleport`, `--bg`/`--background`, `--ax-screen-reader`); they stay reachable through `extraArgs`
+- The live Claude integration tests are split out of credential-free CI, so ordinary pushes and snapshots no longer make paid provider calls (`c5d86c3c`)
+
+## 1.5.1 (2026-08-24)
+
+- Maintenance release refreshing compatible runtime and test dependencies (Jackson 2.22.2 / 3.2.2, MCP SDK 2.0.1)
+- Publishes consumer-correct CycloneDX SBOMs for every artifact
+
 ## 1.5.0 (2026-08-19)
 
 A security, packaging and behaviour-correction release. No public API changed; every

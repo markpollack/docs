@@ -8,14 +8,16 @@ description: "Run a benchmark end-to-end, split the agent step, or use the Java 
 - Java 21
 - An AI coding agent with a CLI for agent-driven runs
 
-Clone the repository, select the 0.6.0 release tag, and run its verified build:
+Clone the repository, select the 0.6.3 release tag, and run its verified build:
 
 ```bash
 git clone https://github.com/markpollack/agent-bench.git
 cd agent-bench
-git checkout v0.6.0
+git checkout v0.6.3
 ./mvnw clean verify
 ```
+
+Use 0.6.2 or later. Releases 0.6.0 and 0.6.1 pin Agent Judge versions whose parallel jury could silently drop a judge; see [What's New](/docs/agent-bench/whats-new).
 
 <Warning>
 Benchmark setup, post-processing, and configured agent commands run as local host processes with
@@ -76,7 +78,7 @@ for deterministic juries. LLM-backed judging is wired for agents-module `run` an
 
 ## Pattern 3: Java API
 
-Applications can discover definitions and materialize the same Agent Judge jury directly:
+Applications can discover definitions and materialize the same Agent Judge jury directly. This uses the Agent Judge 0.17.0 API that Bench 0.6.3 pins (`JudgmentContext` is gone in Judge 0.18.0; see the [0.17.0 README](https://github.com/markpollack/agent-judge/blob/v0.17.0/README.md)):
 
 ```java
 BenchmarkCatalog catalog = new BenchmarkCatalog(Path.of("benchmarks"));

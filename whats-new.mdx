@@ -157,6 +157,15 @@ facts support that, and what an older record cannot say.
 
 [Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
 
+### Agent Bench 0.6.3
+
+**Compatibility with Agent Judge 0.17.0.**
+
+- Repins Agent Judge 0.17.0 and Agent Client 0.30.0; no source change
+- The `answer-key-recall` check type on main is not part of this release
+
+[Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
+
 ---
 
 ## Week of August 23, 2026
@@ -227,6 +236,15 @@ facts support that, and what an older record cannot say.
 - Adds NetworkNT JSON Schema Validator management
 
 [Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+### Agent Bench 0.6.2 (with 0.6.1)
+
+**Correctness: repinned to Agent Judge 0.15.2.**
+
+- A parallel jury on the earlier Agent Judge pin could silently drop a judge, so benchmark scores from Agent Bench 0.6.0 and 0.6.1 that went through a parallel jury are suspect; re-run them on 0.6.2 or later
+- 0.6.1 aligned dependencies and published an SBOM for every artifact
+
+[Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
 
 ---
 

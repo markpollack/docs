@@ -13,7 +13,7 @@ Agent Bench follows a Terminal-Bench-inspired separation:
 
 The verifier is an [Agent Judge](/projects/agent-judge) `Judge` or jury created by `JudgeFactory`.
 Agent Bench preserves Agent Judge's `Judgment`, jury, tier-policy, and voting semantics.
-The 0.6.0 release retains deterministic judges, simple and cascaded juries, and the agents module's
+The 0.6.3 release retains deterministic judges, simple and cascaded juries, and the agents module's
 Agent Client-backed LLM judge.
 
 ## Cascaded Tiers
@@ -50,6 +50,7 @@ jury:
 | `coverage-preservation` | Agent Judge | Require coverage not to regress from the baseline |
 | `coverage-improvement` | Agent Judge | Require coverage to meet a threshold |
 | `test-quality-llm` | `agent-bench-agents` | Score practice adherence with a real Agent Client-backed LLM judge |
+| `answer-key-recall` | `agent-bench-agents` | **On main, not yet released (0.7.0-SNAPSHOT); not in 0.6.3.** Reference recall against a published answer key: each entry is voted independently across adjudication rounds, and a match counts only with a supporting quote from the report |
 
 The core CLI uses deterministic Agent Judge implementations and an abstaining LLM registration for
 end-to-end execution. The agents-module CLI registers `TestQualityJudge` for LLM-graded `run` and
@@ -58,7 +59,11 @@ end-to-end execution. The agents-module CLI registers `TestQualityJudge` for LLM
 ## Custom Judges
 
 Custom judges implement Agent Judge's `Judge` interface and can be registered without changing the
-benchmark format:
+benchmark format.
+
+<Note>
+Agent Bench 0.6.3 pins Agent Judge **0.17.0**, so these examples use the 0.17 API: `Judgment judge(JudgmentContext)` and `JudgmentContext.builder()`. The [Agent Judge pages](/projects/agent-judge) describe 0.18.0, where `JudgmentContext` no longer exists. For the API Bench uses, see the [Agent Judge 0.17.0 README](https://github.com/markpollack/agent-judge/blob/v0.17.0/README.md) and [Migrating to 0.17](/docs/agent-judge/migration-0.17).
+</Note>
 
 ```java
 public final class MyJudge implements Judge {

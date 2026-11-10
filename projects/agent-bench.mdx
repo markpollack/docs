@@ -16,6 +16,8 @@ Agent Bench measures AI coding agents on repeatable software-engineering tasks. 
 Terminal-Bench, each benchmark separates the task definition, the agent that changes a workspace,
 and the verifier that grades the result. Agent Bench uses [Agent Judge](/projects/agent-judge) to
 materialize deterministic checks and cascaded juries rather than reimplementing grading.
+Agent Bench 0.6.3 pins Agent Judge 0.17.0; the Agent Judge pages describe 0.18.0, so for the API Bench uses see the
+[Agent Judge 0.17.0 README](https://github.com/markpollack/agent-judge/blob/v0.17.0/README.md).
 
 The filesystem is the contract: any CLI agent that reads `INSTRUCTION.md` and modifies the
 workspace can participate without an SDK integration.

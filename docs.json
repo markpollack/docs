@@ -172,7 +172,16 @@
                       "docs/agent-client/tutorial/01-first-task",
                       "docs/agent-client/tutorial/02-multi-provider",
                       "docs/agent-client/tutorial/03-read-and-transform",
-                      "docs/agent-client/tutorial/04-git-operations"
+                      "docs/agent-client/tutorial/04-git-operations",
+                      {
+                        "group": "Async conversations",
+                        "pages": [
+                          "docs/agent-client/tutorial/async/01-one-server-many-conversations",
+                          "docs/agent-client/tutorial/async/02-shared-conversation-arrival-order",
+                          "docs/agent-client/tutorial/async/03-separate-conversations",
+                          "docs/agent-client/tutorial/async/04-picking-up-later"
+                        ]
+                      }
                     ]
                   },
                   "docs/agent-client/howto/switching-providers",

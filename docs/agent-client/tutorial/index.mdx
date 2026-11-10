@@ -58,3 +58,14 @@ cd agent-client-tutorial
 | 02 | (doc-only) | Multi-provider portability |
 | 03 | `02-read-and-transform/` | File reading, data transformation, structured output |
 | 04 | `03-git-operations/` | Git history inspection, merge recovery |
+
+## Async conversations (on main, not yet released)
+
+Four more tutorials use the asynchronous lifecycle API in `0.32.1-SNAPSHOT`, built from agent-client `main`. None of it is in 0.32.0. Their code is cut from compiled classes in [`docs/examples/tutorials`](https://github.com/markpollack/agent-client/tree/main/docs/examples/tutorials), which the agent-client build runs offline.
+
+| Tutorial | What it shows |
+|----------|---------------|
+| [One server, many conversations](/docs/agent-client/tutorial/async/01-one-server-many-conversations) | One `AgentClient` per server; the application maps its conversation ids to retained `AgentSession`s |
+| [A shared conversation, in arrival order](/docs/agent-client/tutorial/async/02-shared-conversation-arrival-order) | Bob and Doug in one conversation; an application-owned inbox; an overlapping submit refused `BUSY` and mapped to HTTP 409 |
+| [Separate conversations, independently](/docs/agent-client/tutorial/async/03-separate-conversations) | Concurrent turns in separate workspaces; cancelling one leaves the other running |
+| [Picking a conversation up later](/docs/agent-client/tutorial/async/04-picking-up-later) | The next turn reconnects after a dead process or a cancellation; loading after a restart is not supported yet |

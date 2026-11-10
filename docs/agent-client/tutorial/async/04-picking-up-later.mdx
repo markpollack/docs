@@ -1,0 +1,111 @@
+---
+title: "Picking a conversation up later"
+sidebarTitle: "04 - Picking up later"
+description: "After a dead process or a cancellation the next turn reconnects; loading after a restart is not supported yet"
+---
+
+<Warning>
+**On main, not yet released — 0.32.1-SNAPSHOT, checked against agent-client main f89fc6b5.** This tutorial uses the asynchronous lifecycle API built from `main` (at or after commit `4de205db`). None of it is in 0.32.0. Snapshot content changes as `main` moves, so name the `main` commit you built against.
+</Warning>
+
+<Accordion title="Add the snapshot repository">
+Resolve `0.32.1-SNAPSHOT` from the Central snapshot repository, with snapshots enabled:
+
+```xml
+<repositories>
+    <repository>
+        <id>central-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-core</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-claude</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+```
+
+`agent-client-claude` supplies `ClaudeClientProvider`, the Claude Code lifecycle provider these examples run against.
+</Accordion>
+
+<Card title="Source on GitHub main" icon="github" href="https://github.com/markpollack/agent-client/blob/main/docs/examples/tutorials/PickUpLater.java">
+  `docs/examples/tutorials/PickUpLater.java`, compiled and run offline by the agent-client build
+</Card>
+
+A conversation can be interrupted in two ways: its provider process dies, or a turn is cancelled. Within the same
+JVM, neither ends the conversation. Across a restart, it depends on the provider, and today Claude Code cannot be
+loaded.
+
+## After a dead process or a cancellation: send the next turn
+
+There is no resume call. Send the next turn. A retained session reconnects to its native history, keeps its id, and
+reports the reconnect on the turn's termination:
+
+```java
+/**
+ * After a dead process or a cancellation there is nothing to call first: send the next
+ * turn. A retained session reconnects to its native history, keeps its id and reports the
+ * reconnect on the turn's termination.
+ */
+public static ExecutionTermination nextTurn(AgentSession conversation, String text) throws Exception {
+    AgentExecution turn = conversation.goal(text).runAsync();
+    turn.result();
+    return turn.awaitTermination(Duration.ofSeconds(10));
+}
+```
+
+For Claude Code on main, the next turn starts a new CLI process that resumes the conversation's native session. Nothing
+is replayed. If the CLI never reported the session's identity, the reconnect fails rather than starting an empty
+conversation. A turn whose cleanup could not be confirmed quarantines the conversation: later submits are refused
+`CLEANUP_UNKNOWN`, and the application closes it and, if it wants, starts a new conversation that it calls new.
+
+## After a restart: load, where the provider supports it
+
+Before shutdown, keep the provider's reference to the native history:
+
+```java
+/** Before shutdown, keep the provider's reference to the native history, once there is one. */
+public static Optional<ProviderReference> reference(AgentSession conversation) {
+    return conversation.providerReference();
+}
+```
+
+After a restart, load it only if the provider says it can. Where loading is not supported, the load is refused with
+the provider's reason; it never falls back to a fresh conversation or replays earlier prompts. (A provider that can
+load would give the loaded conversation a fresh logical id with the prior history. No provider on main loads yet.)
+
+```java
+/**
+ * After a restart: load the saved conversation only if the provider says it can.
+ * Otherwise refuse, with the provider's reason. Never fall back to a fresh conversation
+ * under the old id: if the application starts a new one, it says so.
+ */
+public static AgentSession load(AgentClient client, AgentExecutionProvider provider, ProviderReference saved,
+        Path workspace) {
+    Capability load = provider.capabilities().load();
+    if (!load.supported())
+        throw new UnsupportedOperationException(
+                "Cannot load " + saved.nativeId() + " after a restart: " + load.reason().orElse("unsupported"));
+    return client.sessions().load(saved, spec -> spec.workingDirectory(workspace));
+}
+```
+
+**Claude Code: not supported yet.** No provider on main implements loading: `ClaudeClientProvider` reports `capabilities().load()` as unsupported
+("Cross-handle/restart ownership exclusion is not qualified"), and `client.sessions().load(...)` throws
+`UnsupportedOperationException`. After a restart, an application can start a new conversation and give it context
+explicitly, but it is a new conversation, not the old one.
+
+The full class is [PickUpLater.java](https://github.com/markpollack/agent-client/blob/main/docs/examples/tutorials/PickUpLater.java).
+
+The build compiles this tutorial from `docs/examples/tutorials` and runs it against `OfflineProvider`, an offline
+stand-in that makes no model call (`agent-client-tutorials`, `PickUpLaterTest`). A live Claude Code run is not part of the build. `PickUpLaterTest` also checks the load capability the real `ClaudeClientProvider` declares.

@@ -1,0 +1,91 @@
+---
+title: "Separate conversations, independently"
+sidebarTitle: "03 - Separate conversations"
+description: "Concurrent turns in separate conversations, each in its own workspace; cancelling one leaves the other running"
+---
+
+<Warning>
+**On main, not yet released — 0.32.1-SNAPSHOT, checked against agent-client main f89fc6b5.** This tutorial uses the asynchronous lifecycle API built from `main` (at or after commit `4de205db`). None of it is in 0.32.0. Snapshot content changes as `main` moves, so name the `main` commit you built against.
+</Warning>
+
+<Accordion title="Add the snapshot repository">
+Resolve `0.32.1-SNAPSHOT` from the Central snapshot repository, with snapshots enabled:
+
+```xml
+<repositories>
+    <repository>
+        <id>central-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-core</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-claude</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+```
+
+`agent-client-claude` supplies `ClaudeClientProvider`, the Claude Code lifecycle provider these examples run against.
+</Accordion>
+
+<Card title="Source on GitHub main" icon="github" href="https://github.com/markpollack/agent-client/blob/main/docs/examples/tutorials/SeparateConversations.java">
+  `docs/examples/tutorials/SeparateConversations.java`, compiled and run offline by the agent-client build
+</Card>
+
+Alice and Nancy share one conversation, and Bob and Doug share another. The two conversations run at the same time,
+and cancelling a turn in one leaves the other running.
+
+Separate histories do not isolate files: two conversations in one directory can overwrite each other's work. Give
+each conversation its own workspace:
+
+```java
+/**
+ * Separate histories do not isolate file writes: two conversations in one directory can
+ * overwrite each other's files. Give each conversation its own workspace.
+ */
+public static Pair open(AgentClient client, Path workspaces) throws Exception {
+    Path first = Files.createDirectories(workspaces.resolve("alice-and-nancy"));
+    Path second = Files.createDirectories(workspaces.resolve("bob-and-doug"));
+    return new Pair(client.sessions().create(spec -> spec.workingDirectory(first)),
+            client.sessions().create(spec -> spec.workingDirectory(second)));
+}
+```
+
+Start a turn in each. Both run at once, each on its own virtual thread, against its own provider process:
+
+```java
+var alice = pair.aliceAndNancy().goal("Review service A").runAsync();
+var bob = pair.bobAndDoug().goal("Review service B").runAsync();
+```
+
+Cancel Alice and Nancy's turn. Only that turn stops:
+
+```java
+/**
+ * Cancel one conversation's turn. Only that turn stops; the other conversation's turn is
+ * not touched and its result arrives as usual.
+ * @return the cancelled turn's termination
+ */
+public static ExecutionTermination cancel(AgentExecution turn) throws Exception {
+    turn.cancel(true);
+    return turn.awaitTermination(Duration.ofSeconds(10));
+}
+```
+
+Bob and Doug's turn is not touched and its result arrives as usual. Alice and Nancy's conversation is still usable;
+its next turn reconnects, as [picking a conversation up later](/docs/agent-client/tutorial/async/04-picking-up-later) describes.
+
+The full class is [SeparateConversations.java](https://github.com/markpollack/agent-client/blob/main/docs/examples/tutorials/SeparateConversations.java).
+
+The build compiles this tutorial from `docs/examples/tutorials` and runs it against `OfflineProvider`, an offline
+stand-in that makes no model call (`agent-client-tutorials`, `SeparateConversationsTest`). A live Claude Code run is not part of the build.

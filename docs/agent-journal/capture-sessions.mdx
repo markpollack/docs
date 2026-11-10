@@ -3,7 +3,9 @@ title: "Capture SDK Sessions"
 description: "Record Claude Code, Gemini CLI, Grok, Codex, Antigravity, and Junie results with Agent Journal 1.11.0"
 ---
 
-Agent Journal provides six vendor adapters that write compatible core events and portable traces.
+<Note>This page describes Agent Journal 1.11.0 (1.x). It does not apply to main (2.0, prototype), which has a different format; see [Which Journal do I need?](/docs/agent-journal/1x-or-2).</Note>
+
+Agent Journal 1.11.0 provides six vendor adapters that write compatible core events and portable traces.
 
 The Claude and Gemini adapters parse a typed SDK object: Claude consumes the [Claude Agent SDK for Java](/projects/claude-agent-sdk) and Gemini the `gemini-cli-sdk` published with [Agent Client](/projects/agent-client).
 Both require a Java 21 runtime, because those SDK dependencies are published as Java 21 bytecode.

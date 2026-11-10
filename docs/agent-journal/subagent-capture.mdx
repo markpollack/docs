@@ -3,6 +3,8 @@ title: "Sub-agent Capture"
 description: "Record Claude Code and Codex sub-agents as linked runs with Agent Journal 1.11.0: a fixture-backed walkthrough, the accounting rules and the limits"
 ---
 
+<Note>This page describes Agent Journal 1.11.0 (1.x). It does not apply to main (2.0, prototype), which has a different format; see [Which Journal do I need?](/docs/agent-journal/1x-or-2).</Note>
+
 Claude Code and Codex can delegate work to sub-agents. Since Agent Journal 1.11.0, each sub-agent is recorded as a run of its own, linked to the run of the agent that started it.
 The parent's files hold the parent's own activity only, so a reader can analyse the main loop, one sub-agent, or the whole execution tree, and no token or dollar is counted twice.
 
@@ -43,7 +45,7 @@ The other four providers (Gemini CLI, Grok, Antigravity, Junie) are unchanged fr
 
 **Live execution** needs the CLI and an account. For Claude Code, start the CLI (or the SDK's `CLIOptions`) with `--forward-subagent-text`; `claude-code-sdk` 1.6.0 and later expose it as `CLIOptions.forwardSubagentText`. For Codex, run `codex exec` and locate the rollout files Codex writes under its sessions directory: the root file is named with the root thread id, and each child file with the child's thread id, which the root's `SubAgentActivity{kind:"started"}` records as `agent_thread_id`.
 
-**agent-client.** The released agent-client (0.31.0 on Maven Central) does not set `--forward-subagent-text`, harvests the root rollout only, calls the single-file `CodexSessionParser.parse`, and does not apply `withSessionBaseline`. Those four pieces exist on pushed proof branches of `markpollack/agent-client` (`proof/journal-1.11.0-subagent-capture`, `proof/codex-rollout-children`, `proof/codex-subagent-capture-journal-1.11.0`), none of them merged, and 0.31.0 pins Journal 1.10.0. Until an agent-client release adopts them, use the Journal APIs directly as shown here.
+**agent-client.** The released agent-client (0.32.0 on Maven Central) does not set `--forward-subagent-text`, harvests the root rollout only, calls the single-file `CodexSessionParser.parse`, and does not apply `withSessionBaseline`. Those four pieces exist on pushed proof branches of `markpollack/agent-client` (`proof/journal-1.11.0-subagent-capture`, `proof/codex-rollout-children`, `proof/codex-subagent-capture-journal-1.11.0`), none of them merged, and 0.32.0 pins Journal 1.10.0. Until an agent-client release adopts them, use the Journal APIs directly as shown here. Agent Client main has moved to Journal 2.0, where sub-agents are child cores.
 
 ## Claude Code: capture and record
 

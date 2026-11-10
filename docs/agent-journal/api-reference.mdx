@@ -3,6 +3,8 @@ title: "API Reference"
 description: "Agent Journal 1.11.0 core, storage, event, evaluation, and capture APIs"
 ---
 
+<Note>This page describes Agent Journal 1.11.0 (1.x). It does not apply to main (2.0, prototype), which has a different format; see [Which Journal do I need?](/docs/agent-journal/1x-or-2).</Note>
+
 This page describes the public API shipped in Agent Journal 1.11.0.
 
 ## Added or changed in 1.11.0
@@ -23,7 +25,7 @@ Three kinds of compatibility apply, and they differ:
 - **Record patterns.** A record pattern names every component. `PhaseCapture` grew from 22 to 26 components (`subagents`, `subagentTracksAvailable`, `reportedSubagentStats`, `sessionCost` appended), and `CodexPhaseCapture` from 14 to 17 (`subagents`, `subagentTracksAvailable`, `spawnedThreadIds`). A pattern written against 1.10.1 does not compile against 1.11.0 until the new components are added.
 - **JSON readers.** A `PhaseCapture` serialised with Jackson has four more properties and a `CodexPhaseCapture` three; readers that ignore unknown properties keep working. Journal files written by 1.11.0 load in 1.10.1 readers (no new record field, no new enum value), and 1.11.0 readers load older files.
 
-The released agent-client (0.31.0) pins Journal 1.10.0 and calls none of the 1.11.0 additions; see the [sub-agent capture guide](/docs/agent-journal/subagent-capture#requirements).
+The released agent-client (0.32.0) pins Journal 1.10.0 and calls none of the 1.11.0 additions; see the [sub-agent capture guide](/docs/agent-journal/subagent-capture#requirements).
 
 ## Coordinates
 

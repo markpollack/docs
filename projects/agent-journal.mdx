@@ -3,11 +3,9 @@ title: "Agent Journal"
 description: "Structured execution events, portable agent traces, and derived analysis for Java agent research"
 ---
 
-**Current release: 1.11.0** · **[What's New →](/docs/agent-journal/whats-new)**
+**Latest release: 1.11.0 (1.x)** · **On main: 2.0.0-SNAPSHOT, a prototype with a different, incompatible format** · **[Which Journal do I need? →](/docs/agent-journal/1x-or-2)** · **[What's New →](/docs/agent-journal/whats-new)**
 
-Agent Journal is a Java library for recording agent runs as typed events and analyzing them after execution.
-It stores immutable execution facts separately from derived analysis, and it can project Claude Code, Gemini CLI,
-Grok, Codex, Antigravity, and Junie results into a shared journal model.
+Agent Journal records an agent CLI's execution as durable local data. Release 1.11.0 (the 1.x line, below) records runs as typed events and can project Claude Code, Gemini CLI, Grok, Codex, Antigravity and Junie results into a shared journal model. Main (2.0, prototype) instead writes one portable OCSF `events.jsonl` per run and checks it against the CLI's native output with an independent oracle; see the [2.0 group](/docs/agent-journal/v2/overview).
 Release **1.11.0** records Claude Code and Codex sub-agents as runs of their own, linked to the spawning run
 and marked `track=subagent`, so a parent's files hold the main loop only and nothing is counted twice.
 It adds `recordOnce` for recording an execution at most once, `withSessionBaseline` for the cost of a later
@@ -39,7 +37,7 @@ and run on Java 17. The change is additive on the existing event and trace contr
   </Card>
 </CardGroup>
 
-## Modules
+## Modules (1.x, release 1.11.0)
 
 | Module | Purpose | Runtime requirement |
 |---|---|---|
@@ -51,10 +49,12 @@ and run on Java 17. The change is additive on the existing event and trace contr
 | `antigravity-cli-capture` | Antigravity CLI trajectory parsing and recording | Java 17+ |
 | `junie-cli-capture` | Junie CLI session trace parsing and recording | Java 17+ |
 
+None of these modules exists on main. 2.0 has two artifacts, `journal-ocsf-writer` and `journal-capture-tck`; see the [2.0 group](/docs/agent-journal/v2/overview).
+
 `journal-core` uses Jackson 2.22.3 and the SLF4J API; `claude-code-capture` also carries Jackson 3.2.3 through the Claude Agent SDK. Both versions clear CVE-2026-89407, CVE-2026-89425, CVE-2026-91776 and CVE-2026-91777.
 The Claude Code and Gemini CLI capture modules also depend on their respective Java SDKs, whose published bytecode requires Java 21.
 
-## Install
+## Install (1.x, release 1.11.0)
 
 ```xml
 <dependency>
@@ -85,7 +85,7 @@ The seven released artifacts use the `io.github.markpollack` group ID and are av
     Query generated journals with DuckDB.
   </Card>
   <Card title="API reference" icon="brackets-curly" href="/docs/agent-journal/api-reference">
-    Stable 1.11.0 entry points, events, storage operations, and capture options.
+    1.11.0 entry points, events, storage operations, and capture options (1.x).
   </Card>
 </CardGroup>
 
@@ -98,9 +98,9 @@ Treat them as potentially sensitive operational data.
 ## Related projects
 
 - [Agent Workflow](/projects/agent-workflow) provides the separate `workflow-journal` integration module.
-- [Agent Judge](/projects/agent-judge) consumes evaluation subjects derived from recorded behavior.
+- [Agent Eval](/projects/agent-judge) consumes evaluation subjects derived from recorded behavior (1.x `EvalSubject`; not on main).
 - Markov fingerprinting is one downstream analysis technique for tool-call sequences.
 
 <Card title="Source code" icon="github" href="https://github.com/markpollack/agent-journal">
-  Agent Journal on GitHub (BSL 1.1)
+  Agent Journal on GitHub (BSL 1.1). The default branch is 2.0 (prototype); the 1.x code is at tag `v1.11.0` and branch `1.x`.
 </Card>

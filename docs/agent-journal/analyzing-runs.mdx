@@ -3,6 +3,8 @@ title: "Analyze Runs with DuckDB"
 description: "Query Agent Journal 1.11.0 event streams with executable DuckDB examples"
 ---
 
+<Note>This page describes Agent Journal 1.11.0 (1.x). It does not apply to main (2.0, prototype), which has a different format; see [Which Journal do I need?](/docs/agent-journal/1x-or-2). These queries return empty or wrong results on 2.0 packages.</Note>
+
 `JsonFileStorage` writes one `events.jsonl` file per run.
 DuckDB can read all runs for an experiment directly; no import step or fixed table schema is required.
 

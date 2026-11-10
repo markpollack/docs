@@ -101,6 +101,16 @@ next BOM release. Until then, declare the 0.18.0 versions explicitly.
 
 ## Week of September 13, 2026
 
+### Agent Experiment 0.9.0
+
+**Agent Judge's interpretation is recorded beside each verdict.**
+
+- Records the `interpretation` at record time; `InterpretationReExport` adds readings to older results without changing a stored verdict
+- Fix: an item whose jury errored is now an instrument failure, not a subject failure
+- Pins Agent Judge 0.17.0 and Agent Workflow 0.12.3; results written before 0.9.0 stay readable
+
+[Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
+
 ### Agent Judge 0.17.0
 
 **Spec-driven development doesn't stop when the agent says it's done.** Two new judges read the
@@ -120,6 +130,30 @@ facts support that, and what an older record cannot say.
 [How the requirements judges work →](/docs/agent-judge/requirements-judges) ·
 [Migrating to 0.17](/docs/agent-judge/migration-0.17) ·
 [Source](https://github.com/markpollack/agent-judge)
+
+---
+
+## Week of August 23, 2026
+
+### Agent Experiment 0.8.0
+
+**The modernization pipeline and diagnostic packages are removed; runs record their conditions.**
+
+- Removed: the Spring modernization pipeline and the diagnostic packages
+- Records the conditions a run executed under and refuses to compare runs across different conditions; persists the provider session id and archives the transcript beside `run.json`
+- Pins Agent Journal/Capture 1.10.0, Claude Code SDK 1.6.0 and Agent Client 0.30.0
+
+[Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
+
+### Agent Experiment 0.7.2 (with 0.7.0 and 0.7.1)
+
+**Correctness: repinned to Agent Judge 0.15.2.**
+
+- Agent Judge 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect; re-run anything you rely on
+- 0.7.0 moved to Agent Judge 0.15.0, Workflow 0.12.0 and the Jackson 2.22.2 / 3.2.2 BOMs; 0.7.1 aligned dependencies and added per-artifact SBOMs; both are affected, so use 0.7.2 or later
+- Journal 1.9.0 adds the per-turn cost vector, vendor-neutral stop reasons, and tool-call ordinals and durations
+
+[Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
 
 ---
 

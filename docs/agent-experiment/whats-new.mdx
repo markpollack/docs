@@ -4,6 +4,60 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Experiment"
 ---
 
+## On main (0.10.0-SNAPSHOT, not yet released)
+
+None of this is in 0.9.0. Resolve `0.10.0-SNAPSHOT` from `https://central.sonatype.com/repository/maven-snapshots/` with snapshots enabled (`updatePolicy` `always` picks up each push), and name the main commit you built against. Checked against `markpollack/agent-experiment@b5d323c`. See the main tab of [Getting Started](/docs/agent-experiment/getting-started).
+
+- **Two new modules.** `experiment-agent-client` (`AgentClientInvoker`, which takes `Function<InvocationContext, AgentOptions>` so options come from Agent Client) and `experiment-runtime` (canonical acquisition through Agent Client and Agent Journal, Workflow proofs, and immutable per-item runtime results): five modules in all. `experiment-core` no longer depends on Agent Journal
+- **Breaking: a fresh jury for every item.** The constructor is `AgentExperiment(DatasetManager, Function<AgentJudgingInput, Jury>, ResultStore, ExperimentConfig)`; `AgentJudgingInput` carries `goal`, `workspace`, `executionTime`, `status` and `metadata`
+- **Breaking: Agent Judge `0.19.0-SNAPSHOT` API.** `Judge` is `Judgment judge()` with no context argument, and `JudgmentContext` is gone; `Judgment` moved from `judge.result` to `judge.judgment`; the voting strategies moved from `judge.jury` to `judge.voting`; `SimpleJury.Builder` adds `judge(String name, Judge)`; `CascadedJury.Builder.tier(...)` takes a `judge.verdict.RoutingRule` and `TierPolicy` is gone; `BuildSuccessJudge` and `ClassVersionJudge` take a workspace supplier, for example `new BuildSuccessJudge(input::workspace, "./mvnw compile")`
+- **Breaking: removed APIs.** `ClaudeSdkInvoker` and `ClaudeSdkInvokerConfig` are gone (use `AgentClientInvoker` with an Agent Client provider). The phase journal is gone (`RunJournal`, `ExperimentJournal`, `JsonFileRunJournal`, `NoOpRunJournal`); `ExperimentConfig.journalEnabled(true)` now refuses with "Legacy phase writer retired; use experiment-runtime canonical acquisition". `experiment-claude` holds only semantic scoring: `SemanticDiffJudge(SemanticDiffJudgeConfig, plan, workspace)`, run through Agent Client
+- **A run needs a writer identity.** Pass `-Dexperiment.writer.revision=<your source revision>`; without it the run fails with "Set experiment.writer.revision or supply a writer identity"
+- **Unknown is not zero.** `ExperimentResult.totalCostUsd()`, `totalTokens()` and `totalDurationMs()`, and `ItemResult.costUsd()`, `totalTokens()` and `durationMs()`, are nullable; `null` means unknown
+- **Judge-as-subject experiments.** `JudgeExperiment.builder().candidate(Function<DatasetItem, Judge>)` resolves the candidate once per row and invokes that same judge; `replicateCount(int)` sets replicates. `ReEvaluationContextFactory.create(...)` now returns `Optional<AgentJudgingInput>`
+- **Fix: one judge per row.** A run of 2 items × 3 replicates had resolved 12 judges instead of 6, and could invoke a judge other than the one it recorded (`e320545`)
+- **Workflow.** `WorkflowInvoker.buildWorkflow(InvocationContext)` returns `WorkflowInvoker.Plan(ValidatedWorkflow, StepRegistry, ExecutionCompatibility)`, on Agent Workflow 0.14.0
+- **Native recordings, in `experiment-runtime`.** Async Client executions are bound to exact experiment attempts, native Client archives to invocations; qualified Codex one-shot archives are admitted, and an unqualified native recording is refused with the outcome Client reported. CLI versions are recorded, not gated: any Claude Code version on the SDK route (under `client-terminal-claude-2.1.316/1` or `client-terminal-claude-sdk/1`) and any Codex CLI version on the exec route (under `client-terminal-codex-0.166.0/1` or `client-terminal-codex-exec/1`)
+
+## 0.9.0 (2026-09-17)
+
+- Records Agent Judge's `interpretation` beside each verdict, read at record time
+- Adds `InterpretationReExport` to add readings to older results, preserving each stored verdict
+- Pins Agent Judge 0.17.0 and Agent Workflow 0.12.3
+- **Fix:** an item whose jury errored was recorded as a subject failure. It is now an instrument failure; the subject's outcome is unknown
+- Results written before 0.9.0 stay readable and are not rewritten. An item with no interpretation is reported as unattestable
+
+## 0.8.0 (2026-08-28)
+
+- **Removed:** the Spring modernization pipeline (`PipelineAgentInvoker`, `ProjectAnalyzer`, `PlanGenerator`, `ClaudePlanGenerator`, `AnalysisConfig`, `PomAnalyzer`) and the diagnostic packages (`DiagnosticAnalyzer`, `GapClassifier`, `DiagnosticReasoner`, `DeterministicReasoner`, `LlmDiagnosticReasoner`, `EfficiencyEvaluator`). The Pipeline and Diagnostic Reasoning pages described them and are retired
+- Records the conditions a run executed under, and refuses to compare runs across different conditions
+- Persists the provider session id, so a run resolves to its transcript
+- Archives the provider transcript verbatim, content-addressed, beside `run.json`
+- Pins Agent Journal/Capture 1.10.0, Claude Code SDK 1.6.0 and Agent Client 0.30.0
+
+## 0.7.2 (2026-08-25)
+
+**Correctness.**
+
+- Repins Agent Judge 0.15.2, Journal 1.9.0 and Workflow 0.12.2, directly and through Agent Workflow's `JudgeGate`
+- Agent Judge 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so **scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect. Re-run anything you rely on.** Experiment's own 0.7.2 release note names only 0.7.0 and 0.7.1; Agent Judge's corrected note gives the full range
+- Journal 1.9.0 adds the per-turn cost vector, vendor-neutral stop reasons, and tool-call ordinals and durations. Trajectories recorded earlier lack these columns permanently
+
+## 0.7.1 (2026-08-25)
+
+Maintenance.
+
+- Aligns compatible dependencies: Judge 0.15.1, Journal 1.8.2, Workflow 0.12.1, Client 0.29.3, SDK 1.5.1
+- Publishes a consumer-rooted CycloneDX SBOM for every artifact
+- Affected by the jury defect; use 0.7.2 or later
+
+## 0.7.0 (2026-08-24)
+
+- Moves to Agent Judge 0.15.0, Workflow 0.12.0, Journal/Capture 1.8.0, Claude Code SDK 1.5.0 and Agent Client 0.29.0
+- Moves to the Jackson 2.22.2 and 3.2.2 BOMs
+- Keeps the 0.6 APIs and result projection
+- Affected by the jury defect; use 0.7.2 or later
+
 ## 0.6.0 (2026-08-18)
 
 - Adds the `experiment-workflow` module for typed Agent Workflow invocation with journaled step

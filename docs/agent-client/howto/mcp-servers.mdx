@@ -7,7 +7,7 @@ description: "Define MCP servers once in a portable catalog, choose them on the 
 Agent Client has a portable MCP layer. You define MCP servers once, the Client chooses which ones a request gets, and each provider translates the chosen definitions into its own CLI's MCP configuration or refuses them. The catalog, Client defaults and per-request names have shipped since well before 0.32.0.
 
 <Note>
-Facts on this page are marked apart. **Released** means in 0.32.0 on Maven Central. **On main, not yet released** means `0.32.1-SNAPSHOT`, checked against agent-client main `f89fc6b5`: resolve it from `https://central.sonatype.com/repository/maven-snapshots/` with snapshots enabled. None of the main-only behaviour is in 0.32.0.
+Facts on this page are marked apart. **Released** means in 0.32.0 on Maven Central. **On main, not yet released** means `0.32.1-SNAPSHOT`, checked against agent-client main `257f48d0`: resolve it from `https://central.sonatype.com/repository/maven-snapshots/` with snapshots enabled. None of the main-only behaviour is in 0.32.0.
 </Note>
 
 <Card title="Source on GitHub main" icon="github" href="https://github.com/markpollack/agent-client/blob/main/docs/examples/howto/McpServers.java">
@@ -86,7 +86,8 @@ servers without registering a catalog fails with `IllegalStateException`.
 | Claude Code (`agent-claude`) | `AgentModel` | Translated to Claude's MCP configuration: stdio, SSE and HTTP. A Claude-specific `mcpServers` option overrides a portable server of the same name. | <span style={{color: "#22c55e", fontWeight: 600}}>Released</span> |
 | Gemini CLI (`agent-gemini`) | `AgentModel` | Translated to Gemini's MCP configuration. | <span style={{color: "#22c55e", fontWeight: 600}}>Released</span> |
 | Grok, Junie (ACP, `agent-acp`) | `AgentModel` | **0.32.0:** not sent; the servers are dropped. **On main:** stdio servers are always sent in the ACP `session/new`. HTTP and SSE servers are sent when the agent advertises that transport; otherwise the call fails before a session opens. | Dropped in 0.32.0; fix <span style={{color: "#3b82f6", fontWeight: 600}}>On main, not yet released</span> |
-| Codex, Antigravity, Amp, SWE-agent, Amazon Q, Qwen Code | `AgentModel` | Not translated: the portable definitions are not passed to the CLI. | Current behaviour |
+| Amp (`agent-amp`) | `AgentModel` | **0.32.0:** not passed; the servers are dropped. **On main:** passed with Amp's `--mcp-config` in an owner-only temporary file, deleted after the run, and merged with the user's Amp settings. Stdio, SSE and HTTP; Amp detects a remote server's transport from its URL. | Dropped in 0.32.0; fix <span style={{color: "#3b82f6", fontWeight: 600}}>On main, not yet released</span> |
+| Codex, Antigravity, SWE-agent, Amazon Q, Qwen Code | `AgentModel` | **0.32.0:** not passed; the servers are dropped. **On main:** Client has no translation for these CLIs, so the call is refused before the CLI starts. Codex, Antigravity, SWE-agent and Qwen Code return an unsuccessful response naming the servers; Amazon Q throws `UnsupportedOperationException`. | Dropped in 0.32.0; fix <span style={{color: "#3b82f6", fontWeight: 600}}>On main, not yet released</span> |
 | Claude Code (`ClaudeClientProvider`) | Lifecycle | Translated, as for `agent-claude`. Also supports the scoped binding below. | <span style={{color: "#3b82f6", fontWeight: 600}}>On main, not yet released</span> |
 | Codex (`CodexClientProvider`), Antigravity (`AntigravityClientProvider`) | Lifecycle | Refused before launch with `UnsupportedOperationException`. | <span style={{color: "#3b82f6", fontWeight: 600}}>On main, not yet released</span> |
 

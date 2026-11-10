@@ -4,6 +4,15 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Sandbox"
 ---
 
+## 0.10.2 (2026-08-24)
+
+- Corrective maintenance release removing a certification-driven Jackson dependency declaration from the Docker module; the published dependency graph follows natural Maven consumer resolution
+
+## 0.10.1 (2026-08-24)
+
+- Maintenance release refreshing compatible runtime and test dependencies
+- Publishes a consumer-correct CycloneDX SBOM for every artifact, replacing the single SBOM attached to the parent in 0.10.0
+
 ## 0.10.0 (2026-08-18)
 
 - Restore the convenient local Docker backend on current Docker Engine versions with

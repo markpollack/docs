@@ -309,6 +309,15 @@ facts support that, and what an older record cannot say.
 
 [Project](/projects/agent-memory) | [What's New](/docs/agent-memory/whats-new) | [Source](https://github.com/markpollack/agent-memory)
 
+### Agent Sandbox 0.10.2 (with 0.10.1)
+
+**Maintenance releases.**
+
+- 0.10.1 refreshed dependencies and published an SBOM for every artifact; 0.10.2 removed a certification-driven Jackson declaration from the Docker module
+- No source change since 0.10.0
+
+[Project](/projects/agent-sandbox) | [What's New](/docs/agent-sandbox/whats-new) | [Source](https://github.com/markpollack/agent-sandbox)
+
 ---
 
 ## Week of August 16, 2026
@@ -459,6 +468,15 @@ facts support that, and what an older record cannot say.
 - Framework bridges cover Spring AI 2.0.0, LangChain4j 1.19.0, Koog 1.1.1, and Agent Client 0.25.0; the public ten-module tutorial exercises the contract without credentials
 
 [Project](/projects/agent-judge) | [What's New](/docs/agent-judge/whats-new) | [Source](https://github.com/markpollack/agent-judge)
+
+### Agent Sandbox 0.10.0
+
+**Breaking: callers choose the Docker image.**
+
+- The no-argument `DockerSandbox()` constructor and the former default image are removed; select an image with an explicit-image constructor or `DockerSandbox.builder().image(...)`, ideally pinned by digest
+- `LocalSandbox` runs directly on the host and provides no isolation; `DockerSandbox` is a convenient local backend, not hardened multi-tenant infrastructure
+
+[Project](/projects/agent-sandbox) | [What's New](/docs/agent-sandbox/whats-new) | [Source](https://github.com/markpollack/agent-sandbox)
 
 ---
 

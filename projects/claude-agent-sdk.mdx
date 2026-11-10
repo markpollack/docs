@@ -114,5 +114,5 @@ Apache License 2.0 — see [the repository LICENSE](https://github.com/markpolla
 ## Role in the Lab
 
 - **[Agent Client](/projects/agent-client)** uses the SDK for Claude Code integration (`agent-claude`), with Spring Boot lifecycle and sandbox isolation
-- **[Agent Workflow](/projects/agent-workflow)** does not depend on this SDK. Its `ClaudeStep` calls Workflow's own `ClaudeSyncClient` interface, which the application implements
+- **[Agent Workflow](/projects/agent-workflow)** does not depend on this SDK. Its `ClaudeStep` runs the `claude` CLI as a subprocess through Workflow's own `ClaudeSyncClient` interface, whose default implementation an application can replace
 - **[Agent Experiment](/projects/agent-experiment)** 0.9.0 invokes Claude through `ClaudeSdkInvoker` (`experiment-claude`). On main it is replaced by `AgentClientInvoker`, which reaches this SDK through Agent Client

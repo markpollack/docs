@@ -25,11 +25,19 @@
     },
     {
       "source": "/docs/experiment-driver/pipeline",
-      "destination": "/docs/agent-experiment/pipeline"
+      "destination": "/docs/agent-experiment/whats-new"
     },
     {
       "source": "/docs/experiment-driver/diagnostic-reasoning",
-      "destination": "/docs/agent-experiment/diagnostic-reasoning"
+      "destination": "/docs/agent-experiment/whats-new"
+    },
+    {
+      "source": "/docs/agent-experiment/pipeline",
+      "destination": "/docs/agent-experiment/whats-new"
+    },
+    {
+      "source": "/docs/agent-experiment/diagnostic-reasoning",
+      "destination": "/docs/agent-experiment/whats-new"
     },
     {
       "source": "/docs/experiment-driver/jury-system",
@@ -249,8 +257,6 @@
                   "docs/agent-experiment/getting-started",
                   "docs/agent-experiment/creating-experiments",
                   "docs/agent-experiment/sessions-and-sweeps",
-                  "docs/agent-experiment/pipeline",
-                  "docs/agent-experiment/diagnostic-reasoning",
                   "docs/agent-experiment/jury-system",
                   "docs/agent-experiment/api-reference"
                 ]

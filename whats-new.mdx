@@ -53,6 +53,7 @@ sidebarTitle: "What's New"
 - Sequence.build() completes a parent whose final child always fails or cancels; normal returning paths still require explicit terminals
 - Six runnable deterministic examples cover typed Steps, nesting, decisions and Verdict routing, parallel assessments and bounded runtime fan-out
 - Local JDBC recovery retains committed work; durable loops and waits/timers remain deferred
+- With 0.13.0 the same day: **breaking**, the legacy in-memory `Workflow` DSL, `WorkflowExecutor`, `StepRunner`, `workflow-temporal` and `Step.named` are removed; stay on 0.12.3 to keep them
 
 [Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.14.0) | [Tutorial](/docs/agent-workflow/tutorial)
 
@@ -175,6 +176,14 @@ facts support that, and what an older record cannot say.
 
 [Project](/projects/claude-agent-sdk) | [What's New](/docs/claude-agent-sdk/whats-new) | [Source](https://github.com/markpollack/claude-agent-sdk-java)
 
+### Agent Workflow 0.12.3
+
+**Compatibility with Agent Judge 0.17.0.**
+
+- `JudgeGate` and `TieredGate` treat a `NOT_APPLICABLE` aggregate as inconclusive; 0.12.2 cannot compile against Agent Judge 0.17.0
+
+[Project](/projects/agent-workflow) | [What's New](/docs/agent-workflow/whats-new) | [Source](https://github.com/markpollack/agent-workflow)
+
 ---
 
 ## Week of August 23, 2026
@@ -264,6 +273,15 @@ facts support that, and what an older record cannot say.
 - 1.5.1 refreshed dependencies (MCP SDK 2.0.1) and published an SBOM for every artifact
 
 [Project](/projects/claude-agent-sdk) | [What's New](/docs/claude-agent-sdk/whats-new) | [Source](https://github.com/markpollack/claude-agent-sdk-java)
+
+### Agent Workflow 0.12.2 (with 0.12.0 and 0.12.1)
+
+**Correctness: repinned to Agent Judge 0.15.2.**
+
+- On 0.12.0 and 0.12.1 a `JudgeGate` decision may have been taken by fewer judges than configured; re-evaluate gate outcomes that mattered on 0.12.2 or later
+- 0.12.0 moved to Agent Judge 0.15.0, Agent Client 0.29.0 and Agent Journal 1.8.0; 0.12.1 refreshed Hibernate and published an SBOM for every artifact
+
+[Project](/projects/agent-workflow) | [What's New](/docs/agent-workflow/whats-new) | [Source](https://github.com/markpollack/agent-workflow)
 
 ---
 

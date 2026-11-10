@@ -3,11 +3,13 @@ title: "Annotation Model"
 description: "Declare agents with @Agent, compose workflows inside AgentHandler, and wire exception handling with @ExceptionHandler and @AgentAdvice"
 ---
 
-<Note>This page describes the previously published legacy APIs. For the 0.14.0 typed executable-DSL milestone, its supported capabilities and recovery limits, see [Agent Workflow](/projects/agent-workflow). Durable loops, timers and Workflow Journal projection are deferred.</Note>
+<Warning>
+**Removed in 0.13.0.** This page teaches APIs that Agent Workflow removed in 0.13.0: the in-memory `Workflow` DSL, `WorkflowExecutor`, `StepRunner` and its checkpoint adapters, `workflow-temporal` and the `AgentContext`-based `Step.named`. Its examples compile only against 0.12.3 or earlier (`io.github.markpollack:workflow-flows:0.12.3`) and do not compile against 0.14.0. For the current API, see the [tutorial](/docs/agent-workflow/tutorial).
+</Warning>
 
 ## Why an Annotation Model?
 
-Steps and workflows are the plumbing. Agents are the product — the thing you expose to HTTP endpoints, MCP servers, message listeners, and other agents. The annotation model gives you a programming model for declaring agents, naming them, describing them, handling their errors, and looking them up by name at runtime.
+Steps and workflows are the plumbing. Agents are the product — the thing your application exposes to HTTP endpoints, message listeners, other agents or, through your own MCP layer, MCP clients. Agent Workflow itself has no MCP server or adapter. The annotation model gives you a programming model for declaring agents, naming them, describing them, handling their errors, and looking them up by name at runtime.
 
 If you've used `@Controller` + `@ControllerAdvice` in Spring MVC, you already know how this works. `@Agent` is to `AgentHandler` what `@Controller` is to your handler methods.
 
@@ -208,7 +210,7 @@ public class AgentConfig {
 }
 ```
 
-Spring injects the `@Agent` and `@AgentAdvice` beans by type. The registry and resolver become injectable anywhere you need them — HTTP controllers, message listeners, MCP tool handlers.
+Spring injects the `@Agent` and `@AgentAdvice` beans by type. The registry and resolver become injectable anywhere you need them — HTTP controllers, message listeners, or tool handlers in your own MCP layer.
 
 ### Disambiguating steps with @Qualifier
 

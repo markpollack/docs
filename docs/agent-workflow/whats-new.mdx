@@ -30,9 +30,41 @@ First executable-DSL milestone: typed Steps and derived bindings, nested reusabl
 - **Store format 9** refuses older stores; there is no migration.
 - **Uncommitted external effects may repeat** after a crash.
 - **Terminal runs stay terminal:** failed or cancelled runs cannot be restarted from saved progress.
+- **Breaking: legacy APIs removed.** The in-memory `Workflow` DSL and `WorkflowExecutor`, `StepRunner`, `LocalStepRunner` and `CheckpointingStepRunner`, `WorkflowBuilder` and `SupervisorBuilder`, `TemporalStepRunner` and the `workflow-temporal` module, and the `AgentContext`-based `Step.named` are gone. Stay on 0.12.3 to keep using them; their guides are marked "Removed in 0.13.0". `Blueprint`, the agent loops, `@Agent`/`@AgentAdvice` and Journal tracing remain in companion modules.
 
 [Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.13.0) · [Tutorial](/docs/agent-workflow/tutorial)
 
+
+## 0.12.3 (2026-09-17)
+
+Compatibility release for **Agent Judge 0.17.0**: Agent Judge 0.15.2 → 0.17.0 and Agent Journal 1.9.0 → 1.10.0.
+
+- `JudgeGate` and `TieredGate` return `GateAssessment.Inconclusive` for a `NOT_APPLICABLE` aggregate; the verdict is recorded unchanged. Agent Workflow 0.12.2 cannot compile against Agent Judge 0.17.0, so **if you use Agent Judge 0.17.0, use 0.12.3**
+
+[Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.12.3)
+
+## 0.12.2 (2026-08-25)
+
+**Correctness**: Agent Judge 0.15.1 → 0.15.2 and Agent Journal 1.8.2 → 1.9.0.
+
+- Agent Judge 0.15.0 and 0.15.1 could silently drop a judge from a parallel jury, so on Agent Workflow 0.12.0 or 0.12.1 **a `JudgeGate` decision may have been taken by fewer judges than configured**. If a gate outcome mattered, re-evaluate it on 0.12.2 or later. Agent Judge's corrected 0.15.2 note widens the defect to every Judge release from 0.11.0 through 0.15.1, which includes the Judge 0.12.0 that Agent Workflow 0.9.0 and 0.10.0 pin
+- `workflow-journal` runs recorded on Journal 1.8.2 lack the per-turn cost vector, stop reasons and tool-call ordinals and durations that 1.9.0 adds
+
+[Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.12.2)
+
+## 0.12.1 (2026-08-25)
+
+- Maintenance release refreshing the compatible Hibernate line, marking examples as non-published, and publishing consumer-correct CycloneDX SBOMs for every artifact
+- Affected by the parallel-jury defect; use 0.12.2 or later
+
+## 0.12.0 (2026-08-24)
+
+- Compatibility release for Agent Judge 0.15.0, Agent Client 0.29.0 and Agent Journal 1.8.0
+- Gate evaluation distinguishes a returned decision from an inconclusive verdict and keeps the complete verdict trail through recovery; loop results represent absent measurements explicitly instead of as zero
+- Claude CLI subprocesses close their unused stdin pipe immediately, so print-mode output is not polluted by the CLI's no-input warning
+- Affected by the parallel-jury defect; use 0.12.2 or later
+
+[Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.12.0)
 
 ## 0.10.0 (2026-06-15)
 

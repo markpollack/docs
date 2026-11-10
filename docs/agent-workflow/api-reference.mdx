@@ -56,3 +56,15 @@ See [Durability](/docs/agent-workflow/durability).
 0.14.0 adds `build()` to `Workflows.Sequence` for a final child that always fails or cancels.
 It adds no implicit terminal and does not permit dangling ordinary paths or unreachable successors.
 The final child’s explicit terminal closes the parent path; `build()` adds no implicit successful completion.
+
+## MCP servers for a Claude step
+
+`ClaudeStep` (`workflow-flows`, a `Step<String, String>`) runs a Claude agentic loop. `ClaudeStep.withMcp(McpConfig)` adds an MCP server for that loop; `McpConfig.of(name, serverConfig)` takes a name and a Jackson-serializable server description, such as a `Map` with `command` and `args`:
+
+```java
+ClaudeStep.of("analyze this diff and identify concerns: {input}")
+    .workingDirectory(repoPath)
+    .withMcp(McpConfig.of("filesystem", fileSystemMcpServer))
+```
+
+The default client runs the `claude` CLI as a subprocess and writes the configured servers, keyed by name, to a temporary file passed with `--mcp-config`. A custom `ClaudeSyncClient` receives the configurations as an argument. The example is from the `ClaudeStep` Javadoc. This applies only to `ClaudeStep`: `AgentClientStep` passes no MCP configuration, so Agent Workflow has no portable MCP path through Agent Client. Available since 0.10.0, including 0.14.0.

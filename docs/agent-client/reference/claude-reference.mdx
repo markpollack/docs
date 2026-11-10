@@ -52,7 +52,7 @@ These options provide full parity with the Claude Code Python SDK:
 | `env` | `Map<String,String>` | — | Custom environment variables for the CLI process |
 | `max-buffer-size` | `Integer` | — | Maximum buffer size for JSON parsing in bytes (default 1MB) |
 | `user` | `String` | — | Unix user to run the CLI process as (requires sudo configuration) |
-| `trace-dir` | `String` | — | Directory for JSONL trace files. Each invocation writes one file. |
+| `trace-dir` | `String` | — | Directory for JSONL trace files. Each invocation writes one file. Removed on main (0.32.1-SNAPSHOT). |
 
 ## Permission Modes
 
@@ -148,6 +148,10 @@ Trace files are flushed per event during parsing, so you can `tail -f` them duri
 <Note>
 These are Claude-specific JSONL traces, not provider-neutral journal events. See [Agent Journal](/projects/agent-journal) for the portable event layer.
 </Note>
+
+<Warning>
+On main, not yet released: 0.32.1-SNAPSHOT removes `trace-dir`, `trace-content-mode`, `archive-transcript`, `traceDir(...)` and the `tracePath`/`transcriptPath`/`phaseCapture` provider fields. Use `capture(ClaudeCaptureOptions)` for blocking calls, or the lifecycle provider's `acquisitionDirectory(...)`. Everything above is correct for 0.32.0. See [legacy tracing removed](https://github.com/markpollack/agent-client/blob/main/docs/legacy-tracing-removed.md).
+</Warning>
 
 ## Authentication
 

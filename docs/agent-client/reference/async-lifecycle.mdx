@@ -1,0 +1,145 @@
+---
+title: "Async Lifecycle"
+sidebarTitle: "Async Lifecycle"
+description: "runAsync(), retained sessions, cancellation and termination waits, recording outcomes, failed executions and the close order (on main, not yet released)"
+---
+
+<Warning>
+**On main, not yet released — 0.32.1-SNAPSHOT, checked against agent-client main f89fc6b5.** The lifecycle and recording API on this page is in the development snapshots built from `main`. None of it is in 0.32.0. Snapshot content changes as `main` moves, so name the `main` commit you built against.
+</Warning>
+
+<Accordion title="Add the snapshot repository">
+Resolve `0.32.1-SNAPSHOT` from the Central snapshot repository, with snapshots enabled:
+
+```xml
+<repositories>
+    <repository>
+        <id>central-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-claude</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+    <!-- optional: native recording through Agent Journal -->
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-journal</artifactId>
+        <version>0.32.1-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+```
+</Accordion>
+
+## Overview
+
+The lifecycle API runs a goal asynchronously and keeps the execution, its termination and its recording as separate facts. It is available to providers that implement `AgentExecutionProvider`. The new modules, none of them on Maven Central at 0.32.0:
+
+| Module | Supplies |
+|---|---|
+| `agent-client-claude` | `ClaudeClientProvider` (Claude Code, SDK route) |
+| `agent-client-codex` | `CodexClientProvider` (`codex exec`) |
+| `agent-client-antigravity` | `AntigravityClientProvider` (`agy`) |
+| `agent-client-journal` | `JournalExecutionRecorder` (optional native recording through Agent Journal) |
+
+A legacy `AgentApi` still supports its existing blocking path; `runAsync()` and retained Client sessions reject it explicitly.
+
+## A one-shot call
+
+`client.goal(...).runAsync()` returns at once with an `AgentExecution`:
+
+| Method | What it does |
+|---|---|
+| `result()` | Waits for the answer. Interruptible. |
+| `result(Duration)` | Waits with a caller-only timeout. |
+| `awaitTermination(Duration)` | Waits until the turn has really ended, including cleanup. |
+| `termination()` | A `CompletionStage<ExecutionTermination>` that completes on termination. |
+| `cancel(boolean)` | Stops this turn only. |
+| `recording()` | The secondary recording, reported separately from the result. |
+| `inspect()` | A snapshot of the execution's state. |
+
+The Client runs each execution on its own virtual thread; there is no executor to configure.
+
+## A retained session
+
+`client.sessions().create(...)` opens a retained `AgentSession`. Turns on one session run one at a time and share its history:
+
+```java
+AgentExecution execution = session.goal("first turn").runAsync();
+AgentClientResponse result = execution.result(Duration.ofSeconds(1));
+AgentExecution next = session.goal("follow up").runAsync();
+next.result();
+```
+
+A submit the session cannot take dispatches nothing and throws `AgentOperationException`. Its `failure()` is `BUSY` while a turn still holds the session (including a cancelled or failed one whose work has not settled), `CLEANUP_UNKNOWN` once the session is quarantined, or `CLOSED` once it is closing. `AgentOperationException` extends `IllegalStateException`, so existing catches still work. The [shared conversation tutorial](/docs/agent-client/tutorial/async/02-shared-conversation-arrival-order) maps these to HTTP statuses.
+
+## Cancellation, caller timeouts and execution timeouts
+
+- `result(Duration)` is a **caller** timeout. Neither it nor an interrupt stops the execution; the caller just stops waiting.
+- A positive `executionTimeout` is an **execution** deadline. It starts at acceptance, includes required advisors and setup, and excludes secondary recording. Reaching it fails the execution with `FailureCode.TIMEOUT`; it is not a cancellation.
+- `cancel(false)` and `cancel(true)` both stop only the selected turn; `true` also permits interrupting its worker.
+- A cancelled or failed result can be available before the provider process has stopped. `awaitTermination(...)` and `termination()` observe that separate fact. If cleanup cannot be confirmed by the cleanup deadline, the session is quarantined and later submits are refused `CLEANUP_UNKNOWN`.
+
+## Recording outcomes
+
+`execution.recording()` reports native recording separately from the result, and recording never changes the result. With `agent-client-journal`, `nativeRecording()` reports one of four outcomes:
+
+| Outcome | Meaning |
+|---|---|
+| `ATTACHED` | A qualifier accepted the sources; the binding carries them under its native profile. |
+| `UNQUALIFIED` | No qualifier exists for the profile (Antigravity, for example). Evidence only. |
+| `REJECTED` | A known qualifier, or the digest check, refused the sources. Evidence only. |
+| `NOT_CAPTURED` | The provider sealed no native sources. Evidence only. |
+
+Every outcome archives the call, linked by its decision. The evidence-only outcomes carry a `missing` entry naming the profile or verdict.
+
+Claude Code and Codex CLI versions are recorded, not gated: the Client accepts any Claude Code version on the SDK route and any Codex CLI version on the exec route. The observed version names the acquisition profile (`claude-code-<version>-sdk-stdio-session-file`, `codex-cli-<version>-exec-stdio-rollout`). With Agent Journal 2.0.0-SNAPSHOT, qualified one-shots are delivered under `client-terminal-claude-sdk/1` and `client-terminal-codex-exec/1`.
+
+## Failed executions and `fullRecord()`
+
+A failed `result()` throws `AgentExecutionException`. Its cause chain and detached `failure()` (`FailureInfo`: code, exception class, message, causes) carry the original failure, unchanged by recording.
+
+Once the recording lane has sealed the provider's native capture, `execution.recording().evidence().fullRecord()` returns a `CaptureRecordReference` naming the sealed manifest: its `uri`, its `format` (the acquisition profile) and its `sha256`. It is present also when the execution failed and when Journal did not qualify the sources. For Codex the manifest holds argv, exit status, observed processes and the original stdin, stdout and stderr. It is diagnostic evidence, not Journal qualification: `nativeRecording()` reports qualification.
+
+## Close order
+
+The recording lane runs after the result, so wait for termination and for a terminal recording delivery (`TerminalDelivery.Completed` or `TerminalDelivery.Failed` from `recording().delivery()`) before closing the client. A client closed earlier rejects the pending recording work and seals nothing:
+
+```java
+AgentExecution execution = client.goal("task").runAsync();
+try {
+    execution.result();
+}
+catch (AgentExecutionException failed) {
+    FailureInfo failure = failed.failure();   // the original failure, unchanged by recording
+}
+execution.awaitTermination(Duration.ofSeconds(10));
+while (!(execution.recording().delivery() instanceof TerminalDelivery.Completed
+        || execution.recording().delivery() instanceof TerminalDelivery.Failed)) {
+    Thread.sleep(10);                          // bound this wait in real code
+}
+execution.recording().evidence().fullRecord()
+    .ifPresent(record -> System.out.println(record.uri() + " " + record.sha256().orElse("")));
+client.close();
+```
+
+Session and Client `close()` wait within one cleanup budget (default 10 seconds). Unconfirmed cleanup throws `CleanupUnconfirmedException`, which keeps the unconfirmed resources and a read-only cleanup handle.
+
+## Breaking on main: legacy Claude derived tracing removed
+
+`0.32.1-SNAPSHOT` removes the legacy Claude trace-file surface: the builder options `traceDir`, `traceContentMode` and `archiveTranscript`; the provider fields `phaseCapture`, `tracePath`, `transcriptPath` and the derived token fields; and the properties `agent-client.claude.trace-dir`, `trace-content-mode` and `archive-transcript`. `agent-claude` no longer depends on Journal 1.x. Use `ClaudeAgentModel.Builder.capture(ClaudeCaptureOptions)` for blocking calls and `ClaudeClientProvider.Builder.acquisitionDirectory(...)` for lifecycle sessions. `AgentClientResponse.getPhaseCapture()` stays; for Claude it returns null. See [legacy tracing removed](https://github.com/markpollack/agent-client/blob/main/docs/legacy-tracing-removed.md).
+
+## Sources
+
+All on agent-client `main`:
+
+- [Async result lifecycle](https://github.com/markpollack/agent-client/blob/main/docs/async-lifecycle.md), including "Failed executions and closing"
+- [Async capabilities and migration](https://github.com/markpollack/agent-client/blob/main/docs/async-capabilities.md): what each provider supports and what remains to qualify
+- [Claude native guide](https://github.com/markpollack/agent-client/blob/main/docs/native-claude.md) and [Codex one-shot and retained lifecycle](https://github.com/markpollack/agent-client/blob/main/agent-client-codex/README.md)
+- [Codex installed archive](https://github.com/markpollack/agent-client/blob/main/docs/codex-archive.md)

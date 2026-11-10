@@ -195,7 +195,8 @@
                       "docs/agent-client/reference/gemini-reference",
                       "docs/agent-client/reference/grok-reference",
                       "docs/agent-client/reference/antigravity-reference",
-                      "docs/agent-client/reference/sessions"
+                      "docs/agent-client/reference/sessions",
+                      "docs/agent-client/reference/async-lifecycle"
                     ]
                   },
                   "docs/agent-client/explanation/defaults-philosophy"

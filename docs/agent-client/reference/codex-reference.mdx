@@ -16,6 +16,10 @@ agent-client:
     full-auto: true
 ```
 
+<Note>
+On main, not yet released (0.32.1-SNAPSHOT, not in 0.32.0): `CodexClientProvider` (`agent-client-codex`) runs `codex exec` under the [async lifecycle](/docs/agent-client/reference/async-lifecycle) API, at any Codex CLI version; the observed version is recorded, not gated. See the [`agent-client-codex` README](https://github.com/markpollack/agent-client/blob/main/agent-client-codex/README.md).
+</Note>
+
 ## Configuration Properties
 
 Prefix: `agent-client.codex`

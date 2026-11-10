@@ -186,6 +186,7 @@
                   },
                   "docs/agent-client/howto/switching-providers",
                   "docs/agent-client/howto/structured-output",
+                  "docs/agent-client/howto/mcp-servers",
                   {
                     "group": "Reference",
                     "pages": [

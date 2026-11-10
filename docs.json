@@ -221,6 +221,8 @@
                   "docs/agent-judge/interpreting-verdicts",
                   "docs/agent-judge/built-in-judges",
                   "docs/agent-judge/requirements-judges",
+                  "docs/agent-judge/requirement-documents",
+                  "docs/agent-judge/prompt-size-guard",
                   "docs/agent-judge/api-reference",
                   "docs/agent-judge/migration-0.18",
                   "docs/agent-judge/migration-0.17",

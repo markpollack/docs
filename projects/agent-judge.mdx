@@ -12,6 +12,8 @@ Retain the complete result before deciding whether the application may rely on i
 
 **Current release: 0.18.0** (2026-10-08), on Maven Central under `io.github.markpollack:agent-judge-*`.
 
+**On main, not yet released (0.19.0-SNAPSHOT).** Requirement documents are read whole and as CommonMark, with strict loading, a completeness rule and a specification linter. Generated audits refuse an oversized prompt before calling. A generated-answer invocation now stores message digests instead of messages (`generated-answer:v3`). Breaking: `EvalModel` is no longer an `EvalRuntime`, and `BuildSuccessJudge` is no longer a `CommandJudge`. Resolve `0.19.0-SNAPSHOT` from the Central snapshot repository; provenance `markpollack/agent-judge@6303332`. None of it is in 0.18.0.
+
 ```xml
 <dependency>
   <groupId>io.github.markpollack</groupId>

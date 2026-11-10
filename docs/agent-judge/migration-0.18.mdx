@@ -28,7 +28,7 @@ A pure Requirement owns identity, revision, specification and source.
 Typed construction binds that actual requirement and evidence to a ready non-generic Judge or Jury.
 Construction acquires no evidence and invokes no backend.
 Each direct execution is fresh; suppliers acquire one snapshot per execution.
-`EvalRuntime<Q,A>` retains native answers and invocation facts; generated EvalModel specializes that port.
+`EvalRuntime<Q,A>` retains native answers and invocation facts; generated EvalModel specializes that port. On main (0.19.0-SNAPSHOT), `EvalModel` no longer extends `EvalRuntime`; it keeps the same native-execution shape.
 SpringAiEvalModel and AgentClientEvalModel bridge generated runtimes.
 Tools, permissions, workspace, credentials and timeouts belong to the configured backend.
 

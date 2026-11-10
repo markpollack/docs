@@ -43,7 +43,7 @@ Artifact: `agent-judge-exec`.
 
 | Judge | Purpose |
 |---|---|
-| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status. |
+| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status. On main (0.19.0-SNAPSHOT), it is no longer a `CommandJudge`; use `builder(command)`, `maven(...)` or `gradle(...)`. |
 | `CommandJudge` | Execute an arbitrary command through Agent Sandbox and compare the exit code |
 | `ClassVersionJudge` | Validate Java class-file bytecode versions |
 | `CoveragePreservationJudge` | Reject a JaCoCo coverage regression beyond the configured tolerance |

@@ -9,6 +9,8 @@ This guide describes the Agent Eval 0.18.0 API. Maven coordinates and Java packa
 
 A requirement owns identity, revision, specification, and source. It owns neither evidence nor execution.
 `EarsRequirement.from(path, revision)` and `Rfc2119Requirement.from(path, revision)` read the selected document during setup and retain its SHA-256 source reference and native item IDs.
+
+On main, not yet released (0.19.0-SNAPSHOT): `from` reads each requirement's whole paragraph. `fromStrict` refuses a document with any problem, and `RequirementDocuments` lints a whole specification tree. See [Requirement documents](/docs/agent-judge/requirement-documents). None of it is in 0.18.0.
 Select your roster before executing. The PetClinic path keeps `UC6-AC7` through `UC6-AC12` (six), the full UC6 document (52), and the architectural MUST roster (13).
 
 | Operation | Construction | Execution result |
@@ -21,7 +23,7 @@ Select your roster before executing. The PetClinic path keeps `UC6-AC7` through 
 
 ## Configure the runtime
 
-`EvalModel` specializes `EvalRuntime<EvalModelRequest,EvalModelResponse>` for generated answers.
+`EvalModel` specializes `EvalRuntime<EvalModelRequest,EvalModelResponse>` for generated answers. On main (0.19.0-SNAPSHOT), `EvalModel` no longer extends `EvalRuntime`; it keeps the same native-execution shape.
 `SpringAiEvalModel` adapts Spring AI; `AgentClientEvalModel` adapts a native agent client.
 Configure credentials, workspace, permissions, tools, deadlines, and native options on the backend before constructing the Judge or Jury.
 An investigative harness needs actual investigation capability. A prepared-only harness can declare `withInputs(GeneratedInput.PREPARED_EVIDENCE)`; requesting investigation then fails before calls.
@@ -36,6 +38,7 @@ The root Verdict owns the shared Invocation; each requirement result references 
 Structured roster runtimes execute separately for each item: EARS6 means six executions, EARS52 means 52, and RFC13 means 13.
 Jev uses this typed path; its per-item counts must not be described as one generated batch call.
 `InvocationRecords.of(verdict)` resolves retained owners and counts each ID once, including lower invocations on refused originals.
+On main (0.19.0-SNAPSHOT), an invocation's native facts hold message digests (role, UTF-8 length, SHA-256) rather than the messages, protocol `generated-answer:v3`; a reader of the earlier shape fails visibly.
 Unknown usage or cost stays absent; an omitted field is not zero.
 
 ## Run a prepared example

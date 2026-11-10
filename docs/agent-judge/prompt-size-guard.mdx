@@ -1,0 +1,77 @@
+---
+title: "Prompt size guard"
+sidebarTitle: "Prompt size guard"
+description: "Generated EARS and RFC 2119 audits measure the whole request and refuse an oversized prompt with ERROR before calling (on main, 0.19.0-SNAPSHOT)"
+---
+
+<Warning>
+On main, not yet released (0.19.0-SNAPSHOT); provenance `markpollack/agent-judge@6303332`. None of this is in 0.18.0.
+</Warning>
+
+<Accordion title="Add the snapshot repository">
+Every push to main publishes `0.19.0-SNAPSHOT` to the Central snapshot repository. Name the main commit you built against: snapshot content changes as main moves.
+
+```xml
+<repositories>
+  <repository>
+    <id>central-snapshots</id>
+    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    <releases><enabled>false</enabled></releases>
+    <snapshots><enabled>true</enabled></snapshots>
+  </repository>
+</repositories>
+<dependencies>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>agent-judge-ai-core</artifactId>
+    <version>0.19.0-SNAPSHOT</version>
+  </dependency>
+</dependencies>
+```
+</Accordion>
+
+A generated audit is one call, and its workspace slot is meant for a path the judge reads with its tools, not pasted source. Before calling, every generated EARS and RFC 2119 judge and roster jury measures the whole request and refuses one that is too large.
+
+## What is measured, and where
+
+- **What:** the whole request: the requirement headers plus the rendered prompt.
+- **Which builders:** `EarsJury`, `Rfc2119Jury`, `EarsJudge` and `Rfc2119Judge`, for single judges as well as rosters.
+- **The default limit:** `PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS`, 100,000 characters. It is configurable.
+
+## Above the limit
+
+No call is made. The result is `ERROR` with reason code `judge_failed`, never `FAIL`: the requirement was not judged, so it has not failed. The reasoning states the size, the limit and the parts:
+
+```text
+The generated audit prompt of N characters exceeds the L-character limit, so no call was made: requirement headers H, workspace slot W, template and criteria T. The workspace slot is for a path the judge reads with its tools, not pasted evidence; pass a path, or set maxPromptCharacters on the builder.
+```
+
+A refused roster is an ordinary result: it concludes `INCONCLUSIVE`, retains no invocation because no call was made, and stores and reads back exactly through the requirement codecs.
+
+## Set another limit
+
+Call `.maxPromptCharacters(n)` right after `.runtime(...)`. The value must be positive; otherwise the builder throws `IllegalArgumentException`. Here `judgeModel` is the application's configured `EvalModel`:
+
+```java
+import io.github.markpollack.judge.ai.requirements.EarsJury;
+import io.github.markpollack.judge.ai.requirements.EarsRequirement;
+import io.github.markpollack.judge.ai.requirements.PromptLimits;
+
+var orderCriteria = List.of(EarsRequirement.of("UC1-AC1", "1", "Record a placed order",
+    "When a customer places an order, the system shall record the order.", null));
+Verdict sized = EarsJury.builder()
+    .runtime(judgeModel)
+    .maxPromptCharacters(2 * PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS)
+    .requirements(orderCriteria)
+    .evidence("Recorded execution evidence")
+    .build()
+    .vote();
+```
+
+This block is identical to the one in the agent-judge [README](https://github.com/markpollack/agent-judge/blob/6303332/README.md#investigate-a-roster-once), which `CompileGrammarTest` (`agent-judge-assertj`) compiles. The behaviour is covered by `PromptSizeGuardTests` and `PromptRefusalStorageTests`.
+
+## Who must act
+
+**Behaviour change.** A caller that pastes source or other large evidence into the workspace slot now gets `ERROR` instead of a call. Pass a path the judge can read with its tools instead, or raise the limit.
+
+See also [Requirements judges](/docs/agent-judge/requirements-judges) and [What's New](/docs/agent-judge/whats-new).

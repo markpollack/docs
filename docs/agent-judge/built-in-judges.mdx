@@ -1,10 +1,10 @@
 ---
 title: "Built-in Judges"
-description: "Deterministic, execution, file, LLM, RAG, and requirements judges in Agent Judge 0.17"
+description: "Deterministic, execution, file, LLM, RAG, and requirements judges in Agent Judge 0.18"
 ---
 
 <Note>
-This page's examples describe released Agent Judge 0.17.0 and the fundamentals reactor.
+The types on this page are those of Agent Judge 0.18.0. The linked tutorial modules are pinned to 0.17.0 and use its API.
 For configured Agent Eval 0.18 execution, use the [requirements walkthrough](/docs/agent-judge/requirements-judges) and [current API reference](/docs/agent-judge/api-reference).
 </Note>
 
@@ -15,9 +15,9 @@ Status is required, while a stored score and label are present only when that ju
 Reach for these in the order the [tutorial](/docs/agent-judge/tutorial) does: the least interpretive instrument that can reliably answer the question.
 A criterion the compiler, JUnit, ArchUnit or JaCoCo already settles does not need a judge at all — it needs the judge only when its answer has to travel into a definition of done.
 
-## Core file-system judges
+## File-system judges
 
-Artifact: `agent-judge-core`.
+Artifact: `agent-judge-file`.
 
 | Judge | Purpose |
 |---|---|
@@ -43,7 +43,7 @@ Artifact: `agent-judge-exec`.
 
 | Judge | Purpose |
 |---|---|
-| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status |
+| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status. |
 | `CommandJudge` | Execute an arbitrary command through Agent Sandbox and compare the exit code |
 | `ClassVersionJudge` | Validate Java class-file bytecode versions |
 | `CoveragePreservationJudge` | Reject a JaCoCo coverage regression beyond the configured tolerance |
@@ -73,7 +73,7 @@ Artifact: `agent-judge-file`.
 | `XmlSemanticJudge` | Compare XML document structure |
 | `TextFileJudge` | Compare whitespace-normalized text |
 
-These judges expect reference and actual file locations in the evaluation context as documented in the aggregate Javadoc.
+These judges take their reference and actual files as typed evidence on the builder; `FileComparisonJudge.builder()` takes a `DirectoryComparison`.
 
 ## LLM judge
 
@@ -84,7 +84,7 @@ Artifact: `agent-judge-llm`.
 | `CorrectnessJudge` | Ask a Spring AI-backed model whether output satisfies the goal |
 | `LLMJudge` | Base template for specialized Spring AI LLM judges |
 
-For a framework-neutral composition, use `ModelBackedJudge` from `agent-judge-ai-core` with a `JudgePromptTemplate`, `JudgeModel`, and `JudgmentClassifier`.
+For a framework-neutral composition, use `ModelBackedJudge` from `agent-judge-ai-core` with a `JudgePromptTemplate`, an `EvalModel`, and a `JudgmentClassifier`.
 [Tutorial module 07](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/module-07-model-backed-judge) runs that complete path with no credentials.
 
 ## RAG judges
@@ -97,13 +97,13 @@ Artifact: `agent-judge-rag`.
 | `ContextualRelevanceJudge` | Is the retrieved context relevant to the question? |
 | `HallucinationJudge` | Does the answer introduce unsupported claims? |
 
-`RagContext` defines the `rag.question`, `rag.context`, and `rag.answer` metadata keys and the framework fallback conventions.
+`RagEvidence(question, retrievedContext, answer)` carries the three subjects; empty text means the evidence is unavailable.
 When required evidence is absent, these judges abstain rather than inventing a score.
 
 ## Framework evaluators
 
 Evaluators are bridges rather than judges.
-They execute or adapt framework output into `JudgmentContext`, then apply an ordinary `Judge` or `Jury`.
+They execute or adapt framework output into typed evidence (`CompletionEvidence` for Spring AI, LangChain4j and Koog; `AgentExecutionEvidence` for Agent Client), then apply an ordinary `Judge` or `Jury`.
 
 | Artifact | Evaluator | Evaluated value |
 |---|---|---|
@@ -120,7 +120,7 @@ The credential-free bridge samples are [Koog module 10](https://github.com/markp
 
 `EarsJudge` and `Rfc2119Judge` read written acceptance criteria and architectural constraints back
 against the implementation. See [Requirements judges](/docs/agent-judge/requirements-judges) for the
-roster and strict rollup, a BOM import, runnable examples, and the case study.
+roster and strict rollup, explicit 0.18.0 coordinates, runnable examples, and the case study.
 
 ## Related
 

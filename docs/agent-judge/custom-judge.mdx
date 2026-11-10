@@ -4,7 +4,7 @@ description: "Implement a judge with the Agent Judge result API"
 ---
 
 <Note>
-This page's examples describe released Agent Judge 0.17.0 and the fundamentals reactor.
+The types on this page are those of Agent Judge 0.18.0. The linked tutorial modules are pinned to 0.17.0 and use its API.
 For configured Agent Eval 0.18 execution, use the [requirements walkthrough](/docs/agent-judge/requirements-judges) and [current API reference](/docs/agent-judge/api-reference).
 </Note>
 
@@ -39,18 +39,18 @@ Use `Judgment.error(reasoning)` when evaluation could not complete — logging t
 `ModelBackedJudge` keeps three concerns independent.
 
 1. `JudgePromptTemplate` renders evaluation inputs from a context.
-2. `JudgeModel` invokes a backend.
+2. `EvalModel` invokes a backend.
 3. `JudgmentClassifier` converts the response into a normalized judgment.
 
 `LabelJudgmentClassifier` requires an explicit label-to-status policy.
 Unknown labels produce a reasoned `ABSTAIN` with the raw output in metadata and neither a label nor a score — not a guess, and not a default `PASS`.
 
-Production adapters include `SpringAiJudgeModel` and `AgentClientJudgeModel`.
+Production adapters include `SpringAiEvalModel` (`agent-judge-llm`) and `AgentClientEvalModel` (`agent-judge-agent-client`).
 
 ## Keep metadata portable
 
 Judgment metadata may contain only portable primitives, arrays, and string-keyed objects.
-Convert SDK objects to stable fields before attaching them, and keep live exceptions and framework-native objects in logs or `JudgmentContext`, not in the result.
+Convert SDK objects to stable fields before attaching them, and keep live exceptions and framework-native objects in logs or your application's own state, not in the result.
 
 ## Related
 

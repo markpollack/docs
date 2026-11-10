@@ -4,6 +4,32 @@ sidebarTitle: "What's New"
 description: "Release notes for Agent Hooks"
 ---
 
+<Warning>
+**Advisory (2026-08-27): tool-input payloads in adapter log and exception messages, 0.6.x.** `agent-hooks-gemini` and `agent-hooks-claude` **0.6.0 to 0.6.4** embed a whole tool-input payload in a message when a hook returns a `Modify` decision: the Gemini adapter logs it when it downgrades `Modify` to allow, and the Claude adapter puts it in an exception when the replacement input fails to parse as JSON. Tool inputs routinely carry credentials. If no hook of yours returns `Modify`, neither path is reachable. **Fixed in 0.7.0**; all 0.6.x versions remain on Maven Central. **What to do:** upgrade to 0.7.0 or later. If you ran 0.6.x with any hook that returns `Modify`, treat the Gemini CLI and Claude CLI logs from that period as potentially containing tool inputs, and rotate anything those inputs carried. See the [advisory](https://github.com/markpollack/agent-hooks/blob/main/ADVISORY-2026-08-27-tool-input-in-adapter-logs.md).
+</Warning>
+
+## 0.8.3 (2026-09-17)
+
+- Moves `agent-hooks-claude` to Claude Agent SDK 1.7.0 (`provided` scope; consumers supply the SDK), whose close and cancel no longer hang or leave the CLI running
+- No source change and no API change; all 105 tests pass against 1.7.0
+- Each artifact carries its consumer-rooted CycloneDX SBOM
+
+[Release notes](https://github.com/markpollack/agent-hooks/blob/main/release-notes/0.8.3.md)
+
+## 0.8.2 (2026-08-25)
+
+- Corrective maintenance release restoring the natural public dependency graph for `agent-hooks-spring`, removing direct dependency declarations that were added only to align a generated SBOM
+
+## 0.8.1 (2026-08-24)
+
+- Maintenance release aligning JSpecify and Claude Agent SDK dependencies
+- Publishes a consumer-correct CycloneDX SBOM for every artifact, replacing the single aggregate SBOM of 0.7.0
+
+## 0.8.0 (2026-08-24)
+
+- Refreshes Agent Hooks to Claude Agent SDK 1.5.0 and current compatible Spring AI, Spring Boot, Jackson, test, SBOM and release-tooling versions
+- The core, Spring and Gemini modules keep their Java 17 baseline; the Claude adapter stays on Java 21
+
 ## 0.7.0 (2026-08-19)
 
 - **Standalone consumers get safe Jackson versions.** A consumer that resolved
@@ -25,14 +51,18 @@ description: "Release notes for Agent Hooks"
   logged; both were documented as logged and were in fact silent.
 - The Gemini dispatcher writes a protocol response for every invocation, so an unchecked hook
   failure can no longer leave the CLI waiting on empty stdout.
-- Adapter log and exception messages no longer embed tool-input payloads.
+- Adapter log and exception messages no longer embed tool-input payloads. This fixes the 0.6.x leak in the advisory above.
 - `AgentHookBridge` gains `evictSession(String)` and `activeSessionCount()`.
 
 ## 0.6.4 (2026-06-15)
 
+- Affected by the tool-input logging advisory above; upgrade to 0.7.0 or later
+
 - Spring AI 2.0.0 GA and Spring Boot 4.0.7
 
 ## 0.6.3 (2026-06-06)
+
+- Affected by the tool-input logging advisory above; upgrade to 0.7.0 or later
 
 - Add .flattened-pom.xml to .gitignore
 - Prepare for next development iteration 0.6.3-SNAPSHOT

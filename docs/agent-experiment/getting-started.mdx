@@ -1,31 +1,9 @@
 ---
 title: "Getting Started with Agent Experiment"
-description: "Run your first AI agent evaluation: dataset, agent, jury, and variant comparison"
+description: "Run a first agent evaluation: a dataset, an agent, a jury and the result, on 0.9.0 and on main"
 ---
 
-## Quick Start with the Template
-
-The fastest way to start is the [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) — a pre-wired project with variant config, analysis scripts, and the improvement flywheel methodology built in:
-
-```bash
-# Clone the template
-git clone https://github.com/markpollack/agent-experiment-template my-experiment
-cd my-experiment
-
-# Run the baseline variant
-./mvnw compile exec:java -Dexec.args="--variant control"
-
-# Run all variants and compare
-./mvnw compile exec:java -Dexec.args="--run-all-variants"
-```
-
-The template includes `ExperimentApp` (CLI with `--variant`, `--item`, `--run-all-variants`), a pluggable `AgentInvoker`, cascaded jury, Markov analysis scripts, and `GrowthStoryReporter` for variant comparison. Customize three things: the agent invoker, domain judges, and knowledge files.
-
-If you want to wire the experiment loop yourself from scratch, follow the steps below.
-
-## What You'll Build
-
-An experiment that evaluates an AI agent against a dataset of coding tasks, scores the results with a jury of judges, and compares variants to test whether adding knowledge improves quality.
+This page builds one experiment end to end: a one-item dataset, an agent, a jury, and the result. The agent here edits the workspace directly so the example runs offline; a real invoker calls an agent at that point. Both programs below were compiled and run, each with a negative control.
 
 ## Prerequisites
 
@@ -42,7 +20,7 @@ An experiment that evaluates an AI agent against a dataset of coding tasks, scor
     Your agent — anything that takes a prompt + workspace and produces a result
   </Card>
   <Card title="Jury" icon="scale-balanced">
-    One or more judges that score the agent's output against the reference
+    One or more judges that score the agent's output
   </Card>
   <Card title="AgentExperiment" icon="play">
     Orchestrates: load items → invoke agent → evaluate → persist results
@@ -105,174 +83,324 @@ my-dataset/
 
 The `before/` directory is the starting state. The `reference/` directory is the correct answer. The agent never sees the reference — it's used by judges for comparison.
 
-## Step 2: Implement an AgentInvoker
+The two `Person.java` files:
 
-### Using the template invokers (recommended)
-
-The template ships with ready-made invokers that handle journal integration, knowledge injection, and cost tracking. Pick the one that matches your orchestration:
-
-**Single-step workflow** — the simplest starting point. Wraps a `ClaudeStep` in a `Workflow` with automatic journal recording:
+`my-dataset/items/RENAME-001/before/src/main/java/com/example/Person.java`
 
 ```java
-// WorkflowAgentInvoker works out of the box — journal wired, knowledge injected.
-// Rename to {Domain}AgentInvoker and override hooks as needed.
-```
+package com.example;
 
-**Multi-step workflow** — for pipelines with typed state flowing between steps:
+public class Person {
 
-```java
-public class MyWorkflow extends WorkflowInvoker<MyState> {
+    private final String name;
 
-    @Override protected String workflowName() { return "my-experiment"; }
-
-    @Override
-    protected Workflow<Object, MyState> buildWorkflow(
-            InvocationContext ctx, WorkflowExecutor executor) {
-        return Workflow.<Object, MyState>define(workflowName())
-                .withExecutor(executor)   // journal + cost tracking pre-wired
-                .step(analyzeStep)
-                .step(fixStep)
-                .build();
+    public Person(String name) {
+        this.name = name;
     }
 
-    @Override
-    protected MyState buildInitialState(InvocationContext ctx) {
-        return new MyState(ctx.workspacePath());
+    public String getName() {
+        return name;
     }
 }
 ```
 
-See the [API Reference](/docs/agent-experiment/api-reference#template-invokers) for the full invoker hierarchy.
+`my-dataset/items/RENAME-001/reference/src/main/java/com/example/Person.java` is the same file with `fullName` for `name` and `getFullName` for `getName`.
 
-### From scratch
+The dataset format is the same on 0.9.0 and on main.
 
-If you need full control, `AgentInvoker` is a single-method interface:
+## Step 2: The agent, the jury and the run
+
+<Tabs>
+  <Tab title="0.9.0 (released)">
+
+**`pom.xml`** — `experiment-core` 0.9.0 from Maven Central:
+
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-experiment</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.markpollack</groupId>
+            <artifactId>experiment-core</artifactId>
+            <version>0.9.0</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+**`src/main/java/com/example/experiment/GettingStarted.java`** — in 0.9.0 one jury serves every item, and a judge reads the item's workspace from its `JudgmentContext`:
 
 ```java
-public class MyAgent implements AgentInvoker {
+package com.example.experiment;
 
-    @Override
-    public InvocationResult invoke(InvocationContext context) {
-        // Your agent works in context.workspacePath()
-        // using context.prompt() as the task description
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
 
-        ProcessBuilder pb = new ProcessBuilder(
-            "my-agent", "--workspace", context.workspacePath().toString(),
-                        "--prompt", context.prompt());
-        pb.directory(context.workspacePath().toFile());
+import io.github.markpollack.experiment.agent.AgentInvoker;
+import io.github.markpollack.experiment.agent.InvocationResult;
+import io.github.markpollack.experiment.dataset.FileSystemDatasetManager;
+import io.github.markpollack.experiment.result.ExperimentResult;
+import io.github.markpollack.experiment.runner.AgentExperiment;
+import io.github.markpollack.experiment.runner.ExperimentConfig;
+import io.github.markpollack.experiment.store.FileSystemResultStore;
+import io.github.markpollack.judge.Judge;
+import io.github.markpollack.judge.jury.ConsensusStrategy;
+import io.github.markpollack.judge.jury.Jury;
+import io.github.markpollack.judge.jury.SimpleJury;
+import io.github.markpollack.judge.result.Judgment;
 
-        Process p = pb.start();
-        boolean finished = p.waitFor(
-            context.timeout().toSeconds(), TimeUnit.SECONDS);
+public class GettingStarted {
 
-        if (!finished) {
-            p.destroyForcibly();
-            return InvocationResult.timeout(
-                context.timeout().toMillis(),
-                context.metadata(), "Timed out");
+    public static void main(String[] args) {
+        Path results = Path.of("target/experiment");
+
+        // The agent under test. This one edits the workspace directly so the example
+        // runs offline; a real invoker calls an agent here.
+        AgentInvoker agent = context -> {
+            Path person = context.workspacePath().resolve("src/main/java/com/example/Person.java");
+            try {
+                String source = Files.readString(person);
+                Files.writeString(person, source.replace("getName", "getFullName").replace("name", "fullName"));
+            }
+            catch (IOException e) {
+                return InvocationResult.error(e.getMessage(), context.metadata());
+            }
+            return InvocationResult.completed(List.of(), 0, 0, 0, 0.0, 0, null, context.metadata());
+        };
+
+        ExperimentConfig config = ExperimentConfig.builder()
+            .experimentName("rename-field-v1")
+            .datasetDir(Path.of("my-dataset"))
+            .model("offline-example")
+            .promptTemplate("{{task}}")
+            .perItemTimeout(Duration.ofMinutes(2))
+            .outputDir(results.resolve("workspaces"))
+            .build();
+
+        // In 0.9.0 one jury serves every item; each judge reads the item's workspace
+        // from the JudgmentContext.
+        Judge fieldRenamed = context -> {
+            try {
+                String source = Files.readString(context.workspace().resolve("src/main/java/com/example/Person.java"));
+                return source.contains("private final String fullName;")
+                        ? Judgment.pass("Field renamed to fullName")
+                        : Judgment.fail("Field not renamed");
+            }
+            catch (IOException e) {
+                return Judgment.error("Cannot read Person.java: " + e.getMessage());
+            }
+        };
+        Jury jury = SimpleJury.builder()
+            .judge(fieldRenamed, 1.0)
+            .votingStrategy(new ConsensusStrategy())
+            .build();
+
+        AgentExperiment experiment = new AgentExperiment(new FileSystemDatasetManager(), jury,
+                new FileSystemResultStore(results.resolve("results")), config);
+
+        ExperimentResult result = experiment.run(agent);
+
+        result.items().forEach(item -> System.out.println(item.itemId() + " passed=" + item.passed()));
+        System.out.printf("Passed %d of %d scored items%n", result.counts().passes(), result.counts().scored());
+    }
+}
+```
+
+Compile and run:
+
+```bash
+./mvnw compile
+java -cp target/classes:$(./mvnw -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout) \
+  com.example.experiment.GettingStarted
+```
+
+Output:
+
+```text
+RENAME-001 passed=true
+Passed 1 of 1 scored items
+```
+
+With an agent that changes nothing, the same program prints `RENAME-001 passed=false` and `Passed 0 of 1 scored items`.
+
+  </Tab>
+  <Tab title="main (0.10.0-SNAPSHOT, not yet released)">
+
+<Warning>
+On main, not yet released (0.10.0-SNAPSHOT); checked against `markpollack/agent-experiment@b5d323c` (snapshot `0.10.0-20261110.001954-7`). Snapshot content changes as main moves, so name the main commit you built against. None of this is in 0.9.0, and the 0.9.0 program above does not compile against main.
+</Warning>
+
+**`pom.xml`** — `experiment-core` `0.10.0-SNAPSHOT` from the Central snapshot repository:
+
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-experiment</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled><updatePolicy>always</updatePolicy></snapshots>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.markpollack</groupId>
+            <artifactId>experiment-core</artifactId>
+            <version>0.10.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+**`src/main/java/com/example/experiment/GettingStarted.java`** — on main the experiment takes a function that builds a fresh jury for every item, and a judge is `Judgment judge()` with no context:
+
+```java
+package com.example.experiment;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
+
+import io.github.markpollack.experiment.agent.AgentInvoker;
+import io.github.markpollack.experiment.agent.InvocationResult;
+import io.github.markpollack.experiment.dataset.FileSystemDatasetManager;
+import io.github.markpollack.experiment.result.ExperimentResult;
+import io.github.markpollack.experiment.runner.AgentExperiment;
+import io.github.markpollack.experiment.runner.ExperimentConfig;
+import io.github.markpollack.experiment.store.FileSystemResultStore;
+import io.github.markpollack.judge.judgment.Judgment;
+import io.github.markpollack.judge.jury.SimpleJury;
+import io.github.markpollack.judge.voting.ConsensusStrategy;
+
+public class GettingStarted {
+
+    public static void main(String[] args) {
+        Path results = Path.of("target/experiment");
+
+        // The agent under test. This one edits the workspace directly so the example
+        // runs offline; a real invoker calls an agent here.
+        AgentInvoker agent = context -> {
+            Path person = context.workspacePath().resolve("src/main/java/com/example/Person.java");
+            try {
+                String source = Files.readString(person);
+                Files.writeString(person, source.replace("getName", "getFullName").replace("name", "fullName"));
+            }
+            catch (IOException e) {
+                return InvocationResult.error(e.getMessage(), context.metadata());
+            }
+            return InvocationResult.completed(List.of(), 0, 0, 0, 0.0, 0, null, context.metadata());
+        };
+
+        ExperimentConfig config = ExperimentConfig.builder()
+            .experimentName("rename-field-v1")
+            .datasetDir(Path.of("my-dataset"))
+            .model("offline-example")
+            .promptTemplate("{{task}}")
+            .perItemTimeout(Duration.ofMinutes(2))
+            .outputDir(results.resolve("workspaces"))
+            .build();
+
+        // A fresh jury for every item. The input names that item's workspace.
+        AgentExperiment experiment = new AgentExperiment(new FileSystemDatasetManager(),
+                input -> SimpleJury.builder()
+                    .judge("field-renamed", () -> {
+                        Path person = input.workspace().resolve("src/main/java/com/example/Person.java");
+                        return read(person).contains("private final String fullName;")
+                                ? Judgment.pass("Field renamed to fullName")
+                                : Judgment.fail("Field not renamed");
+                    })
+                    .votingStrategy(new ConsensusStrategy())
+                    .build(),
+                new FileSystemResultStore(results.resolve("results")), config);
+
+        ExperimentResult result = experiment.run(agent);
+
+        result.items().forEach(item -> System.out.println(item.itemId() + " passed=" + item.passed()));
+        System.out.printf("Passed %d of %d scored items%n", result.counts().passes(), result.counts().scored());
+    }
+
+    private static String read(Path file) {
+        try {
+            return Files.readString(file);
         }
-
-        return InvocationResult.completed(
-            List.of(), 0, 0, 0, 0.0,
-            System.currentTimeMillis(),
-            null, context.metadata());
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }
 ```
 
-For Claude Code, use the built-in `ClaudeSdkInvoker` from the `experiment-claude` module.
+Compile, then run with a writer identity. On main `experiment.writer.revision` is **required**: without it the run fails with "Set experiment.writer.revision or supply a writer identity".
 
-## Step 3: Wire a Jury
-
-Start with a simple deterministic judge:
-
-```java
-public class FileExistsJudge implements Judge, JudgeWithMetadata {
-    private final String expectedFile;
-
-    public FileExistsJudge(String expectedFile) {
-        this.expectedFile = expectedFile;
-    }
-
-    @Override
-    public Judgment judge(JudgmentContext context) {
-        boolean exists = Files.exists(
-            context.workspacePath().resolve(expectedFile));
-
-        return exists
-            ? Judgment.pass("Found")
-            : Judgment.fail("Missing: " + expectedFile);
-    }
-
-    @Override
-    public JudgeMetadata metadata() {
-        return new JudgeMetadata(
-            "file_exists",
-            "Checks that " + expectedFile + " exists",
-            JudgeType.DETERMINISTIC);
-    }
-}
-
-Jury jury = SimpleJury.builder()
-    .judge(new FileExistsJudge("src/main/java/com/example/Person.java"), 1.0)
-    .votingStrategy(new MajorityVotingStrategy())
-    .build();
+```bash
+./mvnw compile
+java -Dexperiment.writer.revision=my-experiment@local \
+  -cp target/classes:$(./mvnw -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout) \
+  com.example.experiment.GettingStarted
 ```
 
-## Step 4: Run the Experiment
+Output:
 
-```java
-DatasetManager datasetManager = new FileSystemDatasetManager();
-ResultStore resultStore = new FileSystemResultStore(Path.of("results"));
-
-ExperimentConfig config = ExperimentConfig.builder()
-    .experimentName("rename-field-v1")
-    .datasetDir(Path.of("my-dataset"))
-    .model("sonnet")
-    .promptTemplate("{{task}}")
-    .perItemTimeout(Duration.ofMinutes(2))
-    .outputDir(Path.of("results"))
-    .build();
-
-AgentExperiment experiment = new AgentExperiment(
-    datasetManager, jury, resultStore, config);
-
-ExperimentResult result = experiment.run(new MyAgent());
-
-System.out.printf("Pass rate: %.0f%% (%d/%d)%n",
-    result.passRate() * 100,
-    result.passCount(),
-    result.items().size());
+```text
+RENAME-001 passed=true
+Passed 1 of 1 scored items
 ```
 
-## Step 5: Compare Variants
+With an agent that changes nothing, it prints `RENAME-001 passed=false` and `Passed 0 of 1 scored items`.
 
-The real power is variant comparison — same dataset, different agent configurations:
+  </Tab>
+</Tabs>
+
+## Using a real agent
+
+Replace the lambda that edits `Person.java` with your agent.
+
+- **0.9.0:** for Claude Code, use `ClaudeSdkInvoker` from the `experiment-claude` module (0.9.0; removed on main).
+- **main:** for Claude Code or Codex, use `AgentClientInvoker` from `experiment-agent-client`, which takes its options from Agent Client.
+
+The [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) is pinned to 0.6.0 and is not yet updated for these versions.
+
+## Compare variants
+
+Same dataset, a different configuration: build one `AgentExperiment` per configuration and run each.
 
 ```java
-// Variant A: base agent
-ExperimentConfig configA = ExperimentConfig.builder()
-    .experimentName("rename-v1-base")
-    .datasetDir(datasetDir)
-    .model("sonnet")
-    .promptTemplate("{{task}}")
-    .perItemTimeout(Duration.ofMinutes(2))
-    .build();
-ExperimentResult resultA = runner.run(baseAgent);
+// 0.9.0: each configuration gets its own experiment
+AgentExperiment base = new AgentExperiment(datasetManager, jury, resultStore, configA);
+ExperimentResult resultA = base.run(baseAgent);
 
-// Variant B: agent with knowledge base
-ExperimentConfig configB = ExperimentConfig.builder()
-    .experimentName("rename-v1-with-kb")
-    .datasetDir(datasetDir)
-    .model("sonnet")
-    .promptTemplate("{{task}}\n\nRelevant knowledge:\n{{knowledgeRefs}}")
-    .knowledgeBaseDir(Path.of("knowledge"))
-    .perItemTimeout(Duration.ofMinutes(2))
-    .build();
-ExperimentResult resultB = runner.run(kbAgent);
+AgentExperiment withKb = new AgentExperiment(datasetManager, jury, resultStore, configB);
+ExperimentResult resultB = withKb.run(kbAgent);
 ```
 
-Same model. Same dataset. Does adding curated knowledge improve agent quality? That's the thesis in action.
+`configB` can add `.knowledgeBaseDir(Path.of("knowledge"))` and a prompt template that includes `{{knowledgeRefs}}`. Compare the two with `DefaultComparisonEngine`; see [Creating Experiments](/docs/agent-experiment/creating-experiments#cross-run-comparison).
 
 ## What's Next
 
@@ -281,6 +409,6 @@ Same model. Same dataset. Does adding curated knowledge improve agent quality? T
     Dataset design, variant ladders, and filter strategies
   </Card>
   <Card title="Building a Jury" icon="scale-balanced" href="/docs/agent-experiment/jury-system">
-    Three-tier evaluation: deterministic, structural, and semantic
+    Deterministic, structural and semantic judges, and cascades
   </Card>
 </CardGroup>

@@ -5,7 +5,7 @@ description: "runAsync(), retained sessions, cancellation and termination waits,
 ---
 
 <Warning>
-**On main, not yet released — 0.32.1-SNAPSHOT, checked against agent-client main f89fc6b5.** The lifecycle and recording API on this page is in the development snapshots built from `main`. None of it is in 0.32.0. Snapshot content changes as `main` moves, so name the `main` commit you built against.
+**On main, not yet released — 0.32.1-SNAPSHOT, checked against agent-client main 257f48d0.** The lifecycle and recording API on this page is in the development snapshots built from `main`. None of it is in 0.32.0. Snapshot content changes as `main` moves, so name the `main` commit you built against.
 </Warning>
 
 <Accordion title="Add the snapshot repository">
@@ -109,25 +109,39 @@ Once the recording lane has sealed the provider's native capture, `execution.rec
 
 ## Close order
 
-The recording lane runs after the result, so wait for termination and for a terminal recording delivery (`TerminalDelivery.Completed` or `TerminalDelivery.Failed` from `recording().delivery()`) before closing the client. A client closed earlier rejects the pending recording work and seals nothing:
+The recording lane runs after the result, so close the client only after the recording has settled. A client closed earlier rejects the pending recording work and seals nothing. Wait only while delivery is `Pending`, `Processing` or `Resubmitted`, and bound the wait: a client with no recording configured reports `NotConfigured`, which never changes.
 
 ```java
-AgentExecution execution = client.goal("task").runAsync();
-try {
-    execution.result();
+public static Outcome runThenClose(AgentClient client, String goal, Duration recordingBudget)
+        throws InterruptedException, TimeoutException {
+    AgentExecution execution = client.goal(goal).runAsync();
+    Optional<FailureInfo> failure = Optional.empty();
+    try {
+        execution.result();
+    }
+    catch (AgentExecutionException failed) {
+        failure = Optional.of(failed.failure()); // the original failure, unchanged by recording
+    }
+    execution.awaitTermination(Duration.ofSeconds(10));
+    long deadline = System.nanoTime() + recordingBudget.toNanos();
+    while (inFlight(execution.recording().delivery()) && System.nanoTime() < deadline) {
+        Thread.sleep(10);
+    }
+    RecordingSnapshot recording = execution.recording();
+    recording.evidence()
+        .fullRecord()
+        .ifPresent(record -> System.out.println(record.uri() + " " + record.sha256().orElse("")));
+    client.close();
+    return new Outcome(failure, recording.delivery(), recording.evidence().fullRecord());
 }
-catch (AgentExecutionException failed) {
-    FailureInfo failure = failed.failure();   // the original failure, unchanged by recording
+
+static boolean inFlight(TerminalDelivery delivery) {
+    return delivery instanceof TerminalDelivery.Pending || delivery instanceof TerminalDelivery.Processing
+            || delivery instanceof TerminalDelivery.Resubmitted;
 }
-execution.awaitTermination(Duration.ofSeconds(10));
-while (!(execution.recording().delivery() instanceof TerminalDelivery.Completed
-        || execution.recording().delivery() instanceof TerminalDelivery.Failed)) {
-    Thread.sleep(10);                          // bound this wait in real code
-}
-execution.recording().evidence().fullRecord()
-    .ifPresent(record -> System.out.println(record.uri() + " " + record.sha256().orElse("")));
-client.close();
 ```
+
+This code is from [FailedExecutions.java](https://github.com/markpollack/agent-client/blob/main/docs/examples/howto/FailedExecutions.java), which the agent-client build compiles and runs offline (`FailedExecutionsTest`).
 
 Session and Client `close()` wait within one cleanup budget (default 10 seconds). Unconfirmed cleanup throws `CleanupUnconfirmedException`, which keeps the unconfirmed resources and a read-only cleanup handle.
 

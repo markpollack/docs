@@ -4,6 +4,19 @@ sidebarTitle: "What's New"
 description: "Curated Agent Judge release notes"
 ---
 
+## On main (0.19.0-SNAPSHOT, not yet released)
+
+None of it is in 0.18.0. Every push to main publishes `0.19.0-SNAPSHOT` to `https://central.sonatype.com/repository/maven-snapshots/`; name the main commit you built against, since the snapshot changes as main moves. Checked against `markpollack/agent-judge@6303332`. New pages: [Requirement documents](/docs/agent-judge/requirement-documents) and [Prompt size guard](/docs/agent-judge/prompt-size-guard).
+
+- **Requirement documents are read whole.** An EARS criterion is its whole first paragraph, and an RFC 2119 statement continues through its paragraph. Soft wraps join with a space; a hard break joins the same way, without its backslash. Keyword, `**Reason:**` and `Applies when:` lines are recognised inside lists and block quotes. In 0.18.0, EARS read only the first line and RFC 2119 built the rule from its title, which stops at the first clause break, **so a judge could be asked about part of a requirement**
+- **CommonMark reading and strict loading.** Fenced and indented code, HTML blocks and thematic breaks are never read. `EarsRequirement.fromStrict(path, revision)` and `Rfc2119Requirement.fromStrict(path, revision)` throw a `RequirementDocumentException` naming every problem with its identifier and line; strict loading also refuses an EARS sentence without `shall`, and a sentence or statement without `.`, `!` or `?`. Permissive `from(...)` keeps the item and logs at WARN. New runtime dependency `org.commonmark:commonmark` 0.30.0
+- **Specification linter.** `RequirementDocuments.lint(dir)` returns a `Report`, `assertValid(dir)` throws an `AssertionError` listing every problem, and `main(dirs...)` exits 1 on any problem
+- **Behaviour change: prompt size guard.** `EarsJury`, `Rfc2119Jury`, `EarsJudge` and `Rfc2119Judge` measure the whole request before calling. Above `PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS` (100,000) they make no call and return `ERROR` (`judge_failed`), never `FAIL`. Set the limit with `.maxPromptCharacters(n)` right after `.runtime(...)`; it must be positive. Evidence pasted into the workspace slot now yields `ERROR`
+- **A refused roster is an ordinary result.** It concludes `INCONCLUSIVE`, retains no invocation, and stores and reads back exactly
+- **Breaking: wire change `generated-answer:v3`.** Invocation `nativeFacts` hold `messageDigests` (role, UTF-8 length, SHA-256) instead of the messages; the `messages` key is gone, and a reader of the old shape fails visibly. Anyone who stores results needs this
+- **Agent Client invocation seam.** `AgentClientEvalModel(Invocation, NativeCapture)` takes a configured execution lifecycle; invocation facts and artifacts survive an invocation failure. `agent-judge-agent-client` builds against Agent Client `0.32.1-SNAPSHOT`
+- **Breaking API changes.** `EvalModel` no longer extends `EvalRuntime`. `BuildSuccessJudge` extends `DeterministicJudge`, not `CommandJudge`, so the inherited `BuildSuccessJudge.builder(String, int, …)` factories are gone. Binary-incompatible but source-compatible: `EarsJudge`/`Rfc2119Judge` `GeneratedBuilder.requirement` and `GeneratedRequirement.build`, so 0.18.0-compiled callers must recompile. In Jev, an `Error` or a cancellation now reaches the caller instead of a detail-free `IOException` or a future that never completes
+
 ## 0.18.0 (2026-10-08)
 
 Agent Eval configures the actual requirement, evidence and native runtime before executing a ready Judge or Jury.
@@ -73,6 +86,28 @@ decide for themselves which status was a rejection.
 See [Interpreting verdicts](/docs/agent-judge/interpreting-verdicts), and
 [Migrating to 0.17](/docs/agent-judge/migration-0.17) for the one intended compile break and the
 construction-time changes.
+
+## 0.16.0 (2026-09-10)
+
+- **Requirements judges** in `agent-judge-ai-core`: `EarsJudge` and `Rfc2119Judge` run a written specification (EARS acceptance criteria, RFC 2119 architectural constraints) back against the implementation. The document fixes the roster, so the rollup is strict: any `ERROR` gives `ERROR`, else any `FAIL` gives `FAIL`, else any `ABSTAIN` gives `ABSTAIN`, else `PASS`
+- **Behaviour change: the file judges no longer fail open.** `FileExistsJudge` and `FileContentJudge` refuse an empty path, `.`, a directory, an absolute path outside the workspace and a parent traversal (`../`) instead of passing on things they never examined
+- **Two non-compensatory strategies:** `ConjunctiveStrategy` reduces `effectiveScore()` with `min`; `AllMustPassStrategy` requires every applicable judgment to be `PASS`
+- **`Judges` combinators:** their Boolean boundary is pinned rather than widened, so composing them no longer quietly changes how non-Boolean statuses are treated
+
+[Release notes](https://github.com/markpollack/agent-judge/blob/v0.16.0/RELEASE_NOTES_0.16.0.md)
+
+## 0.15.2 (2026-08-25)
+
+**Correctness release.** In 0.15.0 and 0.15.1 a parallel jury could silently score with fewer judges than it listed: the verdict still named every configured judge, but the aggregate came from the judges that survived. **Scores from a parallel jury on those versions are suspect and should be re-run.**
+
+- `TextSources.classpath(...)` and `TextSources.file(...)` read their text eagerly, at construction, so rendering no longer depends on a thread's context classloader; a missing resource fails at construction
+- `SimpleJury` turns a judge that throws, or returns no judgment, into an `ERROR` judgment naming the judge, in parallel and sequential modes
+
+Drop-in for 0.15.1; no API changed. [Release notes](https://github.com/markpollack/agent-judge/blob/v0.15.2/RELEASE_NOTES_0.15.2.md)
+
+## 0.15.1 (2026-08-24)
+
+Maintenance release: dependency alignment (Agent Client and compatible Spring, Jackson, test and analysis dependencies) and CycloneDX SBOMs for every artifact. [Release notes](https://github.com/markpollack/agent-judge/blob/v0.15.1/RELEASE_NOTES_0.15.1.md)
 
 ## 0.15.0
 

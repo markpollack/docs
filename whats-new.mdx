@@ -14,6 +14,21 @@ sidebarTitle: "What's New"
 
 ---
 
+## Week of November 1, 2026
+
+### AgentWorks BOM 1.22.0-SNAPSHOT (on main, not yet released)
+
+**A development BOM on every push to main.**
+
+- Published to the Central snapshot repository on each push to agentworks main; provenance is the main commit (currently `1a4f0d4`, build `1.22.0-20261107.204414-2`)
+- Manages the members' development lines (Client 0.32.1, Workflow 0.14.1, Judge 0.19.0, Sandbox 0.11.0, Experiment 0.10.0, Claude Agent SDK 1.8.0 snapshots; Journal 2.0.0-SNAPSHOT modules) and ACP Java SDK 0.18.0
+- Adds 24 managed entries, including the Client lifecycle modules and the Judge assertion and JSON modules
+- How to consume it: [Using development snapshots from main](/docs/development-snapshots)
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+---
+
 ## Week of October 25, 2026
 
 ### Agent Client 0.32.0
@@ -131,6 +146,17 @@ facts support that, and what an older record cannot say.
 [Migrating to 0.17](/docs/agent-judge/migration-0.17) ·
 [Source](https://github.com/markpollack/agent-judge)
 
+
+### AgentWorks BOM 1.21.0
+
+**Judge 0.17.0's result-format change, coordinated across its consumers.**
+
+- Coordinates Agent Judge 0.17.0 with Workflow 0.12.3, Bench 0.6.3 and Experiment 0.9.0: requirements judges reject empty rosters, and workflow gates treat `NOT_APPLICABLE` aggregates as inconclusive
+- Aligns Client 0.31.0, Journal 1.10.1 and Hooks 0.8.3 with Claude Agent SDK 1.7.0, which destroys the CLI process tree before closing streams on cancellation
+- Adds `agent-acp`, `agent-junie`, `agent-starter-junie` and `junie-cli-capture`: 85 managed entries, 76 of them AgentWorks coordinates
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
 ---
 
 ## Week of August 23, 2026
@@ -154,6 +180,53 @@ facts support that, and what an older record cannot say.
 - Journal 1.9.0 adds the per-turn cost vector, vendor-neutral stop reasons, and tool-call ordinals and durations
 
 [Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
+
+
+### AgentWorks BOM 1.20.0
+
+**The consumer's framework now owns its Jackson line.**
+
+- Repins Journal 1.10.0, Experiment 0.8.0, ACP Java SDK 0.17.0, Claude Agent SDK 1.6.0 and Client 0.30.0
+- Removes Jackson BOM and annotations management
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+### AgentWorks BOM 1.19.1
+
+**Corrects three pins that 1.19.0 announced but did not ship.**
+
+- Workflow 0.12.2, Bench 0.6.2 and Experiment 0.7.2; Judge 0.15.2 and Journal 1.9.0 unchanged
+- Upgrade from 1.19.0 to put the three consumers on the parallel-jury correction
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+### AgentWorks BOM 1.19.0
+
+**The parallel-jury correction.**
+
+- Repins Judge 0.15.2, fixing judges silently dropped from a parallel jury; re-run scores that relied on affected juries
+- Repins Journal 1.9.0, keeping per-turn cost, stop reasons and tool-call ordinals and durations
+- The intended Workflow, Bench and Experiment upgrades did not ship; their pins stayed 0.12.1, 0.6.1 and 0.7.1 (see 1.19.1)
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+### AgentWorks BOM 1.18.0
+
+**The BOM catches up with every member's current release.**
+
+- Client 0.29.3, Journal 1.8.2, Judge 0.15.1, Workflow 0.12.1, ACP Java SDK 0.16.1, Hooks 0.8.2, Sandbox 0.10.2, Experiment 0.7.1, Bench 0.6.1, Memory 0.5.1, Claude Agent SDK 1.5.1
+- Managed AgentWorks coordinates grow from 46 to 72: Client integrations, provider SDKs and starters, Journal captures, Judge integrations and the Experiment Workflow adapter
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
+
+### AgentWorks BOM 1.17.0
+
+**The compatibility train.**
+
+- Workflow 0.12.0, Hooks 0.8.0, Memory 0.5.0, Experiment 0.7.0, ACP Java SDK 0.16.0, Client 0.29.0, Journal 1.8.0
+- Adds NetworkNT JSON Schema Validator management
+
+[Project](/projects/agentworks-bom) | [What's New](/docs/agentworks-bom/whats-new) | [Source](https://github.com/markpollack/agentworks)
 
 ---
 

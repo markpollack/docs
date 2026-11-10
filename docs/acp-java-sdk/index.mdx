@@ -257,20 +257,20 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 <!-- Jackson 2 (com.fasterxml.jackson.databind) -->
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson2</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 <!-- or Jackson 3 (tools.jackson.databind), for example alongside Spring Boot 4 -->
 <!--
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson3</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 -->
 ```
@@ -280,11 +280,11 @@ Run this yourself: [Module 12: Echo Agent](https://github.com/markpollack/acp-ja
 </Warning>
 
 <Note>
-0.80.0 runs on the classpath and is not yet JPMS-modular (no `module-info`): two packages,
+0.81.0 runs on the classpath and is not yet JPMS-modular (no `module-info`): two packages,
 `com.agentclientprotocol.sdk.agent.transport` and `com.agentclientprotocol.sdk.json`, are split across
 more than one jar (`acp-core` plus `acp-streamable-http-jetty`, and `acp-core` plus
 `acp-json-jackson2`/`acp-json-jackson3`, respectively), which JPMS doesn't allow for one package. A fix
-is planned after 0.80.0.
+is planned for a later release.
 </Note>
 
 For annotation-based agents (as shown above), add `acp-agent-support` instead â€” it includes `acp-core` and `acp-json-jackson2` transitively:
@@ -293,7 +293,7 @@ For annotation-based agents (as shown above), add `acp-agent-support` instead â€
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 
@@ -307,7 +307,7 @@ An agent does not have to be a subprocess. From 0.18.0 the SDK implements the AC
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-streamable-http-jetty</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 

@@ -336,6 +336,7 @@
                   "projects/acp-java-sdk",
                   "docs/acp-java-sdk/index",
                   "docs/acp-java-sdk/whats-new",
+                  "docs/acp-java-sdk/whats-new-0.81",
                   "docs/acp-java-sdk/migration-0.80",
                   {
                     "group": "Framework Integrations",

@@ -10,7 +10,7 @@ Complete API reference for the ACP Java SDK, covering client, agent (all three s
 
 ## Installation
 
-### Maven (0.80.0 — stable)
+### Maven (0.81.0 — stable)
 
 Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no JSON implementation; add one JSON module next to it:
 
@@ -18,13 +18,13 @@ Core SDK (client + sync/async agent APIs). From 0.18.0, `acp-core` contains no J
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-core</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 <!-- Jackson 2 (com.fasterxml.jackson.databind) -->
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-json-jackson2</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 
@@ -36,7 +36,7 @@ Annotation-based agent support (includes `acp-core` and `acp-json-jackson2` tran
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-agent-support</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 
@@ -46,7 +46,7 @@ Test utilities:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-test</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -57,7 +57,7 @@ Streamable HTTP and WebSocket server transport for remote agents:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-streamable-http-jetty</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 
@@ -67,27 +67,27 @@ Streamable HTTP and WebSocket server transport for remote agents:
 
 ```groovy
 // build.gradle
-implementation 'com.agentclientprotocol:acp-core:0.80.0'
-implementation 'com.agentclientprotocol:acp-json-jackson2:0.80.0' // or acp-json-jackson3
+implementation 'com.agentclientprotocol:acp-core:0.81.0'
+implementation 'com.agentclientprotocol:acp-json-jackson2:0.81.0' // or acp-json-jackson3
 
 // Optional modules
-implementation 'com.agentclientprotocol:acp-agent-support:0.80.0'
-implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.80.0'
-testImplementation 'com.agentclientprotocol:acp-test:0.80.0'
+implementation 'com.agentclientprotocol:acp-agent-support:0.81.0'
+implementation 'com.agentclientprotocol:acp-streamable-http-jetty:0.81.0'
+testImplementation 'com.agentclientprotocol:acp-test:0.81.0'
 ```
 
 ```kotlin
 // build.gradle.kts
-implementation("com.agentclientprotocol:acp-core:0.80.0")
-implementation("com.agentclientprotocol:acp-json-jackson2:0.80.0") // or acp-json-jackson3
+implementation("com.agentclientprotocol:acp-core:0.81.0")
+implementation("com.agentclientprotocol:acp-json-jackson2:0.81.0") // or acp-json-jackson3
 
 // Optional modules
-implementation("com.agentclientprotocol:acp-agent-support:0.80.0")
-implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.80.0")
-testImplementation("com.agentclientprotocol:acp-test:0.80.0")
+implementation("com.agentclientprotocol:acp-agent-support:0.81.0")
+implementation("com.agentclientprotocol:acp-streamable-http-jetty:0.81.0")
+testImplementation("com.agentclientprotocol:acp-test:0.81.0")
 ```
 
-### Snapshot (0.81.0-SNAPSHOT)
+### Snapshot (0.82.0-SNAPSHOT)
 
 For unreleased features, add the snapshot repository and use the snapshot version:
 
@@ -102,7 +102,7 @@ For unreleased features, add the snapshot repository and use the snapshot versio
 </repositories>
 ```
 
-Then use `0.81.0-SNAPSHOT` in place of `0.80.0` in your dependencies.
+Then use `0.82.0-SNAPSHOT` in place of `0.81.0` in your dependencies.
 
 ---
 

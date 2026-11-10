@@ -22,7 +22,7 @@ Add the ACP Spring Boot Starter:
 <dependency>
     <groupId>com.agentclientprotocol</groupId>
     <artifactId>acp-spring-boot-starter</artifactId>
-    <version>0.80.0</version>
+    <version>0.81.0</version>
 </dependency>
 ```
 

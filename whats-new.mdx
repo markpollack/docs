@@ -6,6 +6,17 @@ sidebarTitle: "What's New"
 
 ## Week of November 8, 2026
 
+### ACP Java SDK 0.81.0
+
+**Protocol conformance fixes from a whole-specification audit.**
+
+- The client refuses, before sending, what stable ACP v1 forbids: an unsupported protocol version (`AcpVersionException`), a terminal auth method id, MCP transports and prompt content the agent did not advertise, and relative session paths
+- `session/cancel` answers pending permission requests `cancelled`
+- Spring Framework 7.0.10 and Spring Boot 4.1.2 address the critical Spring WebFlux advisories GHSA-9qf2-26p9-2q2q and GHSA-j9f9-w8pj-32f8
+- The [audit report](https://github.com/agentclientprotocol/java-sdk/blob/v0.81.0/protocol-conformance/AUDIT-REPORT.md) covers 240 requirements across two judged runs
+
+[What's New 0.81.0](/docs/acp-java-sdk/whats-new-0.81) | [Release notes](https://github.com/agentclientprotocol/java-sdk/releases/tag/v0.81.0) | [Source](https://github.com/agentclientprotocol/java-sdk)
+
 ### Agent Journal 2.0 on main (prototype)
 
 - Agent Journal 2.0 lands on main as a prototype (not released): OCSF packages checked by an independent oracle; incompatible with 1.x. See [Which Journal do I need?](/docs/agent-journal/1x-or-2)

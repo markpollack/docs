@@ -4,6 +4,14 @@ sidebarTitle: "What's New"
 description: "What changed in each ACP Java SDK release, and why it matters"
 ---
 
+## 0.81.0 (2026-11-10)
+
+ACP Java SDK 0.81.0 closes six protocol conformance gaps found by a whole-specification audit, and checks that
+session paths are absolute. Calls that 0.80.0 forwarded despite missing capabilities or invalid session paths
+now fail before sending. It also updates Spring Framework to 7.0.10 and Spring Boot to 4.1.2 for the critical
+Spring WebFlux advisories. See [What's New 0.81.0](/docs/acp-java-sdk/whats-new-0.81) for the full list and
+the known issues.
+
 ## 0.80.0 (2026-10-08)
 
 ACP Java SDK 0.80.0 is a big feature release on the road to 1.0. It implements the latest Agent Client

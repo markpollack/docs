@@ -7,6 +7,8 @@ description: "Reproducible Java experiment lifecycle for evaluating AI agents"
 
 **Current release: 0.9.0** · Java 21 · three modules
 
+**On main, not yet released (0.10.0-SNAPSHOT).** Two new modules: `experiment-agent-client` (`AgentClientInvoker`, with options from Agent Client) and `experiment-runtime` (canonical acquisition through Agent Client and Agent Journal, with immutable per-item results). Breaking: `AgentExperiment` takes a `Function<AgentJudgingInput, Jury>` that builds a fresh jury for every item, judges use the Agent Judge 0.19 API (`Judge.judge()` with no context), `ClaudeSdkInvoker` and the phase journal are removed, and a run needs `-Dexperiment.writer.revision`. Unknown cost, tokens and duration are recorded as unknown, not zero. Resolve `0.10.0-SNAPSHOT` from the Central snapshot repository; provenance `markpollack/agent-experiment@b5d323c`. None of this is in 0.9.0.
+
 ## Overview
 
 Agent Experiment provides a repeatable lifecycle for agent evaluations: load versioned fixture or
@@ -14,7 +16,7 @@ Git-backed datasets, provision isolated workspaces, invoke an agent, judge resul
 [Agent Judge](/projects/agent-judge) juries, persist structured evidence, and compare variants.
 
 `experiment-core` has no direct agent-SDK integration. `experiment-claude` adds Claude Code SDK
-invocation, planning, and semantic evaluation, while `experiment-workflow` adapts typed Agent
+invocation (`ClaudeSdkInvoker`) and semantic evaluation (`SemanticDiffJudge`), while `experiment-workflow` adapts typed Agent
 Workflow executions and journaled step costs to the common `AgentInvoker` contract.
 
 The framework records source and dataset revisions, dirty state, configuration, knowledge hashes,
@@ -49,7 +51,7 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
 | Module | Description | Key Dependencies |
 |--------|-------------|------------------|
 | `experiment-core` | Datasets, workspace provisioning, runner, journals, comparison, results, storage | Agent Judge 0.17.0, Agent Journal 1.10.0, Jackson |
-| `experiment-claude` | Claude SDK invoker, plan generator, semantic judge | Claude Code SDK 1.6.0 |
+| `experiment-claude` | Claude SDK invoker, semantic judge | Claude Code SDK 1.6.0 |
 | `experiment-workflow` | Typed workflow invokers with journal and cost adaptation | Agent Workflow 0.12.3, Agent Client 0.30.0 |
 
 ## Documentation
@@ -65,7 +67,7 @@ external model, CLI, tools, network services, and other nondeterministic inputs.
     Build cascaded juries for tiered evaluation
   </Card>
   <Card title="API Reference" icon="code" href="/docs/agent-experiment/api-reference">
-    Core types, runner, comparison, storage, diagnostics
+    Core types, runner, comparison, storage, re-evaluation
   </Card>
 </CardGroup>
 
@@ -93,7 +95,7 @@ ResultStore store = new FileSystemResultStore(resultsDir);
 
 AgentExperiment experiment = new AgentExperiment(dm, jury, store, config);
 ExperimentResult result = experiment.run(invoker);
-// result.passRate(), result.totalCostUsd(), result.items()
+// result.counts().passRate(), result.totalCostUsd(), result.items()
 ```
 
 The [public template](https://github.com/markpollack/agent-experiment-template) provides a complete
@@ -131,5 +133,5 @@ Public experiments built on this lifecycle include:
 ## Source
 
 <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-experiment">
-  Source code (BSL 1.1) — three modules, 544 tests
+  Source code (BSL 1.1) — three modules in 0.9.0, five on main
 </Card>

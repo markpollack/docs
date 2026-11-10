@@ -7,7 +7,7 @@ description: "Three-tier cascaded evaluation: deterministic, structural, and sem
 
 A single judge gives you a single score. A jury gives you *diagnostic information* — when something fails, you know *where* in the stack it failed and *why*.
 
-The experiment driver uses a **cascaded jury** with three tiers. Each tier is more expensive than the last, and only fires if cheaper tiers don't already have a verdict.
+The experiment driver uses a **cascaded jury** with three tiers. Each tier is more expensive than the last. A `CascadedJury` runs a later tier only when the earlier tier's policy lets it continue; a `SimpleJury` runs every judge.
 
 ## The Three Tiers
 
@@ -41,7 +41,7 @@ Start with a single Tier 1 judge:
 
 ```java
 Jury jury = SimpleJury.builder()
-    .judge(new BuildSuccessJudge(), 1.0)
+    .judge(BuildSuccessJudge.maven("compile"), 1.0)
     .votingStrategy(new MajorityVotingStrategy())
     .build();
 ```
@@ -52,58 +52,83 @@ Add judges from each tier with weights:
 
 ```java
 // Tier 1: deterministic
-Judge buildJudge = new BuildSuccessJudge();
-Judge versionJudge = new ClassVersionJudge(65);  // Java 21 = class version 65
-
-// Tier 2: structural
-Judge importJudge = new ImportDiffJudge();
-Judge pomJudge = new MavenPomDiffJudge();
-
-// Tier 3: semantic (LLM-powered)
-Judge semanticJudge = new SemanticDiffJudge(chatModel, criteriaExtractor);
+Judge buildJudge = BuildSuccessJudge.maven("compile");
+Judge versionJudge = new ClassVersionJudge();  // expects "targetClassVersion" (65 = Java 21) in the context metadata
+// Tier 2: structural (write your own; see "Writing a Custom Judge")
+Judge fileJudge = new FileExistsJudge("src/main/java/com/example/Person.java");
+// Tier 3: semantic (LLM-powered, through the Claude Code SDK)
+Judge semanticJudge = new SemanticDiffJudge(SemanticDiffJudgeConfig.defaults());
 
 Jury jury = SimpleJury.builder()
-    .judge(buildJudge, 1.0)         // Must compile
-    .judge(versionJudge, 0.8)       // Right Java version
-    .judge(importJudge, 0.6)        // Correct imports
-    .judge(pomJudge, 0.6)           // Correct dependencies
-    .judge(semanticJudge, 0.4)      // Semantically sound
+    .judge(buildJudge, 1.0)
+    .judge(versionJudge, 0.8)
+    .judge(fileJudge, 0.6)
+    .judge(semanticJudge, 0.4)
     .votingStrategy(new MajorityVotingStrategy())
     .build();
 ```
 
-Weights determine influence on the final verdict, not ordering. The cascade is implicit in judge cost — cheap judges run first.
+`FileExistsJudge` is the custom judge from [Getting Started](/docs/agent-experiment/getting-started). This block compiles against 0.9.0.
+
+Weights shape the vote; they do not order execution. To stop before an expensive tier, use `CascadedJury`.
+
+## Stopping early with a cascade
+
+A cascade runs its next tier only when the earlier tier's policy lets it continue. Both blocks compile against their version:
+
+```java
+// 0.9.0
+Jury jury = CascadedJury.builder()
+    .tier("deterministic", SimpleJury.builder()
+        .judge(BuildSuccessJudge.maven("compile"))
+        .votingStrategy(new MajorityVotingStrategy()).build(), TierPolicy.REJECT_ON_ANY_FAIL)
+    .tier("semantic", SimpleJury.builder()
+        .judge(new SemanticDiffJudge(SemanticDiffJudgeConfig.defaults()))
+        .votingStrategy(new MajorityVotingStrategy()).build(), TierPolicy.FINAL_TIER)
+    .build();
+
+// main (0.10.0-SNAPSHOT, not yet released): one cascade per item
+Function<AgentJudgingInput, Jury> juries = input -> CascadedJury.builder()
+    .tier("deterministic", SimpleJury.builder()
+        .judge("build", new BuildSuccessJudge(input::workspace, "./mvnw compile"))
+        .votingStrategy(new MajorityVotingStrategy()).build(), RoutingRule.STOP_ON_ANY_OPINION_FAIL)
+    .tier("semantic", SimpleJury.builder()
+        .judge("semantic", new SemanticDiffJudge(SemanticDiffJudgeConfig.defaults(), plan, input.workspace()))
+        .votingStrategy(new MajorityVotingStrategy()).build(), RoutingRule.FINAL_TIER)
+    .build();
+```
+
+On main, `MajorityVotingStrategy` is in `io.github.markpollack.judge.voting`, `RoutingRule` in `io.github.markpollack.judge.verdict`, and `TierPolicy` is gone; `plan` is the item's plan text.
 
 ## Writing a Custom Judge
 
-Implement `Judge` and `JudgeWithMetadata`:
+Implement `JudgeWithMetadata`, a `Judge` that also describes itself. This compiles against 0.9.0; it is named `MavenCompileJudge` so it does not shadow Agent Judge's own `BuildSuccessJudge`:
 
 ```java
-public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
+public class MavenCompileJudge implements JudgeWithMetadata {
 
     @Override
     public Judgment judge(JudgmentContext context) {
-        Path workspace = context.workspacePath();
-
-        // Run the build
-        ProcessBuilder pb = new ProcessBuilder("./mvnw", "compile");
-        pb.directory(workspace.toFile());
-        Process p = pb.start();
-        int exitCode = p.waitFor();
-
-        boolean success = exitCode == 0;
-
-        return success
-            ? Judgment.pass("Build succeeded")
-            : Judgment.fail("Build failed with exit code " + exitCode);
+        try {
+            Process p = new ProcessBuilder("./mvnw", "compile").directory(context.workspace().toFile()).start();
+            int exitCode = p.waitFor();
+            return exitCode == 0
+                ? Judgment.pass("Build succeeded")
+                : Judgment.fail("Build failed with exit code " + exitCode);
+        }
+        catch (IOException e) {
+            return Judgment.error("Could not run the build: " + e.getMessage());
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return Judgment.error("Interrupted while building");
+        }
     }
 
     @Override
     public JudgeMetadata metadata() {
-        return new JudgeMetadata(
-            "build_success",
-            "Verifies the project compiles after agent modifications",
-            JudgeType.DETERMINISTIC);
+        return new JudgeMetadata("maven_compile",
+            "Verifies the project compiles after agent modifications", JudgeType.DETERMINISTIC);
     }
 }
 ```
@@ -118,9 +143,13 @@ public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `workspacePath()` | `Path` | Agent's modified workspace |
-| `referencePath()` | `Path` | Reference implementation |
-| `itemMetadata()` | `Map` | Item metadata (id, slug, tags) |
+| `workspace()` | `Path` | Agent's modified workspace |
+| `goal()` | `String` | The task the agent was given |
+| `agentOutput()` | `Optional<String>` | The agent's output, when it produced one |
+| `status()` | `ExecutionStatus` | How the agent's execution ended |
+| `metadata()` | `Map<String, Object>` | Item metadata |
+
+Agent Judge 0.17.0's `JudgmentContext` is `(goal, workspace, executionTime, startedAt, agentOutput, status, error, metadata)`. It has no reference-path accessor.
 
 ### Judgment fields
 
@@ -134,23 +163,11 @@ public class BuildSuccessJudge implements Judge, JudgeWithMetadata {
 Agent Judge 0.17.0 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
 uses `Judgment.pass(...)` or `Judgment.fail(...)`; it does not duplicate the same fact in a score
 object. `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` contribute no effective score.
+On main, Agent Judge 0.19 removes `JudgmentContext`; see the main-only note.
 
-## Diagnostic Feedback
-
-After jury evaluation, the `DiagnosticAnalyzer` classifies failures into 8 gap categories:
-
-| Gap | Where it failed |
-|-----|----------------|
-| **Knowledge** | Missing or incorrect KB entry |
-| **Analysis** | Pre-analysis missed a pattern |
-| **Planning** | Agent planned the wrong approach |
-| **Execution** | Agent deviated from its own plan |
-| **Tool** | Tool limitation or misconfiguration |
-| **Prompt** | Ambiguous or misleading task prompt |
-| **Evaluation** | Judge produced a false positive/negative |
-| **Environment** | External factor (timeout, network, disk) |
-
-This classification feeds the [Improvement Flywheel](/methodology/improvement-flywheel) — knowledge gaps become new KB entries, tool gaps become new deterministic tools, and the loop turns.
+<Note>
+On main (0.10.0-SNAPSHOT, not yet released) a jury is built per item from `AgentJudgingInput`, judges implement `Judgment judge()`, `Judgment` lives in `judge.judgment`, and voting strategies in `judge.voting`. See the main tab of [Getting Started](/docs/agent-experiment/getting-started). None of this is in 0.9.0.
+</Note>
 
 ## Related
 

@@ -122,12 +122,12 @@ ExperimentConfig.builder()
 
 // Run items with specific tags
 ExperimentConfig.builder()
-    .itemFilter(ItemFilter.tags("rename", "simple"))
+    .itemFilter(ItemFilter.tags(List.of("rename", "simple")))
     // ...
 
-// Run a single item by ID
+// Run one task type
 ExperimentConfig.builder()
-    .itemFilter(ItemFilter.id("RENAME-001"))
+    .itemFilter(ItemFilter.taskType("rename-field"))
     // ...
 ```
 
@@ -140,7 +140,7 @@ ExperimentConfig.builder()
 | `model` | Yes | — | LLM model (`sonnet`, `opus`, `haiku`, or full ID) |
 | `promptTemplate` | Yes | — | Template with `{{task}}` and `{{knowledgeRefs}}` |
 | `perItemTimeout` | Yes | — | Timeout per item invocation |
-| `itemFilter` | No | all items | Filter by bucket, tags, ID, status |
+| `itemFilter` | No | all items | Filter by bucket, tags or task type |
 | `knowledgeBaseDir` | No | — | KB root (for ablation tracking) |
 | `outputDir` | No | — | Directory for workspaces and logs |
 | `experimentTimeout` | No | — | Timeout for entire experiment |
@@ -166,8 +166,8 @@ Each result contains:
 ## Cross-Run Comparison
 
 ```java
-ComparisonEngine comparison = new ComparisonEngine();
-ComparisonResult diff = comparison.compare(resultA, resultB);
+ComparisonEngine comparison = new DefaultComparisonEngine(resultStore);
+ComparisonResult diff = comparison.compare(current, baseline);
 ```
 
 The comparison engine aligns items by ID across two experiments and reports per-item and aggregate deltas.

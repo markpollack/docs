@@ -3,6 +3,10 @@ title: "Agent Experiment API Reference"
 description: "Configuration, dataset format, invoker contract, and result model"
 ---
 
+<Warning>
+This reference describes 0.9.0. On main (0.10.0-SNAPSHOT, not yet released): `AgentExperiment` takes a jury factory, `ReEvaluationContextFactory.create` returns `Optional<AgentJudgingInput>`, `JudgeExperiment` takes `candidate(Function<DatasetItem, Judge>)` and `replicateCount(int)` and no longer has `input(...)`, `WorkflowInvoker.buildWorkflow` returns a `WorkflowInvoker.Plan`, and result totals are nullable (null means unknown). None of this is in 0.9.0.
+</Warning>
+
 ## ExperimentConfig
 
 ```java
@@ -39,7 +43,7 @@ public interface AgentInvoker {
 
 ### Template Invokers
 
-The [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) provides a hierarchy of ready-made invokers. Choose based on your orchestration needs:
+`experiment-workflow` provides `AbstractTemplateAgentInvoker`, `WorkflowAgentInvoker` and `WorkflowInvoker<S>`; the [agent-experiment-template](https://github.com/markpollack/agent-experiment-template) adds `TemplateAgentInvoker` and `TwoPhaseTemplateAgentInvoker` on top of them. Choose based on your orchestration needs:
 
 | Class | Extends | Use When |
 |-------|---------|----------|
@@ -201,8 +205,8 @@ dataset/
 ```java
 ItemFilter.all()                     // No filtering
 ItemFilter.bucket("A")               // Single bucket
-ItemFilter.tags("rename", "simple")  // By tags
-ItemFilter.id("ITEM-001")           // Single item
+ItemFilter.tags(List.of("rename", "simple"))  // By tags
+ItemFilter.taskType("rename-field")           // By task type
 ```
 
 ## ResultStore
@@ -228,9 +232,9 @@ Optional<ExperimentResult> mostRecent(String experimentName);
 | `experimentId()` | `String` | Unique run ID |
 | `experimentName()` | `String` | Experiment name from config |
 | `items()` | `List<ItemResult>` | Per-item results |
-| `passCount()` | `int` | Items that passed all judges |
-| `failCount()` | `int` | Items that failed |
-| `passRate()` | `double` | Pass count / total (0.0–1.0) |
+| `counts()` | `ItemCounts` (nullable) | `passes()`, `nonPasses()`, `scored()`, `total()`, and `passRate()` (`OptionalDouble`) |
+| `totalCostUsd()` | `double` | Total cost |
+| `totalTokens()` | `int` | Total tokens |
 
 ---
 
@@ -314,8 +318,8 @@ public record JudgeScoringInput(
 
 ```java
 public record JudgeScorerResult(
-    boolean match,           // judge agreed with expected label
-    double score,            // normalized agreement score [0, 1]
+    @Nullable Boolean match,  // judge agreed with expected label; null when unscored
+    @Nullable Double score,   // normalized agreement score [0, 1]; null when unscored
     String reasoning         // explanation of match/mismatch
 )
 ```
@@ -342,9 +346,7 @@ public record JudgeExecutionDetail(
 ) implements ExecutionDetail
 ```
 
-Runtime candidates still return Agent Judge 0.14 `Judgment` values. Agent Experiment converts them
-immediately to its normalized `RecordedJudgment` persistence boundary. Existing 0.5 / Agent Judge 0.13
-result files are upgraded on read; saving them writes the normalized 0.6 format.
+Unscored results carry null; see `JudgeScorerResult.unscored`. Runtime candidates return Agent Judge 0.17 `Judgment` values, which Agent Experiment converts to its `RecordedJudgment` persistence form. Results written before 0.9.0 remain readable and are not rewritten.
 
 ### JudgeExperiment
 
@@ -381,7 +383,7 @@ Takes `List<DatasetItem>` directly — judge datasets do not require filesystem 
 ```java
 public record JudgeExperimentResult(
     ExperimentResult experimentResult,
-    double agreementRate,
+    @Nullable Double agreementRate,
     List<JudgeDisagreement> disagreements
 )
 ```
@@ -407,24 +409,24 @@ public record JudgeDisagreement(
 ## Modules
 
 ```xml
-<!-- Core: runner, dataset, jury, stores, diagnostics -->
+<!-- Core: runner, dataset, jury, stores, comparison -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-core</artifactId>
-    <version>0.6.0</version>
+    <version>0.9.0</version>
 </dependency>
 
 <!-- Claude SDK integration (ClaudeSdkInvoker, SemanticDiffJudge) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-claude</artifactId>
-    <version>0.6.0</version>
+    <version>0.9.0</version>
 </dependency>
 
 <!-- Agent Workflow integration (typed workflow invokers and journal adaptation) -->
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>experiment-workflow</artifactId>
-    <version>0.6.0</version>
+    <version>0.9.0</version>
 </dependency>
 ```

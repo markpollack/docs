@@ -1,0 +1,98 @@
+---
+title: "Agent Journal 2.0: Getting Started"
+sidebarTitle: "Getting started"
+description: "Replay a real Claude Code recording into an Agent Journal 2.0 package and verify it against the native input (on main, prototype)"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+This walkthrough replays a sanitized real Claude Code 2.1.304 stream, kept in the agent-journal repository as a test fixture, into a package, then checks the package against the native input with the independent oracle. It needs no CLI and no account.
+
+## 1. Resolve the snapshot
+
+2.0 is not on Maven Central. Resolve the timestamped snapshot from the Central snapshot repository, and pin the timestamped version so the result stays reproducible:
+
+```xml
+<repositories>
+  <repository>
+    <id>central-snapshots</id>
+    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    <releases><enabled>false</enabled></releases>
+    <snapshots><enabled>true</enabled><updatePolicy>always</updatePolicy></snapshots>
+  </repository>
+</repositories>
+<dependencies>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>journal-ocsf-writer</artifactId>
+    <version>2.0.0-20261108.225512-21</version>
+  </dependency>
+  <dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>journal-capture-tck</artifactId>
+    <version>2.0.0-20261108.225512-21</version>
+  </dependency>
+</dependencies>
+```
+
+Put that in the `pom.xml` of an empty project, then write the runtime classpath to a file:
+
+```bash
+mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt -Dmdep.includeScope=runtime
+CP=$(cat cp.txt)
+```
+
+## 2. Get the recording
+
+The input is the fixture [`claude-live-2.1.304-denial`](https://github.com/markpollack/agent-journal/tree/453c1d1/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial): a spec, the native stream and the frozen expected-source manifest.
+
+```bash
+BASE=https://raw.githubusercontent.com/markpollack/agent-journal/453c1d1/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial
+mkdir -p native
+curl -sO $BASE/spec.json
+curl -s -o native/stream.jsonl $BASE/native/stream.jsonl
+curl -s -o native/expected-sources.json $BASE/native/expected-sources.json
+```
+
+The spec's source path is a placeholder. Set `sources[0].path` to `native/stream.jsonl`:
+
+```bash
+sed -i.bak 's#<fixture>/native/claude-live-2.1.304-denial/stream.jsonl#native/stream.jsonl#' spec.json
+```
+
+## 3. Replay and verify
+
+```bash
+java -cp "$CP" io.github.markpollack.journal.ocsf.writer.OcsfWriterTool replay spec.json out
+java -cp "$CP" io.github.markpollack.journal.tck.ocsf.OcsfReaderTool \
+  verify out native report.json --expected native/expected-sources.json
+```
+
+Replay prints:
+
+```text
+fed stream.jsonl: 18 record(s) from native/stream.jsonl
+wrote out state COMPLETED
+81 event line(s) in events.jsonl
+```
+
+and exits 0. `out/` now holds `events.jsonl` and `run.json`; this package states version `0.3.0-prototype`. Verify prints its summary, ends with `acceptance: ACCEPTED`, writes the full report to `report.json`, and exits 0.
+
+## Reading the exit code
+
+Only exit 0 is acceptance. Zero defects alone is not:
+
+| Exit | Meaning |
+|---|---|
+| 0 | Accepted |
+| 2 | The reader refused the package (detached events file, unsupported version, pin mismatch); the raw lines are kept and nothing is interpreted |
+| 3 | The oracle found a defect |
+| 4 | No defect, but something is unresolved: a mandatory property is UNRESOLVED or UNSUPPORTED, a required check is missing, the package is not finalized, acquisition is not complete, no frozen expected-source manifest was supplied, or an acquired population was waived by a declared exclusion |
+| 64 | Bad arguments |
+
+## Next
+
+- [Reading packages](/docs/agent-journal/v2/reading): the same package from Java, with the usage view and the oracle.
+- [Capture](/docs/agent-journal/v2/capture): write a package from a live CLI instead of a recording.

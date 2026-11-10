@@ -1,0 +1,61 @@
+---
+title: "Which Journal Do I Need?"
+sidebarTitle: "Which Journal do I need?"
+description: "Agent Journal 1.x (released 1.11.0) or 2.0 (on main, prototype): how to choose, what changed, and why there is no upgrade path"
+---
+
+Agent Journal has two lines with different, incompatible formats.
+
+| | 1.x | 2.0 |
+|---|---|---|
+| Status | Released: **1.11.0** on Maven Central (2026-10-07) | On main, **prototype**, not released |
+| Version | `1.11.0`; branch `1.x` continues as `1.12.0-SNAPSHOT` | `2.0.0-SNAPSHOT`, a timestamped snapshot per push to main |
+| Artifacts | `journal-core` and six capture modules | `journal-ocsf-writer`, `journal-capture-tck` |
+| Code | Tag `v1.11.0`, branch `1.x` | Default branch `main` |
+| Pages | [Agent Journal 1.x (released)](/docs/agent-journal/getting-started) | [Agent Journal 2.0 (on main, prototype)](/docs/agent-journal/v2/overview) |
+
+## Use 1.x (1.11.0) if
+
+- you depend on a released artifact, or on released Agent Client (0.32.0 pins Journal 1.10.0);
+- you use `journal-core`, the 1.x event and analysis files, the six capture adapters, or the DuckDB queries.
+
+## Use 2.0 (main, prototype) if
+
+- you want one portable OCSF `events.jsonl` per run, checked by an independent oracle;
+- you build against Agent Client main.
+
+Resolve the timestamped snapshot from the Central snapshot repository and name the main commit you checked against; see [Getting started (2.0)](/docs/agent-journal/v2/getting-started). Breaking changes are expected until a release.
+
+## No upgrade path
+
+2.0 does not read 1.x files and 1.x does not read 2.0 packages. To move a run to 2.0, re-capture it or replay the CLI's native output (its stream or session file) through 2.0: 2.0 reads the CLI's own files, not 1.x records.
+
+## Concept map
+
+| 1.x | 2.0 |
+|---|---|
+| `journal-core` run API (`Journal`, `Run`, `RunBuilder`, `Experiment`, typed `JournalEvent`s, `TokenUsage`, `CostBreakdown`, `MetricRegistry`) | No run API. A run is a package written by `journal-ocsf-writer` |
+| `JsonFileStorage` layout `experiments/<id>/runs/<id>/` with `events.jsonl`, `analysis.jsonl`, `feedback.jsonl` | One package directory: `events.jsonl` on OCSF 1.9.0 with the `agentic_cli` extension, plus `run.json` |
+| Portable trace (`TraceWriter`), `TraceContentMode`, the 60,000-character cap | Native sources archived whole beside the package; content is never capped |
+| Per-CLI adapters (`SessionLogParser`, `PhaseCapture`, `RunRecorder`, `CodexSessionParser`, Grok, Gemini, Antigravity, Junie parsers) | `CliCapture` (launches the CLI), `OcsfRunWriter` and replay (from a recording), `FinalAssembly` (several sources), `TerminalReceiver` (from Agent Client) |
+| `recordOnce`, `SourceRecordings` | Immutable terminal decisions and revisions with an exact-retry ACK |
+| Sub-agents as linked runs (`parentRunId`, `track=subagent`) | A sub-agent is a child core under `children/<id>/` inside the one package |
+| `StepCostEvent`, `EVEN_SPLIT`, `costAvailable`/`costSource` | Usage in disjoint tranches, each with a measurement status (Measured, Possibly default, Conditional, Lower bound); nothing is summed or split |
+| `EvalSubject` adapters, feedback service | Removed |
+| DuckDB queries over `@type` / `tokenUsage` | `PackageReader`, `AnalysisViews`, `OcsfReaderTool` |
+| Gemini CLI, Grok CLI capture | Not supported |
+| — | New: GitHub Copilot CLI 1.0.100 (experimental), the independent oracle |
+
+## Not in 2.0
+
+- Gemini CLI and Grok CLI capture
+- The `EvalSubject` seam and the feedback service
+- Even-split cost attribution
+- The content cap and its modes
+
+## New in 2.0
+
+- GitHub Copilot CLI (experimental); see [CLI support](/docs/agent-journal/v2/cli-support)
+- The independent oracle and `OcsfReaderTool`; see [Reading packages](/docs/agent-journal/v2/reading)
+- Child cores for sub-agents
+- Version-neutral Claude Code SDK and Codex exec routes: the CLI version is recorded, not gated

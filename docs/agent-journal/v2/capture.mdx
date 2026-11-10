@@ -1,0 +1,48 @@
+---
+title: "Agent Journal 2.0: Capture"
+sidebarTitle: "Capture"
+description: "Write an Agent Journal 2.0 package by launching a CLI, reading a live stream, replaying a recording, or assembling several sources (on main, prototype)"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+`journal-ocsf-writer` writes packages. Its command line is `OcsfWriterTool`; its API is `CliCapture`, `OcsfRunWriter` and `FinalAssembly`.
+
+## Commands
+
+| Command | Input |
+|---|---|
+| `launch` | Launches the CLI itself and reads its raw standard output |
+| `capture` | Reads a live stream from standard input |
+| `replay` | Writes from a recording; see [Getting started](/docs/agent-journal/v2/getting-started) |
+| `assemble` | Combines several declared sources into one final package |
+
+A spec with several sources needs a reviewed final-assembly profile, or `--evidence-log`, which writes an unvalidated evidence log, never a final combined execution.
+
+## Launching a CLI
+
+```text
+launch <out-dir> --cli claude|codex|antigravity --prompt TEXT --cwd DIR [--run-uid X] [--model M] [--allowed-tools A,B] [--sandbox MODE] [--executable PATH] [--home DIR] [--cancel-after-records N] [--cancel-after-ms N] [--arg EXTRA]...
+```
+
+`launch` (`CliCapture`) starts the CLI's streaming invocation, reads its raw standard output into the writer (an independent byte-for-byte copy is written before the writer sees each chunk), archives the CLI's native session file unchanged beside the package, and freezes the expected-source manifest from the independent copy after acquisition. With a reviewed final-assembly profile, it then assembles the declared sources into a new final package. A launch needs the CLI installed and signed in; this page shows no recorded launch.
+
+Three facts stay separate, in the result and in the package:
+
+| Fact | Values |
+|---|---|
+| Storage finalization | `COMPLETED`, `INTERRUPTED`, `FAILED` |
+| Acquisition extent | Every byte to EOF, or an interrupted prefix with the incomplete tail retained |
+| CLI outcome | `exited` with its exit code, `cancelled` by the capture, `input_failure`, `writer_failure` |
+
+Reaching EOF never means the CLI succeeded: a CLI that exits non-zero after a complete stream is a completely acquired failed run.
+
+**CLI versions.** Claude Code's stream reports its version, so no version command runs. Codex and Antigravity streams report none, so `codex --version` or `agy --version` runs exactly once before launch. The native session file is located by the session id the stream reported and copied by bytes with its hash; it is never parsed for enrichment or version discovery.
+
+## Assembling several sources
+
+`FinalAssembly.assemble(acquisitionManifest, outDirectory)` validates an acquired-execution manifest and writes a new final package. File hashes, extents and route bindings are checked before the output is opened, and original inputs are never modified. A required role without an input is declared missing and makes the assembly incomplete, never silently complete.
+
+Which CLIs and routes each command accepts is in [CLI support](/docs/agent-journal/v2/cli-support).

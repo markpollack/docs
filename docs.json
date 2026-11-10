@@ -272,17 +272,34 @@
                 "pages": [
                   "projects/agent-journal",
                   "docs/agent-journal/whats-new",
-                  "docs/agent-journal/getting-started",
-                  "docs/agent-journal/concepts",
+                  "docs/agent-journal/1x-or-2",
                   {
-                    "group": "Guides",
+                    "group": "Agent Journal 2.0 (on main, prototype)",
                     "pages": [
-                      "docs/agent-journal/capture-sessions",
-                      "docs/agent-journal/subagent-capture",
-                      "docs/agent-journal/analyzing-runs"
+                      "docs/agent-journal/v2/overview",
+                      "docs/agent-journal/v2/getting-started",
+                      "docs/agent-journal/v2/capture",
+                      "docs/agent-journal/v2/reading",
+                      "docs/agent-journal/v2/cli-support",
+                      "docs/agent-journal/v2/agent-client"
                     ]
                   },
-                  "docs/agent-journal/api-reference"
+                  {
+                    "group": "Agent Journal 1.x (released)",
+                    "pages": [
+                      "docs/agent-journal/getting-started",
+                      "docs/agent-journal/concepts",
+                      {
+                        "group": "Guides",
+                        "pages": [
+                          "docs/agent-journal/capture-sessions",
+                          "docs/agent-journal/subagent-capture",
+                          "docs/agent-journal/analyzing-runs"
+                        ]
+                      },
+                      "docs/agent-journal/api-reference"
+                    ]
+                  }
                 ]
               },
               {

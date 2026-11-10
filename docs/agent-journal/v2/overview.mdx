@@ -1,0 +1,62 @@
+---
+title: "Agent Journal 2.0 Overview"
+sidebarTitle: "Overview"
+description: "Agent Journal 2.0 on main (prototype): one portable OCSF events.jsonl per run, checked against the CLI's native output by an independent oracle"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+Agent Journal records an agent CLI's execution as durable local data: the messages, tool activity, reported usage and cost of a run, written as one independently portable `events.jsonl` on the [OCSF](https://ocsf.io) schema with Journal's `agentic_cli` extension, and checked against the native input by an independent oracle.
+
+2.0 is a different format from the released 1.x line. Files written by 1.x are read only by 1.x, and there is no upgrade path. See [Which Journal do I need?](/docs/agent-journal/1x-or-2)
+
+## Artifacts
+
+Two artifacts, group `io.github.markpollack`, version `2.0.0-SNAPSHOT`:
+
+| Artifact | What it does | Dependencies |
+|---|---|---|
+| `journal-ocsf-writer` | Captures a CLI (launching it, reading its standard output, or replaying a recording) and writes the run package | The JDK and `jackson-core` only |
+| `journal-capture-tck` | Reads a package, computes the analysis views, and judges a package against its native input with the independent oracle | A reader needs this artifact alone |
+
+A third module in the repository, `journal-mcp-test-server`, is a test fixture and is not published. The artifacts target Java 17; building the repository needs JDK 21.
+
+No 2.0 release exists on Maven Central. A timestamped snapshot is published to the Central snapshot repository on every push to main that changes code; see [Getting started](/docs/agent-journal/v2/getting-started).
+
+## The package
+
+A run is a package directory:
+
+| File | Holds |
+|---|---|
+| `events.jsonl` | The run's events on OCSF 1.9.0 with the `agentic_cli` extension |
+| `run.json` | The package, recording, run, OCSF version, extension, sources, native files, semantic contract and time policy |
+
+The native sources (the CLI's stream, session file and so on) are archived whole beside the package; content is never capped. A sub-agent is a child core under `children/<id>/` inside the same package, checked like the root.
+
+The extension is `agentic_cli`, uid 901, version `0.16.0-prototype`. The uid is provisional and not registered with OCSF. The reader accepts package versions `0.1.0-prototype` to `0.4.0-prototype`; a package states its own version. The prototype label stays until a release.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Getting started" icon="rocket" href="/docs/agent-journal/v2/getting-started">
+    Replay a real Claude Code recording into a package and verify it.
+  </Card>
+  <Card title="Capture" icon="terminal" href="/docs/agent-journal/v2/capture">
+    `OcsfWriterTool`: launch, capture, replay and assemble.
+  </Card>
+  <Card title="Reading packages" icon="book-open" href="/docs/agent-journal/v2/reading">
+    `PackageReader`, `AnalysisViews`, the oracle and `OcsfReaderTool`.
+  </Card>
+  <Card title="CLI support" icon="table" href="/docs/agent-journal/v2/cli-support">
+    Every CLI and route in the compatibility registry, and what admitted means.
+  </Card>
+  <Card title="Agent Client recording" icon="plug" href="/docs/agent-journal/v2/agent-client">
+    `TerminalReceiver`, terminal profiles and qualifier lookup.
+  </Card>
+  <Card title="Source on GitHub" icon="github" href="https://github.com/markpollack/agent-journal">
+    The default branch is 2.0 (prototype).
+  </Card>
+</CardGroup>

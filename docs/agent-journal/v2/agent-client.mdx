@@ -1,0 +1,56 @@
+---
+title: "Agent Journal 2.0: Agent Client Recording"
+sidebarTitle: "Agent Client recording"
+description: "TerminalReceiver, the terminal profiles and qualifier lookup: how Agent Journal 2.0 records an Agent Client execution (on main, prototype)"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+Agent Client main records executions through Agent Journal 2.0: its `agent-client-journal` module depends on `journal-ocsf-writer` and `journal-capture-tck` `2.0.0-SNAPSHOT`. Released Agent Client 0.32.0 pins Journal 1.10.0. Client's own side, `JournalExecutionRecorder`, is described in the [Agent Client async lifecycle](/docs/agent-client/reference/async-lifecycle#recording-outcomes).
+
+## The receiver
+
+`TerminalReceiver(root, namespace, options)` receives an already accepted Agent Client decision on a separate recording lane. It never runs a provider or changes the decision.
+
+| Method | What it does |
+|---|---|
+| `receive(envelope, sourceRoot)` | Seals and publishes an evidence package. An identical retry returns the original ACK; a changed payload for the same execution is refused. |
+| `receiveRevision(originalBindingId, association, sourceRoot)` | Publishes an immutable revision of an earlier binding |
+
+## Terminal profiles
+
+| Constant | Value |
+|---|---|
+| `CLAUDE_PROFILE` | `client-terminal-claude-sdk/1` |
+| `CODEX_PROFILE` | `client-terminal-codex-exec/1` |
+| `RETAINED_PROFILE` | `client-terminal-claude-sdk-retained/1` |
+| `FRESH_RETAINED_PROFILE`, `FRESH_RETAINED_ORDINARY_PROFILE`, `FRESH_RETAINED_NATIVE_PROFILE` | `client-terminal-claude-sdk-retained-fresh/1`, `/2`, `/3` |
+| `CODEX_RETAINED_PROFILE`, `CODEX_RETAINED_ORDINARY_PROFILE` | `client-terminal-codex-exec-retained/1`, `/2` |
+| `PROFILE` (evidence only) | `client-terminal-evidence-only/1` |
+
+The CLI version is recorded, not gated. The earlier versioned names stay readable for recordings of that one version: `LEGACY_CLAUDE_PROFILE` (`client-terminal-claude-2.1.316/1`), `LEGACY_CODEX_PROFILE` (`client-terminal-codex-0.166.0/1`), and the `LEGACY_*` retained names.
+
+## Qualifier lookup
+
+`AcquisitionQualifier`, in the TCK's `io.github.markpollack.journal.tck.ocsf.inventory` package, lets a producer qualify a sealed one-shot acquisition without naming its CLI:
+
+```java
+AcquisitionQualifier qualifier = AcquisitionQualifier.forProfile(manifestProfile).orElseThrow();
+AcquisitionQualifier.Qualified qualified = qualifier.qualify(sealedManifest, newDirectory);
+// bind qualified.manifest()'s sources and deliver one initial binding under qualifier.terminalProfile()
+```
+
+`manifestProfile` is the sealed manifest's own `profile` member. The registry is fixed, not discovered:
+
+| Acquisition profile | Qualifier | Terminal profile |
+|---|---|---|
+| `claude-code-<version>-sdk-stdio-session-file`, any version | `ClaudeAcquisition.qualifier(version)` | `client-terminal-claude-sdk/1` |
+| `codex-cli-<version>-exec-stdio-rollout`, any version | `CodexAcquisition.qualifier(version)` | `client-terminal-codex-exec/1` |
+
+Any other profile returns empty. A qualifier refuses an acquisition with `IllegalArgumentException`, whose message is its verdict, before creating the new directory. This snippet comes from the repository's [terminal receiver guide](https://github.com/markpollack/agent-journal/blob/453c1d1/docs/terminal-receiver.md#qualifier-lookup) and was not compiled for this page; the lookup is exercised on real recordings by `TerminalRealRecordingTest` (TCK) and `RealRecordingTest` (writer).
+
+## Sub-agents
+
+A Claude Code sub-agent's records form a child core under `children/<id>/` in the same package. The sub-agent's own session file (`<session>/subagents/agent-<agentId>.jsonl`) is bound to its spawning call from the native bytes and read into that child core. Every shown spawn needs a finished, bound session file; otherwise the archive is INCOMPLETE.

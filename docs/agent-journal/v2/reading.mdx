@@ -1,0 +1,78 @@
+---
+title: "Agent Journal 2.0: Reading Packages"
+sidebarTitle: "Reading packages"
+description: "Open an Agent Journal 2.0 package, compute its analysis views and judge it against the native input with the independent oracle (on main, prototype)"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+`journal-capture-tck` reads packages. A consumer that only reads needs this artifact alone.
+
+## From Java
+
+```java
+import io.github.markpollack.journal.tck.ocsf.AnalysisViews;
+import io.github.markpollack.journal.tck.ocsf.ExpectedSources;
+import io.github.markpollack.journal.tck.ocsf.OcsfOracle;
+import io.github.markpollack.journal.tck.ocsf.OcsfPackage;
+import io.github.markpollack.journal.tck.ocsf.OcsfReaderTool;
+import io.github.markpollack.journal.tck.ocsf.OracleReport;
+import io.github.markpollack.journal.tck.ocsf.PackageReader;
+import io.github.markpollack.journal.tck.verify.NeutralJson;
+import java.nio.file.Path;
+
+public class ReadAndVerify {
+    public static void main(String[] args) {
+        Path packageDir = Path.of(args[0]);   // the directory holding events.jsonl and run.json
+        Path nativeDir = Path.of(args[1]);    // the native source files the package was written from
+
+        OcsfPackage pkg = PackageReader.open(packageDir);
+        System.out.println(NeutralJson.write(AnalysisViews.usage(pkg)));
+
+        OracleReport report = OcsfOracle.verify(pkg, nativeDir, ExpectedSources.beside(nativeDir));
+        OcsfReaderTool.Acceptance acceptance = OcsfReaderTool.acceptance(report);
+        System.out.println(acceptance.verdict() + " " + acceptance.reasons());
+    }
+}
+```
+
+This class was compiled and run against snapshot `2.0.0-20261108.225512-21`, on the package from [Getting started](/docs/agent-journal/v2/getting-started), with `java ReadAndVerify out native`. The usage view's final observation reports `uncached_input_tokens` 2, `output_tokens` 76, `cache_read_tokens` 27204 and `cache_write_tokens` 400, each with its native pointer (for example `/cache_read_input_tokens`), and the view states `"aggregation":"none: groups are never summed across scopes, sources, models or child runs"`. The program then prints `ACCEPTED []`.
+
+- `PackageReader.open(Path)` takes `events.jsonl` or the directory holding it. The reader opens no network connection and consults no registry or cache. A refusal means "this reader does not implement that interpretation"; the raw lines are still returned.
+- `OcsfOracle.verify(pkg, nativeDir, expected)` judges a package against its native input. `OcsfReaderTool.acceptance(report)` gives the verdict.
+
+## Analysis views
+
+`AnalysisViews.all(pkg)` returns every view, and each linked child's views under `children`, each computed on its own core:
+
+| View | Key |
+|---|---|
+| Submissions | `submissions` |
+| Responses | `responses` |
+| Usage | `usage` |
+| Associations | `associations` |
+| Tool exchanges | `tool_exchanges` |
+| Settings context | `settings_context` |
+| Compatibility | `compatibility` |
+
+Every row carries the rule it applied and the occurrences it read, so a derived result can be explained from the saved data. Nothing is reconciled or summed: conflicting observations are reported as conflicts, and missing identities as unresolved.
+
+Usage comes in disjoint tranches (`uncached_input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `reasoning_tokens`, `reported_total_tokens`), each with a measurement status: Measured, Possibly default, Conditional or Lower bound. Nothing is summed or split.
+
+## From the command line
+
+`OcsfReaderTool` commands; each takes `<events.jsonl|dir>` first:
+
+| Command | What it does |
+|---|---|
+| `inspect` | Discovers the manifest, verifies pins and hashes, enumerates the saved model |
+| `canonical <out.jsonl>` | Canonical events across the available cores, with full owned content |
+| `views [out.json]` | The analysis views, from the core alone |
+| `measure [out.json]` | Byte measurements per component |
+| `reconstruct <artifact> <out>` | Scoped reconstruction of one source artifact |
+| `self-contained <out.jsonl>` | Exports events with the shared facts joined back on |
+| `verify <native-dir> [report.json] [--expected <expected-sources.json>]` | The independent oracle against the frozen expected sources |
+
+`verify`'s exit codes are listed in [Getting started](/docs/agent-journal/v2/getting-started#reading-the-exit-code): only exit 0 is acceptance.

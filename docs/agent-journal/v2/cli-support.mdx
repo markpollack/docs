@@ -1,0 +1,60 @@
+---
+title: "Agent Journal 2.0: CLI Support"
+sidebarTitle: "CLI support"
+description: "Every CLI, route and version in the Agent Journal 2.0 compatibility registry, and what admitted, experimental and historical mean (on main, prototype)"
+---
+
+<Warning>
+Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+</Warning>
+
+Support is per CLI and launch route, as recorded in the compatibility registry [`compatibility.json`](https://github.com/markpollack/agent-journal/blob/453c1d1/journal-ocsf-writer/src/main/resources/ocsf/compatibility.json). The table below is generated from that file at `453c1d1`: all 20 entries.
+
+## What the labels mean
+
+| Label | Meaning |
+|---|---|
+| **admitted** | A production standard-output route whose live captures, sanitized replay fixtures, inventories, dispositions, independent oracle profile, mapping catalog and live-scenario roster are all registered |
+| **experimental** | A source route tested on recorded evidence, used as a declared source of a reviewed final-assembly profile or kept for its recordings; not admitted |
+| **historical** | A retired route kept so its recordings replay as tested; never extended |
+
+Admission means the route's normalization is exercised on recorded live input and checked by the independent oracle. It is not approval of every meaning: meanings still marked proposed stay proposed, and the output states what the source did not establish rather than guessing it.
+
+## Version rule
+
+Most entries name one exact CLI version. A version-neutral entry (`"versions": "any"`) selects for any CLI version on its route, and the observed version is recorded, not gated. An exact entry wins over a version-neutral one. Input that matches no entry is retained whole under the untested-compatibility contract and flagged; it is never normalized by the nearest entry.
+
+## Entries
+
+| CLI | Source | Route | Versions | Status | Entry id |
+|---|---|---|---|---|---|
+| Antigravity CLI | stream-json | raw standard output | 1.4.6 | admitted | `antigravity-cli/stream-json/1.4.6-stdout` |
+| Claude Code | stream-json | raw standard output | 2.1.304 | admitted | `claude-code/stream-json/2.1.304-stdout` |
+| Codex CLI | exec JSON stream | raw standard output | 0.160.1 | admitted | `codex-cli/exec-json-stream/0.160.1` |
+| Claude Code | session transcript | native session file | 2.1.299 | experimental | `claude-code/session-transcript/2.1.299-session-file` |
+| Claude Code | session transcript | native session file | 2.1.303 | experimental | `claude-code/session-transcript/2.1.303-session-file` |
+| Claude Code | session transcript | native session file | 2.1.304 | experimental | `claude-code/session-transcript/2.1.304-session-file` |
+| Claude Code | stream-json | SDK stdio (transport bytes before SDK decoding) | any (tested 2.1.316, 2.1.319) | experimental | `claude-code/stream-json/sdk-stdio` |
+| Claude Code | session transcript | native session file | any (tested 2.1.316, 2.1.319) | experimental | `claude-code/session-transcript/session-file` |
+| Codex CLI | rollout | native session file | 0.160.1 | experimental | `codex-cli/rollout/0.160.1` |
+| Codex CLI | exec JSON stream | raw standard output | any (tested 0.166.0) | experimental | `codex-cli/exec-json-stream/0.166.0` |
+| Codex CLI | rollout | native session file | any (tested 0.166.0) | experimental | `codex-cli/rollout/0.166.0` |
+| GitHub Copilot CLI | events | raw standard output | 1.0.100 | experimental | `github-copilot-cli/events/1.0.100-stdout` |
+| GitHub Copilot CLI | events | native session file | 1.0.100 | experimental | `github-copilot-cli/events/1.0.100-session-file` |
+| GitHub Copilot CLI | OTel | OpenTelemetry file | 1.0.100 | experimental | `github-copilot-cli/otel/1.0.100` |
+| GitHub Copilot CLI | usage report | usage report file | 1.0.100 | experimental | `github-copilot-cli/usage-report/1.0.100` |
+| Junie | session summary | native session file | 3813.7 | experimental | `junie/session-summary/3813.7` |
+| Junie | session events | native session file | 3813.7 | experimental | `junie/session-events/3813.7` |
+| Junie | JSON stream | raw standard output | 3813.7 | experimental | `junie/json-stream/3813.7-stdout` |
+| Claude Code | stream-json | SDK-delivered stream (filtered) | 2.1.299 | historical | `claude-code/stream-json/2.1.299-sdk` |
+| Claude Code | stream-json | SDK-delivered stream (filtered) | 2.1.303 | historical | `claude-code/stream-json/2.1.303-sdk` |
+
+The two version-neutral Codex entries keep "0.166.0" in their ids but select any version.
+
+## Known limits
+
+- GitHub Copilot CLI's per-response duration and Junie's per-call time carry no vendor-stated unit.
+- Junie's cache counters are reported as zero without establishing whether they are measured, so its uncached input is conditional.
+- A Claude Code foreground sub-agent stream that omits one of its messages is not yet detected as incomplete against the vendor's own counts.
+
+Not supported on main: Gemini CLI and Grok CLI capture (the 1.x line has them). Per-CLI support statements live in the repository under [`docs/cli-support`](https://github.com/markpollack/agent-journal/tree/453c1d1/docs/cli-support), for example [Antigravity CLI 1.4.6](https://github.com/markpollack/agent-journal/blob/453c1d1/docs/cli-support/antigravity-cli-1.4.6.md).

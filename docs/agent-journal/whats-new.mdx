@@ -4,6 +4,17 @@ sidebarTitle: "What's New"
 description: "What changed in each Agent Journal release, and why it matters"
 ---
 
+## On main: 2.0.0-SNAPSHOT (prototype, not released)
+
+Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`. See [Which Journal do I need?](/docs/agent-journal/1x-or-2) and the [2.0 overview](/docs/agent-journal/v2/overview).
+
+- **Breaking: no upgrade path from 1.x.** 2.0 does not read 1.x files and 1.x does not read 2.0 packages
+- The 1.x capture model is retired and replaced by OCSF packages: `journal-ocsf-writer` writes them, `journal-capture-tck` reads them
+- An independent oracle checks each package against the CLI's native input; `OcsfReaderTool` exposes it on the command line
+- Sub-agents are child cores inside the one package
+- GitHub Copilot CLI is supported as experimental; Gemini CLI and Grok CLI are not supported on main
+- On the Claude Code SDK and Codex exec routes, the CLI version is recorded, not gated
+
 ## 1.11.0 (2026-10-07)
 
 - **Sub-agents as runs of their own, for Claude Code and Codex.** A sub-agent is recorded as a linked run in the same experiment: `parentRunId` points at the run of the agent that started it, the tag `track=subagent` marks it, and the config key `subagent.spawnToolUseId` is the id of the spawning tool call, which is also the `id` of that `tool_call` event in the parent run. The parent's files hold the main loop only; its `llm_call` metadata lists the sub-agent runs (`subagents`) and the spawns for which no record arrived (`subagentsWithoutTrack`). No record type gained a field and no enum gained a value

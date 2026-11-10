@@ -1,0 +1,135 @@
+---
+title: "Using development snapshots from main"
+sidebarTitle: "Development snapshots"
+description: "Consume features that are on main but not yet released, through the Central snapshot repository"
+---
+
+Fixes and features land on each library's `main` branch first. Every push to `main` publishes a development
+snapshot to the Maven Central snapshot repository. This page shows how to consume those snapshots, and how to
+tell exactly which build you got.
+
+Pages on this site mark such content **On main, not yet released**, with the snapshot version and the main commit.
+
+## 1. Add the snapshot repository
+
+Snapshots are not on Maven Central's release repository. Declare the snapshot repository in your `pom.xml`:
+
+```xml
+<repositories>
+    <repository>
+        <id>central-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+```
+
+Importing a BOM does not import its `<repositories>`, so every consumer needs this block.
+
+## 2. Import the development BOM
+
+The AgentWorks BOM on main is `1.22.0-SNAPSHOT`. It manages the members' development lines.
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.github.markpollack</groupId>
+            <artifactId>agentworks-bom</artifactId>
+            <version>1.22.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-judge-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-judge-assertj</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.github.markpollack</groupId>
+        <artifactId>agent-client-core</artifactId>
+    </dependency>
+</dependencies>
+```
+
+Build with `-U` so Maven checks for a newer snapshot instead of reusing a cached one:
+
+```bash
+./mvnw -U dependency:resolve
+```
+
+From an empty local repository, on 2026-11-10 UTC, this resolved:
+
+| Artifact | Managed version | Build resolved |
+|---|---|---|
+| `agentworks-bom` | `1.22.0-SNAPSHOT` | `1.22.0-20261107.204414-2` |
+| `agent-judge-core`, `agent-judge-assertj` | `0.19.0-SNAPSHOT` | `0.19.0-20261110.002132-20` |
+| `agent-client-core` | `0.32.1-SNAPSHOT` | `0.32.1-20261110.035344-12` |
+
+Later builds replace these as main moves.
+
+You can also use a single library's snapshot without the BOM: declare its `-SNAPSHOT` version directly, for example
+`agent-client-core` `0.32.1-SNAPSHOT`.
+
+## 3. Read the exact build you resolved
+
+A `-SNAPSHOT` version names a moving line, not fixed content. Each published build gets a timestamped version,
+recorded in the snapshot repository's `maven-metadata.xml`:
+
+```bash
+curl -s https://central.sonatype.com/repository/maven-snapshots/io/github/markpollack/agentworks-bom/1.22.0-SNAPSHOT/maven-metadata.xml
+```
+
+```xml
+<snapshot>
+  <timestamp>20261107.204414</timestamp>
+  <buildNumber>2</buildNumber>
+</snapshot>
+<snapshotVersions>
+  <snapshotVersion>
+    <extension>pom</extension>
+    <value>1.22.0-20261107.204414-2</value>
+  </snapshotVersion>
+</snapshotVersions>
+```
+
+The exact version is the base version with `-SNAPSHOT` replaced by `<timestamp>-<buildNumber>`: here
+`1.22.0-20261107.204414-2`. The `<lastUpdated>` element records when the metadata file was last written. It is
+not a version.
+
+After a build, the same timestamped file names appear in your local Maven repository (by default `.m2/repository` in your home directory), for example
+`io/github/markpollack/agentworks-bom/1.22.0-SNAPSHOT/agentworks-bom-1.22.0-20261107.204414-2.pom`.
+
+To pin one build, use its timestamped version in place of `-SNAPSHOT`. For example,
+`<version>1.22.0-20261107.204414-2</version>` imports exactly that BOM. Pinning the BOM does not pin its members:
+the BOM manages `-SNAPSHOT` lines, so each member still resolves to its latest build. Pin a member's timestamped
+version too if you need it fixed. Snapshot builds are not permanent, so use a release for anything you must
+reproduce long-term.
+
+## 4. Provenance is the main commit
+
+A snapshot has no release tag. What identifies it is the `main` commit that produced it. Each library publishes from
+a workflow that runs on every push to `main`. That run's commit is the snapshot's provenance, and its log names the
+exact timestamped file it uploaded.
+
+For the AgentWorks BOM, the [Publish development BOM snapshot](https://github.com/markpollack/agentworks/actions/workflows/publish-snapshot.yml)
+run for commit `1a4f0d4` uploaded `agentworks-bom-1.22.0-20261107.204414-2.pom`. You can check that the published
+POM is that commit's `pom.xml`:
+
+```bash
+curl -s https://central.sonatype.com/repository/maven-snapshots/io/github/markpollack/agentworks-bom/1.22.0-SNAPSHOT/agentworks-bom-1.22.0-20261107.204414-2.pom | sha256sum
+git -C agentworks show 1a4f0d4:pom.xml | sha256sum
+# both: b9cc9a1bf24688ef8ebb6992a3aff381d126569bb516594b9bd3384d3ecd4542
+```
+
+Each member snapshot's provenance is its own library's main commit, not the BOM's.
+
+When you report a problem against a snapshot, give the timestamped version and the main commit.

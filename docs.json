@@ -124,6 +124,7 @@
             "pages": [
               "index",
               "whats-new",
+              "docs/development-snapshots",
               "projects/index",
               {
                 "group": "Bud",

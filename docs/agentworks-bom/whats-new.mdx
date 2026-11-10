@@ -4,6 +4,14 @@ sidebarTitle: "What's New"
 description: "What changed in each AgentWorks BOM release, and why it matters"
 ---
 
+## On main (1.22.0-SNAPSHOT, not yet released)
+
+- Published to the Central snapshot repository on every push to main. Provenance is the main commit, currently `1a4f0d4` (build `1.22.0-20261107.204414-2`). See [Using development snapshots from main](/docs/development-snapshots).
+- Manages development lines: Client 0.32.1-SNAPSHOT, Workflow 0.14.1-SNAPSHOT, Judge 0.19.0-SNAPSHOT, Sandbox 0.11.0-SNAPSHOT, Experiment 0.10.0-SNAPSHOT and Claude Agent SDK 1.8.0-SNAPSHOT. Journal is mixed: `journal-core` and the six captures move to the 1.11.0 release, while `journal-capture-tck`, `journal-ocsf-writer` and the parent are 2.0.0-SNAPSHOT. `workflow-temporal` stays 0.12.3.
+- Repins the ACP Java SDK to 0.18.0 and adds `acp-json-jackson2`, `acp-json-jackson3` and `acp-streamable-http-jetty`.
+- Adds 24 managed entries (109 in all), including `agent-client-claude`, `agent-client-codex`, `agent-client-antigravity`, `agent-client-journal`, `agent-tck`, the Judge `assertions`, `assertj`, `jev` and `json-jackson2` modules, `experiment-agent-client`, `experiment-runtime`, `journal-ocsf-writer`, `journal-capture-tck` and the member parent POMs.
+- Hooks 0.8.3, Memory 0.5.1, Bench 0.6.3 and the nine third-party entries are unchanged.
+
 ## 1.21.0 (2026-09-17)
 
 - Coordinate Agent Judge 0.17.0 with Workflow 0.12.3, Bench 0.6.3, and Experiment 0.9.0. The judge's result-format change adds `NOT_APPLICABLE` and rejects empty requirements rosters; workflow gates route an excluded aggregate as inconclusive.

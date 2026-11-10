@@ -98,12 +98,12 @@ construction-time changes.
 
 ## 0.15.2 (2026-08-25)
 
-**Correctness release.** In 0.15.0 and 0.15.1 a parallel jury could silently score with fewer judges than it listed: the verdict still named every configured judge, but the aggregate came from the judges that survived. **Scores from a parallel jury on those versions are suspect and should be re-run.**
+**Correctness release.** In every release from 0.11.0 through 0.15.1 a parallel jury could silently score with fewer judges than it listed: the verdict still named every configured judge, but the aggregate came from the judges that survived. **Scores from a parallel jury on any of those versions are suspect and should be re-run; upgrade to 0.15.2 or later.** The release note first scoped this to 0.15.0 and 0.15.1; its correction of 2026-08-27 widened it to all six releases.
 
 - `TextSources.classpath(...)` and `TextSources.file(...)` read their text eagerly, at construction, so rendering no longer depends on a thread's context classloader; a missing resource fails at construction
 - `SimpleJury` turns a judge that throws, or returns no judgment, into an `ERROR` judgment naming the judge, in parallel and sequential modes
 
-Drop-in for 0.15.1; no API changed. [Release notes](https://github.com/markpollack/agent-judge/blob/v0.15.2/RELEASE_NOTES_0.15.2.md)
+Drop-in for 0.15.1; no API changed. [Release notes, with the correction](https://github.com/markpollack/agent-judge/blob/main/RELEASE_NOTES_0.15.2.md)
 
 ## 0.15.1 (2026-08-24)
 

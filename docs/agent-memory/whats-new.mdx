@@ -4,6 +4,18 @@ sidebarTitle: "What's New"
 description: "Curated release notes for Agent Memory"
 ---
 
+## 0.5.1 (2026-08-24)
+
+- Maintenance release aligning compatible dependencies
+- Publishes a consumer-correct CycloneDX SBOM for **every artifact**, replacing the aggregate SBOM on the parent that 0.4.0 and 0.5.0 published
+
+## 0.5.0 (2026-08-24)
+
+- Maintenance release on the Java 17 and Spring AI 2.x line: Spring AI moves to **2.0.1**, and the standalone-consumer Jackson floors move to **2.22.2** and **3.2.2** (from 0.4.0's 2.21.6 and 3.1.6)
+- Refreshes compatible runtime, test, build, SBOM and Central publishing dependencies
+- Keeps the 0.4.0 filesystem-store operating boundary: local, plaintext, single-writer storage, with external coordination required for concurrent writers
+- No Jackson 3 source migration and no licensing change
+
 ## 0.4.0 (2026-08-18)
 
 **First Business Source License 1.1 release, with supply-chain and disclosure work. No behavioural change to Tier-1 compaction.**

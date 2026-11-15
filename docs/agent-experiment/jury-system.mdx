@@ -102,7 +102,7 @@ On main, `MajorityVotingStrategy` is in `io.github.markpollack.judge.voting`, `R
 
 ## Writing a Custom Judge
 
-Implement `JudgeWithMetadata`, a `Judge` that also describes itself. This compiles against 0.9.0; it is named `MavenCompileJudge` so it does not shadow Agent Judge's own `BuildSuccessJudge`:
+Implement `JudgeWithMetadata`, a `Judge` that also describes itself. This compiles against 0.9.0; it is named `MavenCompileJudge` so it does not shadow Agent Eval's own `BuildSuccessJudge`:
 
 ```java
 public class MavenCompileJudge implements JudgeWithMetadata {
@@ -149,7 +149,7 @@ public class MavenCompileJudge implements JudgeWithMetadata {
 | `status()` | `ExecutionStatus` | How the agent's execution ended |
 | `metadata()` | `Map<String, Object>` | Item metadata |
 
-Agent Judge 0.17.0's `JudgmentContext` is `(goal, workspace, executionTime, startedAt, agentOutput, status, error, metadata)`. It has no reference-path accessor.
+Agent Eval 0.17.0's `JudgmentContext` is `(goal, workspace, executionTime, startedAt, agentOutput, status, error, metadata)`. It has no reference-path accessor.
 
 ### Judgment fields
 
@@ -160,10 +160,10 @@ Agent Judge 0.17.0's `JudgmentContext` is `(goal, workspace, executionTime, star
 | `label` | `String` (optional) | Independent classification label when the judge assigned one |
 | `reasoning` | `String` | Human-readable explanation |
 
-Agent Judge 0.17.0 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
+Agent Eval 0.17.0 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
 uses `Judgment.pass(...)` or `Judgment.fail(...)`; it does not duplicate the same fact in a score
 object. `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` contribute no effective score.
-On main, Agent Judge 0.19 removes `JudgmentContext`; see the main-only note.
+On main, Agent Eval 0.19 removes `JudgmentContext`; see the main-only note.
 
 <Note>
 On main (0.10.0-SNAPSHOT, not yet released) a jury is built per item from `AgentJudgingInput`, judges implement `Judgment judge()`, `Judgment` lives in `judge.judgment`, and voting strategies in `judge.voting`. See the main tab of [Getting Started](/docs/agent-experiment/getting-started). None of this is in 0.9.0.

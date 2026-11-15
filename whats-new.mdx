@@ -68,7 +68,7 @@ sidebarTitle: "What's New"
 
 [Release notes](https://github.com/markpollack/agent-workflow/releases/tag/v0.14.0) | [Tutorial](/docs/agent-workflow/tutorial)
 
-### Agent Judge 0.18.0
+### Agent Eval 0.18.0
 
 **Configure the evaluation first, then run it.** Released as Agent Eval under the unchanged
 `io.github.markpollack:agent-judge-*` coordinates. This is a breaking change for 0.17 callers.
@@ -130,15 +130,15 @@ next BOM release. Until then, declare the 0.18.0 versions explicitly.
 
 ### Agent Experiment 0.9.0
 
-**Agent Judge's interpretation is recorded beside each verdict.**
+**Agent Eval's interpretation is recorded beside each verdict.**
 
 - Records the `interpretation` at record time; `InterpretationReExport` adds readings to older results without changing a stored verdict
 - Fix: an item whose jury errored is now an instrument failure, not a subject failure
-- Pins Agent Judge 0.17.0 and Agent Workflow 0.12.3; results written before 0.9.0 stay readable
+- Pins Agent Eval 0.17.0 and Agent Workflow 0.12.3; results written before 0.9.0 stay readable
 
 [Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
 
-### Agent Judge 0.17.0
+### Agent Eval 0.17.0
 
 **Spec-driven development doesn't stop when the agent says it's done.** Two new judges read the
 written requirements back against the code that was supposed to satisfy them — EARS acceptance
@@ -163,7 +163,7 @@ facts support that, and what an older record cannot say.
 
 **Judge 0.17.0's result-format change, coordinated across its consumers.**
 
-- Coordinates Agent Judge 0.17.0 with Workflow 0.12.3, Bench 0.6.3 and Experiment 0.9.0: requirements judges reject empty rosters, and workflow gates treat `NOT_APPLICABLE` aggregates as inconclusive
+- Coordinates Agent Eval 0.17.0 with Workflow 0.12.3, Bench 0.6.3 and Experiment 0.9.0: requirements judges reject empty rosters, and workflow gates treat `NOT_APPLICABLE` aggregates as inconclusive
 - Aligns Client 0.31.0, Journal 1.10.1 and Hooks 0.8.3 with Claude Agent SDK 1.7.0, which destroys the CLI process tree before closing streams on cancellation
 - Adds `agent-acp`, `agent-junie`, `agent-starter-junie` and `junie-cli-capture`: 85 managed entries, 76 of them AgentWorks coordinates
 
@@ -171,9 +171,9 @@ facts support that, and what an older record cannot say.
 
 ### Agent Bench 0.6.3
 
-**Compatibility with Agent Judge 0.17.0.**
+**Compatibility with Agent Eval 0.17.0.**
 
-- Repins Agent Judge 0.17.0 and Agent Client 0.30.0; no source change
+- Repins Agent Eval 0.17.0 and Agent Client 0.30.0; no source change
 - The `answer-key-recall` check type on main is not part of this release
 
 [Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
@@ -189,9 +189,9 @@ facts support that, and what an older record cannot say.
 
 ### Agent Workflow 0.12.3
 
-**Compatibility with Agent Judge 0.17.0.**
+**Compatibility with Agent Eval 0.17.0.**
 
-- `JudgeGate` and `TieredGate` treat a `NOT_APPLICABLE` aggregate as inconclusive; 0.12.2 cannot compile against Agent Judge 0.17.0
+- `JudgeGate` and `TieredGate` treat a `NOT_APPLICABLE` aggregate as inconclusive; 0.12.2 cannot compile against Agent Eval 0.17.0
 
 [Project](/projects/agent-workflow) | [What's New](/docs/agent-workflow/whats-new) | [Source](https://github.com/markpollack/agent-workflow)
 
@@ -219,10 +219,10 @@ facts support that, and what an older record cannot say.
 
 ### Agent Experiment 0.7.2 (with 0.7.0 and 0.7.1)
 
-**Correctness: repinned to Agent Judge 0.15.2.**
+**Correctness: repinned to Agent Eval 0.15.2.**
 
-- Agent Judge 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect; re-run anything you rely on
-- 0.7.0 moved to Agent Judge 0.15.0, Workflow 0.12.0 and the Jackson 2.22.2 / 3.2.2 BOMs; 0.7.1 aligned dependencies and added per-artifact SBOMs; both are affected, so use 0.7.2 or later
+- Agent Eval 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect; re-run anything you rely on
+- 0.7.0 moved to Agent Eval 0.15.0, Workflow 0.12.0 and the Jackson 2.22.2 / 3.2.2 BOMs; 0.7.1 aligned dependencies and added per-artifact SBOMs; both are affected, so use 0.7.2 or later
 - Journal 1.9.0 adds the per-turn cost vector, vendor-neutral stop reasons, and tool-call ordinals and durations
 
 [Project](/projects/agent-experiment) | [What's New](/docs/agent-experiment/whats-new) | [Source](https://github.com/markpollack/agent-experiment)
@@ -276,9 +276,9 @@ facts support that, and what an older record cannot say.
 
 ### Agent Bench 0.6.2 (with 0.6.1)
 
-**Correctness: repinned to Agent Judge 0.15.2.**
+**Correctness: repinned to Agent Eval 0.15.2.**
 
-- A parallel jury on the earlier Agent Judge pin could silently drop a judge, so benchmark scores from Agent Bench 0.6.0 and 0.6.1 that went through a parallel jury are suspect; re-run them on 0.6.2 or later
+- A parallel jury on the earlier Agent Eval pin could silently drop a judge, so benchmark scores from Agent Bench 0.6.0 and 0.6.1 that went through a parallel jury are suspect; re-run them on 0.6.2 or later
 - 0.6.1 aligned dependencies and published an SBOM for every artifact
 
 [Project](/projects/agent-bench) | [What's New](/docs/agent-bench/whats-new) | [Source](https://github.com/markpollack/agent-bench)
@@ -295,10 +295,10 @@ facts support that, and what an older record cannot say.
 
 ### Agent Workflow 0.12.2 (with 0.12.0 and 0.12.1)
 
-**Correctness: repinned to Agent Judge 0.15.2.**
+**Correctness: repinned to Agent Eval 0.15.2.**
 
 - On 0.12.0 and 0.12.1 a `JudgeGate` decision may have been taken by fewer judges than configured; re-evaluate gate outcomes that mattered on 0.12.2 or later
-- 0.12.0 moved to Agent Judge 0.15.0, Agent Client 0.29.0 and Agent Journal 1.8.0; 0.12.1 refreshed Hibernate and published an SBOM for every artifact
+- 0.12.0 moved to Agent Eval 0.15.0, Agent Client 0.29.0 and Agent Journal 1.8.0; 0.12.1 refreshed Hibernate and published an SBOM for every artifact
 
 [Project](/projects/agent-workflow) | [What's New](/docs/agent-workflow/whats-new) | [Source](https://github.com/markpollack/agent-workflow)
 
@@ -373,7 +373,7 @@ facts support that, and what an older record cannot say.
 **The managed set catches up across the whole portfolio.**
 
 - Repins the Agent Client family to 0.28.0, bringing the Grok and Antigravity providers into the managed set
-- Repins Agent Journal 1.7.0, Agent Hooks 0.7.0, Agent Judge 0.15.0, Agent Sandbox 0.10.0, Agent Bench 0.6.0, Agent Experiment 0.6.0, Agent Memory 0.4.0, Claude Agent SDK 1.5.0, and the acp-java family 0.15.0
+- Repins Agent Journal 1.7.0, Agent Hooks 0.7.0, Agent Eval 0.15.0, Agent Sandbox 0.10.0, Agent Bench 0.6.0, Agent Experiment 0.6.0, Agent Memory 0.4.0, Claude Agent SDK 1.5.0, and the acp-java family 0.15.0
 - Drops `loopy` from the managed set; it ships an executable distribution and is depended on directly
 - The BOM tracks a set verified together, so it trails the newest individual releases — Agent Client 0.29.0 and Agent Journal 1.8.0 must be declared explicitly
 
@@ -469,7 +469,7 @@ facts support that, and what an older record cannot say.
 
 [Project](/projects/agent-client) | [What's New](/docs/agent-client/whats-new) | [Source](https://github.com/markpollack/agent-client)
 
-### Agent Judge 0.14.0
+### Agent Eval 0.14.0
 
 **Status-first, portable evaluation that preserves what every judge and composite stage actually reported.**
 

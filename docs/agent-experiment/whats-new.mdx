@@ -10,7 +10,7 @@ None of this is in 0.9.0. Resolve `0.10.0-SNAPSHOT` from `https://central.sonaty
 
 - **Two new modules.** `experiment-agent-client` (`AgentClientInvoker`, which takes `Function<InvocationContext, AgentOptions>` so options come from Agent Client) and `experiment-runtime` (canonical acquisition through Agent Client and Agent Journal, Workflow proofs, and immutable per-item runtime results): five modules in all. `experiment-core` no longer depends on Agent Journal
 - **Breaking: a fresh jury for every item.** The constructor is `AgentExperiment(DatasetManager, Function<AgentJudgingInput, Jury>, ResultStore, ExperimentConfig)`; `AgentJudgingInput` carries `goal`, `workspace`, `executionTime`, `status` and `metadata`
-- **Breaking: Agent Judge `0.19.0-SNAPSHOT` API.** `Judge` is `Judgment judge()` with no context argument, and `JudgmentContext` is gone; `Judgment` moved from `judge.result` to `judge.judgment`; the voting strategies moved from `judge.jury` to `judge.voting`; `SimpleJury.Builder` adds `judge(String name, Judge)`; `CascadedJury.Builder.tier(...)` takes a `judge.verdict.RoutingRule` and `TierPolicy` is gone; `BuildSuccessJudge` and `ClassVersionJudge` take a workspace supplier, for example `new BuildSuccessJudge(input::workspace, "./mvnw compile")`
+- **Breaking: Agent Eval `0.19.0-SNAPSHOT` API.** `Judge` is `Judgment judge()` with no context argument, and `JudgmentContext` is gone; `Judgment` moved from `judge.result` to `judge.judgment`; the voting strategies moved from `judge.jury` to `judge.voting`; `SimpleJury.Builder` adds `judge(String name, Judge)`; `CascadedJury.Builder.tier(...)` takes a `judge.verdict.RoutingRule` and `TierPolicy` is gone; `BuildSuccessJudge` and `ClassVersionJudge` take a workspace supplier, for example `new BuildSuccessJudge(input::workspace, "./mvnw compile")`
 - **Breaking: removed APIs.** `ClaudeSdkInvoker` and `ClaudeSdkInvokerConfig` are gone (use `AgentClientInvoker` with an Agent Client provider). The phase journal is gone (`RunJournal`, `ExperimentJournal`, `JsonFileRunJournal`, `NoOpRunJournal`); `ExperimentConfig.journalEnabled(true)` now refuses with "Legacy phase writer retired; use experiment-runtime canonical acquisition". `experiment-claude` holds only semantic scoring: `SemanticDiffJudge(SemanticDiffJudgeConfig, plan, workspace)`, run through Agent Client
 - **A run needs a writer identity.** Pass `-Dexperiment.writer.revision=<your source revision>`; without it the run fails with "Set experiment.writer.revision or supply a writer identity"
 - **Unknown is not zero.** `ExperimentResult.totalCostUsd()`, `totalTokens()` and `totalDurationMs()`, and `ItemResult.costUsd()`, `totalTokens()` and `durationMs()`, are nullable; `null` means unknown
@@ -21,9 +21,9 @@ None of this is in 0.9.0. Resolve `0.10.0-SNAPSHOT` from `https://central.sonaty
 
 ## 0.9.0 (2026-09-17)
 
-- Records Agent Judge's `interpretation` beside each verdict, read at record time
+- Records Agent Eval's `interpretation` beside each verdict, read at record time
 - Adds `InterpretationReExport` to add readings to older results, preserving each stored verdict
-- Pins Agent Judge 0.17.0 and Agent Workflow 0.12.3
+- Pins Agent Eval 0.17.0 and Agent Workflow 0.12.3
 - **Fix:** an item whose jury errored was recorded as a subject failure. It is now an instrument failure; the subject's outcome is unknown
 - Results written before 0.9.0 stay readable and are not rewritten. An item with no interpretation is reported as unattestable
 
@@ -39,8 +39,8 @@ None of this is in 0.9.0. Resolve `0.10.0-SNAPSHOT` from `https://central.sonaty
 
 **Correctness.**
 
-- Repins Agent Judge 0.15.2, Journal 1.9.0 and Workflow 0.12.2, directly and through Agent Workflow's `JudgeGate`
-- Agent Judge 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so **scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect. Re-run anything you rely on.** Experiment's own 0.7.2 release note names only 0.7.0 and 0.7.1; Agent Judge's corrected note gives the full range
+- Repins Agent Eval 0.15.2, Journal 1.9.0 and Workflow 0.12.2, directly and through Agent Workflow's `JudgeGate`
+- Agent Eval 0.11.0 through 0.15.1 could drop a judge from a parallel jury and still return a verdict, so **scores from Agent Experiment 0.2.0 through 0.7.1 that used a parallel jury are suspect. Re-run anything you rely on.** Experiment's own 0.7.2 release note names only 0.7.0 and 0.7.1; Agent Eval's corrected note gives the full range
 - Journal 1.9.0 adds the per-turn cost vector, vendor-neutral stop reasons, and tool-call ordinals and durations. Trajectories recorded earlier lack these columns permanently
 
 ## 0.7.1 (2026-08-25)
@@ -53,7 +53,7 @@ Maintenance.
 
 ## 0.7.0 (2026-08-24)
 
-- Moves to Agent Judge 0.15.0, Workflow 0.12.0, Journal/Capture 1.8.0, Claude Code SDK 1.5.0 and Agent Client 0.29.0
+- Moves to Agent Eval 0.15.0, Workflow 0.12.0, Journal/Capture 1.8.0, Claude Code SDK 1.5.0 and Agent Client 0.29.0
 - Moves to the Jackson 2.22.2 and 3.2.2 BOMs
 - Keeps the 0.6 APIs and result projection
 - Affected by the jury defect; use 0.7.2 or later
@@ -64,7 +64,7 @@ Maintenance.
   cost/token evidence adapted to `AgentInvoker`.
 - Makes Agent Journal capture a first-class per-item lifecycle owned by `AgentExperiment`, using
   Agent Journal 1.7.0 and preserving variant, item, model, session, tool-use, and derived cost data.
-- Migrates runtime evaluation to Agent Judge 0.14.0 and stores normalized, Agent
+- Migrates runtime evaluation to Agent Eval 0.14.0 and stores normalized, Agent
   Experiment-owned judgments and verdicts. Existing 0.5 / Judge 0.13 results load automatically;
   re-saving writes the normalized format with the documented lossy boundary for obsolete metadata.
 - Updates to Agent Client 0.26.0, Agent Workflow 0.10.0, and Claude Code SDK 1.4.0.

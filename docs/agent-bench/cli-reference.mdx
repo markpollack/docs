@@ -15,7 +15,7 @@ The 0.6.3 release publishes both CLI entry points. Run them from a `v0.6.3` sour
 ./mvnw -q -pl agent-bench-agents exec:java -Dexec.args="<command> [flags]"
 ```
 
-`BenchMain` registers Agent Judge's deterministic file, build, and coverage judges. During `run`
+`BenchMain` registers Agent Eval's deterministic file, build, and coverage judges. During `run`
 and `resume`, its `test-quality-llm` registration abstains because no model-backed judge is present.
 `BenchApp` replaces that registration with `TestQualityJudge`, backed by Agent Client and the Claude
 agent implementation. Other commands delegate to the core CLI.
@@ -94,7 +94,7 @@ Creates the workspace, copies an optional template, and writes `INSTRUCTION.md` 
 
 ### `grade`
 
-Evaluates an existing workspace with the benchmark's deterministic Agent Judge configuration.
+Evaluates an existing workspace with the benchmark's deterministic Agent Eval configuration.
 
 ```bash
 ./mvnw -q -pl agent-bench-core exec:java \

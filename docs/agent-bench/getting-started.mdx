@@ -17,7 +17,7 @@ git checkout v0.6.3
 ./mvnw clean verify
 ```
 
-Use 0.6.2 or later. Releases 0.6.0 and 0.6.1 pin Agent Judge versions whose parallel jury could silently drop a judge; see [What's New](/docs/agent-bench/whats-new).
+Use 0.6.2 or later. Releases 0.6.0 and 0.6.1 pin Agent Eval versions whose parallel jury could silently drop a judge; see [What's New](/docs/agent-bench/whats-new).
 
 <Warning>
 Benchmark setup, post-processing, and configured agent commands run as local host processes with
@@ -73,12 +73,12 @@ cd /path/to/agent-bench
 ```
 
 `provide` writes `INSTRUCTION.md` and `.bench-context.yaml`; the external agent changes the
-workspace; `grade` uses the benchmark's Agent Judge configuration. The split CLI path is intended
+workspace; `grade` uses the benchmark's Agent Eval configuration. The split CLI path is intended
 for deterministic juries. LLM-backed judging is wired for agents-module `run` and `resume`.
 
 ## Pattern 3: Java API
 
-Applications can discover definitions and materialize the same Agent Judge jury directly. This uses the Agent Judge 0.17.0 API that Bench 0.6.3 pins (`JudgmentContext` is gone in Judge 0.18.0; see the [0.17.0 README](https://github.com/markpollack/agent-judge/blob/v0.17.0/README.md)):
+Applications can discover definitions and materialize the same Agent Eval jury directly. This uses the Agent Eval 0.17.0 API that Bench 0.6.3 pins (`JudgmentContext` is gone in Judge 0.18.0; see the [0.17.0 README](https://github.com/markpollack/agent-judge/blob/v0.17.0/README.md)):
 
 ```java
 BenchmarkCatalog catalog = new BenchmarkCatalog(Path.of("benchmarks"));
@@ -117,6 +117,6 @@ runs/<uuid>/
     Commands and entry-point differences
   </Card>
   <Card title="Jury System" icon="scale-balanced" href="/docs/agent-bench/jury-system">
-    Agent Judge tiers, policies, and custom judges
+    Agent Eval tiers, policies, and custom judges
   </Card>
 </CardGroup>

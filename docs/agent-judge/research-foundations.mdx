@@ -1,9 +1,9 @@
 ---
 title: "Research Foundations"
-description: "Why Agent Judge favors explicit requirements, executable evidence, staged evaluation, and independent checks"
+description: "Why Agent Eval favors explicit requirements, executable evidence, staged evaluation, and independent checks"
 ---
 
-Agent Judge evaluates whether work satisfies an explicit definition of done, using executable evidence and independent checks—not whether it resembles one reference answer.
+Agent Eval evaluates whether work satisfies an explicit definition of done, using executable evidence and independent checks—not whether it resembles one reference answer.
 
 ## The motivating failure
 
@@ -15,7 +15,7 @@ Exact comparison is still appropriate when exact output is part of the specifica
 
 ## Five principles
 
-| Principle | What it means | Agent Judge mechanism |
+| Principle | What it means | Agent Eval mechanism |
 |---|---|---|
 | Evidence before opinion | Prefer builds, tests, runtime behavior, bytecode, and coverage when those facts can answer the question directly. | Command, build, class-version, and coverage judges |
 | Judge requirements, not resemblance | Express the invariants the result must satisfy instead of assuming one reference implementation is uniquely correct. | Composable deterministic, file-semantic, execution, RAG, and model-backed judges |
@@ -23,13 +23,13 @@ Exact comparison is still appropriate when exact output is part of the specifica
 | Compose independent perspectives | Combine checks with different failure modes and make their aggregation policy visible. | `SimpleJury`, `MetaJury`, majority, consensus, average, weighted-average, and median strategies |
 | Preserve uncertainty | Keep disagreement, lack of applicability, and evaluator failure distinct from a negative finding. | `PASS`, `FAIL`, `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` outcomes with structured aggregation evidence |
 
-These are design principles, not claims that Agent Judge implements every technique proposed in the literature. Calibrated guarantees of human agreement, dynamic judge-team selection, multi-round debate, and formal program-equivalence proofs remain research or application-level concerns.
+These are design principles, not claims that Agent Eval implements every technique proposed in the literature. Calibrated guarantees of human agreement, dynamic judge-team selection, multi-round debate, and formal program-equivalence proofs remain research or application-level concerns.
 
 ## Ground semantic judgment in tools
 
 Research on tool-augmented LLM evaluation found that web search and code execution can improve judge performance in many, though not all, settings. Code-evaluation systems likewise use execution and other tools to supplement model judgment. The practical implication is bounded: a semantic judge can add value, but it should not replace a build, test, or runtime check when one is available.
 
-Agent Judge therefore treats deterministic and execution-based checks as first-class judges. Model-backed judges are intended for criteria-based questions that the available tools cannot settle directly.
+Agent Eval therefore treats deterministic and execution-based checks as first-class judges. Model-backed judges are intended for criteria-based questions that the available tools cannot settle directly.
 
 ## Allow more than one correct implementation
 
@@ -39,7 +39,7 @@ This leads to a requirements-based evaluation model: specify what must remain tr
 
 ## Use cascades and juries deliberately
 
-Selective-evaluation research motivates starting with lower-cost evaluators and escalating uncertain cases. Ensemble-judge research highlights the value—and limitations—of combining perspectives. Agent Judge exposes those choices as application policy: which judges participate, how their findings aggregate, how errors are handled, and when another tier runs.
+Selective-evaluation research motivates starting with lower-cost evaluators and escalating uncertain cases. Ensemble-judge research highlights the value—and limitations—of combining perspectives. Agent Eval exposes those choices as application policy: which judges participate, how their findings aggregate, how errors are handled, and when another tier runs.
 
 A jury is therefore a composition of visible judgments, not merely several models producing one opaque score.
 
@@ -47,7 +47,7 @@ A jury is therefore a composition of visible judgments, not merely several model
 
 Migration research also documents why weak success criteria are dangerous. An agent can appear to improve a metric by removing tests, reducing exercised behavior, or satisfying only a superficial similarity check. Coverage preservation, compilation, test execution, and project-specific structural invariants make such shortcuts observable.
 
-Agent Judge supplies mechanisms for these safeguards. The application still owns its definition of done; no generic judge suite can infer all of a project's requirements automatically.
+Agent Eval supplies mechanisms for these safeguards. The application still owns its definition of done; no generic judge suite can infer all of a project's requirements automatically.
 
 ## Source map
 
@@ -74,7 +74,7 @@ Agent Judge supplies mechanisms for these safeguards. The application still owns
 - [Amin et al., _JMigBench: A Benchmark for Evaluating LLMs on Source Code Migration_](https://arxiv.org/abs/2602.09930)
 - [Cheng et al., _CODEMENV: Benchmarking Large Language Models on Code Migration_](https://arxiv.org/abs/2506.00894)
 
-Results and numerical claims in these sources belong to their respective studies. They are research inputs to Agent Judge's design, not Agent Judge benchmark results.
+Results and numerical claims in these sources belong to their respective studies. They are research inputs to Agent Eval's design, not Agent Eval benchmark results.
 
 ## Related
 

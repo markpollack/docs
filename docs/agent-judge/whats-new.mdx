@@ -1,7 +1,7 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Curated Agent Judge release notes"
+description: "Curated Agent Eval release notes"
 ---
 
 ## On main (0.19.0-SNAPSHOT, not yet released)
@@ -14,13 +14,13 @@ None of it is in 0.18.0. Every push to main publishes `0.19.0-SNAPSHOT` to `http
 - **Behaviour change: prompt size guard.** `EarsJury`, `Rfc2119Jury`, `EarsJudge` and `Rfc2119Judge` measure the whole request before calling. Above `PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS` (100,000) they make no call and return `ERROR` (`judge_failed`), never `FAIL`. Set the limit with `.maxPromptCharacters(n)` right after `.runtime(...)`; it must be positive. Evidence pasted into the workspace slot now yields `ERROR`
 - **A refused roster is an ordinary result.** It concludes `INCONCLUSIVE`, retains no invocation, and stores and reads back exactly
 - **Breaking: wire change `generated-answer:v3`.** Invocation `nativeFacts` hold `messageDigests` (role, UTF-8 length, SHA-256) instead of the messages; the `messages` key is gone, and a reader of the old shape fails visibly. Anyone who stores results needs this
-- **Agent Client invocation seam.** `AgentClientEvalModel(Invocation, NativeCapture)` takes a configured execution lifecycle; invocation facts and artifacts survive an invocation failure. `agent-judge-agent-client` builds against Agent Client `0.32.1-SNAPSHOT`
+- **Agent Client invocation seam.** `AgentClientEvalModel(Invocation, NativeCapture)` takes a configured execution lifecycle; invocation facts and artifacts survive an invocation failure. `agent-judge-agent-client` builds against the published Agent Client `0.32.0` (since `86d6d59`; earlier main commits, including `6303332`, used `0.32.1-SNAPSHOT`)
 - **Breaking API changes.** `EvalModel` no longer extends `EvalRuntime`. `BuildSuccessJudge` extends `DeterministicJudge`, not `CommandJudge`, so the inherited `BuildSuccessJudge.builder(String, int, …)` factories are gone. Binary-incompatible but source-compatible: `EarsJudge`/`Rfc2119Judge` `GeneratedBuilder.requirement` and `GeneratedRequirement.build`, so 0.18.0-compiled callers must recompile. In Jev, an `Error` or a cancellation now reaches the caller instead of a detail-free `IOException` or a future that never completes
 
 ## 0.18.0 (2026-10-08)
 
 Agent Eval configures the actual requirement, evidence and native runtime before executing a ready Judge or Jury.
-Coordinates still use Agent Judge (`io.github.markpollack:agent-judge-*`). This is a breaking release for 0.17 callers.
+Maven coordinates are unchanged (`io.github.markpollack:agent-judge-*`). This is a breaking release for 0.17 callers.
 
 - [Configured requirements and execution](/docs/agent-judge/requirements-judges): no-argument Judge/Jury, typed EvalRuntime and generated EvalModel, native RFC2119/EARS and Jev.
 - [Complete results and independent reliance](/docs/agent-judge/interpreting-verdicts): originals/refusals, native ownership, separate whole-Verdict Policy, cached live stages and zero-call retained reads.
@@ -111,7 +111,7 @@ Maintenance release: dependency alignment (Agent Client and compatible Spring, J
 
 ## 0.15.0
 
-Agent Judge 0.15 is a compatibility-preserving dependency-alignment and release-reproducibility
+Agent Eval 0.15 is a compatibility-preserving dependency-alignment and release-reproducibility
 update. It keeps the 0.14 status-first `Judgment` API, the Java 21 baseline, and all ten published
 modules unchanged.
 
@@ -130,7 +130,7 @@ modules unchanged.
 values in `ExecSpec.toString()` and avoids forwarding the whole parent process environment when
 caller overrides are present.
 
-Agent Judge's own execution paths construct specs with a command and timeout only; they do not set
+Agent Eval's own execution paths construct specs with a command and timeout only; they do not set
 environment variables. This release does not add the Sandbox Docker or E2B modules.
 
 ### Reproducible release evidence
@@ -148,7 +148,7 @@ and the [GitHub release](https://github.com/markpollack/agent-judge/releases/tag
 
 ## 0.14.0
 
-Agent Judge 0.14 replaces the former sealed score hierarchy with a normalized, portable `Judgment` contract.
+Agent Eval 0.14 replaces the former sealed score hierarchy with a normalized, portable `Judgment` contract.
 This is a breaking pre-1.0 release, so consumers must recompile and follow the [migration guide](https://github.com/markpollack/agent-judge/blob/main/consumer-handoff-normalized-judgment.md).
 
 ### Result model
@@ -192,7 +192,7 @@ Framework bridge dependencies remain `provided` where practical so applications 
 
 ### Samples and reference
 
-- The [Agent Judge Tutorial](https://github.com/markpollack/agent-judge-tutorial) now owns ten canonical credential-free Maven modules.
+- The [Agent Eval tutorial](https://github.com/markpollack/agent-judge-tutorial) now owns ten canonical credential-free Maven modules.
 - Executable Koog and LangChain4j modules replace the former README-only bridge samples.
 - Aggregate Javadoc is warning-clean, warnings are release-breaking, and every published module attaches a Javadoc JAR.
 - See the complete [0.14 release notes](https://github.com/markpollack/agent-judge/blob/main/RELEASE_NOTES_0.14.md).

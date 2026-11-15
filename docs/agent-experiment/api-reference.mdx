@@ -346,7 +346,7 @@ public record JudgeExecutionDetail(
 ) implements ExecutionDetail
 ```
 
-Unscored results carry null; see `JudgeScorerResult.unscored`. Runtime candidates return Agent Judge 0.17 `Judgment` values, which Agent Experiment converts to its `RecordedJudgment` persistence form. Results written before 0.9.0 remain readable and are not rewritten.
+Unscored results carry null; see `JudgeScorerResult.unscored`. Runtime candidates return Agent Eval 0.17 `Judgment` values, which Agent Experiment converts to its `RecordedJudgment` persistence form. Results written before 0.9.0 remain readable and are not rewritten.
 
 ### JudgeExperiment
 

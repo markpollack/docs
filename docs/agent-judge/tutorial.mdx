@@ -3,8 +3,8 @@ title: "Executable Tutorial"
 description: "Eleven credential-free fundamentals modules and the PetClinic requirements case study from the conference"
 ---
 
-The [Agent Judge Tutorial repository](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) is the canonical sample suite.
-The eleven fundamentals modules are small executable Maven projects compiled against Agent Judge 0.17.0.
+The [Agent Eval tutorial repository](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed) is the canonical sample suite.
+The eleven fundamentals modules are small executable Maven projects compiled against Agent Eval 0.17.0.
 The fundamentals commands below select the historical tested 0.17.0 revision. The migrated PetClinic path uses Agent Eval 0.18.0 in a separate reactor.
 
 ```bash
@@ -63,7 +63,7 @@ The modules are ordered by the evaluation problem each one creates, not by the n
 | Module | The problem it introduces |
 |---|---|
 | 01 | A criterion with no expected value. [Known oracle vs. judgment oracle](https://github.com/markpollack/agent-judge-tutorial/tree/106ca35a74ebdd9995329cb0bde63d66a9e7e8ed/module-01-oracle-boundary) |
-| 02 | The compiler and JUnit are already oracles; Agent Judge carries their answers |
+| 02 | The compiler and JUnit are already oracles; Agent Eval carries their answers |
 | 03 | A measurement is not an acceptance decision, and a score is not a status |
 | 04 | Writing a judge: task → criterion → evidence → judgment |
 | 05 | A derived oracle: several objective facts, one finding, every part kept |
@@ -74,7 +74,7 @@ The modules are ordered by the evaluation problem each one creates, not by the n
 | 10 | The same bar, applied to a Koog agent |
 | 11 | The same bar, applied to a LangChain4j result |
 
-A twelfth module, `judge-junit`, is a small bridge turning an Agent Judge outcome into a useful JUnit assertion failure.
+A twelfth module, `judge-junit`, is a small bridge turning an Agent Eval outcome into a useful JUnit assertion failure.
 
 ## Three kinds of oracle
 
@@ -119,7 +119,7 @@ Modules 02, 03 and 06 run real Maven builds; run each once before presenting so 
 ## What to observe
 
 **Module 01** keeps four criteria in plain `assertTrue` on purpose.
-Agent Judge appears only for the criterion that has no expected value, and the judgment it returns carries one `Check` per criterion rather than an average — five failures out of six do not become `0.17`, because a number cannot name the criterion that binds.
+Agent Eval appears only for the criterion that has no expected value, and the judgment it returns carries one `Check` per criterion rather than an average — five failures out of six do not become `0.17`, because a number cannot name the criterion that binds.
 
 **Module 03** separates three things a score normally collapses: the measurement (`100.00% → 36.00%`), the normalized score (`0.0`, which floors and so cannot distinguish a 1-point drop from a 64-point one), and the status (`FAIL`, against a bar written down with its derivation).
 Pointed at a workspace where no build ran, the judge returns `ERROR` — not `FAIL`, and not `0.0`.
@@ -151,7 +151,7 @@ A stand-in that approves what it has not seen is a judge that cannot fail.
 
 | Integration | Tutorial target |
 |---|---|
-| Agent Judge | `0.17.0` |
+| Agent Eval | `0.17.0` |
 | Koog | `1.1.1` |
 | LangChain4j | `1.19.0` |
 

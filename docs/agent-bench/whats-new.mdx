@@ -6,7 +6,7 @@ description: "Release notes for Agent Bench"
 
 ## 0.6.3 (2026-09-17)
 
-- Compatibility release for **Agent Judge 0.17.0**: repins Agent Judge 0.15.2 → 0.17.0 and Agent Client 0.29.3 → 0.30.0. Agent Judge 0.17.0 changes the result format (a fifth status, `NOT_APPLICABLE`; a required reason code on every `ERROR`; construction-time jury validation)
+- Compatibility release for **Agent Eval 0.17.0**: repins Agent Eval 0.15.2 → 0.17.0 and Agent Client 0.29.3 → 0.30.0. Agent Eval 0.17.0 changes the result format (a fifth status, `NOT_APPLICABLE`; a required reason code on every `ERROR`; construction-time jury validation)
 - No source change: Agent Bench compiles and passes its full suite against both
 - Cut from the 0.6.2 line; the `answer-key-recall` check type on main is not part of this release
 
@@ -14,25 +14,25 @@ description: "Release notes for Agent Bench"
 
 ## 0.6.2 (2026-08-25)
 
-- **Correctness.** Repins Agent Judge 0.15.1 → 0.15.2, which fixes a parallel jury that could silently drop a judge and still return a verdict
+- **Correctness.** Repins Agent Eval 0.15.1 → 0.15.2, which fixes a parallel jury that could silently drop a judge and still return a verdict
 - **Scores from earlier versions are suspect.** Any benchmark result scored through a parallel jury on Agent Bench 0.6.0 or 0.6.1 may have been computed from fewer judges than it reports. Re-run anything you rely on with 0.6.2 or later
 
 [Release notes](https://github.com/markpollack/agent-bench/releases/tag/v0.6.2)
 
 ## 0.6.1 (2026-08-25)
 
-- Maintenance release aligning Agent Judge (0.15.1), Agent Client (0.29.3), Spring Boot, Jackson and process-execution dependencies
+- Maintenance release aligning Agent Eval (0.15.1), Agent Client (0.29.3), Spring Boot, Jackson and process-execution dependencies
 - Publishes consumer-correct CycloneDX SBOMs for every artifact
 - Affected by the parallel-jury defect; use 0.6.2 or later
 
 ## 0.6.0 (2026-08-18)
 
 - Removes the unused `DockerSandbox` API and the direct Testcontainers/docker-java dependency.
-- Keeps local process execution, the `Sandbox` abstraction, `LocalSandbox`, Agent Judge grading,
+- Keeps local process execution, the `Sandbox` abstraction, `LocalSandbox`, Agent Eval grading,
   the agents module, and its real Agent Client-backed LLM judge.
 - Documents that workspaces are not security boundaries and recommends externally managed
   isolation for untrusted benchmark definitions or agents.
-- Aligns the dependency floors with Jackson 2.21.6, Jackson 3.1.6, Agent Judge 0.14.0,
+- Aligns the dependency floors with Jackson 2.21.6, Jackson 3.1.6, Agent Eval 0.14.0,
   and Agent Client 0.26.0.
 - Publishes `agent-bench-core` and `agent-bench-agents` 0.6.0, plus the aggregate CycloneDX 1.6
   SBOM.
@@ -41,7 +41,7 @@ description: "Release notes for Agent Bench"
 
 - Added the Spring Boot upgrade benchmark candidate and retained its owner-operated external
   baseline-aware grader distinction.
-- Published the root aggregate CycloneDX SBOM and aligned Agent Judge and Agent Client dependencies.
+- Published the root aggregate CycloneDX SBOM and aligned Agent Eval and Agent Client dependencies.
 - Released two Maven modules: `agent-bench-core` and `agent-bench-agents`.
 
 ## 0.4.0 (2026-06-06)

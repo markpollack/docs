@@ -1,14 +1,16 @@
 ---
-title: "Agent Judge / Agent Eval"
+title: "Agent Eval"
 description: "Configured Java evaluations with requirements, evidence, native runtime results and separate application policy"
 ---
 
 **The agent says it is done. Should you merge?**
 
-Agent Eval (in the Agent Judge repository) is a Java 21 library for evaluating work against
+Agent Eval is a Java 21 library for evaluating work against
 requirements set before execution. Configure a `Judge` with its requirement, runtime and evidence,
 then call `judge()`. Configure a `Jury` with the selected requirements and call `vote()`.
 Retain the complete result before deciding whether the application may rely on it.
+
+Formerly Agent Judge. The Maven coordinates (`io.github.markpollack:agent-judge-*`) and Java packages are unchanged.
 
 **Current release: 0.18.0** (2026-10-08), on Maven Central under `io.github.markpollack:agent-judge-*`.
 

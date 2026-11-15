@@ -5,7 +5,7 @@ description: "Replay a real Claude Code recording into an Agent Journal 2.0 pack
 ---
 
 <Warning>
-Agent Journal 2.0 is the current Journal line, on main. It is not yet released, and breaking changes are expected before 2.0.0. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+Agent Journal 2.0 is the current Journal line, on main. It is not yet released, and breaking changes are expected before 2.0.0. Checked against `markpollack/agent-journal@e161c779`, snapshot `2.0.0-20261115.230849-26`.
 </Warning>
 
 This walkthrough replays a sanitized real Claude Code 2.1.304 stream, kept in the agent-journal repository as a test fixture, into a package, then checks the package against the native input with the independent oracle. It needs no CLI and no account.
@@ -27,12 +27,12 @@ This walkthrough replays a sanitized real Claude Code 2.1.304 stream, kept in th
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-ocsf-writer</artifactId>
-    <version>2.0.0-20261108.225512-21</version>
+    <version>2.0.0-20261115.230849-26</version>
   </dependency>
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>journal-capture-tck</artifactId>
-    <version>2.0.0-20261108.225512-21</version>
+    <version>2.0.0-20261115.230849-26</version>
   </dependency>
 </dependencies>
 ```
@@ -48,10 +48,10 @@ CP=$(cat cp.txt)
 
 ## 2. Get the recording
 
-The input is the fixture [`claude-live-2.1.304-denial`](https://github.com/markpollack/agent-journal/tree/453c1d1/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial): a spec, the native stream and the frozen expected-source manifest.
+The input is the fixture [`claude-live-2.1.304-denial`](https://github.com/markpollack/agent-journal/tree/e161c779/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial): a spec, the native stream and the frozen expected-source manifest.
 
 ```bash
-BASE=https://raw.githubusercontent.com/markpollack/agent-journal/453c1d1/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial
+BASE=https://raw.githubusercontent.com/markpollack/agent-journal/e161c779/journal-capture-tck/src/test/resources/ocsf/fixtures/claude-live-2.1.304-denial
 mkdir -p native
 curl -sO $BASE/spec.json
 curl -s -o native/stream.jsonl $BASE/native/stream.jsonl
@@ -80,7 +80,7 @@ wrote out state COMPLETED
 81 event line(s) in events.jsonl
 ```
 
-and exits 0. `out/` now holds `events.jsonl` and `run.json`; this package states version `0.3.0-prototype`. Verify prints its summary, ends with `acceptance: ACCEPTED`, writes the full report to `report.json`, and exits 0.
+and exits 0. `out/` now holds `events.jsonl` and `run.json`; `run.json` states package kind `agent-journal/ocsf-package`, layout `1.0.0`. Verify prints its summary, ends with `acceptance: ACCEPTED`, writes the full report to `report.json`, and exits 0.
 
 ## Reading the exit code
 

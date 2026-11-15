@@ -36,7 +36,7 @@ A run is a package directory:
 
 The native sources (the CLI's stream, session file and so on) are archived whole beside the package; content is never capped. A sub-agent is a child core under `children/<id>/` inside the same package, checked like the root.
 
-The extension is `agentic_cli`, uid 901, version `0.16.0-prototype`. The uid is provisional and not registered with OCSF. The reader accepts package versions `0.1.0-prototype` to `0.4.0-prototype`; a package states its own version. The prototype label stays until a release.
+The package kind is `agent-journal/ocsf-package`, layout `1.0.0` (`1.1.0` with a terminal binding). The extension is `agentic_cli`, uid 901, version `1.0.0`; the uid is provisional and not registered with OCSF. A package states its own identifiers. 2.0.0 reads only these 1.0.0 formats: a package written before 2.0.0 is refused as an unsupported format, so read it with the Journal version that wrote it. (Format identifiers checked against `markpollack/agent-journal@e161c779`.)
 
 ## Where to go next
 

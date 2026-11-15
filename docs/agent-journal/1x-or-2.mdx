@@ -1,14 +1,14 @@
 ---
 title: "Which Journal Do I Need?"
 sidebarTitle: "Which Journal do I need?"
-description: "Agent Journal 1.x (released 1.11.0) or 2.0 (on main, prototype): how to choose, what changed, and why there is no upgrade path"
+description: "Agent Journal 1.x (released 1.11.0) or 2.0 (the current line, on main): how to choose, what changed, and why there is no upgrade path"
 ---
 
 Agent Journal has two lines with different, incompatible formats.
 
 | | 1.x | 2.0 |
 |---|---|---|
-| Status | Released: **1.11.0** on Maven Central (2026-10-07) | On main, **prototype**, not released |
+| Status | Released: **1.11.0** on Maven Central (2026-10-07) | **Current line**, on main, not yet released |
 | Version | `1.11.0`; branch `1.x` continues as `1.12.0-SNAPSHOT` | `2.0.0-SNAPSHOT`, a timestamped snapshot per push to main |
 | Artifacts | `journal-core` and six capture modules | `journal-ocsf-writer`, `journal-capture-tck` |
 | Code | Tag `v1.11.0`, branch `1.x` | Default branch `main` |
@@ -19,7 +19,7 @@ Agent Journal has two lines with different, incompatible formats.
 - you depend on a released artifact, or on released Agent Client (0.32.0 pins Journal 1.10.0);
 - you use `journal-core`, the 1.x event and analysis files, the six capture adapters, or the DuckDB queries.
 
-## Use 2.0 (main, prototype) if
+## Use 2.0 (main) if
 
 - you want one portable OCSF `events.jsonl` per run, checked by an independent oracle;
 - you build against Agent Client main.

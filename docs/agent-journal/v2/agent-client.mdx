@@ -1,11 +1,11 @@
 ---
 title: "Agent Journal 2.0: Agent Client Recording"
 sidebarTitle: "Agent Client recording"
-description: "TerminalReceiver, the terminal profiles and qualifier lookup: how Agent Journal 2.0 records an Agent Client execution (on main, prototype)"
+description: "TerminalReceiver, the terminal profiles and qualifier lookup: how Agent Journal 2.0 records an Agent Client execution (on main)"
 ---
 
 <Warning>
-Agent Journal 2.0 is on main and is a prototype. It is not released; breaking changes are expected. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
+Agent Journal 2.0 is the current Journal line, on main. It is not yet released, and breaking changes are expected before 2.0.0. Checked against `markpollack/agent-journal@453c1d1`, snapshot `2.0.0-20261108.225512-21`.
 </Warning>
 
 Agent Client main records executions through Agent Journal 2.0: its `agent-client-journal` module depends on `journal-ocsf-writer` and `journal-capture-tck` `2.0.0-SNAPSHOT`. Released Agent Client 0.32.0 pins Journal 1.10.0. Client's own side, `JournalExecutionRecorder`, is described in the [Agent Client async lifecycle](/docs/agent-client/reference/async-lifecycle#recording-outcomes).

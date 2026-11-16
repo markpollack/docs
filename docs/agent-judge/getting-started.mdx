@@ -1,10 +1,10 @@
 ---
 title: "Getting started with Agent Eval"
-description: "Add Agent Eval 0.18.0 from Maven Central and execute credential-free configured requirements"
+description: "Add Agent Eval 1.0.0 from Maven Central and execute credential-free configured requirements"
 ---
 
 <Note>
-Agent Eval 0.18.0 is on Maven Central. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+Agent Eval 1.0.0 is on Maven Central. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 Use the least intelligent practical evaluator that establishes the property at the reliability you need.
@@ -21,22 +21,22 @@ requirements, and the fluent assertions:
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-judge-core</artifactId>
-    <version>0.18.0</version>
+    <version>1.0.0</version>
   </dependency>
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-judge-json-jackson2</artifactId>
-    <version>0.18.0</version>
+    <version>1.0.0</version>
   </dependency>
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-judge-ai-core</artifactId>
-    <version>0.18.0</version>
+    <version>1.0.0</version>
   </dependency>
   <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>agent-judge-assertj</artifactId>
-    <version>0.18.0</version>
+    <version>1.0.0</version>
     <scope>test</scope>
   </dependency>
 </dependencies>
@@ -53,7 +53,7 @@ No live inference is required.
 ### Build from source
 
 To build the released source yourself, check out tag
-[`v0.18.0`](https://github.com/markpollack/agent-judge/tree/v0.18.0) of the `agent-judge` repository
+[`v1.0.0`](https://github.com/markpollack/agent-judge/tree/v1.0.0) of the `agent-judge` repository
 and run `./mvnw -B -ntp clean install` with Java 21. This installs the complete reactor, including
 the parent and every module, into your local Maven repository with tests enabled.
 
@@ -68,10 +68,10 @@ the parent and every module, into your local Maven repository with tests enabled
 
 ## Dependencies
 
-All artifacts retain group `io.github.markpollack` and are released at version `0.18.0`.
-The AgentWorks BOM does not yet manage 0.18.0, so declare the version explicitly.
+All artifacts retain group `io.github.markpollack` and are released at version `1.0.0`.
+No released AgentWorks BOM manages 1.0.0 yet, so declare the version explicitly.
 The inventory is 14 JAR modules plus `agent-judge-parent` (POM packaging).
-The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intentional API and wire breaks.
+Coming from 0.18.0, read the [1.0.0 upgrade notes](/docs/agent-judge/whats-new) for the three API breaks, the `generated-answer:v3` wire change and the prompt size guard; the [0.18 migration guide](/docs/agent-judge/migration-0.18) covers the earlier move from 0.17.
 
 | Artifact | Purpose |
 |---|---|
@@ -86,5 +86,5 @@ The [0.18 migration guide](/docs/agent-judge/migration-0.18) explains the intent
 | `agent-judge-spring-ai` / `agent-judge-langchain4j` / `agent-judge-koog` | Evaluated response evidence bridges |
 
 The [fundamentals path](/docs/agent-judge/tutorial) still demonstrates released 0.17.0 in its separate reactor.
-The [PetClinic path](/docs/agent-judge/petclinic-case-study) demonstrates configured 0.18 APIs.
+The [PetClinic path](/docs/agent-judge/petclinic-case-study) demonstrates the configured API on 0.18.0, which the tutorial's case study pins.
 For historical consumer changes, keep the [0.17 migration guide](/docs/agent-judge/migration-0.17) at its original semantics.

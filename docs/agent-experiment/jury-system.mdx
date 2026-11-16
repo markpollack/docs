@@ -163,7 +163,7 @@ Agent Eval 0.17.0's `JudgmentContext` is `(goal, workspace, executionTime, start
 Agent Eval 0.17.0 keeps outcome, normalized score, and label as independent facts. A Boolean outcome
 uses `Judgment.pass(...)` or `Judgment.fail(...)`; it does not duplicate the same fact in a score
 object. `ABSTAIN`, `NOT_APPLICABLE`, and `ERROR` contribute no effective score.
-On main, Agent Eval 0.19 removes `JudgmentContext`; see the main-only note.
+Agent Eval 0.18.0 and later have no `JudgmentContext`; see the main-only note.
 
 <Note>
 On main (0.10.0-SNAPSHOT, not yet released) a jury is built per item from `AgentJudgingInput`, judges implement `Judgment judge()`, `Judgment` lives in `judge.judgment`, and voting strategies in `judge.voting`. See the main tab of [Getting Started](/docs/agent-experiment/getting-started). None of this is in 0.9.0.

@@ -1,34 +1,25 @@
 ---
 title: "Agent Sandbox"
-description: "Synchronous command execution and workspace files across Local, Docker, and E2B backends"
+description: "One Java API for running commands and managing workspace files on a local process, a Docker container or an E2B microVM"
 ---
 
-**[What's New →](/docs/agent-sandbox/whats-new)**
+**Version 1.0.0** (2026-11-15) · on Maven Central · **[What's New →](/docs/agent-sandbox/whats-new)**
 
-Agent Sandbox provides one synchronous command and workspace-file contract across
-multiple backends. The shared `exec` and file behavior is tested by the
-`AbstractSandboxTCK`. Backend-specific or unsupported capabilities, including
-interactive execution, are not interchangeable.
+**Write the agent's build-and-test loop once, then choose where it runs.** Agent Sandbox gives agents, evaluation
+harnesses and build runners one synchronous API for running commands and creating, reading and listing workspace files.
+Pick a local process for development, a Docker container from an image you choose, or a remote Firecracker microVM on
+E2B, at construction time. The code in between does not change.
 
-## Backends
+```xml
+<dependency>
+  <groupId>io.github.markpollack</groupId>
+  <artifactId>agent-sandbox-core</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
 
-<CardGroup cols={3}>
-  <Card title="LocalSandbox" icon="laptop">
-    Process and workspace convenience via zt-exec. It provides no security isolation and is for development and trusted commands.
-  </Card>
-  <Card title="DockerSandbox" icon="docker">
-    A convenient local Docker backend using Testcontainers and an image you select. It is not a hardened multi-tenant execution service.
-  </Card>
-  <Card title="E2BSandbox" icon="cloud">
-    Remote Firecracker microVM execution via E2B. This backend requires an E2B account and API key.
-  </Card>
-</CardGroup>
-
-`DockerSandbox` has privileged access to a trusted, root-equivalent local Docker daemon.
-Container isolation alone is not a complete hostile-workload security boundary; add the
-kernel, user, and network controls required by your threat model.
-
-## Core API
+Java 21 or later. For the other backends use `agent-sandbox-docker` or `agent-sandbox-e2b` (each brings the core with
+it), also at `1.0.0`.
 
 ```java
 try (Sandbox sandbox = LocalSandbox.builder()
@@ -51,6 +42,57 @@ try (Sandbox sandbox = LocalSandbox.builder()
 }
 ```
 
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="One contract, three backends" icon="layer-group">
+    `Sandbox` is the same interface on `LocalSandbox`, `DockerSandbox` and `E2BSandbox`: `exec`, `files()`, `workDir()`
+    and `close()`.
+  </Card>
+  <Card title="A compatibility kit you can run" icon="vial-circle-check">
+    `AbstractSandboxTCK` holds 22 contract tests for exec, environment, working directory, timeouts, output and file
+    operations. It ships in the core test-jar, so a new backend can prove it behaves the same.
+  </Card>
+  <Card title="Commands are argument vectors" icon="terminal">
+    `ExecSpec.of(...)` passes arguments as given; the kit checks that no backend splits or expands them through a shell.
+    Use `shellCommand(...)` when you do want a shell.
+  </Card>
+  <Card title="Fluent workspace files" icon="folder-tree">
+    Create, read, list, check and delete files and directories, then return to the sandbox with `and()` and run the
+    build.
+  </Card>
+  <Card title="Results that tell you what happened" icon="list-check">
+    `ExecResult` carries the exit code, stdout, stderr and duration, with `success()`, `mergedLog()` and `summary()`.
+    A timeout reaches you as a `SandboxException` caused by a `TimeoutException`.
+  </Card>
+  <Card title="Secrets stay out of logs" icon="key">
+    An `ExecSpec` prints the names of its environment variables, never their values, and `LocalSandbox` logs only the
+    names of the variables you set.
+  </Card>
+</CardGroup>
+
+## Backends
+
+<CardGroup cols={3}>
+  <Card title="LocalSandbox" icon="laptop">
+    Process and workspace convenience via zt-exec. It provides no security isolation and is for development and trusted commands. It is the only backend with interactive execution.
+  </Card>
+  <Card title="DockerSandbox" icon="docker">
+    A convenient local Docker backend using Testcontainers and an image you select. It is not a hardened multi-tenant execution service.
+  </Card>
+  <Card title="E2BSandbox" icon="cloud">
+    Remote Firecracker microVM execution via E2B, with `connect(sandboxId)` to reattach to a running sandbox. This backend requires an E2B account and API key.
+  </Card>
+</CardGroup>
+
+`DockerSandbox` has privileged access to a trusted, root-equivalent local Docker daemon.
+Container isolation alone is not a complete hostile-workload security boundary; add the
+kernel, user, and network controls required by your threat model. The image must provide bash, GNU coreutils and GNU
+findutils, and Docker Engine must offer API 1.44 or newer.
+
+`ExecSpecCustomizer` rewrites each spec before it runs on `LocalSandbox` and `DockerSandbox`; `E2BSandbox` does not
+apply customizers.
+
 ## Module Structure
 
 | Module | Backend | Dependencies |
@@ -59,19 +101,7 @@ try (Sandbox sandbox = LocalSandbox.builder()
 | `agent-sandbox-docker` | `DockerSandbox` | Testcontainers |
 | `agent-sandbox-e2b` | `E2BSandbox` | jackson, awaitility |
 
-## Maven
-
-The currently released version is **0.10.2**:
-
-```xml
-<dependency>
-  <groupId>io.github.markpollack</groupId>
-  <artifactId>agent-sandbox-core</artifactId>
-  <version>0.10.2</version>
-</dependency>
-```
-
-Use `agent-sandbox-docker` or `agent-sandbox-e2b` for those backends.
+1.0.0 has the same API as 0.10.2. It moves Jackson to 2.22.3; Agent Sandbox has no Jackson 3 dependency.
 
 <Info>
 In version 0.10.0, `DockerSandbox` requires an explicit caller-selected image: the
@@ -83,10 +113,15 @@ contents, security, and update policy.
 
 ## Source
 
-<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-sandbox">
-  Source code — Core, Docker, and E2B modules
-</Card>
+<CardGroup cols={2}>
+  <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-sandbox/tree/v1.0.0">
+    Source code at v1.0.0 — Core, Docker, and E2B modules
+  </Card>
+  <Card title="1.0.0 release notes" icon="file-lines" href="https://github.com/markpollack/agent-sandbox/blob/v1.0.0/RELEASE_NOTES_1.0.0.md">
+    First 1.x release
+  </Card>
+</CardGroup>
 
 ## Used By
 
-- **[Agent Eval](/projects/agent-judge)** — `agent-judge-exec` runs command-based evaluation in sandboxes
+- **[Agent Eval](/projects/agent-judge)** — `agent-judge-exec` runs command-based evaluation in sandboxes; Agent Eval 1.0.0 builds against Agent Sandbox 1.0.0

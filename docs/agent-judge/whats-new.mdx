@@ -1,21 +1,36 @@
 ---
 title: "What's New"
 sidebarTitle: "What's New"
-description: "Curated Agent Eval release notes"
+description: "Curated Agent Eval (formerly Agent Judge) release notes"
 ---
 
-## On main (0.19.0-SNAPSHOT, not yet released)
+## 1.0.0 (2026-11-15)
 
-None of it is in 0.18.0. Every push to main publishes `0.19.0-SNAPSHOT` to `https://central.sonatype.com/repository/maven-snapshots/`; name the main commit you built against, since the snapshot changes as main moves. Checked against `markpollack/agent-judge@6303332`. New pages: [Requirement documents](/docs/agent-judge/requirement-documents) and [Prompt size guard](/docs/agent-judge/prompt-size-guard).
+**Agent Judge is now Agent Eval.** Maven coordinates (`io.github.markpollack:agent-judge-*`) and Java packages
+(`io.github.markpollack.judge`) are unchanged, and Judge and Jury remain the names of its building blocks: a judge
+evaluates a requirement, and a jury combines judges. Agent Eval moves from 0.18.0 to 1.0.0; **there is no 0.19.0**.
+Versions do not follow semantic versioning: a deliberate breaking change moves the major version, and older releases are
+not maintained. New pages: [Requirement documents](/docs/agent-judge/requirement-documents) and
+[Prompt size guard](/docs/agent-judge/prompt-size-guard).
 
 - **Requirement documents are read whole.** An EARS criterion is its whole first paragraph, and an RFC 2119 statement continues through its paragraph. Soft wraps join with a space; a hard break joins the same way, without its backslash. Keyword, `**Reason:**` and `Applies when:` lines are recognised inside lists and block quotes. In 0.18.0, EARS read only the first line and RFC 2119 built the rule from its title, which stops at the first clause break, **so a judge could be asked about part of a requirement**
-- **CommonMark reading and strict loading.** Fenced and indented code, HTML blocks and thematic breaks are never read. `EarsRequirement.fromStrict(path, revision)` and `Rfc2119Requirement.fromStrict(path, revision)` throw a `RequirementDocumentException` naming every problem with its identifier and line; strict loading also refuses an EARS sentence without `shall`, and a sentence or statement without `.`, `!` or `?`. Permissive `from(...)` keeps the item and logs at WARN. New runtime dependency `org.commonmark:commonmark` 0.30.0
+- **CommonMark reading and strict loading.** Fenced and indented code, HTML blocks and thematic breaks are never read. `EarsRequirement.fromStrict(path, revision)` and `Rfc2119Requirement.fromStrict(path, revision)` throw a `RequirementDocumentException` naming every problem with its identifier and line; strict loading also refuses an EARS sentence without `shall`, and a sentence or statement without `.`, `!` or `?`. Permissive `from(...)` still leaves a malformed entry out and keeps an incomplete sentence, and logs each problem at WARN. New runtime dependency `org.commonmark:commonmark` 0.30.0
 - **Specification linter.** `RequirementDocuments.lint(dir)` returns a `Report`, `assertValid(dir)` throws an `AssertionError` listing every problem, and `main(dirs...)` exits 1 on any problem
-- **Behaviour change: prompt size guard.** `EarsJury`, `Rfc2119Jury`, `EarsJudge` and `Rfc2119Judge` measure the whole request before calling. Above `PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS` (100,000) they make no call and return `ERROR` (`judge_failed`), never `FAIL`. Set the limit with `.maxPromptCharacters(n)` right after `.runtime(...)`; it must be positive. Evidence pasted into the workspace slot now yields `ERROR`
-- **A refused roster is an ordinary result.** It concludes `INCONCLUSIVE`, retains no invocation, and stores and reads back exactly
+- **Behaviour change: prompt size guard.** `EarsJury`, `Rfc2119Jury`, `EarsJudge` and `Rfc2119Judge` measure the whole request before calling. Above `PromptLimits.DEFAULT_MAX_PROMPT_CHARACTERS` (100,000) they make no call and return `ERROR` (`judge_failed`), never `FAIL`. Set the limit with `.maxPromptCharacters(n)` right after `.runtime(...)`; it must be positive. Evidence pasted into the workspace slot now yields `ERROR`. A refused roster concludes `INCONCLUSIVE`, retains no invocation, and stores and reads back exactly
 - **Breaking: wire change `generated-answer:v3`.** Invocation `nativeFacts` hold `messageDigests` (role, UTF-8 length, SHA-256) instead of the messages; the `messages` key is gone, and a reader of the old shape fails visibly. Anyone who stores results needs this
-- **Agent Client invocation seam.** `AgentClientEvalModel(Invocation, NativeCapture)` takes a configured execution lifecycle; invocation facts and artifacts survive an invocation failure. `agent-judge-agent-client` builds against the published Agent Client `0.32.0` (since `86d6d59`; earlier main commits, including `6303332`, used `0.32.1-SNAPSHOT`)
-- **Breaking API changes.** `EvalModel` no longer extends `EvalRuntime`. `BuildSuccessJudge` extends `DeterministicJudge`, not `CommandJudge`, so the inherited `BuildSuccessJudge.builder(String, int, …)` factories are gone. Binary-incompatible but source-compatible: `EarsJudge`/`Rfc2119Judge` `GeneratedBuilder.requirement` and `GeneratedRequirement.build`, so 0.18.0-compiled callers must recompile. In Jev, an `Error` or a cancellation now reaches the caller instead of a detail-free `IOException` or a future that never completes
+- **Agent Client and Agent Sandbox.** `AgentClientEvalModel(Invocation, NativeCapture)` takes a configured execution lifecycle; invocation facts and artifacts survive an invocation failure. `agent-judge-agent-client` builds against the published Agent Client `0.32.0` in `provided` scope, so the application brings its own Agent Client; `agent-judge-exec` builds against Agent Sandbox `1.0.0`
+- **Releases depend on releases.** Published POMs name no repository, and a release build fails while any dependency is a snapshot
+
+### Upgrading from 0.18.0
+
+- **`EvalModel` no longer extends `EvalRuntime`.** It keeps the same native-execution shape; code that passed an `EvalModel` where an `EvalRuntime` is expected must adapt it
+- **`BuildSuccessJudge` extends `DeterministicJudge`, not `CommandJudge`**, so `BuildSuccessJudge.builder(String, int, …)` and the inherited `CommandJudge` members are gone; use `builder(command)`, `maven(...)` or `gradle(...)`
+- **Recompile.** `EarsJudge`/`Rfc2119Judge` `GeneratedBuilder.requirement` and `GeneratedRequirement.build` are binary-incompatible but source-compatible, so code compiled against 0.18.0 must be recompiled
+- **Stored results:** readers of generated-answer invocations move to `generated-answer:v3` (above)
+- **Large evidence:** pass a workspace path rather than pasting evidence into the workspace slot, or raise `.maxPromptCharacters(n)`
+- In `agent-judge-jev`, an `Error` or a cancellation now reaches the caller instead of a detail-free `IOException` or a future that never completes
+
+[Release notes](https://github.com/markpollack/agent-judge/blob/v1.0.0/RELEASE_NOTES_1.0.0.md)
 
 ## 0.18.0 (2026-10-08)
 

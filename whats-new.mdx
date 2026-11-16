@@ -4,6 +4,52 @@ description: "Weekly release highlights across all Pollack AI Lab projects"
 sidebarTitle: "What's New"
 ---
 
+## Week of November 15, 2026
+
+### Agent Eval 1.0.0
+
+**Agent Judge is now Agent Eval 1.0.0: specifications read whole and linted, oversized prompts refused before calling.**
+
+- Same Maven coordinates (`io.github.markpollack:agent-judge-*`) and packages; Judge and Jury stay the building blocks. There is no 0.19.0
+- EARS and RFC 2119 requirements are read whole and as CommonMark, with strict loading and `RequirementDocuments.assertValid(dir)` to keep a specification valid
+- Generated audits measure the whole request and return `ERROR`, never `FAIL`, above 100,000 characters
+- Upgrading from 0.18.0: `EvalModel` is no longer an `EvalRuntime`, `BuildSuccessJudge` is no longer a `CommandJudge`, recompile, and stored invocations move to `generated-answer:v3`
+
+[Project](/projects/agent-judge) | [What's New](/docs/agent-judge/whats-new) | [Release notes](https://github.com/markpollack/agent-judge/blob/v1.0.0/RELEASE_NOTES_1.0.0.md)
+
+### Claude Agent SDK Java 1.8.0
+
+**Four Jackson CVEs fixed, every byte the Claude CLI writes available to record, and shutdown you can check.**
+
+- Jackson 2.22.3 and 3.2.3 fix CVE-2026-89407, CVE-2026-89425, CVE-2026-91776 and CVE-2026-91777 (CVSS 7.5), which 1.5.1 through 1.7.0 carry
+- `rawLineListener`, `ParsedMessage.rawJson()` on every message kind and a `TransportByteObserver` let a consumer keep the CLI's output as written
+- A hook's PreToolUse `deny` now reaches the CLI, and a required MCP configuration that cannot be written fails before launch
+- `close()` makes one bounded seven-second cleanup attempt, and `transportResources()` reports what actually ended
+
+[Project](/projects/claude-agent-sdk) | [What's New](/docs/claude-agent-sdk/whats-new) | [Release notes](https://github.com/markpollack/claude-agent-sdk-java/blob/v1.8.0/release-notes/1.8.0.md)
+
+### Agent Sandbox 1.0.0
+
+**First 1.x release: one command-and-files API on a local process, Docker or an E2B microVM, with the same API as 0.10.2.**
+
+- The version moves to 1.0.0 with the other AgentWorks members; upgrading from 0.10.2 is a version bump, and there is no 0.11.0
+- Jackson 2.22.3 fixes the jackson-core HIGH (CVSS 7.5) in 2.22.2
+- The licence text and source headers match the canonical Business Source License 1.1 text; the terms are unchanged
+
+[Project](/projects/agent-sandbox) | [What's New](/docs/agent-sandbox/whats-new) | [Release notes](https://github.com/markpollack/agent-sandbox/blob/v1.0.0/RELEASE_NOTES_1.0.0.md)
+
+### Agent Memory 1.0.0
+
+**First 1.x release: token-budgeted memory for Spring AI agents, with the same API as 0.5.1.**
+
+- The version moves to 1.0.0 with the other AgentWorks members; upgrading from 0.5.1 is a version bump
+- Jackson 2.22.3 and 3.2.3 fix the jackson-core CVE in 2.22.2
+- One `CompactionMemoryAdvisor` on a `ChatClient` gives each request a bounded slice of what the agent has learned, condensed by a model you choose
+
+[Project](/projects/agent-memory) | [What's New](/docs/agent-memory/whats-new) | [Release notes](https://github.com/markpollack/agent-memory/blob/v1.0.0/RELEASE_NOTES_1.0.0.md)
+
+---
+
 ## Week of November 8, 2026
 
 ### ACP Java SDK 0.81.0

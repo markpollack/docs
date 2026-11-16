@@ -1,35 +1,89 @@
 ---
 title: "Claude Agent SDK (Java)"
-description: "Java SDK for Claude Code CLI integration — three-API architecture, sessions, MCP, multi-agent orchestration"
+description: "Drive Claude Code from Java: one-shot queries, blocking and reactive sessions, hooks, permission callbacks, MCP servers and full session recording"
 ---
 
-**[What's New →](/docs/claude-agent-sdk/whats-new)**
+**Version 1.8.0** (2026-11-15) · on Maven Central · **[What's New →](/docs/claude-agent-sdk/whats-new)**
 
-Java SDK for programmatic access to Claude Code. Three APIs at different abstraction levels: `Query` (one-liner fire-and-forget), `ClaudeSyncClient` (blocking sessions), and `ClaudeAsyncClient` (reactive with Project Reactor). Pure Java — no native dependencies, and no Spring dependency either: the SDK module depends only on zt-exec, Jackson, Reactor, SLF4J and the MCP Java SDK. Spring Boot auto-configuration for Claude lives in [Agent Client](/projects/agent-client), not here.
-
-Underneath [Agent Client](/projects/agent-client): its Claude provider, `agent-claude`, is built on this SDK.
-
-**Current release: 1.7.0.**
-
-<Warning>
-**1.7.0 ships vulnerable Jackson.** Published 1.7.0 declares Jackson 2.22.2 and 3.2.2 at compile scope, which carry CVE-2026-89407 and CVE-2026-89425 (jackson-core) and CVE-2026-91776 and CVE-2026-91777 (jackson-databind), all CVSS 7.5; the Jackson 3 line carries the latter three. A consumer without its own Jackson BOM inherits them; 1.5.1 and 1.6.0 declare the same Jackson versions. The fix, Jackson 2.22.3 and 3.2.3 (`bc89a1da`), is **on main, not yet released**: no 1.8.0 is on Maven Central. Either manage Jackson at 2.22.3 / 3.2.3 or later in your own build, or use `1.8.0-SNAPSHOT` from main; see [Using development snapshots from main](/docs/development-snapshots).
-</Warning>
-
-**1.7.0:** Closing or cancelling a session destroys the Claude CLI process tree before closing streams, unblocking readers and preventing the CLI from surviving cancellation. Both `close()` and `closeGracefully()` use the corrected order; there is no API change. [Release notes](https://github.com/markpollack/claude-agent-sdk-java/releases/tag/v1.7.0).
-
-**1.5.0:** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568; 1.7.0 uses MCP SDK 2.0.1. See [What's New →](/docs/claude-agent-sdk/whats-new).
-
-## Using it
+**Claude Code, programmable from plain Java.** The SDK runs the Claude Code CLI as a child process and gives you three
+ways to talk to it over the same transport: `Query` for a one-shot answer, `ClaudeSyncClient` for blocking multi-turn
+sessions and `ClaudeAsyncClient` for reactive streams with Project Reactor. Hooks, permission callbacks, MCP servers,
+subagents and structured output come with it. Pure Java, with no native code and no Spring dependency: the SDK needs only
+zt-exec, Jackson, Reactor, SLF4J and the MCP Java SDK. Spring Boot auto-configuration for Claude lives in
+[Agent Client](/projects/agent-client), whose Claude provider, `agent-claude`, is built on this SDK.
 
 ```xml
 <dependency>
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-sdk</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 </dependency>
 ```
 
-**Java 21 or later.** Every published artifact is Java 21 bytecode (class-file major 65); there has never been a Java 17 build, and a Java 17 runtime cannot load the SDK.
+**Java 21 or later.** Every published artifact is Java 21 bytecode (class-file major 65); there has never been a Java 17
+build, and a Java 17 runtime cannot load the SDK. The `claude` CLI must be installed and authenticated.
+
+```java
+// One answer, one call
+String answer = Query.text("What is 2+2?");
+
+// A multi-turn session that keeps its context
+try (ClaudeSyncClient client = ClaudeClient.sync()
+        .workingDirectory(Path.of("."))
+        .build()) {
+    String summary = client.connectText("Summarize this project's README");
+    String modules = client.queryText("Now list its modules");
+}
+```
+
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="Three APIs, one transport" icon="layer-group">
+    `Query.text`, `query`, `stream` and `execute` for one-shot calls; `ClaudeSyncClient` for blocking turns;
+    `ClaudeAsyncClient` returns `Mono` and `Flux` for text, text streams and messages.
+  </Card>
+  <Card title="Sessions you can steer" icon="comments">
+    Resume, continue or fork a session. During a session, `interrupt()`, `setModel(...)` and `setPermissionMode(...)`
+    change course without starting over.
+  </Card>
+  <Card title="Hooks that the CLI obeys" icon="shield-halved">
+    Register Java callbacks for all six hook events, PreToolUse to PreCompact, and allow, block or rewrite a tool call.
+    From 1.8.0 a PreToolUse `deny` reaches the CLI in the nested form it reads.
+  </Card>
+  <Card title="Permission callbacks" icon="user-check">
+    A `ToolPermissionCallback` sees each tool request with its input and returns allow, allow with changed input, or
+    deny with a message.
+  </Card>
+  <Card title="MCP servers" icon="plug">
+    Attach stdio, SSE and HTTP MCP servers by name; their tools appear to Claude as `mcp__{name}__{tool}`.
+  </Card>
+  <Card title="Structured output" icon="code">
+    Pass a JSON schema and read the result back as your own type with `getStructuredOutputAs(...)`, with cost and usage
+    in the result metadata.
+  </Card>
+  <Card title="Record exactly what the CLI wrote" icon="microphone-lines">
+    New in 1.8.0: every standard-output line before parsing, the original JSON of every message, and the raw process
+    bytes of stdin, stdout and stderr, so a recorder can keep a session as it happened.
+  </Card>
+  <Card title="Shutdown you can check" icon="power-off">
+    New in 1.8.0: `close()` makes one bounded cleanup attempt of seven seconds, and `transportResources()` reports which
+    observed processes, readers and temporary files actually ended.
+  </Card>
+</CardGroup>
+
+## 1.8.0 in brief
+
+1.8.0 fixes four Jackson vulnerabilities by moving to Jackson 2.22.3 and 3.2.3. Published 1.5.1, 1.6.0 and 1.7.0 declare
+Jackson 2.22.2 and 3.2.2, which carry CVE-2026-89407, CVE-2026-89425, CVE-2026-91776 and CVE-2026-91777 (CVSS 7.5), so
+upgrade to 1.8.0. It also repairs three wire defects: a required MCP configuration that cannot be written now fails before
+the CLI starts, control responses carry `subtype` once, and hook responses keep their nested fields. Builder users need no
+code change; direct `new CLIOptions(...)` calls and three `ParsedMessage` record constructors gain components, and the
+unused `ClaudeCliPrototype` class is removed. [Release notes](https://github.com/markpollack/claude-agent-sdk-java/blob/v1.8.0/release-notes/1.8.0.md).
+
+**1.7.0:** Closing or cancelling a session destroys the Claude CLI process tree before closing streams, unblocking readers and preventing the CLI from surviving cancellation.
+
+**1.5.0:** A security, packaging and behaviour-correction release: it raises the Jackson floors so they reach standalone consumers, embeds the Apache licence in every archive, publishes a CycloneDX 1.6 SBOM, and stops a no-argument `connect()` from sending a prompt of its own. It follows 1.4.0, which bumped the MCP SDK from 0.15.0 to 2.0.0 (mcp-core 2.0.0), clearing CVE-2026-35568; 1.8.0 uses MCP SDK 2.0.1. See [What's New →](/docs/claude-agent-sdk/whats-new).
 
 <Warning>
 **Upgrade from 1.4.0.** If you use 1.4.0 without importing a BOM that manages Jackson,
@@ -58,18 +112,22 @@ shapes what you need to know:
 
 ## MCP servers
 
-`McpServerConfig` is a sealed interface with four server types (1.7.0, unchanged on main):
+`McpServerConfig` is a sealed interface with four server types (1.8.0):
 
 | Type | Record | Configured with | How it runs |
 |---|---|---|---|
 | stdio | `McpStdioServerConfig(command, args, env)` | a command line | External process, passed to the Claude CLI with `--mcp-config` |
 | SSE | `McpSseServerConfig(url, headers)` | a URL and optional headers | External server, passed with `--mcp-config` |
 | HTTP | `McpHttpServerConfig(url, headers)` | a URL and optional headers | External server, passed with `--mcp-config` |
-| In-process | `McpSdkServerConfig(name, McpSyncServer instance)` | an MCP Java SDK server object in your JVM | Managed by the SDK and served over the `mcp_message` control protocol; no external process |
+| In-process | `McpSdkServerConfig(name, McpSyncServer instance)` | an MCP Java SDK server object in your JVM | Managed by the SDK over the `mcp_message` control protocol; no external process. Tool calls are not yet implemented (below) |
 
-Register a server by name with `CLIOptions.Builder.mcpServer(name, config)`, or on a client spec with `ClaudeClient` `SyncSpec`/`AsyncSpec` `.mcpServer(name, config)` and `.mcpServers(Map)`. Its tools are named `mcp__{name}__{tool}`, for example `mcp__fs__read_file`, which is the name to use in an allowed-tools list. The in-process type lets you expose Java tools to Claude Code with no separate server process.
+Register a server by name with `CLIOptions.Builder.mcpServer(name, config)`, or on a client spec with `ClaudeClient` `SyncSpec`/`AsyncSpec` `.mcpServer(name, config)` and `.mcpServers(Map)`. Its tools are named `mcp__{name}__{tool}`, for example `mcp__fs__read_file`, which is the name to use in an allowed-tools list.
 
-**On main, not yet released (1.8.0-SNAPSHOT):** a requested `--mcp-config` that cannot be written fails before the CLI is launched, with `TransportException("Failed to prepare required MCP configuration")` (`f555e72b`). In 1.7.0 the SDK logs a warning and launches the CLI without the MCP servers.
+<Note>
+**In-process servers list tools but cannot yet run them.** In 1.8.0 the SDK answers `initialize` and the list methods for an `McpSdkServerConfig`, but a `tools/call`, `resources/read` or `prompts/get` through it returns the JSON-RPC error "not yet implemented". Use a stdio, SSE or HTTP server for tools Claude must call.
+</Note>
+
+From 1.8.0, a requested `--mcp-config` that cannot be written fails before the CLI is launched, with `TransportException("Failed to prepare required MCP configuration")` (`f555e72b`). In 1.7.0 the SDK logs a warning and launches the CLI without the MCP servers.
 
 ## Licence
 

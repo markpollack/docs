@@ -1,34 +1,84 @@
 ---
 title: "Agent Eval"
-description: "Configured Java evaluations with requirements, evidence, native runtime results and separate application policy"
+description: "Evaluate agent work against written requirements in Java: ready judges and juries, executable EARS and RFC 2119 specifications, complete results and a separate reliance decision"
 ---
 
-**The agent says it is done. Should you merge?**
+**Version 1.0.0** (2026-11-15) · on Maven Central · **[What's New →](/docs/agent-judge/whats-new)**
 
-Agent Eval is a Java 21 library for evaluating work against
-requirements set before execution. Configure a `Judge` with its requirement, runtime and evidence,
-then call `judge()`. Configure a `Jury` with the selected requirements and call `vote()`.
-Retain the complete result before deciding whether the application may rely on it.
+**The agent says it is done. Should you merge?** Agent Eval answers with evidence, not a vibe. Write the requirements
+before the work, configure a `Judge` or a `Jury` with them, the evidence and the runtime, then call `judge()` or `vote()`.
+You get back every original answer, which requirement it was about and what each model or tool call did, and you decide
+separately whether your application may rely on it. Compilers, tests and analyzers stay in charge of what they can settle;
+a model is asked only where a written requirement needs interpretation.
 
 Formerly Agent Judge. The Maven coordinates (`io.github.markpollack:agent-judge-*`) and Java packages are unchanged.
-
-**Current release: 0.18.0** (2026-10-08), on Maven Central under `io.github.markpollack:agent-judge-*`.
-
-**On main, not yet released (0.19.0-SNAPSHOT).** Requirement documents are read whole and as CommonMark, with strict loading, a completeness rule and a specification linter. Generated audits refuse an oversized prompt before calling. A generated-answer invocation now stores message digests instead of messages (`generated-answer:v3`). Breaking: `EvalModel` is no longer an `EvalRuntime`, and `BuildSuccessJudge` is no longer a `CommandJudge`. Resolve `0.19.0-SNAPSHOT` from the Central snapshot repository; provenance `markpollack/agent-judge@6303332`. None of it is in 0.18.0.
 
 ```xml
 <dependency>
   <groupId>io.github.markpollack</groupId>
   <artifactId>agent-judge-core</artifactId>
-  <version>0.18.0</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
-0.18 configures requirements and execution up front, returns complete results with a separate
-application reliance policy, runs native RFC 2119 and EARS requirements, and stores results as
-durable V6 records. It is a breaking release for 0.17 callers; see the
-[migration guide](/docs/agent-judge/migration-0.18). [Getting started](/docs/agent-judge/getting-started)
-lists the modules most callers need. The separate fundamentals tutorial still uses released 0.17.0.
+Java 21. Add `agent-judge-ai-core` for EARS and RFC 2119 requirements, `agent-judge-json-jackson2` for stored results and
+`agent-judge-assertj` for test assertions, all at `1.0.0`; [Getting started](/docs/agent-judge/getting-started) lists all
+14 modules.
+
+```java
+var integrity = Rfc2119Requirement.of("integrity", "1", "MUST",
+    "preserve all original judgments", "auditability", null);
+// judgeModel is an EvalModel configured by the application.
+var nativeRecipe = Rfc2119Judge.builder().runtime(judgeModel);
+assertThat(integrity).judgedBy(nativeRecipe)
+    .withEvidence("Recorded execution evidence").isSatisfied();
+```
+
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="Specifications that execute" icon="file-signature" href="/docs/agent-judge/requirements-judges">
+    EARS and RFC 2119 requirements are native values. Judge one requirement, or hand a jury the whole roster and
+    investigate it in one pass.
+  </Card>
+  <Card title="A linter for the spec itself" icon="spell-check" href="/docs/agent-judge/requirement-documents">
+    New in 1.0.0: requirements are read whole and as CommonMark, strict loading names every problem with its line, and
+    `RequirementDocuments.assertValid(dir)` keeps a specification valid from one test.
+  </Card>
+  <Card title="Refuses a prompt it cannot afford" icon="ruler" href="/docs/agent-judge/prompt-size-guard">
+    New in 1.0.0: a generated audit measures the whole request first and returns `ERROR`, never `FAIL`, instead of
+    sending an oversized prompt.
+  </Card>
+  <Card title="Five answers, kept apart" icon="scale-balanced" href="/docs/agent-judge/interpreting-verdicts">
+    PASS, FAIL, ABSTAIN, NOT_APPLICABLE and ERROR stay distinct. A `Verdict` keeps the roster, every original answer and
+    the invocations, then derives its conclusion.
+  </Card>
+  <Card title="Reliance is your call" icon="user-shield">
+    Application policy is a separate step. Withholding reliance on a PASS does not rewrite the verdict, and the policy
+    result is stored beside it.
+  </Card>
+  <Card title="Results you can read in six months" icon="box-archive" href="/docs/agent-judge/interpreting-verdicts">
+    Strict V6 storage keeps the complete evaluation, and retained reads and assertions run no producers or policies.
+  </Card>
+  <Card title="Compose like code" icon="sitemap" href="/docs/agent-judge/jury-system">
+    Simple, cascaded and meta juries, explicit `AllOf` parents with typed assignments, and voting strategies you choose.
+  </Card>
+  <Card title="Deterministic judges and adapters" icon="plug" href="/docs/agent-judge/built-in-judges">
+    Build, command, coverage and file judges, plus runtimes for Spring AI and Agent Client and evidence bridges for
+    LangChain4j and Koog.
+  </Card>
+</CardGroup>
+
+## 1.0.0 in brief
+
+Agent Judge is now Agent Eval, and it moves from 0.18.0 to 1.0.0; there is no 0.19.0. Requirement documents are read
+whole, strictly and as CommonMark, with a specification linter. Generated audits refuse an oversized prompt before calling.
+Generated-answer invocations store message digests instead of messages (`generated-answer:v3`). Three API changes need
+attention when you upgrade from 0.18.0: `EvalModel` is no longer an `EvalRuntime`, `BuildSuccessJudge` is no longer a
+`CommandJudge`, and code compiled against 0.18.0 must be recompiled. The [What's New](/docs/agent-judge/whats-new) page
+lists each one. Versions do not follow semantic versioning: a deliberate breaking change moves the major version.
+
+The separate fundamentals tutorial still uses released 0.17.0, and its PetClinic case study uses 0.18.0.
 
 ## Requirements, evidence and execution
 
@@ -67,7 +117,7 @@ and assertions execute no producers or policies.
 
 <CardGroup cols={2}>
   <Card title="Build the configured example" icon="rocket" href="/docs/agent-judge/getting-started">
-    Add the 0.18.0 dependencies and provide requirements, evidence and runtime configuration.
+    Add the 1.0.0 dependencies and provide requirements, evidence and runtime configuration.
   </Card>
   <Card title="Executable requirements" icon="list-check" href="/docs/agent-judge/requirements-judges">
     Run prepared and whole-roster callers without inference.
@@ -82,14 +132,14 @@ and assertions execute no producers or policies.
 
 ## Resources
 
-- [Source](https://github.com/markpollack/agent-judge/tree/v0.18.0)
-- [0.18.0 release notes](https://github.com/markpollack/agent-judge/releases/tag/v0.18.0)
+- [Source](https://github.com/markpollack/agent-judge/tree/v1.0.0)
+- [1.0.0 release notes](https://github.com/markpollack/agent-judge/blob/v1.0.0/RELEASE_NOTES_1.0.0.md)
 - [Tutorial](/docs/agent-judge/tutorial)
 - [Configured API reference](/docs/agent-judge/api-reference)
-- [Migrating to 0.18](/docs/agent-judge/migration-0.18)
+- [Migrating from 0.17 to 0.18](/docs/agent-judge/migration-0.18)
 - [What's New](/docs/agent-judge/whats-new)
 - [Historical 0.17 migration](/docs/agent-judge/migration-0.17)
 
 The source tree uses project-specific Business Source License 1.1 terms. Read its
-[root LICENSE](https://github.com/markpollack/agent-judge/blob/v0.18.0/LICENSE)
+[root LICENSE](https://github.com/markpollack/agent-judge/blob/v1.0.0/LICENSE)
 for the exact grant and restrictions; earlier releases retain their distributed license.

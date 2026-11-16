@@ -1,11 +1,11 @@
 ---
 title: "Built-in Judges"
-description: "Deterministic, execution, file, LLM, RAG, and requirements judges in Agent Eval 0.18"
+description: "Deterministic, execution, file, LLM, RAG, and requirements judges in Agent Eval 1.0"
 ---
 
 <Note>
-The types on this page are those of Agent Eval 0.18.0. The linked tutorial modules are pinned to 0.17.0 and use its API.
-For configured Agent Eval 0.18 execution, use the [requirements walkthrough](/docs/agent-judge/requirements-judges) and [current API reference](/docs/agent-judge/api-reference).
+The types on this page are those of Agent Eval 1.0.0. The linked tutorial modules are pinned to 0.17.0 and use its API.
+For configured Agent Eval execution, use the [requirements walkthrough](/docs/agent-judge/requirements-judges) and [current API reference](/docs/agent-judge/api-reference).
 </Note>
 
 
@@ -43,7 +43,7 @@ Artifact: `agent-judge-exec`.
 
 | Judge | Purpose |
 |---|---|
-| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status. On main (0.19.0-SNAPSHOT), it is no longer a `CommandJudge`; use `builder(command)`, `maven(...)` or `gradle(...)`. |
+| `BuildSuccessJudge` | Run Maven, Gradle, or a configured build command and judge its exit status. From 1.0.0 it is a `DeterministicJudge` composing a command judge, not a `CommandJudge`; use `builder(command)`, `maven(...)` or `gradle(...)`. |
 | `CommandJudge` | Execute an arbitrary command through Agent Sandbox and compare the exit code |
 | `ClassVersionJudge` | Validate Java class-file bytecode versions |
 | `CoveragePreservationJudge` | Reject a JaCoCo coverage regression beyond the configured tolerance |
@@ -120,7 +120,7 @@ The credential-free bridge samples are [Koog module 10](https://github.com/markp
 
 `EarsJudge` and `Rfc2119Judge` read written acceptance criteria and architectural constraints back
 against the implementation. See [Requirements judges](/docs/agent-judge/requirements-judges) for the
-roster and strict rollup, explicit 0.18.0 coordinates, runnable examples, and the case study.
+roster and strict rollup, explicit 1.0.0 coordinates, runnable examples, and the case study.
 
 ## Related
 

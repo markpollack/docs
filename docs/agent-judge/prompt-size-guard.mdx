@@ -1,35 +1,12 @@
 ---
 title: "Prompt size guard"
 sidebarTitle: "Prompt size guard"
-description: "Generated EARS and RFC 2119 audits measure the whole request and refuse an oversized prompt with ERROR before calling (on main, 0.19.0-SNAPSHOT)"
+description: "Generated EARS and RFC 2119 audits measure the whole request and refuse an oversized prompt with ERROR before calling (Agent Eval 1.0.0)"
 ---
 
-<Warning>
-On main, not yet released (0.19.0-SNAPSHOT); provenance `markpollack/agent-judge@6303332`. None of this is in 0.18.0.
-</Warning>
-
-<Accordion title="Add the snapshot repository">
-Every push to main publishes `0.19.0-SNAPSHOT` to the Central snapshot repository. Name the main commit you built against: snapshot content changes as main moves.
-
-```xml
-<repositories>
-  <repository>
-    <id>central-snapshots</id>
-    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-    <releases><enabled>false</enabled></releases>
-    <snapshots><enabled>true</enabled></snapshots>
-  </repository>
-</repositories>
-<dependencies>
-  <dependency>
-    <groupId>io.github.markpollack</groupId>
-    <artifactId>agent-judge-ai-core</artifactId>
-    <version>0.19.0-SNAPSHOT</version>
-  </dependency>
-</dependencies>
-```
-See [Using development snapshots from main](/docs/development-snapshots) for pinning one build and reading its provenance.
-</Accordion>
+<Note>
+Released in Agent Eval 1.0.0; none of this is in 0.18.0. It applies to the generated EARS and RFC 2119 paths in `agent-judge-ai-core` `1.0.0`.
+</Note>
 
 A generated audit is one call, and its workspace slot is meant for a path the judge reads with its tools, not pasted source. Before calling, every generated EARS and RFC 2119 judge and roster jury measures the whole request and refuses one that is too large.
 
@@ -69,7 +46,7 @@ Verdict sized = EarsJury.builder()
     .vote();
 ```
 
-This block is identical to the one in the agent-judge [README](https://github.com/markpollack/agent-judge/blob/6303332/README.md#investigate-a-roster-once), which `CompileGrammarTest` (`agent-judge-assertj`) compiles. The behaviour is covered by `PromptSizeGuardTests` and `PromptRefusalStorageTests`.
+This block is identical to the one in the agent-judge [README](https://github.com/markpollack/agent-judge/blob/v1.0.0/README.md#investigate-a-roster-once), which `CompileGrammarTest` (`agent-judge-assertj`) compiles. The behaviour is covered by `PromptSizeGuardTests` and `PromptRefusalStorageTests`.
 
 ## Who must act
 

@@ -1,23 +1,24 @@
 ---
 title: "Agent Memory"
-description: "Progressive memory management for Spring AI — from context compaction to autonomous memory control"
+description: "Token-budgeted memory for Spring AI agents: one advisor keeps long tasks focused, with model-written compaction"
 ---
 
-**[What's New →](/docs/agent-memory/whats-new)**
+**Version 1.0.0** (2026-11-15) · on Maven Central · **[What's New →](/docs/agent-memory/whats-new)**
 
-**Latest — 0.5.1.**
+**Long agent tasks drown in their own history.** Every turn re-sends earlier tool results, the context fills with stale
+detail, costs climb and the model loses the thread. Agent Memory keeps what the agent has learned, gives each request a
+token-budgeted slice of it, and has a model condense the backlog once it grows past a threshold. It is one Spring AI
+advisor: add it to a `ChatClient` and the agent carries a bounded, dense memory from turn to turn.
 
-**0.5.x:** maintenance releases. 0.5.0 moves to Spring AI 2.0.1 and Jackson floors 2.22.2 / 3.2.2; 0.5.1 publishes an SBOM for every artifact. Behaviour and the filesystem-store operating boundary are unchanged from 0.4.0.
+```xml
+<dependency>
+    <groupId>io.github.markpollack</groupId>
+    <artifactId>memory-advisor</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
-**0.4.0:** first Business Source License 1.1 release. Jackson floors raised for standalone consumers, an aggregate CycloneDX SBOM published on the parent artifact, hosted OWASP/NVD scanning removed in favour of a local offline procedure, and the operating boundary documented. Tier-1 compaction behaviour is unchanged from 0.1.0.
-
-## Overview
-
-Agent Memory gives AI agents a way to manage conversational context. Without memory management, every prior tool result is re-sent every turn — on long tasks, context fills with stale noise, costs climb, and the model loses focus. Agent Memory stores accumulated learnings on the filesystem, injects a token-budgeted subset into each request, and summarizes older entries with a cheaper model once the uncompacted set crosses a threshold.
-
-The library starts with context compaction and progressively adds structured retrieval, reflection, and autonomous memory management — eventually reaching MemGPT-level capabilities. Each tier is independently useful. **Tier 1 is what ships today; tiers 2–4 are planned.**
-
-Agent Memory ships as a Spring AI `BaseAdvisor` — plug it into any `ChatClient` pipeline with one line:
+`memory-advisor` brings `memory-core` with it. Java 17 or later, Spring AI 2.0.1.
 
 ```java
 var memoryStore = new FileSystemMemoryStore(Path.of(".memory"));
@@ -33,31 +34,42 @@ ChatClient agent = ChatClient.builder(chatModel)
     .build();
 ```
 
-On each request, the advisor retrieves accumulated learnings (within the token budget) and injects them into the system message. After each response, it appends the assistant's output to the store. When uncompacted entries exceed `budget × ratio`, compaction summarizes them via a cheap model and replaces them with dense summaries.
+## What you get
 
-## Compatibility
+<CardGroup cols={2}>
+  <Card title="A drop-in Spring AI advisor" icon="plug">
+    `CompactionMemoryAdvisor` is a `BaseAdvisor`. It works with blocking and streaming calls: a streamed response is
+    aggregated before it is stored.
+  </Card>
+  <Card title="A hard token budget" icon="gauge">
+    Each request gets at most `memoryTokenBudget` tokens of memory, compacted summaries first and then the newest
+    entries, so the prompt stays bounded however long the task runs.
+  </Card>
+  <Card title="Compaction written by a model" icon="compress">
+    Once the uncompacted entries reach `budget × ratio`, a `ChatClient` you choose, typically a cheaper model, writes one
+    summary with the task's status and its learnings.
+  </Card>
+  <Card title="Nothing is thrown away" icon="box-archive">
+    Compacted originals stay on disk, marked compacted, beside the summary in `patterns/`. The `MemoryIndex` can list
+    entries by topic or by compaction state.
+  </Card>
+  <Card title="Safe with code and JSON" icon="code">
+    Stored memory and system instructions are substituted literally, so braces, JSON and template-like text in them do
+    not break the prompt template.
+  </Card>
+  <Card title="Plain files you can read" icon="folder-open">
+    Entries live under `iterations/` and `patterns/` with an `_index.json`; `ProgressFileMemoryStore` keeps a single
+    `progress.txt` instead.
+  </Card>
+</CardGroup>
 
-| Property | Value |
-|----------|-------|
-| Java | 17 |
-| Spring AI | 2.0.1 |
-| Maturity | Pre-1.0 library; Tier-1 compaction shipping |
-| License | **0.4.0 and later: Business Source License 1.1.** 0.3.0 and earlier remain Apache License 2.0. Published tags and artifacts are not retroactively relicensed. |
+## How it works
 
-## Operating boundary
-
-The 0.4.0 filesystem store is **local, plaintext, and single-writer**. Read this before putting it in front of anything shared.
-
-- Memory is written to the local filesystem in clear text. It is not encrypted and is not shared storage.
-- There is no locking, no atomic index replacement, and no crash recovery. A second concurrent writer, or a crash during an index write, can corrupt or truncate `_index.json` — the only source of truth for the index.
-- Stored memory is injected verbatim into the model's system prompt, so only trusted content should be written to it.
-- Multi-process or concurrent-writer use requires external coordination.
-
-Locking, atomic index replacement, and crash recovery are backlog items, not shipped functionality.
-
-## How Compaction Works
-
-When accumulated context exceeds a token budget, older entries are summarized by a cheap model (e.g., Haiku) and replaced with a compact summary. The agent continues with dense, relevant context instead of an ever-growing prompt.
+On each request, the advisor retrieves accumulated learnings within the token budget and injects them into the system
+message. After each response, it appends the assistant's text to the store; it does not store the user's messages or
+the conversation history. When the uncompacted entries reach `budget × ratio`, the compactor sends all of them to the
+compaction model, writes the summary as a new entry and marks the originals compacted. Compaction runs inside the
+advisor's `after()` step, on the calling thread.
 
 Two parameters control it:
 
@@ -67,6 +79,27 @@ Two parameters control it:
 | `compactionRatio` | 0.75 | Fraction of budget that triggers compaction |
 
 Token estimation is a characters÷4 approximation, not a tokenizer.
+
+## Compatibility
+
+| Property | Value |
+|----------|-------|
+| Java | 17 |
+| Spring AI | 2.0.1 |
+| Spring Boot | Not required; there is no starter or auto-configuration |
+| API | 1.0.0 has the same API as 0.5.1 |
+| License | **0.4.0 and later: Business Source License 1.1.** 0.3.0 and earlier remain Apache License 2.0. Published tags and artifacts are not retroactively relicensed. |
+
+## Operating boundary
+
+The filesystem store is **local, plaintext, and single-writer**. Read this before putting it in front of anything shared.
+
+- Memory is written to the local filesystem in clear text. It is not encrypted and is not shared storage.
+- There is no locking, no atomic index replacement, and no crash recovery. A second concurrent writer, or a crash during an index write, can corrupt or truncate `_index.json` — the only source of truth for the index.
+- Stored memory is injected verbatim into the model's system prompt, so only trusted content should be written to it.
+- Multi-process or concurrent-writer use requires external coordination.
+
+Locking, atomic index replacement, and crash recovery are backlog items, not shipped functionality.
 
 ## Research background
 
@@ -113,7 +146,7 @@ A code-coverage experiment there recorded:
 
 | Tier | Name | Status | Description |
 |------|------|--------|-------------|
-| 1 | **Compaction** | **Shipping** | Token-budgeted retrieval + LLM summarization |
+| 1 | **Compaction** | **Released** | Token-budgeted retrieval + LLM summarization |
 | 2 | Structured | Planned | Categorized memory with selective retrieval and per-category retention policies |
 | 3 | Reflective | Planned | Importance scoring + periodic reflection synthesis ([Generative Agents](https://arxiv.org/abs/2304.03442) pattern) |
 | 4 | Autonomous | Planned | Agent-controlled memory via tools — virtual context management ([MemGPT](https://arxiv.org/abs/2310.08560) pattern) |
@@ -129,9 +162,14 @@ The on-disk shape — `iterations/`, `patterns/`, `_index.json`, or a single `pr
 
 ## Quick Links
 
-<Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-memory">
-  Source code (0.5.1 on Maven Central)
-</Card>
+<CardGroup cols={2}>
+  <Card title="GitHub" icon="github" href="https://github.com/markpollack/agent-memory/tree/v1.0.0">
+    Source code at v1.0.0
+  </Card>
+  <Card title="1.0.0 release notes" icon="file-lines" href="https://github.com/markpollack/agent-memory/blob/v1.0.0/RELEASE_NOTES_1.0.0.md">
+    First 1.x release
+  </Card>
+</CardGroup>
 
 ## Origin
 

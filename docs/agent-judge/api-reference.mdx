@@ -4,7 +4,7 @@ description: "Public packages, configured producers, native execution, and retai
 ---
 
 <Note>
-This guide describes the Agent Eval 0.18.0 API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
+This guide describes the Agent Eval 1.0.0 API. Maven coordinates and Java packages still use `agent-judge` and `io.github.markpollack.judge`.
 </Note>
 
 | Package under `io.github.markpollack.judge` | Public responsibility |
@@ -50,6 +50,6 @@ A Verdict retains collective and individual judgments, seats, children/attempts,
 Core owns no Jackson engine. Add the supported Jackson 2 module explicitly; use `NativeRequirementCodecs.codec()` for RFC/EARS values and `VerdictCodec` for text/AllOf.
 Descriptions stay V3; results/evaluations use V6.
 
-Source at v0.18.0: [producer README](https://github.com/markpollack/agent-judge/blob/v0.18.0/README.md), [V6 storage](https://github.com/markpollack/agent-judge/blob/v0.18.0/portable-results-v6.md).
+Source at v1.0.0: [producer README](https://github.com/markpollack/agent-judge/blob/v1.0.0/README.md), [V6 storage](https://github.com/markpollack/agent-judge/blob/v1.0.0/portable-results-v6.md).
 These pinned sources are distinct from released 0.17 Javadoc.
-For source and stored-result changes, follow [Migrating to 0.18](/docs/agent-judge/migration-0.18).
+For changes since 0.18.0, read the [1.0.0 notes](/docs/agent-judge/whats-new); for the move from 0.17, follow [Migrating to 0.18](/docs/agent-judge/migration-0.18).

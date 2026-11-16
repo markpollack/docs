@@ -6,18 +6,18 @@ description: "Configured RFC13 and EARS6/52 evaluations with archived replay, fu
 An agent implemented appointment scheduling for PetClinic. Its build and existing tests pass.
 This path asks whether it meets the written requirements, then investigates one failed rule.
 The five modules share a fixed subject and a separate Maven reactor under
-[`case-studies/spec-driven-petclinic/`](https://github.com/markpollack/agent-judge-tutorial/tree/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic).
+[`case-studies/spec-driven-petclinic/`](https://github.com/markpollack/agent-judge-tutorial/tree/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic).
 
-The current caller uses Agent Eval `0.18.0` from Maven Central. Follow
-[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md) and
-[the presenter runbook](https://github.com/markpollack/agent-judge-tutorial/blob/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic/PRESENTER-RUNBOOK.md)
-for setup, commands and optional isolated reproduction. The root fundamentals reactor remains on 0.17.0.
+The current caller uses Agent Eval `1.0.0` from Maven Central. Follow
+[CONFIGURED-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic/CONFIGURED-RUN.md) and
+[the presenter runbook](https://github.com/markpollack/agent-judge-tutorial/blob/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic/PRESENTER-RUNBOOK.md)
+for setup, commands and optional isolated reproduction. The root fundamentals reactor uses the same release.
 
 ## The specification supplies the roster
 
 The subject is the vendored PetClinic branch at `fc9df4af`. Preparation materializes a buildable
 copy and applies its existing formatter; it does not change frozen source or recording bytes.
-[Fixture provenance](https://github.com/markpollack/agent-judge-tutorial/blob/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic/fixtures/petclinic/PROVENANCE.md)
+[Fixture provenance](https://github.com/markpollack/agent-judge-tutorial/blob/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic/fixtures/petclinic/PROVENANCE.md)
 records that origin.
 
 `EarsRequirement.from(criteria, "petclinic:fc9df4af")` reads the 52 UC6 requirements.
@@ -80,7 +80,7 @@ assertThat(jury).isPassed();
 ```
 
 The full class is
-[ShouldIMergeBehaviorDemo](https://github.com/markpollack/agent-judge-tutorial/blob/2ad2b03c85e63e00324d18f7f57e61a3b0ad4b3f/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java).
+[ShouldIMergeBehaviorDemo](https://github.com/markpollack/agent-judge-tutorial/blob/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic/module-03-ears-usecase/src/test/java/io/github/markpollack/judge/tutorial/ears/ShouldIMergeBehaviorDemo.java).
 EARS6 passes. EARS52 intentionally fails this gate on INCONCLUSIVE; RFC13 fails it on FAIL.
 The `ShouldIMerge*Demo` classes are excluded from ordinary regression discovery and run separately
 with the commands in CONFIGURED-RUN.md. Regression tests pass by asserting these populations.
@@ -98,7 +98,7 @@ It reports CONFIRMED / REACHABLE and refines StaffFallbackService.java:247 to :2
 The H2 deadlock claim in the recording was not independently reproduced; it remains an archived
 claim rather than a fresh result of this migration. Investigation does not repair the subject.
 
-[DRY-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/3bb1d6ff898d861f34da6d9ffe10efc990425efd/case-studies/spec-driven-petclinic/DRY-RUN.md)
+[DRY-RUN.md](https://github.com/markpollack/agent-judge-tutorial/blob/475e7a622a4063adc3bbc080599c30c095a368b6/case-studies/spec-driven-petclinic/DRY-RUN.md)
 preserves the historical 0.17 presenter evidence. Its old API and overall ABSTAIN display describe
 that revision; the current configured caller uses an INCONCLUSIVE Verdict with the ABSTAIN child
 intact. Module 06 remains unimplemented.
